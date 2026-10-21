@@ -13,6 +13,7 @@ import {
   upsertWebhookTrainingEnrollment,
   updateEnrollmentPayment,
   updateEnrollmentApproval,
+  transferEnrollmentTraining,
 } from '../models/training.model.js';
 
 /**
@@ -221,6 +222,31 @@ export const updateApprovalStatus = async (req, res, next) => {
     const adminId = req.user?.id || req.user?.userId || null;
     const updated = await updateEnrollmentApproval(enrollmentId, newApproval, adminId, rejection_reason || rejectionReason);
     return sendSuccess(res, `Registration ${newApproval.toLowerCase()} successfully`, updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/v1/trainings/enrollments/:enrollmentId/transfer
+ * Admin: Move/Transfer an enrolled student to another training program (e.g. from Aptitude to Technical).
+ */
+export const transferStudentTraining = async (req, res, next) => {
+  try {
+    const { enrollmentId } = req.params;
+    const { target_training_id, targetTrainingId } = req.body;
+    const newTrainingId = target_training_id || targetTrainingId;
+
+    if (!newTrainingId) {
+      return sendError(res, 'target_training_id is required', 400);
+    }
+
+    const result = await transferEnrollmentTraining(enrollmentId, newTrainingId);
+    return sendSuccess(
+      res,
+      `Student successfully transferred to '${result.targetTraining.name}'`,
+      result
+    );
   } catch (error) {
     next(error);
   }

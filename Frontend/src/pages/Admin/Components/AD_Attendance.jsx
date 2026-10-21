@@ -187,20 +187,19 @@ export default function AdminAttendance() {
         const scannedMap = {};
 
         fetchedStudents.forEach((s) => {
-          // Check if student has marked attendance present on DB (by ID or student name)
+          // Check if student has marked attendance present on DB (by ID, roll number, or student name)
           const record = dbList.find(d => {
             const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
             const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
+            const matchesRoll = d.roll_number && s.rollNo && String(d.roll_number).trim().toLowerCase() === String(s.rollNo).trim().toLowerCase();
             const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
                                 (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
-            return matchesId || matchesName;
+            return matchesId || matchesRoll || matchesName;
           });
           const isPresentInDb = record ? (
             record.today_status === 'present' ||
             record.is_scanned === true ||
-            String(record.status || '').toLowerCase() === 'present' || 
-            Number(record.present || record.present_count || 0) > 0 ||
-            Number(record.attendance_percentage || 0) > 0
+            String(record.status || '').toLowerCase() === 'present'
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
           if (isPresentInDb || (record && record.is_scanned)) scannedMap[s.id] = true;
@@ -230,14 +229,22 @@ export default function AdminAttendance() {
     };
 
     fetchStudentsAndAttendance(false);
-    const interval = setInterval(() => fetchStudentsAndAttendance(true), 5000); // 5 sec live sync poll
+    const interval = setInterval(() => fetchStudentsAndAttendance(true), 3000); // 3 sec live sync poll
     return () => clearInterval(interval);
   }, [selectedBatchCode, batches, sessionDate]);
 
   // Real-time QR Scan listener (window event & storage sync)
-  const handleQrScanCheckIn = useCallback((scannedStudentName) => {
-    const targetName = scannedStudentName || (students[0] ? students[0].name : "");
-    const studentObj = students.find(s => s.name.toLowerCase() === targetName.toLowerCase()) || students[0];
+  const handleQrScanCheckIn = useCallback((scannedStudentName, studentId) => {
+    let studentObj = null;
+    if (studentId) {
+      studentObj = students.find(s => Number(s.id) === Number(studentId) || Number(s.userId) === Number(studentId) || Number(s.studentId) === Number(studentId));
+    }
+    if (!studentObj && scannedStudentName) {
+      studentObj = students.find(s => s.name.toLowerCase().trim() === scannedStudentName.toLowerCase().trim());
+    }
+    if (!studentObj && students.length === 1) {
+      studentObj = students[0];
+    }
     if (studentObj) {
       setAttendance(prev => ({ ...prev, [studentObj.id]: true }));
       setQrScannedMap(prev => ({ ...prev, [studentObj.id]: true }));
@@ -248,18 +255,16 @@ export default function AdminAttendance() {
 
   useEffect(() => {
     const onCustomQrScan = (e) => {
-      if (e && e.detail && e.detail.studentName) {
-        handleQrScanCheckIn(e.detail.studentName);
-      } else {
-        handleQrScanCheckIn("Ganesh Shinde");
+      if (e && e.detail) {
+        handleQrScanCheckIn(e.detail.studentName, e.detail.studentId || e.detail.userId);
       }
     };
     const onStorageSync = (e) => {
       if (e.key === "admin_live_qr_scans" && e.newValue) {
         try {
           const scans = JSON.parse(e.newValue);
-          if (scans && scans[0] && scans[0].studentName) {
-            handleQrScanCheckIn(scans[0].studentName);
+          if (scans && scans[0]) {
+            handleQrScanCheckIn(scans[0].studentName, scans[0].studentId || scans[0].userId);
           }
         } catch (_) {}
       }

@@ -25,12 +25,15 @@ export default function PracticeProblems() {
           title: p.title,
           topic: p.category || "General DSA",
           difficulty: p.difficulty || "Medium",
-          acceptance: "65.0%",
           points: p.points || 100,
           solved: p.solve_status === "Solved",
+          solveStatus: p.solve_status || "Unsolved",
+          scoreObtained: p.marks_obtained ?? p.score_obtained ?? null,
+          percentage: p.percentage ?? null,
           companies: p.tags ? (Array.isArray(p.tags) ? p.tags : (typeof p.tags === "string" ? p.tags.split(",").map(t => t.trim()) : [])) : ["TCS", "Infosys"],
           solutionAvailable: true,
           description: p.description || "No problem description provided.",
+          language: p.language || "",
           dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
         }));
         setProblemsList(mapped);
@@ -265,59 +268,82 @@ export default function PracticeProblems() {
                 <th>Title</th>
                 <th>Topic</th>
                 <th>Difficulty</th>
+                <th>Status & Marks</th>
                 <th>Due Date</th>
-                <th>Acceptance</th>
                 <th className="pp-th-action">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredProblems.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="pp-empty-cell">
+                  <td colSpan={6} className="pp-empty-cell">
                     No practice problems found matching your filters.
                   </td>
                 </tr>
               ) : (
-                filteredProblems.map((prob) => (
-                  <tr key={prob.id} className="problem-row">
-                    <td>
-                      <div className="prob-title-box">
-                        <Link
-                          to={`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`}
-                          state={{ task: prob, source: 'practice' }}
-                          className="prob-title-link"
-                        >
-                          {prob.title}
-                        </Link>
-                        <span className="prob-points">+{prob.points} XP</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="topic-badge">{prob.topic}</span>
-                    </td>
-                    <td>
-                      <span className={`diff-badge diff-${prob.difficulty.toLowerCase()}`}>
-                        {prob.difficulty}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
-                        {prob.dueDate}
-                      </span>
-                    </td>
-                    <td className="acceptance-cell">{prob.acceptance}</td>
+                filteredProblems.map((prob) => {
+                  const isSolved = prob.solved || prob.solveStatus === "Solved";
+                  const isPartial = prob.solveStatus === "Partial";
+                  const hasAttempted = prob.solveStatus === "Attempted";
+                  return (
+                    <tr key={prob.id} className="problem-row">
+                      <td>
+                        <div className="prob-title-box">
+                          <Link
+                            to={`/student/coding-platform/practice-${prob.id}`}
+                            state={{ task: prob, source: 'practice' }}
+                            className="prob-title-link"
+                          >
+                            {prob.title}
+                          </Link>
+                          <span className="prob-points">{prob.points} pts</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="topic-badge">{prob.topic}</span>
+                      </td>
+                      <td>
+                        <span className={`diff-badge diff-${prob.difficulty.toLowerCase()}`}>
+                          {prob.difficulty}
+                        </span>
+                      </td>
+                      <td>
+                        {isSolved ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "3px 8px", borderRadius: "6px" }}>
+                            <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : `${prob.points}/${prob.points}`}
+                          </span>
+                        ) : isPartial ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: "6px" }}>
+                            <span>⚠️</span> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : "Partial"}
+                          </span>
+                        ) : hasAttempted ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: "6px" }}>
+                            <span>❌</span> 0/{prob.points}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "12px", color: "#64748b" }}>
+                            Unsolved ({prob.points} pts)
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                          {prob.dueDate}
+                        </span>
+                      </td>
 
-                    <td className="pp-td-action">
-                      <Button
-                        size="sm"
-                        className="solve-btn"
-                        onClick={() => navigate(`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`, { state: { task: prob, source: 'practice' } })}
-                      >
-                        <Terminal size={14} /> Solve
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                      <td className="pp-td-action">
+                        <Button
+                          size="sm"
+                          className="solve-btn"
+                          onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: prob, source: 'practice' } })}
+                        >
+                          <Terminal size={14} /> {isSolved ? "Review" : isPartial ? "Resume" : "Solve"}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

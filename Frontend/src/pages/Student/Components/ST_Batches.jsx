@@ -114,21 +114,22 @@ export default function Batches() {
           id: t.id,
           taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
           title: t.title,
-          type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} XP)`,
+          type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
           due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
           status: t.status || "Pending",
           platform: t.platform || "coding",
           points: Number(t.points) || 100,
+          scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
+          alreadySubmitted: Boolean(t.alreadySubmitted),
           language: t.language || "",
           description: t.description || t.desc || "",
           testCases: t.testCases || t.test_cases || [],
           batch_id: t.batch_id || batch.id,
         }));
 
-        // Initial batch XP starts at 0, afterwards increases according to task performance
+        // Batch XP calculates according to task marks obtained
         const completedXp = customTasks
-          .filter(t => (t.status || "").toLowerCase() === "completed" || (t.status || "").toLowerCase() === "passed")
-          .reduce((sum, t) => sum + (t.points || 100), 0);
+          .reduce((sum, t) => sum + (t.scoreObtained != null ? Number(t.scoreObtained) : ((t.status || "").toLowerCase() === "completed" ? (t.points || 100) : 0)), 0);
 
         setSelectedBatch((prev) => ({
           ...prev,
@@ -390,14 +391,21 @@ export default function Batches() {
                             </div>
                           </div>
 
-                          <div className="cw-item-right">
+                          <div className="cw-item-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {task.scoreObtained != null && (
+                              <span style={{ fontSize: "12px", fontWeight: 700, color: task.status === "Completed" ? "#16a34a" : "#d97706" }}>
+                                {task.scoreObtained} / {task.points} pts
+                              </span>
+                            )}
                             <Badge
                               variant={
                                 task.status === "Completed"
                                   ? "success"
+                                  : task.status === "Partial"
+                                  ? "warning"
                                   : task.urgent
                                   ? "danger"
-                                  : "warning"
+                                  : "secondary"
                               }
                             >
                               {task.status}

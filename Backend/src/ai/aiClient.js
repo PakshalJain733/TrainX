@@ -3,8 +3,8 @@ const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const DEFAULT_MODELS = {
-  groq: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-  nvidia: ['meta/llama-3.2-11b-vision-instruct', 'nvidia/nemotron-3.5-lightning-30b-a3b'],
+  groq: ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'],
+  nvidia: ['meta/llama-3.2-11b-vision-instruct', 'google/gemma-3-12b-it'],
   gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
 };
 
@@ -14,6 +14,22 @@ let lastUsedProviderInfo = null;
 
 export const getAllAvailableProviders = () => {
   const providers = [];
+
+  // Groq (high speed, 200-800ms)
+  const groqKey = (
+    process.env.Groq_AI_API_KEY ||
+    process.env.GROQ_AI_API_KEY ||
+    process.env.GROQ_API_KEY ||
+    (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_API_KEY : '')
+  ).trim();
+
+  if (groqKey && !PLACEHOLDER_KEYS.has(groqKey)) {
+    providers.push({
+      provider: 'groq',
+      key: groqKey,
+      configuredModel: process.env.Groq_AI_MODEL || process.env.GROQ_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_MODEL : null),
+    });
+  }
 
   // NVIDIA
   const nvidiaKey = (
@@ -45,31 +61,11 @@ export const getAllAvailableProviders = () => {
     });
   }
 
-  // Groq
-  const groqKey = (
-    process.env.Groq_AI_API_KEY ||
-    process.env.GROQ_AI_API_KEY ||
-    process.env.GROQ_API_KEY ||
-    (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_API_KEY : '')
-  ).trim();
-
-  if (groqKey && !PLACEHOLDER_KEYS.has(groqKey)) {
-    providers.push({
-      provider: 'groq',
-      key: groqKey,
-      configuredModel: process.env.Groq_AI_MODEL || process.env.GROQ_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_MODEL : null),
-    });
-  }
-
-  // Prioritize primary provider specified by AI_API_KEY if present
-  const primaryRawKey = String(process.env.AI_API_KEY || '').trim();
-  if (primaryRawKey.startsWith('nvapi-')) {
-    providers.sort((a, b) => (a.provider === 'nvidia' ? -1 : b.provider === 'nvidia' ? 1 : 0));
-  } else if (primaryRawKey.startsWith('AQ.') || primaryRawKey.startsWith('AIza')) {
-    providers.sort((a, b) => (a.provider === 'gemini' ? -1 : b.provider === 'gemini' ? 1 : 0));
-  } else if (primaryRawKey.startsWith('gsk_')) {
-    providers.sort((a, b) => (a.provider === 'groq' ? -1 : b.provider === 'groq' ? 1 : 0));
-  }
+  // Always prioritize ultra-fast providers (Groq: ~600ms, then NVIDIA, then Gemini)
+  providers.sort((a, b) => {
+    const priority = { groq: 1, nvidia: 2, gemini: 3 };
+    return (priority[a.provider] || 99) - (priority[b.provider] || 99);
+  });
 
   return providers;
 };
@@ -106,7 +102,9 @@ const extractText = (provider, data) => {
   }
   const msg = data?.choices?.[0]?.message;
   if (!msg) return null;
-  return msg.content || msg.reasoning_content || null;
+  const content = typeof msg.content === 'string' ? msg.content.trim() : '';
+  if (content.length > 0) return content;
+  return msg.reasoning_content || msg.reasoning || null;
 };
 
 const buildRequest = (provider, key, { model, prompt, system, temperature, maxTokens, json }) => {
@@ -115,12 +113,12 @@ const buildRequest = (provider, key, { model, prompt, system, temperature, maxTo
     if (maxTokens) generationConfig.maxOutputTokens = maxTokens;
     if (json) generationConfig.response_mime_type = 'application/json';
     return {
-      url: `${GEMINI_URL}/${model}:streamGenerateContent?alt=sse&key=${key}`,
+      url: `${GEMINI_URL}/${model}:generateContent?key=${key}`,
       init: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts: [{ text: (system ? system + '\n\n' : '') + prompt }] }],
           generationConfig,
         }),
       },
@@ -129,7 +127,7 @@ const buildRequest = (provider, key, { model, prompt, system, temperature, maxTo
 
   const url = provider === 'nvidia' ? NVIDIA_URL : GROQ_URL;
   const messages = system ? [{ role: 'system', content: system }, { role: 'user', content: prompt }] : [{ role: 'user', content: prompt }];
-  const body = { model, messages, temperature, stream: true };
+  const body = { model, messages, temperature };
   if (maxTokens) body.max_tokens = maxTokens;
   if (json) body.response_format = { type: 'json_object' };
 
@@ -140,57 +138,15 @@ const buildRequest = (provider, key, { model, prompt, system, temperature, maxTo
       headers: {
         'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
-        'Accept': 'text/event-stream',
       },
       body: JSON.stringify(body),
     },
   };
 };
 
-const readSSE = async (body, provider, onActivity) => {
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let content = '';
-  let reasoning = '';
-
-  for await (const chunk of body) {
-    if (onActivity) onActivity();
-    buffer += decoder.decode(chunk, { stream: true });
-
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data:')) continue;
-      const payload = trimmed.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
-
-      let evt;
-      try {
-        evt = JSON.parse(payload);
-      } catch {
-        continue;
-      }
-
-      if (provider === 'gemini') {
-        content += evt?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      } else {
-        const delta = evt?.choices?.[0]?.delta;
-        if (delta?.content) content += delta.content;
-        if (delta?.reasoning_content) reasoning += delta.reasoning_content;
-      }
-    }
-  }
-
-  return content || reasoning || null;
-};
-
 /**
  * Primary completion call with multi-provider rotation & fallback.
- *
- * Tries all active providers (NVIDIA, Gemini, Groq) and their respective models
- * until a successful response is generated.
+ * Direct non-blocking REST JSON calls (sub-second response time).
  */
 export const generateText = async (prompt, options = {}) => {
   const {
@@ -198,7 +154,7 @@ export const generateText = async (prompt, options = {}) => {
     temperature = 0.4,
     maxTokens = 2048,
     json = false,
-    timeoutMs = 60000,
+    timeoutMs = 6000,
   } = options;
 
   const availableProviders = getAllAvailableProviders();
@@ -211,42 +167,24 @@ export const generateText = async (prompt, options = {}) => {
     const models = getModelsToTry(provider, configuredModel);
 
     for (const model of models) {
-      const controller = new AbortController();
-      let timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      const onActivity = () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-      };
-
       try {
         const { url, init } = buildRequest(provider, key, { model, prompt, system, temperature, maxTokens, json });
-        const response = await fetch(url, { ...init, signal: controller.signal });
+        const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
 
         if (!response.ok) {
           const body = await response.text().catch(() => '');
-          console.warn(`[AI] ${provider} (${model}) HTTP ${response.status}: ${body.slice(0, 180)}`);
+          console.warn(`[AI] ${provider} (${model}) HTTP ${response.status}: ${body.slice(0, 160)}`);
           continue;
         }
 
-        if (!response.body) {
-          const data = await response.json();
-          const text = extractText(provider, data);
-          if (text) {
-            lastUsedProviderInfo = { provider, model };
-            return text;
-          }
-          continue;
-        }
-
-        const text = await readSSE(response.body, provider, onActivity);
+        const data = await response.json();
+        const text = extractText(provider, data);
         if (text) {
           lastUsedProviderInfo = { provider, model };
           return text;
         }
       } catch (err) {
         console.warn(`[AI] ${provider} (${model}) failed: ${err.message}`);
-      } finally {
-        clearTimeout(timeoutId);
       }
     }
   }

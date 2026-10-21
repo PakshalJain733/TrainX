@@ -1,13 +1,39 @@
-import React, { useState } from "react";
-import { FileCheck2, ChevronDown, ChevronUp, Download, CheckCircle, AlertTriangle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { FileCheck2, ChevronDown, ChevronUp, Download, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
-import "../Styles/ST_WeeklyReports.css"
-
-const reportsData = [];
+import { apiFetch } from "../../../utils/api";
+import "../Styles/ST_WeeklyReports.css";
 
 export default function WeeklyReports() {
   const { isModuleActive } = useSystemMaintenance();
-  const [openWeek, setOpenWeek] = useState("week-32");
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openWeek, setOpenWeek] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
+        const res = await apiFetch("/student/weekly-reports");
+        const data = res?.data || (Array.isArray(res) ? res : []);
+        if (isMounted) {
+          setReports(data);
+          if (data && data.length > 0) {
+            setOpenWeek(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch student weekly reports:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchReports();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleWeek = (id) => {
     setOpenWeek((prev) => (prev === id ? null : id));
@@ -20,6 +46,9 @@ export default function WeeklyReports() {
     }
     alert(`Downloading ${reportTitle} dossier summary (PDF)...`);
   };
+
+  const activeMentor = reports[0]?.mentor || "Assigned Faculty Mentor";
+  const activeTrend = reports[0]?.trendStatus || "On Track";
 
   return (
     <div className="weekly-reports-page stack-6">
@@ -44,26 +73,31 @@ export default function WeeklyReports() {
           <span>Current status</span>
         </div>
         <p className="weekly-status-desc">
-          Reviewed by Mentor Ms. R. Kulkarni · Coordinator Prof. A. Deshmukh (ECS / IT)
+          Supervised by Mentor: <strong>{activeMentor}</strong> · Academic Oversight: ECS / Training Cell
         </p>
         <div className="weekly-status-pills">
-          <span className="weekly-track-badge">On Track</span>
+          <span className="weekly-track-badge">{activeTrend}</span>
           <span className="weekly-track-note">
-            No mentor intervention required this week.
+            {activeTrend === "On Track" ? "Progress aligned with target placement readiness." : "Attention recommended on highlighted skill gaps."}
           </span>
         </div>
       </div>
 
       {/* Accordion List */}
       <div className="weekly-reports-list">
-        {reportsData.length === 0 ? (
+        {loading ? (
+          <div style={{ padding: '48px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <Loader2 size={32} className="spinning" style={{ margin: '0 auto 12px auto', color: '#4f46e5', animation: 'spin 1s linear infinite' }} />
+            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Loading weekly performance dossier...</p>
+          </div>
+        ) : reports.length === 0 ? (
           <div className="admin-empty-state-card" style={{ padding: '40px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <FileCheck2 size={36} className="weekly-empty-icon" />
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>No weekly reports available</h3>
             <p style={{ color: '#64748b' }}>Your weekly performance reports will appear here once generated.</p>
           </div>
         ) : (
-          reportsData.map((report) => {
+          reports.map((report) => {
             const isOpen = openWeek === report.id;
             return (
               <div
@@ -150,7 +184,7 @@ export default function WeeklyReports() {
                   <div className="weekly-info-section">
                     <h4 className="weekly-section-title">Skill gaps</h4>
                     <div className="weekly-gaps-tags">
-                      {report.skillGaps.map((gap) => (
+                      {(report.skillGaps || []).map((gap) => (
                         <span key={gap} className="weekly-gap-pill">
                           {gap}
                         </span>
@@ -162,7 +196,7 @@ export default function WeeklyReports() {
                   <div className="weekly-info-section">
                     <h4 className="weekly-section-title">Recommended next steps</h4>
                     <ul className="weekly-steps-list">
-                      {report.nextSteps.map((step, idx) => (
+                      {(report.nextSteps || []).map((step, idx) => (
                         <li key={idx}>{step}</li>
                       ))}
                     </ul>

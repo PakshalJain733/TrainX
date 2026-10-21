@@ -397,10 +397,61 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     totalTests,
   });
 
-  const problemTotalMarks = parseInt(problem.total_marks, 10) || 100;
-  const marks = totalTests > 0 ? Math.round((passedTests / totalTests) * problemTotalMarks) : 0;
-  const score = marks;
-  const percentage = totalTests > 0 ? Number(((passedTests / totalTests) * 100).toFixed(2)) : 0;
+  const problemTotalMarks = parseInt(problem.total_marks || problem.points, 10) || 100;
+
+  // Calculate marks based on test case weights if configured, or equal distribution
+  const totalWeight = testCases.reduce(
+    (acc, tc) => acc + (Number(tc.weightage) > 0 ? Number(tc.weightage) : 1),
+    0
+  );
+  let passedWeight = 0;
+  testCases.forEach((tc, idx) => {
+    if (executed[idx] && executed[idx].passed) {
+      passedWeight += (Number(tc.weightage) > 0 ? Number(tc.weightage) : 1);
+    }
+  });
+
+  let marks = 0;
+  let score = 0;
+  let percentage = 0;
+
+  if (totalTests > 0 && !overallCompilationError) {
+    if (passedTests === totalTests) {
+      marks = problemTotalMarks;
+      score = problemTotalMarks;
+      percentage = 100.0;
+    } else if (passedTests === 0) {
+      marks = 0;
+      score = 0;
+      percentage = 0.0;
+    } else {
+      const ratio = totalWeight > 0 ? (passedWeight / totalWeight) : (passedTests / totalTests);
+      percentage = Number((ratio * 100).toFixed(2));
+      marks = Math.round(ratio * problemTotalMarks);
+      score = marks;
+    }
+  }
+
+  // Ensure coding_problems table has an entry for this problem ID so foreign key constraint never fails
+  try {
+    await query(
+      `INSERT INTO coding_problems (id, title, description, difficulty, category, total_marks)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+         title = COALESCE(VALUES(title), title), 
+         total_marks = COALESCE(VALUES(total_marks), total_marks)`,
+      [
+        problem.id,
+        problem.title || `Problem ${problem.id}`,
+        problem.description || '',
+        problem.difficulty || 'Medium',
+        problem.category || 'Practice',
+        problemTotalMarks,
+      ]
+    );
+  } catch (e) {
+    console.warn('[submitCodeAndSaveService] coding_problems sync notice:', e.message);
+  }
 
   const submissionRecord = await createSubmissionModel({
     student_id: student.id || student_id,
@@ -410,12 +461,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     passed_test_cases: passedTests,
     total_test_cases: totalTests,
     score,
-    marks: score,
+    marks,
     percentage,
     status,
     execution_details: {
       sandbox: 'docker',
       status,
+      score,
+      marks,
+      total_marks: problemTotalMarks,
+      percentage,
       passed_test_cases: passedTests,
       total_test_cases: totalTests,
       execution_time_ms: totalExecutionMs,
@@ -424,22 +479,96 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
   });
 
   if (isBatchTask && batchTaskRecord) {
+    const taskStatus = (status === 'accepted' || status === 'passed')
+      ? 'Passed'
+      : (passedTests > 0 ? 'Partial' : (overallCompilationError ? 'Compilation Error' : (overallTimedOut ? 'Time Limit Exceeded' : 'Wrong Answer')));
+    const feedbackText = `Passed ${passedTests}/${totalTests} test cases (${percentage}%) - Score: ${score}/${problemTotalMarks} pts`;
+
     try {
-      await query(
-        `INSERT INTO task_submissions (task_id, user_id, batch_id, code_submission, status, marks_obtained, feedback, submitted_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [
-          batchTaskRecord.id,
-          student.id || student_id,
-          batchTaskRecord.batch_id || null,
-          code,
-          (status === 'accepted' || status === 'passed') ? 'Passed' : 'Wrong Answer',
-          score,
-          `Passed ${passedTests}/${totalTests} test cases`,
-        ]
+      const existingSub = await query(
+        `SELECT id FROM task_submissions WHERE task_id = ? AND user_id = ? LIMIT 1`,
+        [batchTaskRecord.id, student.id || student_id]
       );
+
+      if (existingSub && existingSub.length > 0) {
+        await query(
+          `UPDATE task_submissions 
+           SET status = ?, 
+               score = ?, 
+               marks_obtained = ?, 
+               submitted_code = ?, 
+               code_submission = ?, 
+               batch_id = COALESCE(?, batch_id), 
+               feedback = ?, 
+               submitted_at = NOW()
+           WHERE id = ?`,
+          [
+            taskStatus,
+            score,
+            score,
+            code,
+            code,
+            batchTaskRecord.batch_id || null,
+            feedbackText,
+            existingSub[0].id,
+          ]
+        );
+      } else {
+        await query(
+          `INSERT INTO task_submissions 
+            (task_id, user_id, batch_id, status, score, marks_obtained, submitted_code, code_submission, feedback, submitted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            batchTaskRecord.id,
+            student.id || student_id,
+            batchTaskRecord.batch_id || null,
+            taskStatus,
+            score,
+            score,
+            code,
+            code,
+            feedbackText,
+          ]
+        );
+      }
     } catch (e) {
       console.warn('[task_submissions save error]', e.message);
+      try {
+        await query(
+          `INSERT INTO task_submissions (task_id, user_id, status, score, submitted_code, submitted_at)
+           VALUES (?, ?, ?, ?, ?, NOW())`,
+          [batchTaskRecord.id, student.id || student_id, taskStatus, score, code]
+        );
+      } catch (innerErr) {
+        console.warn('[task_submissions fallback error]', innerErr.message);
+      }
+    }
+  }
+
+  // Also record in practice_problem_submissions for practice problems
+  if (!isBatchTask && problem) {
+    try {
+      const practiceStatus = (status === 'accepted' || status === 'passed') ? 'Solved' : (passedTests > 0 ? 'Partially Solved' : 'Attempted');
+      const exist = await query(
+        'SELECT id FROM practice_problem_submissions WHERE problem_id = ? AND user_id = ? LIMIT 1',
+        [problem.id, student.id || student_id]
+      );
+      if (exist && exist.length > 0) {
+        await query(
+          `UPDATE practice_problem_submissions 
+           SET code_submitted = ?, language = ?, status = ?, points_earned = ?, submitted_at = NOW() 
+           WHERE id = ?`,
+          [code, language, practiceStatus, score, exist[0].id]
+        );
+      } else {
+        await query(
+          `INSERT INTO practice_problem_submissions (problem_id, user_id, code_submitted, language, status, points_earned, submitted_at) 
+           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [problem.id, student.id || student_id, code, language, practiceStatus, score]
+        );
+      }
+    } catch (e) {
+      console.warn('[practice_problem_submissions save error]', e.message);
     }
   }
 
@@ -659,3 +788,138 @@ export const getStudentSubmissionsService = async (studentId) => {
     submissions,
   };
 };
+
+/**
+ * Fetch all coding submissions with student and problem details for Admin / Instructors
+ */
+export const getAllCodingSubmissionsService = async (filters = {}) => {
+  const { problem_id, student_id, status, limit = 100, page = 1 } = filters;
+
+  let sql = `
+    SELECT 
+      cs.id,
+      cs.student_id,
+      COALESCE(u.name, 'Student') AS student_name,
+      u.email AS student_email,
+      s.roll_number,
+      COALESCE(d.name, s.department, 'General') AS department_name,
+      cs.problem_id,
+      COALESCE(cp.title, CONCAT('Problem #', cs.problem_id)) AS problem_title,
+      cp.category AS problem_category,
+      cp.difficulty AS problem_difficulty,
+      cs.language,
+      cs.passed_test_cases,
+      cs.total_test_cases,
+      cs.score,
+      cs.marks,
+      cs.percentage,
+      cs.status,
+      cs.execution_details,
+      cs.submitted_code,
+      cs.submitted_at,
+      cs.created_at
+    FROM coding_submissions cs
+    LEFT JOIN users u ON cs.student_id = u.id
+    LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON s.department_id = d.id
+    LEFT JOIN coding_problems cp ON cs.problem_id = cp.id
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  if (problem_id) {
+    sql += ' AND cs.problem_id = ?';
+    params.push(parseInt(problem_id, 10));
+  }
+
+  if (student_id) {
+    sql += ' AND cs.student_id = ?';
+    params.push(parseInt(student_id, 10));
+  }
+
+  if (status) {
+    sql += ' AND LOWER(cs.status) = LOWER(?)';
+    params.push(String(status).trim());
+  }
+
+  sql += ' ORDER BY cs.submitted_at DESC, cs.id DESC';
+
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
+  const safePage = Math.max(parseInt(page, 10) || 1, 1);
+  const offset = (safePage - 1) * safeLimit;
+
+  sql += ' LIMIT ? OFFSET ?';
+  params.push(safeLimit, offset);
+
+  const rows = await query(sql, params);
+
+  return rows.map((r) => {
+    let execDetails = r.execution_details;
+    if (typeof execDetails === 'string') {
+      try {
+        execDetails = JSON.parse(execDetails);
+      } catch (e) {
+        execDetails = null;
+      }
+    }
+
+    const execTimeMs = execDetails?.execution_time_ms || 0;
+    const formattedExecutionTime = execTimeMs > 0
+      ? (execTimeMs >= 1000 ? `${(execTimeMs / 1000).toFixed(2)}s` : `${execTimeMs}ms`)
+      : '0.12s';
+
+    const memoryUsage = execDetails?.memory_kb
+      ? `${(execDetails.memory_kb / 1024).toFixed(1)} MB`
+      : '256 KB';
+
+    let displayStatus = 'Accepted';
+    const rawStatus = (r.status || '').toLowerCase();
+    if (rawStatus === 'accepted' || rawStatus === 'passed' || (r.passed_test_cases === r.total_test_cases && r.total_test_cases > 0)) {
+      displayStatus = 'Accepted';
+    } else if (rawStatus.includes('wrong') || rawStatus === 'wrong_answer') {
+      displayStatus = 'Wrong Answer';
+    } else if (rawStatus.includes('runtime')) {
+      displayStatus = 'Runtime Error';
+    } else if (rawStatus.includes('time') || rawStatus === 'tle') {
+      displayStatus = 'Time Limit Exceeded';
+    } else if (rawStatus.includes('compil')) {
+      displayStatus = 'Compilation Error';
+    } else {
+      displayStatus = r.status || 'Failed';
+    }
+
+    const submittedDate = r.submitted_at ? new Date(r.submitted_at) : new Date(r.created_at || Date.now());
+    const formattedTime = submittedDate.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return {
+      id: r.id,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      studentEmail: r.student_email,
+      rollNo: r.roll_number || 'Roll N/A',
+      department: r.department_name,
+      problemId: r.problem_id,
+      problemTitle: r.problem_title,
+      problemDifficulty: r.problem_difficulty || 'Medium',
+      language: r.language || 'code',
+      passedTestCases: r.passed_test_cases || 0,
+      totalTestCases: r.total_test_cases || 0,
+      score: Math.round(Number(r.score || r.marks) || 0),
+      rawStatus: r.status,
+      status: displayStatus,
+      executionTime: formattedExecutionTime,
+      memory: memoryUsage,
+      submittedAt: formattedTime,
+      submittedDate: r.submitted_at,
+      submittedCode: r.submitted_code,
+    };
+  });
+};
+

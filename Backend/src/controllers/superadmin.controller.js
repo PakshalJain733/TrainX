@@ -629,8 +629,11 @@ export const getSuperAdminSupportTickets = async (req, res, next) => {
         LEFT JOIN users u ON st.user_id = u.id
         LEFT JOIN students s ON u.id = s.user_id
         LEFT JOIN users eb ON st.escalated_by = eb.id
-        WHERE (st.category IS NULL OR st.category != 'Access Request')
-          AND (st.subject IS NULL OR st.subject NOT LIKE 'Secure Code Request%')
+        WHERE (st.is_escalated = 1 
+               OR st.status = 'Escalated' 
+               OR st.escalated_to = 'super_admin' 
+               OR u.role IN ('admin', 'COLLEGE_ADMIN', 'college_admin')
+               OR ((st.category IS NULL OR st.category != 'Access Request') AND (st.subject IS NULL OR st.subject NOT LIKE 'Secure Code Request%')))
         ORDER BY st.is_escalated DESC, st.id DESC
       `;
       tickets = await query(sql);

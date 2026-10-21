@@ -22,6 +22,10 @@ import {
   deleteStudyMaterial,
   getMentorNotifications,
   getMentorMenteeInterviews,
+  getMentorSupportTickets,
+  createMentorSupportTicket,
+  updateMentorSupportTicket,
+  escalateMentorSupportTicket,
 } from '../controllers/mentor.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -73,5 +77,11 @@ router.delete('/materials/:id', materialsWrite, deleteStudyMaterial);
 router.delete('/study-materials/:id', materialsWrite, deleteStudyMaterial);
 
 router.get('/notifications', mentorOnly, getMentorNotifications);
+
+// Mentor Support Tickets & Escalation to College Admin
+router.get('/support/tickets', mentorOnly, getMentorSupportTickets);
+router.post('/support/tickets', mentorOnly, createMentorSupportTicket);
+router.put('/support/tickets/:id', mentorOnly, updateMentorSupportTicket);
+router.post('/support/tickets/:id/escalate', mentorOnly, escalateMentorSupportTicket);
 
 export default router;

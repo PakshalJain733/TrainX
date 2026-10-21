@@ -674,12 +674,42 @@ export const upsertWebhookTrainingEnrollment = async (payload) => {
       throw new Error(`Invalid training_code '${training_code}': No training program found matching this Code.`);
     }
   } else {
+    // Check if the response contains selected training title/choice (e.g. from a form field like 'Select Training' or 'Course')
+    const rawPayload = payload.raw_payload || payload || {};
+    const chosenName = 
+      rawPayload.selected_training ||
+      rawPayload.training_name ||
+      rawPayload.course ||
+      rawPayload['Select Training'] ||
+      rawPayload['Select Training Program'] ||
+      rawPayload['Training Name'] ||
+      rawPayload['Choose Training'] ||
+      rawPayload['Training'] ||
+      rawPayload['Course'] ||
+      rawPayload['Track'] ||
+      rawPayload['Program'];
+
+    if (chosenName && typeof chosenName === 'string') {
+      const trimmed = chosenName.trim();
+      const matchRows = await query(
+        `SELECT id FROM training_programs 
+         WHERE LOWER(name) LIKE ? OR LOWER(short_name) LIKE ? OR LOWER(code) LIKE ?
+         ORDER BY id DESC LIMIT 1`,
+        [`%${trimmed.toLowerCase()}%`, `%${trimmed.toLowerCase()}%`, `%${trimmed.toLowerCase()}%`]
+      );
+      if (matchRows && matchRows.length > 0) {
+        training = await getTrainingById(matchRows[0].id);
+      }
+    }
+
     // Backward-compatibility fallback: map to existing C2C program (ID 4 or first C2C)
-    const fallbackRows = await query("SELECT id FROM training_programs WHERE UPPER(code) LIKE '%C2C%' ORDER BY id DESC LIMIT 1");
-    if (fallbackRows && fallbackRows.length > 0) {
-      training = await getTrainingById(fallbackRows[0].id);
-    } else {
-      training = await getTrainingById(4) || (await getAllTrainings())[0];
+    if (!training) {
+      const fallbackRows = await query("SELECT id FROM training_programs WHERE UPPER(code) LIKE '%C2C%' ORDER BY id DESC LIMIT 1");
+      if (fallbackRows && fallbackRows.length > 0) {
+        training = await getTrainingById(fallbackRows[0].id);
+      } else {
+        training = await getTrainingById(4) || (await getAllTrainings())[0];
+      }
     }
   }
 
@@ -865,6 +895,39 @@ export const updateEnrollmentApproval = async (id, newApprovalStatus, adminUserI
 
   const updatedRows = await query('SELECT * FROM c2c_enrollments WHERE id = ?', [id]);
   return updatedRows[0];
+};
+
+export const transferEnrollmentTraining = async (enrollmentId, newTrainingId) => {
+  const training = await getTrainingById(newTrainingId);
+  if (!training) {
+    throw new Error(`Target training program ID ${newTrainingId} not found.`);
+  }
+
+  const enrollmentRows = await query('SELECT * FROM c2c_enrollments WHERE id = ?', [enrollmentId]);
+  if (!enrollmentRows || enrollmentRows.length === 0) {
+    throw new Error(`Enrollment record with ID ${enrollmentId} not found.`);
+  }
+
+  const current = enrollmentRows[0];
+  const totalFee = Number(training.feeAmount !== undefined ? training.feeAmount : (training.fee_amount || 3500.0));
+  const amountPaid = Number(current.amount_paid || 0);
+  const newBalance = Math.max(0, totalFee - amountPaid);
+  const paymentStatus = amountPaid >= totalFee && totalFee > 0 ? 'Completed' : amountPaid > 0 ? 'Part Payment' : 'Pending';
+
+  await query(
+    `UPDATE c2c_enrollments SET
+      training_id = ?,
+      training_code = ?,
+      total_fee = ?,
+      balance = ?,
+      payment_status = ?,
+      updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [training.id, training.code, totalFee, newBalance, paymentStatus, enrollmentId]
+  );
+
+  const updated = await query('SELECT * FROM c2c_enrollments WHERE id = ?', [enrollmentId]);
+  return { enrollment: updated[0], targetTraining: training };
 };
 
 /**

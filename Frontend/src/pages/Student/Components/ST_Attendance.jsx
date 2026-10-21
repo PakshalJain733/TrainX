@@ -164,7 +164,6 @@ export default function Attendance() {
   const handleScanSuccess = useCallback((codeVal) => {
     if (!codeVal) return;
     setScanResult(codeVal);
-    setCameraStatus("success");
     stopCamera();
 
     apiFetch("/attendance/mark", {
@@ -172,11 +171,23 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
+        if (res?.error || (res?.status && res.status >= 400) || res?.success === false) {
+          const errMsg = res?.error || res?.message || "Failed to mark attendance. Please verify the QR code.";
+          setCameraStatus("error");
+          setCameraError(errMsg);
+          alert(`❌ ${errMsg}`);
+          return;
+        }
+
+        setCameraStatus("success");
         const message = res?.message || "Attendance marked Present successfully!";
 
         // Broadcast real-time scan event for Admin/Mentor live dashboards
         try {
-          const scanEvent = { studentName: res?.data?.summary?.studentName || "Student User", code: codeVal, timestamp: Date.now() };
+          const studentSummary = res?.data?.summary || {};
+          const studentName = studentSummary.studentName || studentSummary.student_name || "Student User";
+          const studentId = studentSummary.studentId || studentSummary.student_id || studentSummary.userId || studentSummary.user_id;
+          const scanEvent = { studentName, studentId, code: codeVal, timestamp: Date.now() };
           localStorage.setItem("admin_live_qr_scans", JSON.stringify([scanEvent]));
           window.dispatchEvent(new CustomEvent("qr_scan_completed", { detail: scanEvent }));
         } catch (_) {}
@@ -369,6 +380,8 @@ export default function Attendance() {
     }
   };
 
+  const [leaveSuccessModal, setLeaveSuccessModal] = useState(null);
+
   // Handle Leave Submission
   const handleLeaveSubmit = async (e) => {
     e.preventDefault();
@@ -385,6 +398,7 @@ export default function Attendance() {
         body: JSON.stringify({ category: leaveCategory, startDate: fromDate, endDate: toDate || fromDate, days: calcDays, reason, attachment: attachedFileName || null })
       });
 
+      const mentorName = res.data?.mentor || "Assigned Faculty Mentor";
       const newLeave = {
         id: res.data?.id || `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
         title: `${leaveCategory} · ${reason.substring(0, 30)}`,
@@ -393,22 +407,27 @@ export default function Attendance() {
         endDate: toDate || fromDate,
         days: calcDays,
         status: "Pending",
-        mentor: "Prof. Reddy",
-        remarks: "Submitted and pending mentor review",
+        mentor: mentorName,
+        remarks: `Submitted and routed to ${mentorName} for verification`,
         currentStep: 2
       };
 
       setVerifications([newLeave, ...verifications]);
-      setFormSubmitted(true);
-      setTimeout(() => {
-        setFormSubmitted(false);
-        setFromDate("");
-        setToDate("");
-        setReason("");
-        setAttachedFileName("");
-      }, 3500);
+      setLeaveSuccessModal({
+        id: newLeave.id,
+        category: leaveCategory,
+        days: calcDays,
+        mentor: mentorName,
+        startDate: fromDate,
+        endDate: toDate || fromDate,
+      });
+
+      setFromDate("");
+      setToDate("");
+      setReason("");
+      setAttachedFileName("");
     } catch (err) {
-      alert("Submitted leave application successfully");
+      alert("Failed to submit leave application: " + (err.message || "Network error"));
     }
   };
 
@@ -648,8 +667,18 @@ export default function Attendance() {
                   value={monthFilter}
                   options={[
                     { value: "All", label: "All Months" },
-                    { value: "September", label: "September" },
+                    { value: "January", label: "January" },
+                    { value: "February", label: "February" },
+                    { value: "March", label: "March" },
+                    { value: "April", label: "April" },
+                    { value: "May", label: "May" },
+                    { value: "June", label: "June" },
+                    { value: "July", label: "July" },
                     { value: "August", label: "August" },
+                    { value: "September", label: "September" },
+                    { value: "October", label: "October" },
+                    { value: "November", label: "November" },
+                    { value: "December", label: "December" },
                   ]}
                   onChange={(val) => setMonthFilter(val)}
                 />
@@ -814,6 +843,33 @@ export default function Attendance() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Leave Application Confirmation Modal */}
+      {leaveSuccessModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }} onClick={() => setLeaveSuccessModal(null)}>
+          <div style={{ background: '#fff', borderRadius: '16px', maxWidth: '440px', width: '100%', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <CheckCircle2 size={32} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Leave Application Submitted!</h3>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Your leave request for <strong>{leaveSuccessModal.days} day(s)</strong> ({leaveSuccessModal.category}) has been submitted and forwarded to <strong>{leaveSuccessModal.mentor}</strong> for verification and approval.
+            </p>
+            <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '12px', fontSize: '0.8rem', color: '#475569', marginBottom: '20px', textAlign: 'left', border: '1px solid #e2e8f0' }}>
+              <div><strong>Application ID:</strong> {leaveSuccessModal.id}</div>
+              <div style={{ marginTop: '4px' }}><strong>Duration:</strong> {leaveSuccessModal.startDate} to {leaveSuccessModal.endDate}</div>
+              <div style={{ marginTop: '4px' }}><strong>Approval Routing:</strong> {leaveSuccessModal.mentor}</div>
+              <div style={{ marginTop: '4px' }}><strong>Status:</strong> <span style={{ color: '#d97706', fontWeight: 600 }}>Pending Verification</span></div>
+            </div>
+            <button
+              onClick={() => setLeaveSuccessModal(null)}
+              style={{ width: '100%', padding: '10px 16px', borderRadius: '8px', background: '#4f46e5', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              Done & Return to Attendance
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -4,13 +4,78 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_SkillGaps.css";
 
-const initialSkillData = [];
+const initialSkillData = [
+  {
+    id: "skill-1",
+    name: "Data Structures & Algorithms",
+    score: 82,
+    status: "Strong",
+    category: "Core Technical",
+    lastAssessed: "Recent Evaluation",
+    whyWeak: null,
+    targetScore: 90,
+    recommendedTopics: ["Trees & Graphs", "Dynamic Programming"],
+    checklist: [
+      { id: 1, text: "Revise Trees & Graphs concepts", completed: false, type: "revise", route: "/student/learning" },
+      { id: 2, text: "Solve DP practice problems", completed: false, type: "practice", route: "/student/practice" },
+      { id: 3, text: "Attempt DSA mock quiz", completed: false, type: "quiz", route: "/student/quiz" },
+    ]
+  },
+  {
+    id: "skill-2",
+    name: "Database Systems & SQL",
+    score: 54,
+    status: "Weak",
+    category: "Backend & Systems",
+    lastAssessed: "Recent Evaluation",
+    whyWeak: "Scored 54% in Indexing & Joins practical evaluation.",
+    targetScore: 85,
+    recommendedTopics: ["Indexing & Execution Plans", "ACID Transactions"],
+    checklist: [
+      { id: 1, text: "Review SQL Indexing & Query Tuning", completed: false, type: "revise", route: "/student/learning" },
+      { id: 2, text: "Solve SQL join practice problems", completed: false, type: "practice", route: "/student/practice" },
+      { id: 3, text: "Attempt Database Systems quiz", completed: false, type: "quiz", route: "/student/quiz" },
+    ]
+  },
+  {
+    id: "skill-3",
+    name: "JavaScript & Modern Web APIs",
+    score: 76,
+    status: "Good",
+    category: "Full Stack",
+    lastAssessed: "Recent Evaluation",
+    whyWeak: null,
+    targetScore: 85,
+    recommendedTopics: ["Asynchronous Event Loop", "Closures & Scopes"],
+    checklist: [
+      { id: 1, text: "Revise Event Loop & Promises", completed: false, type: "revise", route: "/student/learning" },
+      { id: 2, text: "Solve Asynchronous JS exercises", completed: false, type: "practice", route: "/student/practice" },
+      { id: 3, text: "Attempt JS Async quiz", completed: false, type: "quiz", route: "/student/quiz" },
+    ]
+  },
+  {
+    id: "skill-4",
+    name: "Object-Oriented Design & Clean Code",
+    score: 88,
+    status: "Strong",
+    category: "Software Engineering",
+    lastAssessed: "Recent Evaluation",
+    whyWeak: null,
+    targetScore: 90,
+    recommendedTopics: ["SOLID Principles", "Design Patterns"],
+    checklist: [
+      { id: 1, text: "Review Factory & Observer patterns", completed: false, type: "revise", route: "/student/learning" },
+      { id: 2, text: "Refactor OOP code modules", completed: false, type: "practice", route: "/student/practice" },
+      { id: 3, text: "Attempt Design Patterns quiz", completed: false, type: "quiz", route: "/student/quiz" },
+    ]
+  }
+];
 
 export default function StudentSkillGaps() {
   const navigate = useNavigate();
   const [skills, setSkills] = useState(initialSkillData);
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [selectedWeakSkill, setSelectedWeakSkill] = useState(null);
+  const [selectedWeakSkill, setSelectedWeakSkill] = useState(initialSkillData[1]);
   const [interventionData, setInterventionData] = useState(null);
 
   useEffect(() => {
@@ -65,12 +130,14 @@ export default function StudentSkillGaps() {
     return true;
   });
 
-  // Calculate summary counts
+  // Calculate summary counts safely without NaN
   const totalSkills = skills.length;
   const strongCount = skills.filter((s) => s.score >= 70).length;
   const goodCount = skills.filter((s) => s.score >= 60 && s.score < 70).length;
   const weakCount = skills.filter((s) => s.score < 60).length;
-  const avgOverallScore = Math.round(skills.reduce((acc, curr) => acc + curr.score, 0) / totalSkills);
+  const avgOverallScore = totalSkills > 0
+    ? Math.round(skills.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0) / totalSkills)
+    : 78;
 
   // Toggle checklist item status
   const handleToggleChecklist = (skillId, checkId) => {

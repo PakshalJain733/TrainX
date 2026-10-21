@@ -84,6 +84,12 @@ async function ensureTables() {
     await safeAlter("ALTER TABLE batches ADD COLUMN date VARCHAR(100) NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN test_cases TEXT NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN language VARCHAR(50) DEFAULT 'Java'");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN batch_id INT NULL");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN code_submission TEXT NULL");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN marks_obtained INT DEFAULT 0");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN feedback TEXT NULL");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN score INT DEFAULT 0");
+    await safeAlter("ALTER TABLE task_submissions ADD COLUMN submitted_code LONGTEXT NULL");
 
     // Ensure all batches have unique persistent join codes
     try {
@@ -471,6 +477,7 @@ export const getBatchTasks = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
     const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
+    const studentId = req.user?.userId || req.user?.id;
 
     let dbTasks = await query(
       `SELECT * FROM batch_tasks WHERE batch_id = ? OR batch_id = ? OR batch_id = '0' ORDER BY id DESC`,
@@ -482,7 +489,68 @@ export const getBatchTasks = async (req, res, next) => {
       dbTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC`);
     }
 
-    const formatted = (dbTasks || []).map(t => parseTaskRecord(t, isStudent));
+    let studentSubmissions = new Map();
+    if (studentId) {
+      try {
+        const subRows = await query(
+          `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score
+           FROM task_submissions 
+           WHERE user_id = ?`,
+          [studentId]
+        );
+        if (Array.isArray(subRows)) {
+          subRows.forEach(s => {
+            studentSubmissions.set(Number(s.task_id), s);
+          });
+        }
+        const cSubRows = await query(
+          `SELECT problem_id as task_id, status, marks as marks_obtained, score
+           FROM coding_submissions
+           WHERE student_id = ?`,
+          [studentId]
+        );
+        if (Array.isArray(cSubRows)) {
+          cSubRows.forEach(s => {
+            const tId = Number(s.task_id);
+            if (!studentSubmissions.has(tId)) {
+              studentSubmissions.set(tId, s);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[getBatchTasks submissions query error]', e.message);
+      }
+    }
+
+    const formatted = (dbTasks || []).map(t => {
+      const parsed = parseTaskRecord(t, isStudent);
+      const sub = studentSubmissions.get(Number(t.id));
+      let taskStatus = 'Pending';
+      let scoreObtained = null;
+      let alreadySubmitted = false;
+
+      if (sub) {
+        alreadySubmitted = true;
+        scoreObtained = sub.marks_obtained ?? sub.score ?? 0;
+        const lower = String(sub.status || '').toLowerCase();
+        if (lower === 'passed' || lower === 'completed' || lower === 'accepted') {
+          taskStatus = 'Completed';
+        } else if (lower === 'partial' || scoreObtained > 0) {
+          taskStatus = 'Partial';
+        } else {
+          taskStatus = 'Submitted';
+        }
+      }
+
+      return {
+        ...parsed,
+        status: taskStatus,
+        alreadySubmitted,
+        scoreObtained,
+        marksObtained: scoreObtained,
+      };
+    });
+
     return sendSuccess(res, 'Batch tasks retrieved', formatted);
   } catch (error) {
     next(error);
@@ -505,9 +573,6 @@ export const getTaskById = async (req, res, next) => {
 
     if (dbTasks && dbTasks.length > 0) {
       targetTask = dbTasks[0];
-    } else {
-      const allTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC LIMIT 1`);
-      if (allTasks && allTasks.length > 0) targetTask = allTasks[0];
     }
 
     if (!targetTask) {
@@ -586,21 +651,24 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // Query students enrolled explicitly via student_batches join table (joined via batch code)
+    // Query students enrolled via student_batches join table or students table
     const enrolledUsers = await query(
-      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, s.roll_number AS rollNo, s.department
-       FROM student_batches sb
-       JOIN users u ON sb.user_id = u.id
+      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, COALESCE(s.roll_number, '') AS rollNo, s.department
+       FROM users u
        LEFT JOIN students s ON u.id = s.user_id
-       WHERE sb.batch_id = ? OR sb.batch_id = ?
+       LEFT JOIN student_batches sb ON sb.user_id = u.id
+       WHERE (sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?)
+         AND u.role = 'student'
        ORDER BY u.name ASC`,
-      [id, cleanId]
+      [id, cleanId, id, cleanId]
     );
 
     const formatted = (enrolledUsers || []).map((s, idx) => ({
       id: s.id,
       user_id: s.id,
-      rollNo: s.rollNo || s.roll_number || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
+      userId: s.id,
+      studentId: s.id,
+      rollNo: s.rollNo || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
       name: s.name || s.full_name || "Student User",
       email: s.email,
       department: s.department || "Computer Engineering",
@@ -768,11 +836,19 @@ export const getTaskSubmissions = async (req, res, next) => {
     }
 
     const rows = await query(
-      `SELECT ts.id, ts.task_id, ts.user_id, ts.batch_id, ts.code_submission, ts.status, ts.marks_obtained, ts.feedback, ts.submitted_at,
+      `SELECT ts.id, ts.task_id, ts.user_id, ts.batch_id, 
+              COALESCE(ts.code_submission, ts.submitted_code) AS code_submission, 
+              ts.status, 
+              COALESCE(ts.marks_obtained, ts.score, 0) AS marks_obtained,
+              COALESCE(ts.score, ts.marks_obtained, 0) AS score,
+              ts.feedback, 
+              ts.submitted_at,
+              COALESCE(bt.points, 100) AS total_marks,
               COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
        FROM task_submissions ts
        JOIN users u ON ts.user_id = u.id
        LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
        WHERE ts.task_id = ?
        ORDER BY ts.submitted_at DESC`,
       [cleanId]
@@ -784,13 +860,19 @@ export const getTaskSubmissions = async (req, res, next) => {
 
     // Fallback: Check coding_submissions table for this problem/task
     const codingRows = await query(
-      `SELECT cs.id, cs.problem_id AS task_id, cs.student_id AS user_id, NULL AS batch_id, cs.submitted_code AS code_submission,
-              IF(cs.status = 'accepted' OR cs.status = 'passed', 'Passed', 'Wrong Answer') AS status,
-              cs.score AS marks_obtained, NULL AS feedback, cs.submitted_at,
+      `SELECT cs.id, cs.problem_id AS task_id, cs.student_id AS user_id, NULL AS batch_id, 
+              cs.submitted_code AS code_submission,
+              IF(cs.status = 'accepted' OR cs.status = 'passed', 'Passed', IF(cs.status = 'partial', 'Partial', 'Wrong Answer')) AS status,
+              cs.marks AS marks_obtained,
+              cs.score AS score,
+              CONCAT('Passed ', cs.passed_test_cases, '/', cs.total_test_cases, ' test cases (', cs.percentage, '%)') AS feedback,
+              cs.submitted_at,
+              COALESCE(bt.points, 100) AS total_marks,
               COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
        FROM coding_submissions cs
        JOIN users u ON cs.student_id = u.id
        LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN batch_tasks bt ON cs.problem_id = bt.id
        WHERE cs.problem_id = ?
        ORDER BY cs.submitted_at DESC`,
       [cleanId]

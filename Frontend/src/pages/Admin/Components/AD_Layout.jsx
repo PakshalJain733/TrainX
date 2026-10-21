@@ -263,7 +263,17 @@ export default function AdminLayout() {
       apiFetch("/admin/broadcast")
         .then((res) => {
           const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-          const serverItems = rawItems.map((b) => ({
+          const serverItems = rawItems
+            .filter((b) => {
+              const role = String(b.sender_role || "").toLowerCase();
+              const creator = String(b.created_by_name || "").toLowerCase();
+              // Do not notify admin of announcements that admin himself created
+              if (role.includes("admin") || creator.includes("admin")) {
+                return false;
+              }
+              return true;
+            })
+            .map((b) => ({
             id: b.id || `notif-${Math.random()}`,
             title: b.title || "Announcement",
             desc: b.message || b.desc || b.description || "",

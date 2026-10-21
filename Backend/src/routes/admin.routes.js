@@ -12,6 +12,7 @@ import {
   deleteUserAdmin,
   getAdminPracticeProblems,
   createAdminPracticeProblem,
+  updateAdminPracticeProblem,
   deleteAdminPracticeProblem,
   generateAIPracticeProblemController,
   getAdminProfile,
@@ -27,10 +28,12 @@ import {
   getAdminSupportTickets,
   updateAdminSupportTicket,
   escalateSupportTicketToSuperAdmin,
+  createAdminSupportTicket,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { getAllCodingSubmissionsAdmin } from '../controllers/codingSubmission.controller.js';
 
 const router = Router();
 
@@ -57,8 +60,10 @@ router.put('/profile', updateAdminProfile);
 // Coding Tasks / Practice Problems
 router.get('/practice-problems', getAdminPracticeProblems);
 router.post('/practice-problems', createAdminPracticeProblem);
+router.put('/practice-problems/:id', updateAdminPracticeProblem);
 router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
+router.get('/practice-problems/submissions', getAllCodingSubmissionsAdmin);
 
 // Broadcast Notifications Center
 router.get('/broadcast', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getAdminBroadcasts);
@@ -77,6 +82,7 @@ router.get('/c2c/enrollments', getAdminC2CEnrollments);
 
 // Support Ticket Management & Escalation
 router.get('/support/tickets', getAdminSupportTickets);
+router.post('/support/tickets', createAdminSupportTicket);
 router.put('/support/tickets/:id', updateAdminSupportTicket);
 router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
 

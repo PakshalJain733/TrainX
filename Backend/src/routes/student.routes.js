@@ -14,6 +14,7 @@ import {
   getStudentTrainingEnrollment,
   getSupportTickets,
   createSupportTicket,
+  getStudentWeeklyReports,
 } from '../controllers/student.controller.js';
 import { getRoadmapData, generateRoadmap } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
@@ -45,6 +46,7 @@ router.post('/attendance/leave', applyStudentLeave);
 router.get('/notifications', getStudentNotifications);
 router.get('/performance', getStudentPerformance);
 router.get('/training-enrollment', getStudentTrainingEnrollment);
+router.get('/weekly-reports', getStudentWeeklyReports);
 router.get('/support/tickets', getSupportTickets);
 router.post('/support/tickets', createSupportTicket);
 

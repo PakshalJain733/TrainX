@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Trophy, Flame, Medal, Users, RefreshCw, Filter, BookOpen, Brain } from "lucide-react";
+import { Trophy, Medal, Users, RefreshCw, BookOpen, Brain, Code, CheckCircle, Clock } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { collegeAPI, departmentAPI } from "../../../services/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
@@ -11,7 +11,7 @@ const getRankClass = (r) => r === 1 ? "admin-rank-1" : r === 2 ? "admin-rank-2" 
 
 export default function AdminLeaderboard() {
   const [activeTab, setActiveTab] = useState("moduleWise"); // 'moduleWise' | 'department'
-  const [moduleFilter, setModuleFilter] = useState("all"); // 'all' | 'quiz' | 'interview' | 'roadmap'
+  const [moduleFilter, setModuleFilter] = useState("all"); // 'all' | 'quiz' | 'coding' | 'tasks' | 'interview'
   const [data, setData] = useState({ overall: [], department: [] });
   const [loading, setLoading] = useState(true);
 
@@ -74,22 +74,67 @@ export default function AdminLeaderboard() {
       .finally(() => setLoading(false));
   };
 
-  // Process overall list sorting based on module filter
+  // Process overall list sorting based on module filter and time tie-breaker
   let currentList = [];
   if (activeTab === "moduleWise") {
     const rawList = [...(data.overall || [])];
     if (moduleFilter === "quiz") {
-      rawList.sort((a, b) => (b.quiz_score || 0) - (a.quiz_score || 0));
+      rawList.sort((a, b) => {
+        const scoreDiff = (b.quiz_points || 0) - (a.quiz_points || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const aTime = Number(a.quiz_time_seconds) || 0;
+        const bTime = Number(b.quiz_time_seconds) || 0;
+        if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+        return (b.quiz_score || 0) - (a.quiz_score || 0);
+      });
+    } else if (moduleFilter === "coding") {
+      rawList.sort((a, b) => {
+        const scoreDiff = (b.coding_points || 0) - (a.coding_points || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const aTime = Number(a.coding_time_seconds) || 0;
+        const bTime = Number(b.coding_time_seconds) || 0;
+        if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+        return (b.problems_solved || 0) - (a.problems_solved || 0);
+      });
+    } else if (moduleFilter === "tasks") {
+      rawList.sort((a, b) => {
+        const scoreDiff = (b.task_points || 0) - (a.task_points || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const aTime = Number(a.task_time_seconds) || 0;
+        const bTime = Number(b.task_time_seconds) || 0;
+        if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+        return (b.tasks_completed || 0) - (a.tasks_completed || 0);
+      });
     } else if (moduleFilter === "interview") {
-      rawList.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0));
-    } else if (moduleFilter === "roadmap") {
-      rawList.sort((a, b) => (b.coding_score || 0) - (a.coding_score || 0));
+      rawList.sort((a, b) => {
+        const diff = (b.interview_score || 0) - (a.interview_score || 0);
+        if (diff !== 0) return diff;
+        return (b.interviews_count || 0) - (a.interviews_count || 0);
+      });
     } else {
-      rawList.sort((a, b) => (b.score || b.overall_score || 0) - (a.score || a.overall_score || 0));
+      // all activities
+      rawList.sort((a, b) => {
+        const aScore = a.total_points !== undefined ? a.total_points : (a.score || 0);
+        const bScore = b.total_points !== undefined ? b.total_points : (b.score || 0);
+        if (bScore !== aScore) return bScore - aScore;
+        const aTime = Number(a.total_time_seconds) || 0;
+        const bTime = Number(b.total_time_seconds) || 0;
+        if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+        return (b.score || 0) - (a.score || 0);
+      });
     }
     currentList = rawList.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
   } else if (activeTab === "department") {
     let deptList = [...(data.department || [])];
+    deptList.sort((a, b) => {
+      const aScore = a.total_points !== undefined ? a.total_points : (a.score || 0);
+      const bScore = b.total_points !== undefined ? b.total_points : (b.score || 0);
+      if (bScore !== aScore) return bScore - aScore;
+      const aTime = Number(a.total_time_seconds) || 0;
+      const bTime = Number(b.total_time_seconds) || 0;
+      if (aTime > 0 && bTime > 0 && aTime !== bTime) return aTime - bTime;
+      return 0;
+    });
     currentList = deptList.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
   }
 
@@ -103,7 +148,7 @@ export default function AdminLeaderboard() {
               <span>Leaderboard & Rankings</span>
             </h2>
             <p className="ui-section-desc">
-              Campus-wide student module standings, department level performance, and milestone rankings.
+              Campus-wide student standings, tracking real performance points across Quizzes, Practice Coding, and Coursework Tasks with solve duration.
             </p>
           </div>
           <div className="ui-section-action">
@@ -151,32 +196,38 @@ export default function AdminLeaderboard() {
         </div>
       )}
 
-      {/* Module Wise Sub-Tabs (Clean text, no emojis) */}
+      {/* Module Wise Sub-Tabs */}
       {activeTab === 'moduleWise' && (
         <div className="admin-lb-metric-pills">
           <button
             onClick={() => setModuleFilter('all')}
             className={`admin-metric-pill ${moduleFilter === 'all' ? 'active' : ''}`}
           >
-            All
+            All Activities
           </button>
           <button
             onClick={() => setModuleFilter('quiz')}
             className={`admin-metric-pill ${moduleFilter === 'quiz' ? 'active' : ''}`}
           >
-            Quiz
+            Quiz Assessment
+          </button>
+          <button
+            onClick={() => setModuleFilter('coding')}
+            className={`admin-metric-pill ${moduleFilter === 'coding' ? 'active' : ''}`}
+          >
+            Practice Coding
+          </button>
+          <button
+            onClick={() => setModuleFilter('tasks')}
+            className={`admin-metric-pill ${moduleFilter === 'tasks' ? 'active' : ''}`}
+          >
+            Coursework Tasks
           </button>
           <button
             onClick={() => setModuleFilter('interview')}
             className={`admin-metric-pill ${moduleFilter === 'interview' ? 'active' : ''}`}
           >
-            Interview
-          </button>
-          <button
-            onClick={() => setModuleFilter('roadmap')}
-            className={`admin-metric-pill ${moduleFilter === 'roadmap' ? 'active' : ''}`}
-          >
-            Roadmap
+            AI Interview
           </button>
         </div>
       )}
@@ -188,18 +239,20 @@ export default function AdminLeaderboard() {
           </div>
           <div>
             <CardTitle>
-              {activeTab === 'moduleWise' && moduleFilter === 'all' && 'Top Students (Overall Standings)'}
-              {activeTab === 'moduleWise' && moduleFilter === 'quiz' && 'Academic & Assessment Quiz Leaderboard'}
-              {activeTab === 'moduleWise' && moduleFilter === 'interview' && 'AI Mock Interview Leaderboard'}
-              {activeTab === 'moduleWise' && moduleFilter === 'roadmap' && 'AI Roadmap & Coding Leaderboard'}
+              {activeTab === 'moduleWise' && moduleFilter === 'all' && 'Campus-Wide Student Standings (All Activities)'}
+              {activeTab === 'moduleWise' && moduleFilter === 'quiz' && 'Academic & Quiz Assessment Leaderboard'}
+              {activeTab === 'moduleWise' && moduleFilter === 'coding' && 'Practice Coding Problem Leaderboard'}
+              {activeTab === 'moduleWise' && moduleFilter === 'tasks' && 'Coursework Task Submissions Leaderboard'}
+              {activeTab === 'moduleWise' && moduleFilter === 'interview' && 'AI Mock Interview Performance'}
               {activeTab === 'department' && 'Department Rankings & Standings'}
             </CardTitle>
             <CardDescription>
-              {activeTab === 'moduleWise' && moduleFilter === 'all' && 'Ranked across quiz assessments, AI interviews, roadmap progress, and attendance.'}
-              {activeTab === 'moduleWise' && moduleFilter === 'quiz' && 'Ranked by academic quiz scores, quiz accuracy, and completed tests.'}
+              {activeTab === 'moduleWise' && moduleFilter === 'all' && 'Ranked by true student progress points earned from quizzes, coding problems, and coursework tasks, with total solve duration as tie-breaker.'}
+              {activeTab === 'moduleWise' && moduleFilter === 'quiz' && 'Ranked by Quiz Points earned and Quiz Accuracy, with Quiz Solve Time as tie-breaker (faster completion ranks higher).'}
+              {activeTab === 'moduleWise' && moduleFilter === 'coding' && 'Ranked by Practice Coding Points and Problems Solved, with Execution & Solve Time as tie-breaker.'}
+              {activeTab === 'moduleWise' && moduleFilter === 'tasks' && 'Ranked by Coursework Task Points and Completed Tasks, with Completion Duration as tie-breaker.'}
               {activeTab === 'moduleWise' && moduleFilter === 'interview' && 'Ranked by AI mock technical and HR interview performance ratings.'}
-              {activeTab === 'moduleWise' && moduleFilter === 'roadmap' && 'Ranked by roadmap milestones achieved, coding problems solved, and active streak.'}
-              {activeTab === 'department' && 'Ranked by department level performance and composite student scores.'}
+              {activeTab === 'department' && 'Ranked by department-level performance, points earned, and overall speed.'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -215,7 +268,7 @@ export default function AdminLeaderboard() {
                 <Trophy size={32} />
               </div>
               <p className="admin-empty-state-title">No leaderboard entries found for this selection</p>
-              <p className="admin-empty-state-sub">Rankings will update dynamically as students in this batch complete quizzes, coding challenges, or AI mock interviews.</p>
+              <p className="admin-empty-state-sub">Rankings will update dynamically as students in this batch complete quizzes, coding challenges, or coursework tasks.</p>
             </div>
           ) : (
             <>
@@ -223,11 +276,11 @@ export default function AdminLeaderboard() {
                 <div className="admin-lb-grid-header">
                   <div className="col-rank">Rank</div>
                   <div className="col-student">Student</div>
-                  <div className="col-metric">Quiz</div>
-                  <div className="col-metric">AI Interview</div>
-                  <div className="col-metric">Roadmap</div>
-                  <div className="col-metric">Attendance</div>
-                  <div className="col-score">Composite XP</div>
+                  <div className="col-metric">Quiz Points</div>
+                  <div className="col-metric">Coding Points</div>
+                  <div className="col-metric">Task Points</div>
+                  <div className="col-metric">Total Time Taken</div>
+                  <div className="col-score">Total Points</div>
                 </div>
               )}
 
@@ -237,8 +290,31 @@ export default function AdminLeaderboard() {
                   <div className="col-student">Student</div>
                   <div className="col-metric">Department</div>
                   <div className="col-metric">Quizzes Taken</div>
-                  <div className="col-metric">Quiz Score</div>
-                  <div className="col-score">Quiz XP</div>
+                  <div className="col-metric">Avg Score</div>
+                  <div className="col-metric">Time Taken</div>
+                  <div className="col-score">Quiz Points</div>
+                </div>
+              )}
+
+              {activeTab === 'moduleWise' && moduleFilter === 'coding' && (
+                <div className="admin-lb-grid-header">
+                  <div className="col-rank">Rank</div>
+                  <div className="col-student">Student</div>
+                  <div className="col-metric">Department</div>
+                  <div className="col-metric">Problems Solved</div>
+                  <div className="col-metric">Solve / Run Time</div>
+                  <div className="col-score">Coding Points</div>
+                </div>
+              )}
+
+              {activeTab === 'moduleWise' && moduleFilter === 'tasks' && (
+                <div className="admin-lb-grid-header">
+                  <div className="col-rank">Rank</div>
+                  <div className="col-student">Student</div>
+                  <div className="col-metric">Department</div>
+                  <div className="col-metric">Tasks Completed</div>
+                  <div className="col-metric">Time Taken</div>
+                  <div className="col-score">Task Points</div>
                 </div>
               )}
 
@@ -253,24 +329,14 @@ export default function AdminLeaderboard() {
                 </div>
               )}
 
-              {activeTab === 'moduleWise' && moduleFilter === 'roadmap' && (
-                <div className="admin-lb-grid-header">
-                  <div className="col-rank">Rank</div>
-                  <div className="col-student">Student</div>
-                  <div className="col-metric">Department</div>
-                  <div className="col-metric">Milestones</div>
-                  <div className="col-metric">Streak</div>
-                  <div className="col-score">Coding XP</div>
-                </div>
-              )}
-
               {activeTab === 'department' && (
                 <div className="admin-lb-grid-header">
                   <div className="col-rank">Rank</div>
                   <div className="col-student">Student</div>
                   <div className="col-metric">Department</div>
                   <div className="col-metric">College</div>
-                  <div className="col-score">Score</div>
+                  <div className="col-metric">Total Time</div>
+                  <div className="col-score">Total Points</div>
                 </div>
               )}
 
@@ -287,24 +353,27 @@ export default function AdminLeaderboard() {
                         <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
                         <div className="lb-info">
                           <span className="lb-name">{s.name}</span>
-                          <span className="lb-sub">{s.department || s.college || 'Student'}</span>
+                          <span className="lb-sub">{[s.roll_number, s.department || s.college].filter(Boolean).join(' • ') || 'Student'}</span>
                         </div>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-blue">{s.quiz_score || 0}%</span>
+                        <span className="lb-metric-badge badge-blue">{s.quiz_points || 0} pts</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-purple">{s.interview_score || 0}%</span>
+                        <span className="lb-metric-badge badge-emerald">{s.coding_points || 0} pts</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-emerald">{s.coding_score || 0}%</span>
+                        <span className="lb-metric-badge badge-purple">{s.task_points || 0} pts</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-amber">{s.attendance_score || 0}%</span>
+                        <span className="lb-metric-badge badge-time">
+                          <Clock size={12} style={{ marginRight: 3 }} />
+                          {s.total_time_formatted || '0s'}
+                        </span>
                       </div>
                       <div className="col-score">
                         <span className="lb-xp-clean-num">
-                          {s.score !== undefined ? s.score : s.overall_score || 0} pts
+                          {s.total_points !== undefined ? s.total_points : (s.score || 0)} pts
                         </span>
                       </div>
                     </div>
@@ -321,21 +390,95 @@ export default function AdminLeaderboard() {
                         <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
                         <div className="lb-info">
                           <span className="lb-name">{s.name}</span>
-                          <span className="lb-sub">{s.department || 'Computer Science'}</span>
+                          <span className="lb-sub">{s.roll_number || 'Student'}</span>
                         </div>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-dept-tag">{s.department || 'CS Dept'}</span>
+                        <span className="lb-dept-tag">{s.department || 'General'}</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-students-count">{s.quizzes || 12} Quizzes</span>
+                        <span className="lb-students-count">{s.quizzes_taken || 0} Quizzes</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-blue">{s.quiz_score || 90}% Avg</span>
+                        <span className="lb-metric-badge badge-blue">{s.quiz_score || 0}% Avg</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-time">
+                          <Clock size={12} style={{ marginRight: 3 }} />
+                          {s.quiz_time_formatted || '0s'}
+                        </span>
                       </div>
                       <div className="col-score">
                         <span className="lb-xp-clean-num">
-                          {(s.quiz_score || 90) * 10} pts
+                          {s.quiz_points || 0} pts
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (activeTab === 'moduleWise' && moduleFilter === 'coding') {
+                  return (
+                    <div key={s.id || idx} className="lb-grid-row">
+                      <div className="col-rank">
+                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
+                      </div>
+                      <div className="col-student">
+                        <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
+                        <div className="lb-info">
+                          <span className="lb-name">{s.name}</span>
+                          <span className="lb-sub">{s.roll_number || 'Student'}</span>
+                        </div>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-dept-tag">{s.department || 'General'}</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-emerald">{s.problems_solved || 0} Solved</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-time">
+                          <Clock size={12} style={{ marginRight: 3 }} />
+                          {s.coding_time_formatted || '0s'}
+                        </span>
+                      </div>
+                      <div className="col-score">
+                        <span className="lb-xp-clean-num">
+                          {s.coding_points || 0} pts
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (activeTab === 'moduleWise' && moduleFilter === 'tasks') {
+                  return (
+                    <div key={s.id || idx} className="lb-grid-row">
+                      <div className="col-rank">
+                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
+                      </div>
+                      <div className="col-student">
+                        <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
+                        <div className="lb-info">
+                          <span className="lb-name">{s.name}</span>
+                          <span className="lb-sub">{s.roll_number || 'Student'}</span>
+                        </div>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-dept-tag">{s.department || 'General'}</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-purple">{s.tasks_completed || 0} Tasks</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-time">
+                          <Clock size={12} style={{ marginRight: 3 }} />
+                          {s.task_time_formatted || '0s'}
+                        </span>
+                      </div>
+                      <div className="col-score">
+                        <span className="lb-xp-clean-num">
+                          {s.task_points || 0} pts
                         </span>
                       </div>
                     </div>
@@ -352,52 +495,21 @@ export default function AdminLeaderboard() {
                         <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
                         <div className="lb-info">
                           <span className="lb-name">{s.name}</span>
-                          <span className="lb-sub">{s.department || 'Computer Science'}</span>
+                          <span className="lb-sub">{s.roll_number || 'Student'}</span>
                         </div>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-dept-tag">{s.department || 'CS Dept'}</span>
+                        <span className="lb-dept-tag">{s.department || 'General'}</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-students-count">{s.interviews || 6} Interviews</span>
+                        <span className="lb-students-count">{s.interviews_count || 0} Sessions</span>
                       </div>
                       <div className="col-metric">
-                        <span className="lb-metric-badge badge-purple">{s.interview_score || 88}% AI Score</span>
+                        <span className="lb-metric-badge badge-purple">{s.interview_score || 0}% AI Score</span>
                       </div>
                       <div className="col-score">
                         <span className="lb-xp-clean-num">
-                          {(s.interview_score || 88) * 10} pts
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (activeTab === 'moduleWise' && moduleFilter === 'roadmap') {
-                  return (
-                    <div key={s.id || idx} className="lb-grid-row">
-                      <div className="col-rank">
-                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
-                      </div>
-                      <div className="col-student">
-                        <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
-                        <div className="lb-info">
-                          <span className="lb-name">{s.name}</span>
-                          <span className="lb-sub">{s.department || 'Computer Science'}</span>
-                        </div>
-                      </div>
-                      <div className="col-metric">
-                        <span className="lb-dept-tag">{s.department || 'CS Dept'}</span>
-                      </div>
-                      <div className="col-metric">
-                        <span className="lb-students-count">{s.milestones || 10} Milestones</span>
-                      </div>
-                      <div className="col-metric">
-                        <span className="lb-metric-badge badge-emerald">{s.streak || 14}d Streak</span>
-                      </div>
-                      <div className="col-score">
-                        <span className="lb-xp-clean-num">
-                          {(s.coding_score || 92) * 10} pts
+                          {(s.interview_score || 0) * 10} pts
                         </span>
                       </div>
                     </div>
@@ -423,9 +535,15 @@ export default function AdminLeaderboard() {
                       <div className="col-metric">
                         <span className="lb-college-tag">{s.college || 'College'}</span>
                       </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-time">
+                          <Clock size={12} style={{ marginRight: 3 }} />
+                          {s.total_time_formatted || '0s'}
+                        </span>
+                      </div>
                       <div className="col-score">
                         <span className="lb-xp-clean-num">
-                          {s.score || s.overall_score || 0} pts
+                          {s.total_points !== undefined ? s.total_points : (s.score || 0)} pts
                         </span>
                       </div>
                     </div>

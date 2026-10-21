@@ -550,6 +550,7 @@ export default function AdminQuizzes() {
 
   // Publish only the approved questions from verification preview
   const handlePublishVerifiedQuiz = async () => {
+    if (isPublishing) return;
     const toPublish = verifiedQuestions
       .filter(q => q.verified !== false || q._forceInclude)
       .map(q => ({
@@ -583,6 +584,7 @@ export default function AdminQuizzes() {
   // Submit Quiz Creation → API
   const handleCreateQuizSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (isGenerating) return;
     if (!title.trim()) { alert("Please enter a Quiz Title."); return; }
 
     if (mode === "ai") {
@@ -590,8 +592,12 @@ export default function AdminQuizzes() {
       setGeneratingPhase("generating");
       try {
         const aiQs = await fetchLiveAIQuestions(title, numQuestions);
-        setGeneratingPhase("verifying");
-        const verified = await verifyQuestionsWithAI(aiQs, title);
+        const alreadyVerified = Array.isArray(aiQs) && aiQs.length > 0 && aiQs[0].verified !== undefined;
+        let verified = aiQs;
+        if (!alreadyVerified) {
+          setGeneratingPhase("verifying");
+          verified = await verifyQuestionsWithAI(aiQs, title);
+        }
         setVerifiedQuestions(verified);
         setShowVerifyModal(true);
         setShowForm(false);
