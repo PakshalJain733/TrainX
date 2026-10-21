@@ -23,6 +23,14 @@ export default function AdminHelp() {
   const [escalationReason, setEscalationReason] = useState("");
   const [escalating, setEscalating] = useState(false);
 
+  // Create Ticket Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [newSubject, setNewSubject] = useState("");
+  const [newCategory, setNewCategory] = useState("Software Bug");
+  const [newPriority, setNewPriority] = useState("High");
+  const [newDescription, setNewDescription] = useState("");
+  const [creatingTicket, setCreatingTicket] = useState(false);
+
   const fetchTickets = async () => {
     setLoading(true);
     try {
@@ -97,6 +105,33 @@ export default function AdminHelp() {
     }
   };
 
+  const handleCreateTicketSubmit = async (e) => {
+    e.preventDefault();
+    if (!newSubject.trim()) return;
+    setCreatingTicket(true);
+    try {
+      const res = await apiFetch('/admin/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          subject: newSubject.trim(),
+          category: newCategory,
+          priority: newPriority,
+          description: newDescription.trim(),
+        })
+      });
+      if (res && res.success) {
+        setCreateModalOpen(false);
+        setNewSubject("");
+        setNewDescription("");
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error('[AD_Help createTicket error]', err);
+    } finally {
+      setCreatingTicket(false);
+    }
+  };
+
   const filteredTickets = tickets.filter(t => {
     const matchesSearch =
       (t.title || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -125,13 +160,20 @@ export default function AdminHelp() {
               Review, manage, and resolve tickets submitted by students, mentors, and department coordinators. Forward unresolvable issues directly to Super Admin.
             </p>
           </div>
-          <div className="ui-section-action">
+          <div className="ui-section-action" style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <div className="help-stats">
               <span className="help-stat-badge help-stat-open">{openCount} Open</span>
               <span className="help-stat-badge help-stat-inprogress">{inProgressCount} In Progress</span>
               <span className="help-stat-badge" style={{ background: '#ffedd5', color: '#c2410c' }}>{escalatedCount} Escalated</span>
               <span className="help-stat-badge help-stat-resolved">{resolvedCount} Resolved</span>
             </div>
+            <button
+              className="admin-btn-primary"
+              style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => setCreateModalOpen(true)}
+            >
+              <Send size={14} /> Raise Ticket to Super Admin
+            </button>
           </div>
         </div>
       </div>
@@ -389,6 +431,103 @@ export default function AdminHelp() {
                   style={{ background: "#ea580c" }}
                 >
                   <Send size={15} /> {escalating ? "Forwarding..." : "Send to Super Admin"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {/* Create Ticket to Super Admin Modal */}
+      {createModalOpen && (
+        <div className="admin-modal-backdrop" onClick={() => setCreateModalOpen(false)}>
+          <div className="admin-modal-card" style={{ maxWidth: "550px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header" style={{ background: "#2563eb" }}>
+              <div>
+                <span className="admin-modal-badge" style={{ background: "rgba(255,255,255,0.2)", color: "#fff" }}>
+                  Super Admin Desk
+                </span>
+                <h3 className="admin-modal-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Send size={18} /> Raise Support Ticket to Super Admin
+                </h3>
+              </div>
+              <button className="admin-modal-close" onClick={() => setCreateModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTicketSubmit}>
+              <div className="admin-modal-body">
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Subject / Issue Title *</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    placeholder="Brief summary of the issue..."
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Category</label>
+                    <select
+                      className="admin-form-select"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                    >
+                      <option value="Software Bug">Software Bug</option>
+                      <option value="Access Request">Access Request</option>
+                      <option value="Feature Request">Feature Request</option>
+                      <option value="Billing / Quota">Billing / Quota</option>
+                      <option value="System Security">System Security</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div className="admin-form-group">
+                    <label className="admin-form-label">Priority</label>
+                    <select
+                      className="admin-form-select"
+                      value={newPriority}
+                      onChange={(e) => setNewPriority(e.target.value)}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Normal">Normal</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Description & Steps to Reproduce</label>
+                  <textarea
+                    className="admin-form-textarea"
+                    rows={4}
+                    placeholder="Provide full details, error messages, or context for the Super Admin..."
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="admin-modal-footer">
+                <button
+                  type="button"
+                  className="admin-btn-secondary"
+                  onClick={() => setCreateModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="admin-btn-primary"
+                  disabled={creatingTicket}
+                  style={{ background: "#2563eb" }}
+                >
+                  <Send size={15} /> {creatingTicket ? "Submitting..." : "Submit to Super Admin"}
                 </button>
               </div>
             </form>

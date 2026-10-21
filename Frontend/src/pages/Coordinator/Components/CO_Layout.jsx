@@ -8,9 +8,10 @@ import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
+import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import "../Styles/CO_Layout.css";
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("all");
@@ -185,7 +186,8 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
-                  setExpandedId(isExpanded ? null : n.id);
+                  if (onClose) onClose();
+                  if (onSelectNotification) onSelectNotification(n);
                 }}
               >
                 {getIcon(n)}
@@ -260,29 +262,43 @@ export default function CoordinatorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
+  const [selectedNotifModal, setSelectedNotifModal] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    apiFetch("/coordinator/notifications")
-      .then((res) => {
-        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const serverItems = rawItems.map((b) => ({
-          id: b.id || `notif-${Math.random()}`,
-          title: b.title || "Announcement",
-          desc: b.message || b.desc || b.description || "",
-          message: b.message || b.desc || "",
-          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-          unread: b.unread !== undefined ? Boolean(b.unread) : true,
-          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-          target: b.target || "All Batches",
-          priority: b.priority || "General Notice",
-          created_by_name: b.created_by_name || "Admin",
-        }));
-        setNotifications(serverItems);
-      })
-      .catch(() => { });
+    const loadCoordinatorNotifs = () => {
+      apiFetch("/coordinator/notifications")
+        .then((res) => {
+          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          const serverItems = rawItems.map((b) => ({
+            id: b.id || `notif-${Math.random()}`,
+            title: b.title || "Announcement",
+            desc: b.message || b.desc || b.description || "",
+            message: b.message || b.desc || "",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
+            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+            target: b.target || "All Batches",
+            priority: b.priority || "General Notice",
+            created_by_name: b.created_by_name || "Admin",
+          }));
+          setNotifications(serverItems);
+        })
+        .catch(() => { });
+    };
+
+    loadCoordinatorNotifs();
+    const interval = setInterval(loadCoordinatorNotifs, 8000);
+    window.addEventListener("portal_broadcast_updated", loadCoordinatorNotifs);
+    window.addEventListener("new_broadcast_notification", loadCoordinatorNotifs);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("portal_broadcast_updated", loadCoordinatorNotifs);
+      window.removeEventListener("new_broadcast_notification", loadCoordinatorNotifs);
+    };
   }, []);
 
   const headerRightRef = useRef(null);
@@ -437,6 +453,7 @@ export default function CoordinatorLayout() {
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
+                      onSelectNotification={(n) => setSelectedNotifModal(n)}
                     />
                   )}
                 </div>
@@ -529,6 +546,13 @@ export default function CoordinatorLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+      />
+      <NotificationDetailModal
+        notification={selectedNotifModal}
+        onClose={() => setSelectedNotifModal(null)}
+        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
+        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onNavigate={(path) => navigate(path)}
       />
       <BroadcastToast />
     </div>

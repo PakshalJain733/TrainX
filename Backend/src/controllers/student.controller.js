@@ -38,22 +38,42 @@ export const getStudentData = async (req, res, next) => {
       });
     }
 
-    const formatted = students.map((s) => ({
-      id: s.id,
-      user_id: s.id,
-      name: s.name,
-      email: s.email,
-      rollNo: s.roll_number || s.rollNo || `CS-${s.id}`,
-      roll_number: s.roll_number || s.rollNo || `CS-${s.id}`,
-      department: s.department || 'Computer Science & Engineering',
-      department_id: s.department_id || 1,
-      batch: s.batch_name || 'BE-CS-2026-A',
-      year: s.year || 'TE',
-      cgpa: s.cgpa || '8.5',
-      riskStatus: s.cgpa < 6 ? 'High Risk' : s.cgpa < 7.5 ? 'Moderate' : 'Good',
-      attendancePct: 92,
-      placementStatus: 'Eligible',
-    }));
+    // Fetch real attendance rates per student
+    let attendanceMap = {};
+    try {
+      const attStats = await query(
+        "SELECT user_id, COUNT(*) as total, SUM(CASE WHEN LOWER(status) = 'present' THEN 1 ELSE 0 END) as present FROM attendance GROUP BY user_id"
+      );
+      if (Array.isArray(attStats)) {
+        attStats.forEach((r) => {
+          const tot = Number(r.total) || 0;
+          const pres = Number(r.present) || 0;
+          attendanceMap[r.user_id] = tot > 0 ? Math.round((pres / tot) * 100) : 0;
+        });
+      }
+    } catch (_) {}
+
+    const formatted = students.map((s) => {
+      const studentId = s.id || s.user_id;
+      const realAtt = attendanceMap[studentId] !== undefined ? attendanceMap[studentId] : (s.attendance_pct ? Number(s.attendance_pct) : 0);
+      return {
+        id: s.id,
+        user_id: s.id,
+        name: s.name,
+        email: s.email,
+        rollNo: s.roll_number || s.rollNo || `CS-${s.id}`,
+        roll_number: s.roll_number || s.rollNo || `CS-${s.id}`,
+        department: s.department || 'Computer Science & Engineering',
+        department_id: s.department_id || 1,
+        batch: s.batch_name || 'BE-CS-2026-A',
+        year: s.year || 'TE',
+        cgpa: s.cgpa || '8.5',
+        riskStatus: s.cgpa < 6 ? 'High Risk' : s.cgpa < 7.5 ? 'Moderate' : 'Good',
+        attendancePct: realAtt,
+        attendance: realAtt,
+        placementStatus: 'Eligible',
+      };
+    });
 
     return sendSuccess(res, 'Students retrieved successfully', formatted);
   } catch (error) {

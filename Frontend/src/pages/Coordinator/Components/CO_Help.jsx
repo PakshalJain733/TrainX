@@ -94,24 +94,14 @@ export default function CoordinatorHelp() {
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [tickets, setTickets] = useState([
-    {
-      id: "TICK-9102",
-      subject: "Request for new batch creation (CSE Sem 6 - Division C)",
-      category: "Academics & Labs",
-      priority: "High",
-      created: "2026-09-11",
-      status: "In Progress"
-    },
-    {
-      id: "TICK-8840",
-      subject: "Trainer re-allocation for Systems Programming",
-      category: "Account & Security",
-      priority: "Normal",
-      created: "2026-09-04",
-      status: "Resolved"
-    }
-  ]);
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  // Escalation state
+  const [escalateModalOpen, setEscalateModalOpen] = useState(false);
+  const [ticketToEscalate, setTicketToEscalate] = useState(null);
+  const [escalationReason, setEscalationReason] = useState("");
+  const [escalating, setEscalating] = useState(false);
 
   const [newTicket, setNewTicket] = useState({
     subject: "",
@@ -122,6 +112,23 @@ export default function CoordinatorHelp() {
 
   const categories = ["All", "Attendance & QR", "Academics & Labs", "Account & Security", "Exams & Marks"];
 
+  const fetchTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await apiFetch('/coordinator/support/tickets');
+      const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      setTickets(list);
+    } catch (err) {
+      console.error('[CO_Help fetchTickets error]', err);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
   const filteredFaqs = defaultFaqs.filter((f) => {
     const matchesCat = selectedCat === "All" || f.category === selectedCat;
     const matchesQuery =
@@ -130,23 +137,67 @@ export default function CoordinatorHelp() {
     return matchesCat && matchesQuery;
   });
 
-  const handleCreateTicket = (e) => {
+  const handleCreateTicket = async (e) => {
     e.preventDefault();
     if (!newTicket.subject.trim() || !newTicket.description.trim()) return;
 
-    const createdTicket = {
-      id: `TICK-${Math.floor(1000 + Math.random() * 9000)}`,
-      subject: newTicket.subject,
-      category: newTicket.category,
-      priority: newTicket.priority,
-      created: new Date().toISOString().split("T")[0],
-      status: "Open"
-    };
+    try {
+      const res = await apiFetch('/coordinator/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify(newTicket),
+      });
+      if (res && res.success) {
+        setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
+        setIsTicketModalOpen(false);
+        setActiveTab("tickets");
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error('[CO_Help handleCreateTicket error]', err);
+    }
+  };
 
-    setTickets([createdTicket, ...tickets]);
-    setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
-    setIsTicketModalOpen(false);
-    setActiveTab("tickets");
+  const handleOpenEscalateModal = (ticket) => {
+    setTicketToEscalate(ticket);
+    setEscalationReason("");
+    setEscalateModalOpen(true);
+  };
+
+  const handleConfirmEscalate = async (e) => {
+    e.preventDefault();
+    if (!ticketToEscalate) return;
+    setEscalating(true);
+    try {
+      const res = await apiFetch(`/coordinator/support/tickets/${ticketToEscalate.dbId || ticketToEscalate.id}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          escalationReason: escalationReason || 'Coordinator requested assistance from College Admin.'
+        })
+      });
+      if (res && res.success) {
+        setEscalateModalOpen(false);
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error('[CO_Help escalate error]', err);
+    } finally {
+      setEscalating(false);
+    }
+  };
+
+  const handleResolveTicket = async (ticket) => {
+    try {
+      await apiFetch(`/coordinator/support/tickets/${ticket.dbId || ticket.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: 'Resolved',
+          resolutionNote: 'Resolved by Department Coordinator.'
+        })
+      });
+      fetchTickets();
+    } catch (err) {
+      console.error('[CO_Help resolve error]', err);
+    }
   };
 
   const toggleFaq = (id) => {
@@ -310,16 +361,24 @@ export default function CoordinatorHelp() {
                 <tr>
                   <th>Ticket ID</th>
                   <th>Subject & Details</th>
+                  <th>Raised By</th>
                   <th>Category</th>
                   <th>Priority</th>
                   <th>Date Raised</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {tickets.length === 0 ? (
+                {loadingTickets ? (
                   <tr>
-                    <td colSpan="6" className="help-table-empty-cell">
+                    <td colSpan="8" className="help-table-empty-cell">
+                      Loading tickets...
+                    </td>
+                  </tr>
+                ) : tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="help-table-empty-cell">
                       No support tickets raised yet.
                     </td>
                   </tr>
@@ -327,26 +386,59 @@ export default function CoordinatorHelp() {
                   tickets.map((t) => (
                     <tr key={t.id}>
                       <td><span className="help-ticket-id">{t.id}</span></td>
-                      <td className="help-table-subject">{t.subject}</td>
+                      <td className="help-table-subject">
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{t.subject || t.title}</div>
+                        {t.description && <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 2 }}>{t.description.slice(0, 80)}{t.description.length > 80 ? '...' : ''}</div>}
+                        {t.isEscalated && <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: 600, marginTop: 3 }}>⚠ Escalated to College Admin: {t.escalationReason || 'Assistance requested'}</div>}
+                        {t.resolutionNote && <div style={{ fontSize: '0.74rem', color: '#16a34a', marginTop: 2 }}>✓ Resolution: {t.resolutionNote}</div>}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1e293b' }}>
+                          {t.requesterName || (t.isOwner ? 'Me (Coordinator)' : 'User')}
+                        </span>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>{t.role || (t.isOwner ? 'COORDINATOR' : 'USER')}</div>
+                      </td>
                       <td><span className="help-faq-category-tag">{t.category}</span></td>
                       <td>
                         <span className={`help-priority-pill ${t.priority === "High" ? "help-priority-high" : "help-priority-normal"}`}>
                           {t.priority}
                         </span>
                       </td>
-                      <td className="help-table-date">{t.created}</td>
+                      <td className="help-table-date">{t.created || t.time}</td>
                       <td>
-                        <span className={`help-ticket-status-pill ${t.status === "In Progress"
+                        <span className={`help-ticket-status-pill ${
+                          t.isEscalated || t.status === "Escalated"
+                            ? "help-priority-high"
+                            : t.status === "In Progress"
                             ? "help-status-in-progress"
                             : t.status === "Resolved"
                               ? "help-status-resolved"
                               : "help-status-open"
                           }`}>
-                          {t.status === "In Progress" && "⏳ "}
-                          {t.status === "Resolved" && "✓ "}
-                          {t.status === "Open" && "● "}
-                          {t.status}
+                          {t.isEscalated || t.status === "Escalated" ? "⚠ Escalated" : t.status}
                         </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {t.status !== 'Resolved' && (
+                            <button
+                              onClick={() => handleResolveTicket(t)}
+                              style={{ padding: '4px 8px', fontSize: '0.75rem', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                              title="Mark as resolved"
+                            >
+                              <Check size={12} /> Resolve
+                            </button>
+                          )}
+                          {!t.isEscalated && t.status !== 'Escalated' && t.status !== 'Resolved' && (
+                            <button
+                              onClick={() => handleOpenEscalateModal(t)}
+                              style={{ padding: '4px 8px', fontSize: '0.75rem', background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                              title="Escalate ticket to College Admin"
+                            >
+                              <ShieldAlert size={12} /> Escalate to Admin
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -459,6 +551,51 @@ export default function CoordinatorHelp() {
                 </button>
                 <button type="submit" className="help-submit-btn">
                   Submit Ticket
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ESCALATE TO COLLEGE ADMIN */}
+      {escalateModalOpen && ticketToEscalate && (
+        <div className="help-modal-overlay">
+          <div className="help-modal-card" style={{ maxWidth: '500px' }}>
+            <div className="help-modal-header" style={{ background: '#ea580c' }}>
+              <h3 className="help-modal-title" style={{ color: '#fff' }}>
+                <ShieldAlert size={18} color="#fff" /> Escalate Ticket to College Admin
+              </h3>
+              <button className="help-modal-close-btn" style={{ color: '#fff' }} onClick={() => setEscalateModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmEscalate} className="help-modal-form">
+              <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
+                <p style={{ margin: 0 }}><strong>Ticket ID:</strong> {ticketToEscalate.id}</p>
+                <p style={{ margin: '4px 0 0 0' }}><strong>Subject:</strong> {ticketToEscalate.subject || ticketToEscalate.title}</p>
+                <p style={{ margin: '4px 0 0 0' }}><strong>Requester:</strong> {ticketToEscalate.requesterName} ({ticketToEscalate.role})</p>
+              </div>
+
+              <div className="help-form-group">
+                <label className="help-form-label">Reason for Escalation to College Admin *</label>
+                <textarea
+                  className="help-form-textarea"
+                  rows={4}
+                  placeholder="Explain why this requires administrative approval or college-level intervention..."
+                  value={escalationReason}
+                  onChange={(e) => setEscalationReason(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="help-modal-footer">
+                <button type="button" className="help-cancel-btn" onClick={() => setEscalateModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="help-submit-btn" disabled={escalating} style={{ background: '#ea580c' }}>
+                  {escalating ? 'Escalating...' : 'Confirm Escalation'}
                 </button>
               </div>
             </form>

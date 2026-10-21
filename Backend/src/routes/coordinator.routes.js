@@ -14,6 +14,10 @@ import {
   getCoordinatorLiveSessions,
   createCoordinatorLiveSession,
   getCoordinatorNotifications,
+  getCoordinatorSupportTickets,
+  createCoordinatorSupportTicket,
+  updateCoordinatorSupportTicket,
+  escalateCoordinatorSupportTicket,
 } from '../controllers/coordinator.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -49,5 +53,11 @@ router.get('/practice-problems', getAdminPracticeProblems);
 router.post('/practice-problems', createAdminPracticeProblem);
 router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
+
+// Coordinator Support Tickets & Escalation to College Admin
+router.get('/support/tickets', getCoordinatorSupportTickets);
+router.post('/support/tickets', createCoordinatorSupportTicket);
+router.put('/support/tickets/:id', updateCoordinatorSupportTicket);
+router.post('/support/tickets/:id/escalate', escalateCoordinatorSupportTicket);
 
 export default router;

@@ -452,6 +452,7 @@ export default function MentorQuizzes() {
 
   const handleCreateQuiz = async e => {
     e && e.preventDefault();
+    if (isGenerating) return;
     if (!title.trim()) { alert("Quiz title is required."); return; }
     setIsGenerating(true);
     try {

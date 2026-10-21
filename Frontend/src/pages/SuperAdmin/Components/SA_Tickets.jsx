@@ -62,10 +62,13 @@ export default function SuperAdminTickets() {
   };
 
   const filteredTickets = tickets.filter(t => {
-    // Exclude secure code / access requests (these are routed to bell notifications)
+    const isEscalated = Boolean(t.isEscalated || t.status === "Escalated");
+    // Only exclude raw un-escalated access requests (which go to secure code approvals)
     if (
-      t.category === "Access Request" ||
-      (t.title || "").toLowerCase().includes("secure code")
+      !isEscalated && (
+        t.category === "Access Request" ||
+        (t.title || "").toLowerCase().includes("secure code")
+      )
     ) {
       return false;
     }
@@ -77,12 +80,15 @@ export default function SuperAdminTickets() {
     const matchesStatus =
       statusFilter === "All"
         ? true
+        : statusFilter === "Escalated"
+        ? isEscalated
         : t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const openCount = filteredTickets.filter(t => t.status === "Open").length;
   const inProgressCount = filteredTickets.filter(t => t.status === "In Progress").length;
+  const escalatedCount = filteredTickets.filter(t => t.status === "Escalated" || t.isEscalated).length;
   const resolvedCount = filteredTickets.filter(t => t.status === "Resolved").length;
 
   return (
@@ -101,6 +107,7 @@ export default function SuperAdminTickets() {
             <div className="help-stats">
               <span className="help-stat-badge help-stat-open">{openCount} Open</span>
               <span className="help-stat-badge help-stat-inprogress">{inProgressCount} In Progress</span>
+              <span className="help-stat-badge" style={{ background: '#ffedd5', color: '#c2410c' }}>{escalatedCount} Escalated</span>
               <span className="help-stat-badge help-stat-resolved">{resolvedCount} Resolved</span>
             </div>
           </div>
@@ -131,7 +138,7 @@ export default function SuperAdminTickets() {
         </div>
 
         <div className="admin-status-tabs">
-          {["All", "Open", "In Progress", "Resolved"].map((st) => (
+          {["All", "Open", "In Progress", "Escalated", "Resolved"].map((st) => (
             <button
               key={st}
               className={`admin-status-tab ${statusFilter === st ? "active" : ""}`}
@@ -172,6 +179,11 @@ export default function SuperAdminTickets() {
                     <span className="ticket-id-pill">{t.id}</span>
                     <span className="ticket-role-pill">{t.role}</span>
                     <span className="ticket-category-pill">{t.category}</span>
+                    {(t.isEscalated || t.status === "Escalated") && (
+                      <span className="ticket-role-pill" style={{ background: "#ffedd5", color: "#c2410c", border: "1px solid #fdba74" }}>
+                        <ShieldAlert size={11} style={{ marginRight: 4, display: "inline" }} /> Escalated by College Admin
+                      </span>
+                    )}
                   </div>
                   <h4 className="ticket-title">{t.title}</h4>
                   <p className="ticket-desc-snippet">{t.description}</p>
@@ -184,6 +196,12 @@ export default function SuperAdminTickets() {
                     <Clock size={12} className="ticket-clock" />
                     <span className="ticket-time">{t.time}</span>
                   </div>
+
+                  {(t.isEscalated || t.status === "Escalated") && t.escalationReason && (
+                    <div className="ticket-resolution-note-box" style={{ background: "#fff7ed", borderColor: "#f97316", color: "#9a3412", marginTop: 8 }}>
+                      <strong>Escalation Reason from College Admin:</strong> {t.escalationReason}
+                    </div>
+                  )}
 
                   {t.resolutionNote && (
                     <div className="ticket-resolution-note-box">

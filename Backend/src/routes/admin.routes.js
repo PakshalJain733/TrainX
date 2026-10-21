@@ -28,6 +28,7 @@ import {
   getAdminSupportTickets,
   updateAdminSupportTicket,
   escalateSupportTicketToSuperAdmin,
+  createAdminSupportTicket,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -81,6 +82,7 @@ router.get('/c2c/enrollments', getAdminC2CEnrollments);
 
 // Support Ticket Management & Escalation
 router.get('/support/tickets', getAdminSupportTickets);
+router.post('/support/tickets', createAdminSupportTicket);
 router.put('/support/tickets/:id', updateAdminSupportTicket);
 router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
 

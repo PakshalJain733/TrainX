@@ -311,24 +311,37 @@ export default function StudentLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    apiFetch("/student/notifications")
-      .then((res) => {
-        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const serverItems = rawItems.map((b) => ({
-          id: b.id || `notif-${Math.random()}`,
-          title: b.title || "Announcement",
-          desc: b.message || b.desc || b.description || "",
-          message: b.message || b.desc || "",
-          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-          unread: b.unread !== undefined ? Boolean(b.unread) : true,
-          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-          target: b.target || "All Batches",
-          priority: b.priority || "General Notice",
-          created_by_name: b.created_by_name || "Admin",
-        }));
-        setNotifications(serverItems);
-      })
-      .catch(() => { });
+    const loadStudentNotifs = () => {
+      apiFetch("/student/notifications")
+        .then((res) => {
+          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          const serverItems = rawItems.map((b) => ({
+            id: b.id || `notif-${Math.random()}`,
+            title: b.title || "Announcement",
+            desc: b.message || b.desc || b.description || "",
+            message: b.message || b.desc || "",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
+            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+            target: b.target || "All Batches",
+            priority: b.priority || "General Notice",
+            created_by_name: b.created_by_name || "Admin",
+          }));
+          setNotifications(serverItems);
+        })
+        .catch(() => { });
+    };
+
+    loadStudentNotifs();
+    const interval = setInterval(loadStudentNotifs, 8000);
+    window.addEventListener("portal_broadcast_updated", loadStudentNotifs);
+    window.addEventListener("new_broadcast_notification", loadStudentNotifs);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("portal_broadcast_updated", loadStudentNotifs);
+      window.removeEventListener("new_broadcast_notification", loadStudentNotifs);
+    };
   }, []);
 
   const [showFirstLoginFlash, setShowFirstLoginFlash] = useState(false);

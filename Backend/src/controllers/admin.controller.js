@@ -950,7 +950,12 @@ export const getAdminPerformance = async (req, res, next) => {
     let studentSql = `
       SELECT u.id, u.name, u.email, s.roll_number, s.department, s.department_id, s.batch_id,
              d.name as dept_name, b.name as batch_name,
-             COALESCE(att.attendance_percentage, 0) as attendance_pct,
+             COALESCE(
+               (SELECT ROUND((SUM(CASE WHEN LOWER(att2.status) = 'present' THEN 1 ELSE 0 END) / COUNT(*)) * 100)
+                FROM attendance att2 WHERE att2.user_id = u.id),
+               att.attendance_percentage,
+               0
+             ) as attendance_pct,
              COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_assessment,
              sg.overall_status, sg.weak_areas
       FROM users u
@@ -1548,3 +1553,40 @@ export const escalateSupportTicketToSuperAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Admin creates a new support ticket (routed to Super Admin)
+ */
+export const createAdminSupportTicket = async (req, res, next) => {
+  try {
+    const { subject, category = 'Software Bug', priority = 'High', description } = req.body;
+    if (!subject) {
+      return sendError(res, 'Ticket subject is required', 400);
+    }
+    const adminId = req.user?.userId || req.user?.id || 1;
+
+    let insertId = Date.now();
+    try {
+      const result = await query(
+        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, is_escalated, escalated_to, escalation_reason, created_at)
+         VALUES (?, ?, ?, ?, 'Open', ?, 1, 'super_admin', 'Raised directly by College Admin to Super Admin', NOW())`,
+        [adminId, subject.trim(), category, priority, description ? description.trim() : '']
+      );
+      if (result && result.insertId) insertId = result.insertId;
+    } catch (e) {
+      console.warn('[DB createAdminSupportTicket fallback]', e.message);
+    }
+
+    return sendSuccess(res, 'Support ticket created and routed to Super Admin successfully', {
+      id: `TICK-${insertId}`,
+      dbId: insertId,
+      subject,
+      category,
+      priority,
+      status: 'Open'
+    }, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
