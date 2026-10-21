@@ -436,6 +436,8 @@ export default function AdminHelp() {
             </form>
           </div>
         </div>
+      )}
+
       {/* Create Ticket to Super Admin Modal */}
       {createModalOpen && (
         <div className="admin-modal-backdrop" onClick={() => setCreateModalOpen(false)}>
