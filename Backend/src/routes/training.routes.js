@@ -11,6 +11,7 @@ import {
   registerForTraining,
   updatePaymentStatus,
   updateApprovalStatus,
+  transferStudentTraining,
   handleMultiTrainingWebhook,
   getTrainingData,
 } from '../controllers/training.controller.js';
@@ -109,6 +110,13 @@ router.patch(
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
   updateApprovalStatus
+);
+
+router.patch(
+  '/enrollments/:enrollmentId/transfer',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  transferStudentTraining
 );
 
 export default router;

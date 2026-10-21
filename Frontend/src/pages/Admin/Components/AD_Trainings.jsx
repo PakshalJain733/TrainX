@@ -113,6 +113,8 @@ export default function AdminTrainings() {
 
   const [isAmountModalOpen, setIsAmountModalOpen] = useState(false);
   const [amountModalData, setAmountModalData] = useState({ enrollmentId: null, studentName: "", totalFee: 0, currentPaid: 0, newPaid: "" });
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferModalData, setTransferModalData] = useState({ enrollmentId: null, studentName: "", currentTrainingName: "", targetTrainingId: "" });
   const [actionInProgressId, setActionInProgressId] = useState(null);
 
   const showToast = (msg) => {
@@ -376,6 +378,44 @@ export default function AdminTrainings() {
       }
     } catch (err) {
       alert("Error: " + err.message);
+    }
+  };
+
+  const handleOpenTransferModal = (row) => {
+    const candidate = trainingsList.find((t) => t.id !== selectedTrainingId);
+    setTransferModalData({
+      enrollmentId: row.id,
+      studentName: row.full_name || row.name || "Student",
+      currentTrainingName: selectedTraining?.name || row.training_name || "Current Training",
+      targetTrainingId: candidate ? String(candidate.id) : "",
+    });
+    setIsTransferModalOpen(true);
+  };
+
+  const handleConfirmTransfer = async (e) => {
+    e.preventDefault();
+    if (!transferModalData.targetTrainingId) {
+      alert("Please select a target training program.");
+      return;
+    }
+    setActionInProgressId(transferModalData.enrollmentId);
+    try {
+      const res = await apiFetch(`/trainings/enrollments/${transferModalData.enrollmentId}/transfer`, {
+        method: "PATCH",
+        body: JSON.stringify({ target_training_id: transferModalData.targetTrainingId }),
+      });
+      if (res?.error) {
+        alert("Failed to transfer student: " + res.error);
+      } else {
+        setIsTransferModalOpen(false);
+        showToast(res?.message || "Student transferred to target training successfully!");
+        fetchTrainingEnrollments(selectedTrainingId);
+        fetchTrainingsAndStats();
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      setActionInProgressId(null);
     }
   };
 
@@ -1048,14 +1088,25 @@ export default function AdminTrainings() {
                               {formattedDate}
                             </span>
                           </td>
-                          <td style={{ textAlign: "right" }}>
+                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                             <button
                               type="button"
                               className="btn-action-sm"
+                              style={{ marginRight: "6px" }}
                               onClick={() => handleOpenAmountModal(row)}
                               disabled={isBusy}
                             >
                               Edit Paid
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-action-sm"
+                              style={{ background: "#f8fafc", color: "#4f46e5", border: "1px solid #c7d2fe" }}
+                              onClick={() => handleOpenTransferModal(row)}
+                              disabled={isBusy}
+                              title="Move / Reallocate student to another training program"
+                            >
+                              Move Training
                             </button>
                           </td>
                         </tr>
