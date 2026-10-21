@@ -103,8 +103,10 @@ export const createPracticeProblemModel = async ({
   sampleOutput = '',
   testCases = [],
   due_date = null,
+  language = null,
 }) => {
   const tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+  const langVal = language && language !== 'All' && language !== 'Any' ? language : null;
 
   // Validate college_id foreign key against colleges table
   let validCollegeId = null;
@@ -149,13 +151,13 @@ export const createPracticeProblemModel = async ({
   try {
     res = await query(
       `INSERT INTO practice_problems 
-        (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [validCollegeId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
+        (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by, language) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [validCollegeId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy, langVal]
     );
   } catch (err) {
-    if (err && err.message && err.message.includes("Unknown column 'due_date'")) {
-      console.warn('[Practice Problem Model] due_date column not found in table, falling back to insert without due_date');
+    if (err && err.message && (err.message.includes("Unknown column 'due_date'") || err.message.includes("Unknown column 'language'"))) {
+      console.warn('[Practice Problem Model] falling back to insert without due_date/language');
       res = await query(
         `INSERT INTO practice_problems 
           (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, created_by) 

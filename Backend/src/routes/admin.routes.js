@@ -32,6 +32,7 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { getAllCodingSubmissionsAdmin } from '../controllers/codingSubmission.controller.js';
 
 const router = Router();
 
@@ -61,6 +62,7 @@ router.post('/practice-problems', createAdminPracticeProblem);
 router.put('/practice-problems/:id', updateAdminPracticeProblem);
 router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
+router.get('/practice-problems/submissions', getAllCodingSubmissionsAdmin);
 
 // Broadcast Notifications Center
 router.get('/broadcast', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getAdminBroadcasts);

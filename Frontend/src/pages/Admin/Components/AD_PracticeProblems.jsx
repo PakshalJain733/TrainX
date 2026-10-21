@@ -15,7 +15,6 @@ function AdminPpSelect(props) {
 
 const initialCodingProblems = [];
 const mockAssignments = [];
-const mockSubmissions = [];
 
 export default function AdminPracticeProblems() {
   const [activeTab, setActiveTab] = useState("bank");
@@ -23,6 +22,12 @@ export default function AdminPracticeProblems() {
   // API + Local State
   const [problems, setProblems] = useState(initialCodingProblems);
   const [batches, setBatches] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState("All");
+  const [viewingSubmission, setViewingSubmission] = useState(null);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProblemId, setEditingProblemId] = useState(null);
   const [showTestCaseModal, setShowTestCaseModal] = useState(false);
@@ -34,6 +39,7 @@ export default function AdminPracticeProblems() {
     title: "",
     topic: "",
     difficulty: "Easy",
+    language: "All",
     xp: "",
     companies: "",
     timeLimit: "",
@@ -55,7 +61,7 @@ export default function AdminPracticeProblems() {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiPromptTopic, setAiPromptTopic] = useState("");
   const [aiDifficulty, setAiDifficulty] = useState("Medium");
-  const [aiCompanies, setAiCompanies] = useState("Google, Amazon, TCS, Infosys");
+  const [aiLanguage, setAiLanguage] = useState("All");
 
   // Tab 2 States
   const [assignments, setAssignments] = useState(mockAssignments);
@@ -66,14 +72,15 @@ export default function AdminPracticeProblems() {
     dueDate: "",
   });
 
-  const handleGenerateProblemAI = async (topicToUse, diffToUse) => {
+  const handleGenerateProblemAI = async (topicToUse, diffToUse, langToUse) => {
     const topic = (topicToUse || aiPromptTopic || "").trim() || "Arrays & Hashing";
     const difficulty = diffToUse || aiDifficulty || "Medium";
+    const assignedLang = langToUse || aiLanguage || "All";
     setIsGeneratingAI(true);
     try {
       const res = await apiFetch("/admin/practice-problems/generate-ai", {
         method: "POST",
-        body: JSON.stringify({ topic, difficulty, companies: aiCompanies }),
+        body: JSON.stringify({ topic, difficulty }),
       });
       if (res && res.data) {
         const d = res.data;
@@ -81,8 +88,9 @@ export default function AdminPracticeProblems() {
           title: d.title || "",
           topic: d.category || d.topic || topic,
           difficulty: d.difficulty || difficulty,
+          language: assignedLang,
           xp: d.points || (difficulty === "Easy" ? 50 : difficulty === "Medium" ? 100 : 150),
-          companies: d.tags || d.companies || aiCompanies,
+          companies: d.tags || d.companies || "",
           timeLimit: d.timeLimit || "1.0s",
           memoryLimit: d.memoryLimit || "256 MB",
           description: d.description || "",
@@ -160,6 +168,7 @@ export default function AdminPracticeProblems() {
           title,
           topic: normTopic,
           difficulty: normDiff,
+          language: p.language || "All",
           xp: normXp,
           companies: normCompanies,
           dueDate: p.dueDate || (p.due_date ? new Date(p.due_date).toISOString().slice(0, 10) : ""),
@@ -186,10 +195,57 @@ export default function AdminPracticeProblems() {
     } catch (err) { }
   };
 
+  const fetchSubmissions = async () => {
+    setLoadingSubmissions(true);
+    try {
+      const res = await apiFetch("/admin/practice-problems/submissions");
+      const list = (res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []);
+      setSubmissions(list);
+    } catch (err) {
+      console.warn("Failed to load /admin/practice-problems/submissions, trying fallback:", err);
+      try {
+        const alt = await apiFetch("/coding-submissions");
+        const list = (alt && Array.isArray(alt.data)) ? alt.data : (Array.isArray(alt) ? alt : []);
+        setSubmissions(list);
+      } catch (e) {
+        setSubmissions([]);
+      }
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
+
   useEffect(() => {
     fetchApiProblems();
     fetchBatches();
+    fetchSubmissions();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "submissions") {
+      fetchSubmissions();
+    }
+  }, [activeTab]);
+
+  const filteredSubmissions = submissions.filter((s) => {
+    if (submissionStatusFilter !== "All") {
+      if (s.status?.toLowerCase() !== submissionStatusFilter.toLowerCase()) {
+        return false;
+      }
+    }
+    if (submissionSearch.trim()) {
+      const q = submissionSearch.toLowerCase();
+      const matchName = (s.studentName || "").toLowerCase().includes(q);
+      const matchRoll = (s.rollNo || "").toLowerCase().includes(q);
+      const matchEmail = (s.studentEmail || "").toLowerCase().includes(q);
+      const matchProb = (s.problemTitle || "").toLowerCase().includes(q);
+      const matchLang = (s.language || "").toLowerCase().includes(q);
+      if (!matchName && !matchRoll && !matchEmail && !matchProb && !matchLang) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const handleOpenEditProblem = (p) => {
     setEditingProblemId(p.id);
@@ -197,6 +253,7 @@ export default function AdminPracticeProblems() {
       title: p.title || "",
       topic: p.topic || "",
       difficulty: p.difficulty || "Easy",
+      language: p.language || "All",
       xp: p.xp || 50,
       companies: Array.isArray(p.companies) ? p.companies.join(", ") : (p.companies || ""),
       timeLimit: p.timeLimit || "1.0s",
@@ -220,6 +277,7 @@ export default function AdminPracticeProblems() {
       topic: newProb.topic,
       category: newProb.topic,
       difficulty: newProb.difficulty,
+      language: newProb.language === "All" ? "" : newProb.language,
       xp: Number(newProb.xp) || 50,
       points: Number(newProb.xp) || 50,
       companies: newProb.companies,
@@ -410,7 +468,7 @@ export default function AdminPracticeProblems() {
           className={`admin-filter-pill ${activeTab === "submissions" ? "admin-filter-pill--active" : ""}`}
           onClick={() => setActiveTab("submissions")}
         >
-          <ListChecks size={15} /> Submissions & Audits
+          <ListChecks size={15} /> Submissions & Audits ({submissions.length})
         </button>
       </div>
 
@@ -604,41 +662,229 @@ export default function AdminPracticeProblems() {
 
       {/* ─── TAB 3: SUBMISSIONS & AUDITS ─────────────────────────────────────── */}
       {activeTab === "submissions" && (
-        <div className="admin-users-table-card">
-          <table className="admin-users-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Problem</th>
-                <th>Language</th>
-                <th>Execution Time</th>
-                <th>Memory</th>
-                <th>Status</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockSubmissions.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <div className="user-name-title">{s.studentName}</div>
-                    <div className="user-email-sub">{s.rollNo}</div>
-                  </td>
-                  <td><span className="user-dept-student">{s.problemTitle}</span></td>
-                  <td><span style={{ fontSize: "12px", background: "#e0e7ff", color: "#4338ca", padding: "2px 8px", borderRadius: "4px", fontWeight: 700 }}>{s.language}</span></td>
-                  <td>{s.executionTime}</td>
-                  <td>{s.memory}</td>
-                  <td>
-                    <span className={`status-badge ${s.status === "Accepted" ? "status-badge--active" : "role-badge--admin"}`}>
-                      {s.status}
-                    </span>
-                  </td>
-                  <td><span className="user-email-sub">{s.submittedAt}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="admin-submissions-wrap">
+          {/* Submissions Toolbar */}
+          <div className="admin-users-toolbar" style={{ marginBottom: "16px" }}>
+            <div className="admin-users-search-wrap">
+              <Search size={16} className="admin-users-search-icon" />
+              <input
+                type="text"
+                className="admin-users-search-input"
+                placeholder="Search by student name, roll number, problem..."
+                value={submissionSearch}
+                onChange={(e) => setSubmissionSearch(e.target.value)}
+              />
+              {submissionSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSubmissionSearch("")}
+                  className="admin-search-clear-btn"
+                  title="Clear Search"
+                  style={{ background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="admin-users-actions" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <div style={{ width: "180px" }}>
+                <AdminPpSelect
+                  value={submissionStatusFilter}
+                  options={[
+                    { value: "All", label: "All Statuses" },
+                    { value: "Accepted", label: "Accepted" },
+                    { value: "Wrong Answer", label: "Wrong Answer" },
+                    { value: "Runtime Error", label: "Runtime Error" },
+                    { value: "Time Limit Exceeded", label: "Time Limit Exceeded" },
+                  ]}
+                  onChange={(val) => setSubmissionStatusFilter(val)}
+                  placeholder="Filter by Status"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={fetchSubmissions}
+                className="admin-action-btn admin-action-btn--primary"
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "8px" }}
+              >
+                <Clock size={14} /> Refresh
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-users-table-card">
+            {loadingSubmissions ? (
+              <div style={{ padding: "50px", textAlign: "center", color: "#64748b" }}>
+                Loading coding submissions...
+              </div>
+            ) : filteredSubmissions.length === 0 ? (
+              <div style={{ padding: "60px 20px", textAlign: "center" }}>
+                <div style={{ width: "54px", height: "54px", borderRadius: "50%", background: "#eef2ff", color: "#4f46e5", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "14px" }}>
+                  <ListChecks size={26} />
+                </div>
+                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", margin: "0 0 6px" }}>No coding submissions found</h3>
+                <p style={{ fontSize: "13px", color: "#64748b", margin: 0, maxWidth: "440px", marginInline: "auto" }}>
+                  {submissionSearch || submissionStatusFilter !== "All"
+                    ? "No submissions matched your search criteria. Try clearing the search or status filter."
+                    : "Student submissions will appear here dynamically as students solve and submit practice coding problems."}
+                </p>
+              </div>
+            ) : (
+              <table className="admin-users-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Problem</th>
+                    <th>Language</th>
+                    <th>Test Cases / Score</th>
+                    <th>Execution Time</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                    <th style={{ textAlign: "right" }}>Code Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSubmissions.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <div className="user-name-title">{s.studentName}</div>
+                        <div className="user-email-sub">{[s.rollNo, s.department].filter(Boolean).join(" • ")}</div>
+                      </td>
+                      <td>
+                        <div className="user-dept-student" style={{ fontWeight: 600 }}>{s.problemTitle}</div>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>Problem #{s.problemId} • {s.problemDifficulty}</div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "11px", background: "#e0e7ff", color: "#4338ca", padding: "3px 8px", borderRadius: "4px", fontWeight: 700, textTransform: "uppercase" }}>
+                          {s.language}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#0f172a" }}>
+                          {s.passedTestCases}/{s.totalTestCases} Passed
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#10b981", fontWeight: 600 }}>
+                          +{s.score} XP
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "12px", fontFamily: "monospace", background: "#f8fafc", padding: "3px 8px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                          ⏱️ {s.executionTime}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${s.status === "Accepted" ? "status-badge--active" : "role-badge--admin"}`}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="user-email-sub">{s.submittedAt}</span>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          onClick={() => setViewingSubmission(s)}
+                          className="admin-action-btn admin-action-btn--secondary"
+                          style={{ padding: "5px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                        >
+                          <FileCode size={13} /> View Code
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* ─── VIEW SUBMITTED CODE MODAL ─────────────────────────────────────── */}
+      {viewingSubmission && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewingSubmission(null); }}>
+          <div className="modal-dialog" style={{ maxWidth: "800px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <FileCode size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">{viewingSubmission.studentName} — {viewingSubmission.problemTitle}</h2>
+                  <p className="modal-subtitle">
+                    Submitted on {viewingSubmission.submittedAt} • Language: <strong style={{ textTransform: "uppercase" }}>{viewingSubmission.language}</strong>
+                  </p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setViewingSubmission(null)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: "20px" }}>
+              <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", background: "#f8fafc", padding: "10px 14px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <span className={`status-badge ${viewingSubmission.status === "Accepted" ? "status-badge--active" : "role-badge--admin"}`}>
+                    {viewingSubmission.status}
+                  </span>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>
+                    Test Cases: {viewingSubmission.passedTestCases} / {viewingSubmission.totalTestCases} Passed
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", fontSize: "12px", color: "#64748b" }}>
+                  <span>Execution: <strong>{viewingSubmission.executionTime}</strong></span>
+                  <span>•</span>
+                  <span>Memory: <strong>{viewingSubmission.memory}</strong></span>
+                  <span>•</span>
+                  <span>Score: <strong style={{ color: "#10b981" }}>+{viewingSubmission.score} XP</strong></span>
+                </div>
+              </div>
+
+              <div style={{ position: "relative" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#1e293b", color: "#94a3b8", padding: "8px 14px", borderTopLeftRadius: "8px", borderTopRightRadius: "8px", fontSize: "12px", fontWeight: 600 }}>
+                  <span>Submitted Code ({viewingSubmission.language})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(viewingSubmission.submittedCode || "");
+                      alert("Code copied to clipboard!");
+                    }}
+                    style={{ background: "transparent", border: "1px solid #475569", color: "#cbd5e1", borderRadius: "4px", padding: "3px 10px", cursor: "pointer", fontSize: "11px" }}
+                  >
+                    Copy Code
+                  </button>
+                </div>
+                <pre style={{
+                  margin: 0,
+                  padding: "16px",
+                  background: "#0f172a",
+                  color: "#f8fafc",
+                  fontFamily: "'Fira Code', 'Cascadia Code', monospace",
+                  fontSize: "13px",
+                  lineHeight: "1.6",
+                  borderBottomLeftRadius: "8px",
+                  borderBottomRightRadius: "8px",
+                  overflowX: "auto",
+                  maxHeight: "450px"
+                }}>
+                  <code>{viewingSubmission.submittedCode || "// No code available"}</code>
+                </pre>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ justifyContent: "flex-end", padding: "14px 20px" }}>
+              <button
+                type="button"
+                className="admin-action-btn admin-action-btn--secondary"
+                onClick={() => setViewingSubmission(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* ─── ADD PROBLEM MODAL (WITH UNIFIED TEST CASES BUILDER) ──────────────── */}
@@ -735,7 +981,7 @@ export default function AdminPracticeProblems() {
                     />
                   </div>
 
-                  <div className="form-row-3 add-prob-grid-4">
+                  <div className="add-prob-grid-3" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.2fr", gap: "12px", marginBottom: "12px" }}>
                     <div className="form-group-admin">
                       <label>Topic / Category</label>
                       <input
@@ -759,6 +1005,25 @@ export default function AdminPracticeProblems() {
                         ]}
                       />
                     </div>
+                    <div className="form-group-admin">
+                      <label>Allowed Language</label>
+                      <AdminPpSelect
+                        value={newProb.language || "All"}
+                        onChange={(val) => setNewProb({ ...newProb, language: val })}
+                        options={[
+                          { value: "All", label: "All Languages (Student's Choice)" },
+                          { value: "Python", label: "Python (Python 3)" },
+                          { value: "Java", label: "Java (Java 17)" },
+                          { value: "C++", label: "C++ (C++ 20)" },
+                          { value: "C", label: "C (C11)" },
+                          { value: "JavaScript", label: "JavaScript (Node.js)" },
+                          { value: "SQL", label: "SQL (SQLite3)" }
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="add-prob-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                     <div className="form-group-admin">
                       <label>Due Date & Time</label>
                       <input
@@ -986,15 +1251,20 @@ export default function AdminPracticeProblems() {
 
                 <div className="form-group-admin">
                   <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
-                    Target Companies
+                    Allowed Language
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Google, Amazon, TCS"
-                    value={aiCompanies}
-                    onChange={(e) => setAiCompanies(e.target.value)}
-                    className="form-input-admin"
-                    style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  <AdminPpSelect
+                    value={aiLanguage}
+                    onChange={(val) => setAiLanguage(val)}
+                    options={[
+                      { value: "All", label: "All Languages (Student's Choice)" },
+                      { value: "Python", label: "Python (Python 3)" },
+                      { value: "Java", label: "Java (Java 17)" },
+                      { value: "C++", label: "C++ (C++ 20)" },
+                      { value: "C", label: "C (C11)" },
+                      { value: "JavaScript", label: "JavaScript (Node.js)" },
+                      { value: "SQL", label: "SQL (SQLite3)" }
+                    ]}
                   />
                 </div>
               </div>
@@ -1016,7 +1286,7 @@ export default function AdminPracticeProblems() {
               <button
                 type="button"
                 disabled={isGeneratingAI}
-                onClick={() => handleGenerateProblemAI(aiPromptTopic, aiDifficulty)}
+                onClick={() => handleGenerateProblemAI(aiPromptTopic, aiDifficulty, aiLanguage)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

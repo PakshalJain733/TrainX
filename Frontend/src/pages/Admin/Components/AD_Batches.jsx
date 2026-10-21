@@ -1139,37 +1139,55 @@ export default function AdminBatches() {
                               <th>Student Details</th>
                               <th>Roll Number</th>
                               <th>Submission Result</th>
+                              <th>Marks / Score</th>
                               <th style={{ textAlign: "right" }}>Submitted At</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {taskSubmissions.map((sub) => (
-                              <tr key={sub.id}>
-                                <td>
-                                  <div className="user-cell">
-                                    <div className="user-avatar" style={{ width: "34px", height: "34px", fontSize: "12px" }}>
-                                      {getInitials(sub.name)}
+                            {taskSubmissions.map((sub) => {
+                              const isPassed = sub.status === "Passed" || sub.status === "Completed";
+                              const isPartial = sub.status === "Partial";
+                              const statusCls = isPassed ? "status-badge--active" : isPartial ? "status-badge--warning" : "status-badge--inactive";
+                              const marksVal = sub.marks_obtained ?? sub.score ?? 0;
+                              const maxPoints = sub.total_marks || activeTaskForSubmissions?.points || 100;
+                              return (
+                                <tr key={sub.id}>
+                                  <td>
+                                    <div className="user-cell">
+                                      <div className="user-avatar" style={{ width: "34px", height: "34px", fontSize: "12px" }}>
+                                        {getInitials(sub.name)}
+                                      </div>
+                                      <div>
+                                        <div className="user-name-title" style={{ fontSize: "13.5px" }}>{sub.name || "Student"}</div>
+                                        <div className="user-email-sub" style={{ fontSize: "11.5px" }}>{sub.email}</div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <div className="user-name-title" style={{ fontSize: "13.5px" }}>{sub.name || "Student"}</div>
-                                      <div className="user-email-sub" style={{ fontSize: "11.5px" }}>{sub.email}</div>
+                                  </td>
+                                  <td>
+                                    <span className="roster-badge-roll">{sub.roll_number || "N/A"}</span>
+                                  </td>
+                                  <td>
+                                    <span className={`status-badge ${statusCls}`}>
+                                      <span className="status-dot"></span>
+                                      {sub.status || "Submitted"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div style={{ fontWeight: 700, color: isPassed ? "#16a34a" : isPartial ? "#d97706" : "#475569", fontSize: "13px" }}>
+                                      {marksVal} / {maxPoints} pts
                                     </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="roster-badge-roll">{sub.roll_number || "N/A"}</span>
-                                </td>
-                                <td>
-                                  <span className={`status-badge ${sub.status === "Passed" ? "status-badge--active" : "status-badge--inactive"}`}>
-                                    <span className="status-dot"></span>
-                                    {sub.status || "Submitted"}
-                                  </span>
-                                </td>
-                                <td style={{ textAlign: "right", fontSize: "12.5px", color: "#64748b" }}>
-                                  {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
-                                </td>
-                              </tr>
-                            ))}
+                                    {sub.feedback && (
+                                      <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                                        {sub.feedback}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ textAlign: "right", fontSize: "12.5px", color: "#64748b" }}>
+                                    {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

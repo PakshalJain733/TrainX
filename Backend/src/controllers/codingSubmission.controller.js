@@ -3,6 +3,7 @@ import {
   saveCodingSubmissionService,
   getSubmissionByIdService,
   getStudentSubmissionsService,
+  getAllCodingSubmissionsService,
 } from '../services/codingSubmission.service.js';
 
 /**
@@ -101,3 +102,27 @@ export const getStudentCodingSubmissions = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Controller: Get all coding submissions across students for Admin & Instructors
+ * GET /api/v1/coding-submissions
+ */
+export const getAllCodingSubmissionsAdmin = async (req, res, next) => {
+  try {
+    const { problem_id, student_id, status, limit, page } = req.query;
+    const submissions = await getAllCodingSubmissionsService({
+      problem_id,
+      student_id,
+      status,
+      limit,
+      page,
+    });
+    return sendSuccess(res, 'Coding submissions retrieved successfully', submissions, 200);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.message, error.statusCode);
+    }
+    next(error);
+  }
+};
+

@@ -1447,30 +1447,17 @@ export default function CodingPractice() {
                 />
               </div>
 
-              <div className="coord-cp-form-grid-2" style={{ marginBottom: "16px" }}>
-                <div className="coord-cp-form-group">
-                  <label className="coord-cp-form-label">Difficulty Level</label>
-                  <CustomSelect
-                    value={aiDiff}
-                    onChange={(val) => setAiDiff(val)}
-                    options={[
-                      { value: "Easy", label: "🟢 Easy (50 XP)" },
-                      { value: "Medium", label: "🟡 Medium (100 XP)" },
-                      { value: "Hard", label: "🔴 Hard (150 XP)" },
-                    ]}
-                  />
-                </div>
-
-                <div className="coord-cp-form-group">
-                  <label className="coord-cp-form-label">Target Companies</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Google, Amazon, TCS"
-                    value={aiCompanies}
-                    onChange={(e) => setAiCompanies(e.target.value)}
-                    className="coord-cp-form-input"
-                  />
-                </div>
+              <div className="coord-cp-form-group" style={{ marginBottom: "16px" }}>
+                <label className="coord-cp-form-label">Difficulty Level</label>
+                <CustomSelect
+                  value={aiDiff}
+                  onChange={(val) => setAiDiff(val)}
+                  options={[
+                    { value: "Easy", label: "🟢 Easy (50 XP)" },
+                    { value: "Medium", label: "🟡 Medium (100 XP)" },
+                    { value: "Hard", label: "🔴 Hard (150 XP)" },
+                  ]}
+                />
               </div>
 
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px", fontSize: "12px", color: "#64748b" }}>

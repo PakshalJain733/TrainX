@@ -442,41 +442,85 @@ export const getStudentPracticeProblems = async (req, res, next) => {
       collegeId: req.user?.collegeId || req.user?.college_id,
     });
 
-    let solvedIds = new Set();
+    let submissionMap = new Map();
     if (callerId) {
       try {
         const solvedRows = await query(
-          `SELECT DISTINCT problem_id FROM coding_submissions 
-           WHERE student_id = ? AND (LOWER(status) IN ('accepted', 'passed') OR (passed_test_cases = total_test_cases AND total_test_cases > 0))`,
+          `SELECT problem_id, score, marks, percentage, status, passed_test_cases, total_test_cases
+           FROM coding_submissions 
+           WHERE student_id = ?
+           ORDER BY id ASC`,
           [callerId]
         );
         if (Array.isArray(solvedRows)) {
-          solvedRows.forEach(r => solvedIds.add(Number(r.problem_id)));
+          solvedRows.forEach(r => {
+            const pId = Number(r.problem_id);
+            const prev = submissionMap.get(pId);
+            const rScore = parseFloat(r.marks ?? r.score ?? 0);
+            if (!prev || rScore >= prev.score) {
+              submissionMap.set(pId, {
+                score: rScore,
+                percentage: parseFloat(r.percentage ?? 0),
+                status: r.status,
+                passed_test_cases: r.passed_test_cases,
+                total_test_cases: r.total_test_cases,
+              });
+            }
+          });
         }
         const taskSolved = await query(
-          `SELECT DISTINCT task_id FROM task_submissions WHERE user_id = ? AND LOWER(status) IN ('completed', 'passed')`,
+          `SELECT task_id, score, marks_obtained, status FROM task_submissions WHERE user_id = ?`,
           [callerId]
         );
         if (Array.isArray(taskSolved)) {
-          taskSolved.forEach(r => solvedIds.add(Number(r.task_id)));
+          taskSolved.forEach(r => {
+            const tId = Number(r.task_id);
+            const tScore = parseFloat(r.marks_obtained ?? r.score ?? 0);
+            const prev = submissionMap.get(tId);
+            if (!prev || tScore >= prev.score) {
+              submissionMap.set(tId, {
+                score: tScore,
+                percentage: 100,
+                status: r.status,
+              });
+            }
+          });
         }
       } catch (e) { }
     }
 
     if (dbProblems && dbProblems.length > 0) {
-      const mapped = dbProblems.map((p) => ({
-        id: p.id,
-        title: p.title,
-        category: p.category || 'General DSA',
-        topic: p.category || 'General DSA',
-        difficulty: p.difficulty,
-        points: p.points || 100,
-        due_date: p.due_date || p.dueDate || null,
-        dueDate: p.due_date || p.dueDate || null,
-        tags: p.tags || [],
-        description: p.description || '',
-        solve_status: solvedIds.has(Number(p.id)) ? 'Solved' : 'Unsolved',
-      }));
+      const mapped = dbProblems.map((p) => {
+        const sub = submissionMap.get(Number(p.id));
+        let solveStatus = 'Unsolved';
+        if (sub) {
+          const lowerStatus = String(sub.status || '').toLowerCase();
+          if (lowerStatus === 'accepted' || lowerStatus === 'passed' || lowerStatus === 'solved' || (sub.percentage >= 100)) {
+            solveStatus = 'Solved';
+          } else if (sub.score > 0 || sub.percentage > 0 || lowerStatus === 'partial') {
+            solveStatus = 'Partial';
+          } else {
+            solveStatus = 'Attempted';
+          }
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          category: p.category || 'General DSA',
+          topic: p.category || 'General DSA',
+          difficulty: p.difficulty,
+          points: p.points || 100,
+          due_date: p.due_date || p.dueDate || null,
+          dueDate: p.due_date || p.dueDate || null,
+          tags: p.tags || [],
+          description: p.description || '',
+          language: p.language || null,
+          solve_status: solveStatus,
+          score_obtained: sub ? sub.score : null,
+          marks_obtained: sub ? sub.score : null,
+          percentage: sub ? sub.percentage : null,
+        };
+      });
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
     }
 

@@ -228,7 +228,12 @@ export default function Leaderboard() {
                       </div>
                     </div>
 
-                    <div className="leaderboard-score-val">
+                    <div className="leaderboard-score-val" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {st.total_time_formatted && st.total_time_formatted !== '0s' && (
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '12px' }}>
+                          ⏱️ {st.total_time_formatted}
+                        </span>
+                      )}
                       <Flame size={16} color="#ea580c" />
                       <span>{displayScore} XP</span>
                     </div>

@@ -702,6 +702,8 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       sampleInput = '',
       sampleOutput = '',
       testCases = [],
+      language = null,
+      lang = null,
     } = req.body;
 
     if (!title || !title.trim()) {
@@ -739,6 +741,7 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       sampleOutput,
       testCases,
       due_date: normalizedDueDate,
+      language: language || lang || null,
     });
 
     return sendSuccess(res, 'Coding problem created successfully', newProblem, 201);
@@ -763,6 +766,8 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
       points = 100,
       xp = 50,
       testCases = [],
+      language = null,
+      lang = null,
     } = req.body;
 
     const rawDueDate = dueDate || due_date;
@@ -779,6 +784,7 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
     }
 
     const tagsStr = Array.isArray(tags) ? tags.join(', ') : (Array.isArray(companies) ? companies.join(', ') : (tags || companies || ''));
+    const langVal = language || lang || null;
 
     try {
       await query(
@@ -789,9 +795,10 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
              category = COALESCE(?, category),
              tags = COALESCE(?, tags),
              points = COALESCE(?, points),
-             due_date = ?
+             due_date = ?,
+             language = COALESCE(?, language)
          WHERE id = ?`,
-        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, id]
+        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, langVal, id]
       );
     } catch (err) {
       await query(

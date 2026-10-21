@@ -49,21 +49,49 @@ import { Button } from "../../../components/ui/Button";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
-import apiFetch from "../../../utils/api";
+import apiFetch, { getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiRoadmap.css";
 
 const COMPILER_LANGUAGE_OPTIONS = [
+  { value: "python", label: "Python 3.10 (Docker)" },
+  { value: "node", label: "Node.js 18 (Docker)" },
+  { value: "java", label: "Java 17 (Docker)" },
+  { value: "cpp", label: "C++ 20 (Docker)" },
+  { value: "c", label: "C (C11 - Docker)" },
+  { value: "sql", label: "SQL (SQLite3 - Docker)" },
+  { value: "go", label: "Go 1.21 (Docker)" },
   { value: "react", label: "React (JSX Live Preview)" },
   { value: "html", label: "HTML5 / CSS3 Preview" },
-  { value: "node", label: "JavaScript (Node.js)" },
-  { value: "typescript", label: "TypeScript" },
-  { value: "python", label: "Python 3" },
-  { value: "java", label: "Java 17" },
-  { value: "cpp", label: "C++ 20" },
-  { value: "c", label: "C Language" },
-  { value: "sql", label: "SQL (PostgreSQL)" },
-  { value: "go", label: "Go (Golang)" },
 ];
+
+const STARTER_TEMPLATES = {
+  python: `# Write your Python solution here\nimport sys\n\ndef main():\n    # Read input from standard input\n    # lines = sys.stdin.read().splitlines()\n    pass\n\nif __name__ == '__main__':\n    main()\n`,
+  node: `// Write your JavaScript (Node.js) solution here\nconst fs = require('fs');\n\nfunction main() {\n    // const input = fs.readFileSync(0, 'utf-8').trim();\n}\n\nmain();\n`,
+  cpp: `// Write your C++ solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    \n    return 0;\n}\n`,
+  c: `// Write your C solution here\n#include <stdio.h>\n\nint main() {\n    return 0;\n}\n`,
+  java: `// Write your Java solution here\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n`,
+  sql: `-- Write your SQL query here\nSELECT * FROM solution;\n`,
+  go: `// Write your Go solution here\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Hello, World!")\n}\n`,
+  react: `// React Interactive Component\nimport React, { useState } from 'react';\n\nexport default function App() {\n  const [count, setCount] = useState(0);\n  return (\n    <div style={{ padding: 24, textAlign: 'center', fontFamily: 'sans-serif' }}>\n      <h2>Interactive React Preview</h2>\n      <p>Count: {count}</p>\n      <button onClick={() => setCount(c => c + 1)}>+ Increment</button>\n    </div>\n  );\n}\n`,
+  html: `<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; }\n  </style>\n</head>\n<body>\n  <h1>Web Preview</h1>\n  <p>Write HTML & CSS here.</p>\n</body>\n</html>\n`,
+};
+
+function getAuthHeaders() {
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt;
+    } catch (e) {}
+  }
+
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 function getPreviewDocument(lang, code) {
   if (lang === "react") {
@@ -1071,12 +1099,14 @@ export default function AIRoadmap() {
   const [practiceScores, setPracticeScores] = useState({}); // { [mKey]: 100 }
   const [milestoneCombinedResults, setMilestoneCombinedResults] = useState({}); // { [mKey]: { practiceScore, quizScore, combinedScore, isPassed } }
 
-  // Compiler State
-  const [compilerLanguage, setCompilerLanguage] = useState("node");
+  // Compiler State (Docker Sandbox)
+  const [compilerLanguage, setCompilerLanguage] = useState("python");
   const [compilerCode, setCompilerCode] = useState("");
   const [compilerOutput, setCompilerOutput] = useState("");
   const [compilerStatus, setCompilerStatus] = useState("idle");
-  const [compilerActiveTab, setCompilerActiveTab] = useState("terminal"); // 'terminal' | 'preview'
+  const [compilerActiveTab, setCompilerActiveTab] = useState("terminal"); // 'terminal' | 'input' | 'preview'
+  const [customInput, setCustomInput] = useState("");
+  const [useCustomInput, setUseCustomInput] = useState(false);
 
   // YouTube Video Cache & Loading State
   const [milestoneVideosCache, setMilestoneVideosCache] = useState({});
@@ -1223,6 +1253,9 @@ export default function AIRoadmap() {
         }
         if (res.data.starterCode) {
           setCompilerCode((prevCode) => (prevCode ? prevCode : res.data.starterCode));
+        }
+        if (res.data.sampleInput) {
+          setCustomInput(res.data.sampleInput);
         }
       }
     } catch (err) {
@@ -1463,17 +1496,61 @@ export default function AIRoadmap() {
     // Initialize compiler code for the selected milestone topic
     const role = currentRoadmap?.targetRole || goalInput || "Topic Practice";
     const title = targetM.title || "Topic";
-    const practice = getPracticeQuestionForMilestone(targetM, role);
-    const lang = resolveLanguageForRole(role, title, practice?.prompt);
+    const cleanTitle = String(title).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(role).trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const cachedPractice = aiPracticeCache[cacheKey];
+    const practice = cachedPractice || getPracticeQuestionForMilestone(targetM, role);
+    const lang = practice?.language || resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
-    setCompilerCode("");
+    setCompilerCode(practice?.starterCode || STARTER_TEMPLATES[lang] || "");
     setCompilerOutput("");
     setCompilerStatus("idle");
+    setCustomInput(practice?.sampleInput || "");
+    setUseCustomInput(false);
     if (lang === "html" || lang === "react") {
       setCompilerActiveTab("preview");
     } else {
       setCompilerActiveTab("terminal");
     }
+  };
+
+  const handleCompilerLanguageChange = (newLang) => {
+    setCompilerLanguage(newLang);
+    const activeM = milestones[activeMilestoneIdx];
+    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+
+    if (currentPractice?.language === newLang && currentPractice?.starterCode) {
+      setCompilerCode(currentPractice.starterCode);
+    } else {
+      setCompilerCode(STARTER_TEMPLATES[newLang] || "");
+    }
+    setCompilerOutput("");
+    setCompilerStatus("idle");
+    if (newLang === "html" || newLang === "react") {
+      setCompilerActiveTab("preview");
+    } else {
+      setCompilerActiveTab("terminal");
+    }
+  };
+
+  const handleResetCompilerCode = () => {
+    const activeM = milestones[activeMilestoneIdx];
+    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+
+    if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
+      setCompilerCode(currentPractice.starterCode);
+    } else {
+      setCompilerCode(STARTER_TEMPLATES[compilerLanguage] || "");
+    }
+    setCompilerOutput("");
+    setCompilerStatus("idle");
   };
 
   const resetQuizState = () => {
@@ -1510,13 +1587,6 @@ export default function AIRoadmap() {
 
       saveProgressToServer(currentRoadmap, updatedMilestones, activeM.id, newProgress, "in-progress");
     }
-  };
-
-  const handleSubmitPractice = () => {
-    recordPracticeSuccess();
-    setCompilerStatus("success");
-    const activeM = milestones[activeMilestoneIdx];
-    setCompilerOutput(`✅ Practice Challenge Solution Submitted Successfully!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
   };
 
   const handleGenerate = async (e) => {
@@ -1664,84 +1734,238 @@ export default function AIRoadmap() {
   const handleRunCompiler = async () => {
     if (!isModuleActive("codingCompiler")) {
       setCompilerStatus("error");
-      setCompilerOutput(`⚠️ Code Execution Sandbox is under scheduled maintenance:\n${getModuleConfig("codingCompiler")?.message || "Compiler feature disabled by Super Admin."}`);
+      setCompilerOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Docker Sandbox is currently undergoing maintenance."}`);
       return;
     }
-    setCompilerStatus("running");
-    setCompilerOutput("Executing code...");
-    const startTime = Date.now();
+    const currentCode = (typeof compilerCode === "string" ? compilerCode : String(compilerCode ?? "")).trim();
+    if (!currentCode) {
+      setCompilerOutput("⚠️ Write some code before running.");
+      setCompilerStatus("error");
+      return;
+    }
 
     if (compilerLanguage === "html" || compilerLanguage === "react") {
       setCompilerStatus("success");
       setCompilerOutput(`✅ Live ${compilerLanguage === "react" ? "React JSX" : "HTML/CSS"} Preview Rendered Successfully! Check the Preview tab.`);
       setCompilerActiveTab("preview");
-      recordPracticeSuccess();
       return;
     }
 
+    setCompilerStatus("running");
+    setCompilerOutput("Executing code in Docker sandbox container...");
+    setCompilerActiveTab("terminal");
+    const startTime = Date.now();
+
+    const activeM = milestones[activeMilestoneIdx];
+    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+
+    const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
+
     try {
-      const res = await apiFetch("/code/run", {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/code/run`, {
         method: "POST",
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           language: compilerLanguage,
           code: compilerCode,
+          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
         }),
       });
+      const data = await res.json();
 
-      const elapsed = Date.now() - startTime;
-
-      if (res && (res.data || res.stdout !== undefined)) {
-        const result = res.data || res;
-        if (result.compilationError) {
-          setCompilerStatus("ce");
-          setCompilerOutput(`🔴 Compilation Error:\n\n${result.stderr || "Check syntax."}`);
-        } else if (result.exitCode !== 0 && result.exitCode !== undefined) {
-          setCompilerStatus("error");
-          setCompilerOutput(`🔴 Runtime Error:\n\n${result.stderr || result.stdout || "Execution failed."}`);
+      if (!res.ok) {
+        setCompilerStatus("error");
+        if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
+          setCompilerOutput(`⚠️ Docker compiler sandbox is currently unavailable. Please verify Docker Desktop is running.`);
         } else {
-          setCompilerStatus("success");
-          setCompilerOutput(result.stdout || result.output || "(Execution completed with no console output)");
-          recordPracticeSuccess();
+          setCompilerOutput(`❌ Execution Error: ${data.message || "Execution failed"}`);
         }
+        return;
+      }
+
+      const result = data.data || data;
+
+      if (result.compilationError) {
+        setCompilerStatus("ce");
+        setCompilerOutput(`🔴 Compilation Error\n\n${result.stderr || "Check your syntax."}`);
+      } else if (result.timedOut) {
+        setCompilerStatus("tle");
+        setCompilerOutput(`⏱️ Time Limit Exceeded (${result.executionTime || 5000}ms)`);
+      } else if (result.exitCode !== 0 && result.exitCode !== undefined) {
+        setCompilerStatus("error");
+        setCompilerOutput(
+          `🔴 Runtime Error (exit code ${result.exitCode})\n\n${result.stderr ? `Stderr:\n${result.stderr}` : ""}${result.stdout ? `\nStdout (partial):\n${result.stdout}` : ""}`
+        );
       } else {
-        runClientFallbackExecution(elapsed);
+        setCompilerStatus("success");
+        const outputText = result.stdout?.trim() || "(Execution completed with no console output)";
+        const expectedText = currentPractice?.sampleOutput?.trim() || null;
+        let verdict = "";
+        if (expectedText && expectedText !== "null") {
+          const match = outputText.toLowerCase().includes(expectedText.toLowerCase()) || outputText === expectedText;
+          verdict = match ? "\n\n✅ Output matches sample expectation!" : `\n\nSample Expected:\n${expectedText}\n\nActual Got:\n${outputText}`;
+        }
+        setCompilerOutput(
+          `✅ Execution successful (${result.executionTime || 0}ms - Docker Sandbox)\n\n${outputText}${verdict}`
+        );
       }
     } catch (err) {
-      runClientFallbackExecution(Date.now() - startTime);
+      setCompilerStatus("error");
+      setCompilerOutput(`❌ Network error executing Docker container: ${err.message}`);
     }
   };
 
-  const runClientFallbackExecution = (elapsed) => {
-    if (compilerLanguage === "node" || compilerLanguage === "javascript" || compilerLanguage === "typescript") {
-      try {
-        let logs = [];
-        const customConsole = {
-          log: (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(" ")),
-          warn: (...args) => logs.push("[WARN] " + args.join(" ")),
-          error: (...args) => logs.push("[ERROR] " + args.join(" ")),
-          info: (...args) => logs.push("[INFO] " + args.join(" ")),
-        };
-        let runCode = compilerCode;
-        if (compilerLanguage === "typescript") {
-          runCode = runCode
-            .replace(/:\s*[A-Za-z0-9_<>\[\]|]+/g, "")
-            .replace(/interface\s+[A-Za-z0-9_]+\s*\{[^}]*\}/g, "");
-        }
-        const runFn = new Function("console", runCode);
-        runFn(customConsole);
-        setCompilerStatus("success");
-        setCompilerOutput(logs.length > 0 ? logs.join("\n") : "(Execution succeeded with no console output)");
-        recordPracticeSuccess();
-      } catch (jsErr) {
+  const submitPracticeRef = useRef(null);
+  const hasAutoSubmittedPracticeRef = useRef(false);
+
+  const handleSubmitPractice = async (opts = {}) => {
+    const isAuto = opts?.isAutoSubmit === true;
+    if (!isAuto && !isModuleActive("codingCompiler")) {
+      setCompilerStatus("error");
+      setCompilerOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code submission is currently undergoing maintenance."}`);
+      return;
+    }
+    let currentCode = (typeof compilerCode === "string" ? compilerCode : String(compilerCode ?? "")).trim();
+    if (!currentCode) {
+      if (isAuto) {
+        currentCode = STARTER_TEMPLATES[compilerLanguage] || "// Auto-submitted due to tab switch";
+      } else {
+        setCompilerOutput("⚠️ Write some code before submitting your solution.");
         setCompilerStatus("error");
-        setCompilerOutput(`🔴 ${compilerLanguage.toUpperCase()} Runtime Error:\n\n${jsErr.name}: ${jsErr.message}`);
+        return;
       }
-    } else {
-      setCompilerStatus("success");
-      setCompilerOutput(`✅ Code Executed Successfully (${compilerLanguage.toUpperCase()})\n\nOutput Log:\nExecuting practice challenge for ${compilerLanguage.toUpperCase()}...\nResult: All assertions and logic checks passed cleanly!`);
+    }
+
+    const activeM = milestones[activeMilestoneIdx];
+    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+
+    if (compilerLanguage === "html" || compilerLanguage === "react") {
       recordPracticeSuccess();
+      setCompilerStatus("success");
+      setCompilerOutput(`✅ Practice Challenge Solution Accepted!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
+      return;
+    }
+
+    setCompilerStatus("running");
+    if (isAuto) {
+      setCompilerOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating in Docker sandbox...");
+    } else {
+      setCompilerOutput("Evaluating solution in Docker sandbox container...");
+    }
+    setCompilerActiveTab("terminal");
+
+    const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
+
+    try {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/code/run`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          language: compilerLanguage,
+          code: currentCode,
+          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCompilerStatus("error");
+        setCompilerOutput(`❌ Submission Error: ${data.message || "Execution failed"}`);
+        return;
+      }
+
+      const result = data.data || data;
+
+      if (result.compilationError) {
+        setCompilerStatus("ce");
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Cannot Submit Solution: Compilation Error"}\n\n${result.stderr || "Check your syntax."}`);
+        return;
+      }
+      if (result.timedOut) {
+        setCompilerStatus("tle");
+        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Cannot Submit Solution: Time Limit Exceeded"} (${result.executionTime || 5000}ms)`);
+        return;
+      }
+      if (result.exitCode !== 0 && result.exitCode !== undefined) {
+        setCompilerStatus("error");
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Cannot Submit Solution: Runtime Error"} (exit code ${result.exitCode})\n\n${result.stderr || "Execution failed."}`);
+        return;
+      }
+
+      // Execution passed cleanly in Docker container!
+      recordPracticeSuccess();
+      setCompilerStatus("success");
+      const outputText = result.stdout?.trim() || "(No console output)";
+      setCompilerOutput(
+        `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText}\n\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
+      );
+    } catch (err) {
+      setCompilerStatus("error");
+      setCompilerOutput(`❌ Network error submitting to Docker sandbox: ${err.message}`);
     }
   };
+
+  useEffect(() => {
+    submitPracticeRef.current = handleSubmitPractice;
+  });
+
+  useEffect(() => {
+    if (activeSection !== "practice") return;
+
+    const activeM = milestones[activeMilestoneIdx];
+    const mKey = activeM?.id || `m_${activeMilestoneIdx}`;
+    const isAlreadyPassed = practiceScores[mKey] === 100;
+
+    const triggerTabSwitchAutoSubmit = () => {
+      if (!isAlreadyPassed && !hasAutoSubmittedPracticeRef.current) {
+        hasAutoSubmittedPracticeRef.current = true;
+        if (submitPracticeRef.current && compilerStatus !== "running") {
+          submitPracticeRef.current({ isAutoSubmit: true, reason: "tab_switch" });
+        }
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        triggerTabSwitchAutoSubmit();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      triggerTabSwitchAutoSubmit();
+    };
+
+    const preventCopy = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCompilerStatus("error");
+      setCompilerOutput("⚠️ Copying, cutting, and pasting is strictly disabled in the compiler! Please write your code manually.");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("copy", preventCopy, true);
+    document.addEventListener("cut", preventCopy, true);
+    document.addEventListener("paste", preventCopy, true);
+    document.addEventListener("contextmenu", preventCopy, true);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("copy", preventCopy, true);
+      document.removeEventListener("cut", preventCopy, true);
+      document.removeEventListener("paste", preventCopy, true);
+      document.removeEventListener("contextmenu", preventCopy, true);
+    };
+  }, [activeSection, activeMilestoneIdx, milestones, practiceScores, compilerStatus]);
 
   const overallProgress = calculateRoadmapProgress(milestones);
 
@@ -2486,9 +2710,9 @@ export default function AIRoadmap() {
                         <div className="compiler-toolbar-right">
                           <button
                             type="button"
-                            onClick={() => setCompilerCode("")}
+                            onClick={handleResetCompilerCode}
                             className="compiler-reset-btn"
-                            title="Clear code editor"
+                            title="Reset code to challenge template"
                           >
                             <RotateCcw size={13} />
                             <span>Reset Code</span>
@@ -2498,15 +2722,7 @@ export default function AIRoadmap() {
                             <CustomSelect
                               value={compilerLanguage}
                               options={COMPILER_LANGUAGE_OPTIONS}
-                              onChange={(newLang) => {
-                                setCompilerLanguage(newLang);
-                                setCompilerCode("");
-                                if (newLang === "html" || newLang === "react") {
-                                  setCompilerActiveTab("preview");
-                                } else {
-                                  setCompilerActiveTab("terminal");
-                                }
-                              }}
+                              onChange={handleCompilerLanguageChange}
                               placeholder="Select Language"
                             />
                           </div>
@@ -2535,12 +2751,13 @@ export default function AIRoadmap() {
                             ) : (
                               <Play size={14} />
                             )}
-                            <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
+                            <span>{compilerStatus === "running" ? "Running in Docker..." : "Run Code"}</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={handleSubmitPractice}
+                            disabled={compilerStatus === "running"}
                             className={`compiler-submit-practice-btn ${practiceScores[activeMilestone?.id || `m_${activeMilestoneIdx}`] === 100 ? "submitted" : ""}`}
                           >
                             <CheckCircle2 size={14} />
@@ -2559,23 +2776,39 @@ export default function AIRoadmap() {
 
                             <button
                               type="button"
-                              onClick={() => setCompilerActiveTab("preview")}
-                              className={`compiler-tab-btn ${compilerActiveTab === "preview" ? "active" : ""}`}
+                              onClick={() => setCompilerActiveTab("input")}
+                              className={`compiler-tab-btn ${compilerActiveTab === "input" ? "active" : ""}`}
                             >
-                              <Eye size={13} />
-                              <span>{compilerLanguage === "react" ? "Live React Preview" : "Live Web Preview"}</span>
+                              <FileText size={13} />
+                              <span>Custom Input</span>
                             </button>
+
+                            {(compilerLanguage === "react" || compilerLanguage === "html") && (
+                              <button
+                                type="button"
+                                onClick={() => setCompilerActiveTab("preview")}
+                                className={`compiler-tab-btn ${compilerActiveTab === "preview" ? "active" : ""}`}
+                              >
+                                <Eye size={13} />
+                                <span>{compilerLanguage === "react" ? "Live React Preview" : "Live Web Preview"}</span>
+                              </button>
+                            )}
                           </div>
                         </div>
 
                         <div className="compiler-actions-right">
+                          {compilerStatus === "running" && (
+                            <span className="compiler-status-badge warning">
+                              <RefreshCw size={13} className="animate-spin" /> Running in Docker...
+                            </span>
+                          )}
                           {practiceScores[activeMilestone?.id || `m_${activeMilestoneIdx}`] === 100 ? (
                             <span className="compiler-status-badge success">
                               <CheckCircle2 size={13} /> Practice Score: 100%
                             </span>
                           ) : compilerStatus === "success" ? (
                             <span className="compiler-status-badge success">
-                              <CheckCircle2 size={13} /> Succeeded
+                              <CheckCircle2 size={13} /> Execution Succeeded
                             </span>
                           ) : null}
                           {compilerStatus === "error" && (
@@ -2584,12 +2817,40 @@ export default function AIRoadmap() {
                           {compilerStatus === "ce" && (
                             <span className="compiler-status-badge warning">Compilation Error</span>
                           )}
+                          {compilerStatus === "tle" && (
+                            <span className="compiler-status-badge warning">Time Limit Exceeded</span>
+                          )}
                         </div>
                       </div>
 
-                      {/* Output Section: Terminal Output or Live Web Preview iframe */}
+                      {/* Output Section: Terminal Output, Custom Input, or Live Web Preview iframe */}
                       <div className="compiler-output-section">
-                        {compilerActiveTab === "preview" || compilerLanguage === "html" || compilerLanguage === "react" ? (
+                        {compilerActiveTab === "input" ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", color: "#cbd5e1", fontWeight: 600, cursor: "pointer" }}>
+                              <input 
+                                type="checkbox" 
+                                checked={useCustomInput} 
+                                onChange={(e) => setUseCustomInput(e.target.checked)} 
+                                style={{ accentColor: "#6366f1", width: "16px", height: "16px", cursor: "pointer" }}
+                              />
+                              <span>Test against custom stdin input</span>
+                            </label>
+                            <textarea 
+                              value={customInput}
+                              onChange={(e) => setCustomInput(e.target.value)}
+                              placeholder={useCustomInput ? "Type standard input (stdin) for your program here..." : `Default sample input: ${practice.sampleInput || '(none)'}`}
+                              style={{ 
+                                width: "100%", minHeight: "130px", padding: "12px", borderRadius: "8px", border: "1px solid #1e293b", 
+                                fontFamily: "'Fira Code', Consolas, monospace", fontSize: "13px", resize: "vertical",
+                                background: "#0b1120", color: "#f8fafc", outline: "none", boxSizing: "border-box"
+                              }}
+                            />
+                            <span style={{ fontSize: "11px", color: "#64748b" }}>
+                              {useCustomInput ? "Using custom input for Docker sandbox execution." : "Custom input is disabled. Docker execution will use the milestone's sample input."}
+                            </span>
+                          </div>
+                        ) : compilerActiveTab === "preview" && (compilerLanguage === "html" || compilerLanguage === "react") ? (
                           <iframe
                             key={`${compilerLanguage}-${compilerCode.length}`}
                             title="Live Code Preview"
@@ -2601,12 +2862,12 @@ export default function AIRoadmap() {
                           <div>
                             {compilerOutput ? (
                               <pre className="compiler-terminal-view">
-                                <span className="compiler-output-prefix">$ execution output:{"\n"}</span>
+                                <span className="compiler-output-prefix">$ docker execution output:{"\n"}</span>
                                 {compilerOutput}
                               </pre>
                             ) : (
                               <div className="compiler-empty-output">
-                                Click "Run Code" above to execute and inspect stdout / terminal output.
+                                Click "Run Code" above to execute inside the isolated Docker sandbox container.
                               </div>
                             )}
                           </div>

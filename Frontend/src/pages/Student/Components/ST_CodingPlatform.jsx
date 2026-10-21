@@ -244,6 +244,15 @@ export default function CodingPlatform() {
               if (probRes.ok && probData.success && probData.data) {
                 const p = probData.data;
                 const rawCases = p.testCases || p.cases || p.test_cases || [];
+                const taskLang = p.language || "";
+                const taskNormKey = normalizeLanguageKey(taskLang);
+                if (taskNormKey) {
+                  setSelectedLang(taskNormKey);
+                  setCode((prevCode) => {
+                    const prev = typeof prevCode === "string" ? prevCode : "";
+                    return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                  });
+                }
                 setTaskData({
                   id: p.id,
                   title: p.title,
@@ -254,6 +263,7 @@ export default function CodingPlatform() {
                   description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
                   testCases: getDynamicSampleTestCases(p.title, rawCases),
                   source: "practice_problem",
+                  language: taskLang,
                 });
                 return;
               }
@@ -313,6 +323,15 @@ export default function CodingPlatform() {
         if (probRes.ok && probData.success && probData.data) {
           const p = probData.data;
           const rawCases = p.testCases || p.cases || p.test_cases || [];
+          const taskLang = p.language || "";
+          const taskNormKey = normalizeLanguageKey(taskLang);
+          if (taskNormKey) {
+            setSelectedLang(taskNormKey);
+            setCode((prevCode) => {
+              const prev = typeof prevCode === "string" ? prevCode : "";
+              return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+            });
+          }
           setTaskData({
             id: p.id,
             title: p.title,
@@ -323,6 +342,7 @@ export default function CodingPlatform() {
             description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
             testCases: getDynamicSampleTestCases(p.title, rawCases),
             source: "practice_problem",
+            language: taskLang,
           });
           return;
         }
@@ -484,23 +504,30 @@ export default function CodingPlatform() {
     }
   };
 
-  const handleSubmit = async () => {
+  const hasAutoSubmittedRef = useRef(false);
+
+  const handleSubmit = async (opts = {}) => {
+    const isAuto = opts?.isAutoSubmit === true;
     if (isSubmitting || isRunning) return;
     if (hasSubmitted) {
       setConsoleStatus("error");
       setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
       return;
     }
-    if (!isModuleActive("codingCompiler")) {
+    if (!isAuto && !isModuleActive("codingCompiler")) {
       setConsoleStatus("error");
       setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution and Submission is currently undergoing maintenance."}`);
       return;
     }
-    const currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
+    let currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
     if (!currentCode) {
-      setConsoleOutput("⚠️  Write some code before submitting.");
-      setConsoleStatus("error");
-      return;
+      if (isAuto) {
+        currentCode = STARTER_TEMPLATES[selectedLang] || "// Auto-submitted due to tab switch";
+      } else {
+        setConsoleOutput("⚠️  Write some code before submitting.");
+        setConsoleStatus("error");
+        return;
+      }
     }
     if (!taskData?.id) {
       setConsoleOutput("⚠️  No problem ID found. Cannot submit.");
@@ -509,7 +536,11 @@ export default function CodingPlatform() {
     }
     setIsSubmitting(true);
     setConsoleStatus("running");
-    setConsoleOutput("Evaluating all test cases...");
+    if (isAuto) {
+      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test cases in Docker sandbox...");
+    } else {
+      setConsoleOutput("Evaluating all test cases in Docker sandbox...");
+    }
     setMobileView("code");
 
     try {
@@ -518,7 +549,7 @@ export default function CodingPlatform() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           language: selectedLang,
-          code,
+          code: currentCode,
           problem_id: taskData.id,
           task_id: taskId,
           source: taskData.source || (taskData.batch_id ? 'batch_task' : undefined),
@@ -555,12 +586,17 @@ export default function CodingPlatform() {
       } else if (passed === total && total > 0) {
         setConsoleStatus("success");
         header = `✅ ${passed} / ${total} test cases passed  —  ACCEPTED\n`;
+      } else if (passed > 0) {
+        setConsoleStatus("warning");
+        header = `⚠️ ${passed} / ${total} test cases passed  —  PARTIALLY ACCEPTED\n`;
       } else {
         setConsoleStatus("error");
         header = `❌ ${passed} / ${total} test cases passed  —  WRONG ANSWER\n`;
       }
 
-      const scoreLine = `Score: ${result.score ?? 0} / ${result.total_marks ?? 100}  (${result.percentage ?? 0}%)\n`;
+      const scoreVal = result.marks ?? result.score ?? 0;
+      const totalMarksVal = result.total_marks ?? taskData?.points ?? 100;
+      const scoreLine = `Marks: ${scoreVal} / ${totalMarksVal} pts  (${result.percentage ?? 0}%)\n`;
       const timeLine = result.execution_time_ms != null ? `Execution Time: ${result.execution_time_ms}ms\n` : "";
 
       // Per-test-case breakdown
@@ -629,30 +665,48 @@ export default function CodingPlatform() {
   });
 
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden && taskData) {
-        if (submitRef.current && !isSubmitting) submitRef.current();
+    const triggerTabSwitchAutoSubmit = () => {
+      if (taskData && !hasSubmitted && !hasAutoSubmittedRef.current) {
+        hasAutoSubmittedRef.current = true;
+        if (submitRef.current && !isSubmitting) {
+          submitRef.current({ isAutoSubmit: true, reason: "tab_switch" });
+        }
       }
     };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        triggerTabSwitchAutoSubmit();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      triggerTabSwitchAutoSubmit();
+    };
+
     const preventCopy = (e) => {
       e.preventDefault();
-      alert("Copying and pasting is disabled in the coding platform.");
+      e.stopPropagation();
+      setConsoleStatus("error");
+      setConsoleOutput("⚠️ Copying, cutting, and pasting is strictly disabled in the coding compiler! You must type your solution manually.");
     };
 
     document.addEventListener("visibilitychange", handleVisibility);
-    document.addEventListener("copy", preventCopy);
-    document.addEventListener("cut", preventCopy);
-    document.addEventListener("paste", preventCopy);
-    document.addEventListener("contextmenu", preventCopy);
+    window.addEventListener("blur", handleWindowBlur);
+    document.addEventListener("copy", preventCopy, true);
+    document.addEventListener("cut", preventCopy, true);
+    document.addEventListener("paste", preventCopy, true);
+    document.addEventListener("contextmenu", preventCopy, true);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      document.removeEventListener("copy", preventCopy);
-      document.removeEventListener("cut", preventCopy);
-      document.removeEventListener("paste", preventCopy);
-      document.removeEventListener("contextmenu", preventCopy);
+      window.removeEventListener("blur", handleWindowBlur);
+      document.removeEventListener("copy", preventCopy, true);
+      document.removeEventListener("cut", preventCopy, true);
+      document.removeEventListener("paste", preventCopy, true);
+      document.removeEventListener("contextmenu", preventCopy, true);
     };
-  }, [taskData, isSubmitting]);
+  }, [taskData, hasSubmitted, isSubmitting]);
 
   const testCasesList = taskData?.testCases || taskData?.test_cases || [];
 
@@ -931,19 +985,22 @@ export default function CodingPlatform() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "4px 0" }}>
                     {submissions.map((s, i) => {
                       const isAccepted = s.status === "accepted" || s.status === "passed";
-                      const statusColor = isAccepted ? "#16a34a" : s.status === "compilation_error" ? "#9333ea" : s.status === "time_limit_exceeded" ? "#d97706" : "#dc2626";
+                      const isPartial = s.status === "partial" || (!isAccepted && (s.passed_test_cases ?? 0) > 0);
+                      const statusColor = isAccepted ? "#16a34a" : isPartial ? "#d97706" : s.status === "compilation_error" ? "#9333ea" : s.status === "time_limit_exceeded" ? "#d97706" : "#dc2626";
+                      const statusLabel = isAccepted ? "✅ Accepted" : isPartial ? "⚠️ Partially Accepted" : s.status === "compilation_error" ? "🔴 Compilation Error" : s.status === "time_limit_exceeded" ? "⏱️ Time Limit Exceeded" : "❌ Wrong Answer";
+                      const marksVal = s.marks ?? s.score ?? 0;
                       return (
-                        <div key={s.id || i} style={{ border: "1.5px solid #e2e8f0", borderRadius: "10px", padding: "12px 16px", background: isAccepted ? "#f0fdf4" : "#fff" }}>
+                        <div key={s.id || i} style={{ border: `1.5px solid ${isAccepted ? '#86efac' : isPartial ? '#fde68a' : '#e2e8f0'}`, borderRadius: "10px", padding: "12px 16px", background: isAccepted ? "#f0fdf4" : isPartial ? "#fffbeb" : "#fff" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                             <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
-                              {isAccepted ? "✅ Accepted" : s.status?.replace(/_/g, " ") || "Unknown"}
+                              {statusLabel}
                             </span>
                             <span style={{ fontSize: "12px", color: "#64748b" }}>
-                              {s.language} &bull; {s.passed_test_cases ?? 0}/{s.total_test_cases ?? 0} tests
+                              {s.language} &bull; {s.passed_test_cases ?? 0}/{s.total_test_cases ?? 0} tests passed
                             </span>
                           </div>
                           <div style={{ fontSize: "12px", color: "#475569" }}>
-                            Score: <strong>{s.score ?? 0}</strong> / {taskData?.points || 100} &nbsp;|&nbsp;
+                            Marks: <strong>{marksVal}</strong> / {taskData?.points || 100} pts &nbsp;|&nbsp;
                             {s.percentage ?? 0}% &nbsp;|&nbsp;
                             {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ""}
                           </div>

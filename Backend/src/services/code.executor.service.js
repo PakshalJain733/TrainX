@@ -591,8 +591,9 @@ const executeLocalProcess = (cmd, args, cwd, stdin, timeoutSeconds, startedAt) =
  */
 export const deriveSubmissionStatus = ({ timedOut, compilationError, runtimeError, passedTests, totalTests }) => {
   if (compilationError) return 'compilation_error';
+  if (totalTests > 0 && passedTests === totalTests) return 'accepted';
+  if (passedTests > 0) return 'partial';
   if (timedOut) return 'time_limit_exceeded';
   if (runtimeError) return 'runtime_error';
-  if (passedTests === totalTests) return 'accepted';
   return 'wrong_answer';
 };

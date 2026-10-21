@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import "./MonacoCodeEditor.css";
 
@@ -38,9 +38,25 @@ export default function MonacoCodeEditor({
   options = {},
   className = "",
   onMount,
+  preventCopyPaste = true,
+  onClipboardBlocked,
 }) {
   const editorRef = useRef(null);
+  const [clipboardWarning, setClipboardWarning] = useState("");
   const monacoLang = LANGUAGE_MAP[String(language).toLowerCase()] || language || "javascript";
+
+  const showBlockedWarning = (action = "paste") => {
+    const msg = action === "paste"
+      ? "⚠️ Pasting code is strictly disabled. You must type your solution manually."
+      : "⚠️ Copying code is disabled in this coding environment.";
+    setClipboardWarning(msg);
+    setTimeout(() => {
+      setClipboardWarning("");
+    }, 3500);
+    if (typeof onClipboardBlocked === "function") {
+      onClipboardBlocked(action);
+    }
+  };
 
   const handleBeforeMount = (monaco) => {
     // Define the vibrant-dark theme with rich colorful syntax highlighting
@@ -124,6 +140,72 @@ export default function MonacoCodeEditor({
 
   const handleEditorDidMount = (editor, monaco) => {
     editorRef.current = editor;
+
+    if (preventCopyPaste) {
+      // 1. Intercept keyboard shortcuts (Ctrl+V, Cmd+V, Shift+Insert, Ctrl+C, Cmd+C, Ctrl+X, Cmd+X)
+      editor.onKeyDown((e) => {
+        const evt = e.browserEvent || e;
+        const isMod = evt.ctrlKey || evt.metaKey;
+        const key = (evt.key || "").toLowerCase();
+        const code = evt.code || "";
+
+        if (
+          (isMod && (key === "v" || code === "KeyV")) ||
+          (evt.shiftKey && (key === "insert" || code === "Insert"))
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          evt.preventDefault?.();
+          evt.stopPropagation?.();
+          showBlockedWarning("paste");
+          return;
+        }
+
+        if (
+          (isMod && (key === "c" || code === "KeyC")) ||
+          (isMod && (key === "x" || code === "KeyX"))
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          evt.preventDefault?.();
+          evt.stopPropagation?.();
+          showBlockedWarning(key === "c" ? "copy" : "cut");
+          return;
+        }
+      });
+
+      // 2. Override Monaco internal clipboard commands
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+        showBlockedWarning("paste");
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+        showBlockedWarning("copy");
+      });
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+        showBlockedWarning("cut");
+      });
+      editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.Insert, () => {
+        showBlockedWarning("paste");
+      });
+
+      // 3. Attach DOM-level capture listeners to editor container
+      const domNode = editor.getDomNode();
+      if (domNode) {
+        const blockEvent = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          showBlockedWarning(e.type);
+        };
+        domNode.addEventListener("paste", blockEvent, true);
+        domNode.addEventListener("copy", blockEvent, true);
+        domNode.addEventListener("cut", blockEvent, true);
+        domNode.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+      }
+    }
+
     if (typeof onMount === "function") {
       onMount(editor, monaco);
     }
@@ -147,7 +229,8 @@ export default function MonacoCodeEditor({
     suggestOnTriggerCharacters: true,
     acceptSuggestionOnEnter: "on",
     quickSuggestions: true,
-    formatOnPaste: true,
+    formatOnPaste: !preventCopyPaste,
+    contextmenu: !preventCopyPaste,
     bracketPairColorization: { enabled: true },
     guides: {
       bracketPairs: true,
@@ -159,7 +242,30 @@ export default function MonacoCodeEditor({
   };
 
   return (
-    <div className={`monaco-editor-shell ${className}`} style={{ height }}>
+    <div className={`monaco-editor-shell ${className}`} style={{ height, position: "relative" }}>
+      {clipboardWarning && (
+        <div style={{
+          position: "absolute",
+          top: "12px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+          background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+          color: "#ffffff",
+          padding: "8px 16px",
+          borderRadius: "8px",
+          fontSize: "12.5px",
+          fontWeight: 700,
+          boxShadow: "0 6px 20px rgba(0, 0, 0, 0.4)",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          pointerEvents: "none",
+          textAlign: "center"
+        }}>
+          <span>{clipboardWarning}</span>
+        </div>
+      )}
       <Editor
         height="100%"
         width="100%"

@@ -3,10 +3,17 @@ import {
   createCodingSubmission,
   getCodingSubmissionById,
   getStudentCodingSubmissions,
+  getAllCodingSubmissionsAdmin,
 } from '../controllers/codingSubmission.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+
+/**
+ * Route: Get all coding submissions (Admin / Mentors)
+ * GET /api/v1/coding-submissions
+ */
+router.get('/', authenticateToken, getAllCodingSubmissionsAdmin);
 
 /**
  * Route: Save a student's coding attempt and marks
