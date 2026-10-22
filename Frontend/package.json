@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/patch-node18.js && vite",
-    "build": "node scripts/patch-node18.js && vite build",
+    "build": "node scripts/patch-node18.js && node scripts/safe-build.js",
     "lint": "node scripts/patch-node18.js && eslint .",
-    "test": "node scripts/patch-node18.js && eslint . --quiet && vite build",
+    "test": "node scripts/patch-node18.js && eslint . --quiet && node scripts/safe-build.js",
     "preview": "vite preview",
     "postinstall": "node scripts/patch-node18.js"
   },
@@ -25,7 +25,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.20.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-basic-ssl": "^1.2.0",
