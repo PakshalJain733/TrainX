@@ -263,7 +263,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .global-header-search-wrap {
     flex: 0 0 auto;
     margin-left: 0;

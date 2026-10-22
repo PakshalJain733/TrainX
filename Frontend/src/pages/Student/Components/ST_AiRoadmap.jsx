@@ -1081,6 +1081,7 @@ export default function AIRoadmap() {
 
   // View state: 'overview' (all roadmaps list) vs 'milestones' (selected roadmap detail)
   const [viewMode, setViewMode] = useState("overview");
+  const [mobileMilestonesOpen, setMobileMilestonesOpen] = useState(false);
 
   // Active section inside milestone detail: 'theory' | 'video' | 'practice' | 'quiz'
   const [activeSection, setActiveSection] = useState("theory");
@@ -1490,6 +1491,7 @@ export default function AIRoadmap() {
 
     setActiveMilestoneIdx(index);
     setActiveSection("theory");
+    setMobileMilestonesOpen(false);
     resetQuizState();
     setError(null);
 
@@ -2193,9 +2195,22 @@ export default function AIRoadmap() {
 
             <hr className="roadmap-card-divider" />
 
-            {/* Milestones Vertical List */}
-            <div className="roadmap-sidebar-list">
+            {/* Milestones Vertical List Header with Mobile Toggle */}
+            <div className="roadmap-sidebar-header-row">
               <span className="roadmap-sidebar-heading">Milestones ({milestones.length})</span>
+              <button
+                type="button"
+                className="roadmap-mobile-milestone-toggle"
+                onClick={() => setMobileMilestonesOpen(prev => !prev)}
+                aria-label="Toggle Milestones"
+              >
+                <span>{mobileMilestonesOpen ? "Hide" : "Switch Milestone"}</span>
+                {mobileMilestonesOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+            </div>
+
+            {/* Milestones Vertical List */}
+            <div className={`roadmap-sidebar-list ${mobileMilestonesOpen ? 'roadmap-sidebar-list--mobile-open' : ''}`}>
               {milestones.map((m, idx) => {
                 const isActive = activeMilestoneIdx === idx;
                 const isCompleted = m.status === "completed";
@@ -2244,7 +2259,10 @@ export default function AIRoadmap() {
                         <div className="roadmap-sidebar-sublist">
                           <button
                             type="button"
-                            onClick={() => setActiveSection("theory")}
+                            onClick={() => {
+                              setActiveSection("theory");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "theory" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">1.</span>
@@ -2254,7 +2272,10 @@ export default function AIRoadmap() {
                           {mHasVideo && (
                             <button
                               type="button"
-                              onClick={() => setActiveSection("video")}
+                              onClick={() => {
+                                setActiveSection("video");
+                                setMobileMilestonesOpen(false);
+                              }}
                               className={`roadmap-sidebar-sub-btn ${activeSection === "video" ? "active" : "inactive"}`}
                             >
                               <span className="font-extrabold opacity-90">2.</span>
@@ -2264,7 +2285,10 @@ export default function AIRoadmap() {
 
                           <button
                             type="button"
-                            onClick={() => setActiveSection("practice")}
+                            onClick={() => {
+                              setActiveSection("practice");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "practice" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">{mHasVideo ? "3." : "2."}</span>
@@ -2273,7 +2297,10 @@ export default function AIRoadmap() {
 
                           <button
                             type="button"
-                            onClick={() => setActiveSection("quiz")}
+                            onClick={() => {
+                              setActiveSection("quiz");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "quiz" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">{mHasVideo ? "4." : "3."}</span>
