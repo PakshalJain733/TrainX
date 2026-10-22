@@ -818,6 +818,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0 !important;
   position: relative !important;
 }
 
@@ -2198,6 +2199,27 @@ button:active:not(:disabled),
 [data-theme="dark"] .student-header__sidebar-toggle:hover {
   background: rgba(255, 255, 255, 0.16) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Responsive header adjustments to prevent overlap on mobile/tablet */
+@media (max-width: 860px) {
+  .student-header {
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+
+  .student-header__user-info {
+    display: none !important;
+  }
+
+  .student-header__user {
+    padding: 3px !important;
+    gap: 0 !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+  }
 }
 
 .student-header-title {

@@ -825,6 +825,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0 !important;
   position: relative !important;
 }
 
@@ -1992,6 +1993,27 @@ body {
 [data-theme="dark"] .coordinator-header__sidebar-toggle:hover {
   background: rgba(255, 255, 255, 0.16) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Responsive header adjustments to prevent overlap on mobile/tablet */
+@media (max-width: 860px) {
+  .coordinator-header {
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+
+  .coordinator-header__user-info {
+    display: none !important;
+  }
+
+  .coordinator-header__user {
+    padding: 3px !important;
+    gap: 0 !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+  }
 }
 
 .coord-page-sub,
