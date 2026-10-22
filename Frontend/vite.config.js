@@ -39,16 +39,20 @@ export default defineConfig({
         manualChunks(id) {
           const normalized = id.replace(/\\/g, '/');
           if (normalized.includes('node_modules')) {
+            if (normalized.includes('/@monaco-editor/')) {
+              return 'vendor-monaco';
+            }
             if (normalized.includes('/lucide-react/')) {
               return 'vendor-icons';
             }
             if (
-              normalized.includes('/react/') ||
-              normalized.includes('/react-dom/') ||
-              normalized.includes('/react-is/') ||
-              normalized.includes('/react-router/') ||
-              normalized.includes('/react-router-dom/') ||
-              normalized.includes('/scheduler/')
+              normalized.includes('/node_modules/react/') ||
+              normalized.includes('/node_modules/react-dom/') ||
+              normalized.includes('/node_modules/react-is/') ||
+              normalized.includes('/node_modules/react-router/') ||
+              normalized.includes('/node_modules/react-router-dom/') ||
+              normalized.includes('/node_modules/scheduler/') ||
+              normalized.includes('/node_modules/use-sync-external-store/')
             ) {
               return 'vendor-react';
             }

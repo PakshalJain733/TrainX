@@ -1,0 +1,1 @@
+import{j as r}from"./vendor-react-DDRa9cJ2.js";/* empty css           */function u({children:a,variant:e="default",className:s="",...t}){return r.jsx("span",{className:`ui-badge ui-badge--${e} ${s}`,...t,children:a})}export{u as B};
