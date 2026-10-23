@@ -15,14 +15,22 @@ let smtpTransporter = null;
 
 const getSmtpTransporter = () => {
   if (!smtpTransporter && process.env.SMTP_HOST) {
+    const port = parseInt(process.env.SMTP_PORT || '465', 10);
+    const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
     smtpTransporter = nodemailer.createTransport({
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+      port,
+      secure: isSecure,
       auth: {
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
       },
+      connectionTimeout: 4000, // 4s timeout for fast connection failover
+      greetingTimeout: 4000,   // 4s timeout for server greeting
+      socketTimeout: 8000,     // 8s timeout for socket activity
     });
   }
   return smtpTransporter;
@@ -89,6 +97,9 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
       return info;
     } catch (smtpErr) {
       console.error(`[SMTP Error] Failed to send email to ${to}:`, smtpErr.message);
+      if (smtpErr.code === 'ETIMEDOUT' || smtpErr.code === 'ECONNRESET' || smtpErr.message?.includes('timeout')) {
+        smtpTransporter = null;
+      }
       if (!process.env.BREVO_API_KEY) {
         throw smtpErr;
       }
