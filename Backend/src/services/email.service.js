@@ -4,11 +4,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { query } from '../config/db.js';
 
-// Ensure environment variables are loaded
-if (!process.env.BREVO_API_KEY && !process.env.SMTP_HOST) {
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-  dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
-}
+// Ensure environment variables are loaded regardless of current working directory
+dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 let brevoClient = null;
 let smtpTransporter = null;
