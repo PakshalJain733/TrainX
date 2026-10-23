@@ -145,7 +145,7 @@ export default function Overview() {
           }));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   useEffect(() => {
@@ -371,7 +371,7 @@ export default function Overview() {
                   <s.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{s.label}</span>
-                
+
               </div>
 
               <p className="overview-stat-value">{s.value}</p>
@@ -615,4 +615,3 @@ export default function Overview() {
     </div>
   );
 }
-

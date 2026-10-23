@@ -436,7 +436,10 @@ export default function Departments() {
             <form onSubmit={handleAddDepartment}>
               <div className="modal-body">
                 <div className="form-group-admin">
-                  <label>College *</label>
+                  <label className="form-label-admin">
+                    <span>College Institution</span>
+                    <span className="form-required">*</span>
+                  </label>
                   <DeptSelect
                     value={deptForm.collegeId}
                     options={(Array.isArray(colleges) ? colleges : []).map((c) => ({
@@ -450,32 +453,41 @@ export default function Departments() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Department Name *</label>
+                    <label className="form-label-admin">
+                      <span>Department Name</span>
+                      <span className="form-required">*</span>
+                    </label>
                     <input
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="e.g. Computer Science"
+                      placeholder="e.g. Computer Science & Engineering"
                       value={deptForm.name}
                       onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Department Code *</label>
+                    <label className="form-label-admin">
+                      <span>Department Code</span>
+                      <span className="form-required">*</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className="form-input-admin dept-code-input"
                       placeholder="e.g. CSE"
                       value={deptForm.code}
-                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
                     />
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>HOD Name</label>
+                    <label className="form-label-admin">
+                      <span>HOD Name</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       className="form-input-admin"
@@ -485,7 +497,10 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>HOD Email</label>
+                    <label className="form-label-admin">
+                      <span>HOD Email</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="email"
                       className="form-input-admin"
@@ -506,7 +521,8 @@ export default function Departments() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Save Department
+                  <Plus size={16} />
+                  <span>Save Department</span>
                 </button>
               </div>
             </form>
@@ -634,7 +650,10 @@ export default function Departments() {
               <div className="modal-body">
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Department Name *</label>
+                    <label className="form-label-admin">
+                      <span>Department Name</span>
+                      <span className="form-required">*</span>
+                    </label>
                     <input
                       type="text"
                       required
@@ -644,20 +663,26 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Department Code *</label>
+                    <label className="form-label-admin">
+                      <span>Department Code</span>
+                      <span className="form-required">*</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className="form-input-admin dept-code-input"
                       value={editDept.code || ''}
-                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value })}
+                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value.toUpperCase() })}
                     />
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>HOD Name</label>
+                    <label className="form-label-admin">
+                      <span>HOD Name</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       className="form-input-admin"
@@ -666,7 +691,10 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>HOD Email</label>
+                    <label className="form-label-admin">
+                      <span>HOD Email</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="email"
                       className="form-input-admin"
@@ -686,7 +714,8 @@ export default function Departments() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Save Changes
+                  <Check size={16} />
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

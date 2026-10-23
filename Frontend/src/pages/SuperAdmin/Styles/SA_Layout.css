@@ -2118,6 +2118,30 @@ option:hover {
   border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
+/* Responsive header adjustments to prevent overlap on mobile/tablet */
+@media (max-width: 860px) {
+  .superadmin-header,
+  .sa-header {
+    padding: 0 12px !important;
+    gap: 8px !important;
+  }
+
+  .sa-header__user-info,
+  .superadmin-header__user-info {
+    display: none !important;
+  }
+
+  .sa-header__user,
+  .superadmin-header__user {
+    padding: 3px !important;
+    gap: 0 !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    justify-content: center !important;
+  }
+}
+
 .sa-page-subtitle,
 .maintenancecontrols-header-subtitle,
 .system-health-subtitle {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame } from "lucide-react";
+import { Search, X, ArrowLeft, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame } from "lucide-react";
 import './GlobalHeaderSearch.css';
 
 const SEARCH_REGISTRY = [
@@ -84,6 +84,7 @@ const SEARCH_REGISTRY = [
 export default function GlobalHeaderSearch({ role }) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef(null);
@@ -116,6 +117,7 @@ export default function GlobalHeaderSearch({ role }) {
         e.preventDefault();
         inputRef.current?.focus();
         setIsOpen(true);
+        setIsMobileOpen(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -127,6 +129,7 @@ export default function GlobalHeaderSearch({ role }) {
     const handleClickOutside = (e) => {
       if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) {
         setIsOpen(false);
+        setIsMobileOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -140,10 +143,25 @@ export default function GlobalHeaderSearch({ role }) {
 
   const handleSelect = (item) => {
     setIsOpen(false);
+    setIsMobileOpen(false);
     setQuery('');
     if (item && item.path) {
       navigate(item.path);
     }
+  };
+
+  const handleOpenMobile = () => {
+    setIsMobileOpen(true);
+    setIsOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 60);
+  };
+
+  const handleCloseMobile = () => {
+    setIsMobileOpen(false);
+    setIsOpen(false);
+    setQuery('');
   };
 
   const handleKeyDown = (e) => {
@@ -162,13 +180,41 @@ export default function GlobalHeaderSearch({ role }) {
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
+      setIsMobileOpen(false);
     }
   };
 
   return (
-    <div className="global-header-search-wrap" ref={searchWrapRef}>
+    <div
+      className={`global-header-search-wrap ${isMobileOpen ? 'global-header-search-wrap--mobile-active' : ''}`}
+      ref={searchWrapRef}
+    >
+      {/* Mobile-only Trigger Icon Button */}
+      <button
+        type="button"
+        className="global-header-search-mobile-trigger"
+        onClick={handleOpenMobile}
+        aria-label="Search"
+        title="Search pages (Ctrl + K)"
+      >
+        <Search size={18} />
+      </button>
+
+      {/* Main Search Bar */}
       <div className={`global-header-search-bar ${isOpen ? 'global-header-search-bar--focused' : ''}`}>
-        <Search size={16} className="global-header-search-icon" />
+        {isMobileOpen ? (
+          <button
+            type="button"
+            className="global-header-search-mobile-back"
+            onClick={handleCloseMobile}
+            aria-label="Back"
+          >
+            <ArrowLeft size={17} />
+          </button>
+        ) : (
+          <Search size={16} className="global-header-search-icon" />
+        )}
+
         <input
           ref={inputRef}
           type="text"
@@ -182,6 +228,7 @@ export default function GlobalHeaderSearch({ role }) {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
+
         {query ? (
           <button
             type="button"
@@ -198,6 +245,17 @@ export default function GlobalHeaderSearch({ role }) {
           <span className="global-header-search-kbd">
             <kbd>Ctrl K</kbd>
           </span>
+        )}
+
+        {isMobileOpen && (
+          <button
+            type="button"
+            className="global-header-search-mobile-close"
+            onClick={handleCloseMobile}
+            aria-label="Close search"
+          >
+            <X size={17} />
+          </button>
         )}
       </div>
 

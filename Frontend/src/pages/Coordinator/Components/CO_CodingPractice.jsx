@@ -205,6 +205,50 @@ export default function CodingPractice() {
     }
   };
 
+  const resetProblemForm = () => {
+    setProblemForm({
+      title: "",
+      topic: "",
+      difficulty: "Easy",
+      points: "",
+      timeLimit: "",
+      memoryLimit: "",
+      description: "",
+      inputFormat: "",
+      outputFormat: "",
+      sampleInput: "",
+      sampleOutput: "",
+      tags: "",
+      companies: "",
+    });
+    setNewTestCase({
+      input: "",
+      expectedOutput: "",
+      isHidden: false,
+      description: "",
+    });
+  };
+
+  const handleEditClick = (prob) => {
+    setEditingProblem(prob);
+    setProblemForm({
+      title: prob.title || "",
+      topic: prob.topic || prob.category || "",
+      difficulty: prob.difficulty || "Easy",
+      points: prob.points || 100,
+      timeLimit: prob.timeLimit || "1.0s",
+      memoryLimit: prob.memoryLimit || "256 MB",
+      description: prob.description || "",
+      inputFormat: prob.inputFormat || "",
+      outputFormat: prob.outputFormat || "",
+      sampleInput: prob.sampleInput || (prob.testCases?.[0]?.input) || "",
+      sampleOutput: prob.sampleOutput || (prob.testCases?.[0]?.expectedOutput) || "",
+      tags: Array.isArray(prob.tags) ? prob.tags.join(", ") : (prob.tags || ""),
+      companies: Array.isArray(prob.companies) ? prob.companies.join(", ") : (prob.companies || ""),
+    });
+    setIsProblemModalOpen(true);
+  };
+
   // Handle Save Problem with MySQL Persistence
   const handleSaveProblem = async (e) => {
     e.preventDefault();
