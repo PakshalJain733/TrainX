@@ -1291,6 +1291,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState(() => searchParams.get("role") || "all");
   const [departmentFilter, setDepartmentFilter] = useState(() => searchParams.get("department") || searchParams.get("dept") || "");
   const [stats, setStats] = useState({ totalUsers: 0, students: 0, mentors: 0, coordinators: 0 });
+  const [departments, setDepartments] = useState([]);
 
   // Sync state when URL search parameters change
   useEffect(() => {
@@ -1420,14 +1421,32 @@ export default function AdminUsers() {
     fetchStats();
   }, []);
 
+  // Fetch departments for the dropdown
+  useEffect(() => {
+    apiFetch("/departments")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+          setDepartments(list);
+          // Set the default department in the form
+          setFormData(prev => ({
+            ...prev,
+            department: prev.department || list[0]?.code || list[0]?.name || "",
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleOpenAdd = () => {
+    const firstDept = departments[0]?.code || departments[0]?.name || "";
     setFormData({
       name: "",
       email: "",
       mobile_number: "",
       role: "student",
       roll_number: "",
-      department: "COMPS",
+      department: firstDept,
       year: "FE",
       division: "A",
       semester: "1",
@@ -2008,14 +2027,15 @@ export default function AdminUsers() {
                         <AdminUserSelect
                           value={formData.department}
                           onChange={(val) => setFormData({ ...formData, department: val })}
-                          options={[
-                            { value: "COMPS", label: "COMPS" },
-                            { value: "IT", label: "IT" },
-                            { value: "AIML", label: "AIML" },
-                            { value: "ECS", label: "ECS" },
-                            { value: "MTRX", label: "MTRX" },
-                            { value: "EXTC", label: "EXTC" }
-                          ]}
+                          options={
+                            departments.length > 0
+                              ? departments.map((d) => ({
+                                  value: d.code || d.name,
+                                  label: d.code ? `${d.code} – ${d.name}` : d.name,
+                                }))
+                              : [{ value: formData.department, label: formData.department }]
+                          }
+                          placeholder="Select Department"
                         />
                       </div>
                     </div>
