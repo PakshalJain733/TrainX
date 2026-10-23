@@ -1,1 +1,0 @@
-import{j as t}from"./vendor-react-DDRa9cJ2.js";/* empty css           */function o({className:a="",children:r,...s}){return t.jsx("div",{className:`ui-avatar ${a}`,...s,children:r})}function u({children:a,className:r=""}){return t.jsx("span",{className:`ui-avatar-fallback ${r}`,children:a})}export{o as A,u as a};

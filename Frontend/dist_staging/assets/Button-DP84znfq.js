@@ -1,1 +1,0 @@
-import{j as u}from"./vendor-react-DDRa9cJ2.js";/* empty css           */function e({children:t,variant:n="primary",size:r="md",className:i="",disabled:o=!1,...s}){return u.jsx("button",{className:`ui-btn ui-btn--${n} ui-btn--${r} ${i}`,disabled:o,...s,children:t})}export{e as B};

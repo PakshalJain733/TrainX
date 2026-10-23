@@ -596,7 +596,7 @@ export default function Batches() {
                 <button
                   type="button"
                   className="btn-modal-cancel"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => setIsModalOpen(false)}
                 >
                   Cancel
                 </button>
@@ -839,7 +839,7 @@ export default function Batches() {
                 <button
                   type="button"
                   className="btn-modal-cancel"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={() => setEditBatch(null)}
                 >
                   Cancel
                 </button>
