@@ -457,34 +457,28 @@ export default function Departments() {
                       <span>Department Name</span>
                       <span className="form-required">*</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <Building2 size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin dept-input-padded"
-                        placeholder="e.g. Computer Science & Engineering"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Computer Science & Engineering"
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Code</span>
                       <span className="form-required">*</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <GraduationCap size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin dept-input-padded dept-code-input"
-                        placeholder="e.g. CSE"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin dept-code-input"
+                      placeholder="e.g. CSE"
+                      value={deptForm.code}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
+                    />
                   </div>
                 </div>
 
@@ -494,32 +488,26 @@ export default function Departments() {
                       <span>HOD Name</span>
                       <span className="form-optional">(Optional)</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <UserCheck size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        className="form-input-admin dept-input-padded"
-                        placeholder="Dr. K. R. Sharma"
-                        value={deptForm.hodName}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="Dr. K. R. Sharma"
+                      value={deptForm.hodName}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>HOD Email</span>
                       <span className="form-optional">(Optional)</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <Mail size={16} className="dept-field-icon" />
-                      <input
-                        type="email"
-                        className="form-input-admin dept-input-padded"
-                        placeholder="hod.cse@college.edu.in"
-                        value={deptForm.hodEmail}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      placeholder="hod.cse@college.edu.in"
+                      value={deptForm.hodEmail}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>
@@ -666,32 +654,26 @@ export default function Departments() {
                       <span>Department Name</span>
                       <span className="form-required">*</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <Building2 size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin dept-input-padded"
-                        value={editDept.name}
-                        onChange={(e) => setEditDept({ ...editDept, name: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editDept.name}
+                      onChange={(e) => setEditDept({ ...editDept, name: e.target.value })}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Code</span>
                       <span className="form-required">*</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <GraduationCap size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin dept-input-padded dept-code-input"
-                        value={editDept.code || ''}
-                        onChange={(e) => setEditDept({ ...editDept, code: e.target.value.toUpperCase() })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin dept-code-input"
+                      value={editDept.code || ''}
+                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value.toUpperCase() })}
+                    />
                   </div>
                 </div>
 
@@ -701,30 +683,24 @@ export default function Departments() {
                       <span>HOD Name</span>
                       <span className="form-optional">(Optional)</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <UserCheck size={16} className="dept-field-icon" />
-                      <input
-                        type="text"
-                        className="form-input-admin dept-input-padded"
-                        value={editDept.hodName || ''}
-                        onChange={(e) => setEditDept({ ...editDept, hodName: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      value={editDept.hodName || ''}
+                      onChange={(e) => setEditDept({ ...editDept, hodName: e.target.value })}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>HOD Email</span>
                       <span className="form-optional">(Optional)</span>
                     </label>
-                    <div className="dept-input-icon-wrap">
-                      <Mail size={16} className="dept-field-icon" />
-                      <input
-                        type="email"
-                        className="form-input-admin dept-input-padded"
-                        value={editDept.hodEmail || ''}
-                        onChange={(e) => setEditDept({ ...editDept, hodEmail: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      value={editDept.hodEmail || ''}
+                      onChange={(e) => setEditDept({ ...editDept, hodEmail: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>
