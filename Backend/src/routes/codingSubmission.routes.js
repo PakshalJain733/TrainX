@@ -4,6 +4,7 @@ import {
   getCodingSubmissionById,
   getStudentCodingSubmissions,
   getAllCodingSubmissionsAdmin,
+  updateSubmissionFeedbackController,
 } from '../controllers/codingSubmission.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -20,6 +21,14 @@ router.get('/', authenticateToken, getAllCodingSubmissionsAdmin);
  * POST /api/v1/coding-submissions
  */
 router.post('/', authenticateToken, createCodingSubmission);
+
+/**
+ * Route: Save optional feedback on coding submission (Admin / Mentors)
+ * PATCH /api/v1/coding-submissions/:id/feedback
+ * POST /api/v1/coding-submissions/:id/feedback
+ */
+router.patch('/:id/feedback', authenticateToken, updateSubmissionFeedbackController);
+router.post('/:id/feedback', authenticateToken, updateSubmissionFeedbackController);
 
 /**
  * Route: Get coding submission by ID

@@ -4,7 +4,7 @@ import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, 
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
+import { getSharedQuizzes, deleteSharedItem, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Quizzes.css";
 
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -14,13 +14,20 @@ function AdminQuizSelect(props) {
   return <CustomSelect {...props} />;
 }
 
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
-
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt || "";
+    } catch (e) {}
+  }
 
   return {
     "Content-Type": "application/json",
@@ -298,37 +305,63 @@ export default function AdminQuizzes() {
       if (data.success && Array.isArray(data.data)) {
         list = data.data.map(mapAssessment);
       }
+      const existingTitles = new Set(list.map(q => (q.title || '').trim().toLowerCase()));
+      const existingIds = new Set(list.map(q => String(q.id)));
+
       const shared = await getSharedQuizzes([]);
-      const existingIds = new Set(list.map(q => q.id));
       const sharedItems = shared
-        .filter(s => !existingIds.has(s.id))
+        .filter(s => {
+          const sTitle = (s.title || '').trim().toLowerCase();
+          return !existingIds.has(String(s.id)) && !existingTitles.has(sTitle);
+        })
         .map(s => ({
           id: s.id,
           title: s.title,
           batch: s.batch_name || s.data?.batch || "All Batches",
-          questionsCount: s.data?.questionsCount || 10,
+          questionsCount: s.data?.questionsCount || (s.data?.questions ? s.data.questions.length : 10),
           type: "Manual",
           status: s.status || "Active",
           submissions: 0,
           questionsList: s.data?.questions || [],
           description: s.description || ""
         }));
-      setQuizzes([...list, ...sharedItems]);
+
+      // Ensure every quiz is distinct: deduplicate by title and questions count
+      const seen = new Set();
+      const uniqueQuizzes = [];
+      for (const q of [...list, ...sharedItems]) {
+        const key = `${(q.title || '').trim().toLowerCase()}__${q.questionsCount}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueQuizzes.push(q);
+        }
+      }
+
+      setQuizzes(uniqueQuizzes);
     } catch (err) {
       console.error("Failed to load quizzes:", err);
       const shared = await getSharedQuizzes([]);
       if (shared.length > 0) {
-        setQuizzes(shared.map(s => ({
-          id: s.id,
-          title: s.title,
-          batch: s.batch_name || s.data?.batch || "All Batches",
-          questionsCount: s.data?.questionsCount || 10,
-          type: "Manual",
-          status: "Active",
-          submissions: 0,
-          questionsList: s.data?.questions || [],
-          description: s.description || ""
-        })));
+        const seen = new Set();
+        const fallbackList = [];
+        for (const s of shared) {
+          const sTitle = (s.title || '').trim();
+          if (!seen.has(sTitle.toLowerCase())) {
+            seen.add(sTitle.toLowerCase());
+            fallbackList.push({
+              id: s.id,
+              title: sTitle,
+              batch: s.batch_name || s.data?.batch || "All Batches",
+              questionsCount: s.data?.questionsCount || 10,
+              type: "Manual",
+              status: "Active",
+              submissions: 0,
+              questionsList: s.data?.questions || [],
+              description: s.description || ""
+            });
+          }
+        }
+        setQuizzes(fallbackList);
       }
     } finally {
       setLoading(false);
@@ -354,17 +387,7 @@ export default function AdminQuizzes() {
     const selectedBatchObj = availableBatches.find(b => b.name === batch);
     const batchId = selectedBatchObj ? selectedBatchObj.id : null;
 
-    // Broadcast to DB-backed shared store across all dashboards
-    await addSharedQuiz({
-      title: title.trim(),
-      batch: batch,
-      questionsCount: questionsList.length,
-      questions: questionsList,
-      duration_minutes: parseInt(timeLimit, 10) || 15,
-      description: `${quizType} quiz for ${batch}`,
-    });
-
-    // 1. Create the assessment
+    // 1. Create the assessment in backend MySQL database
     const assessRes = await fetch(`${API_BASE}/assessments`, {
       method: "POST",
       headers: getAuthHeaders(),
@@ -648,8 +671,10 @@ export default function AdminQuizzes() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
     try {
-      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
-      setQuizzes(quizzes.filter(q => q.id !== id));
+      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() }).catch(() => {});
+      await deleteSharedItem(id).catch(() => {});
+      setQuizzes(prev => prev.filter(q => q.id !== id));
+      window.dispatchEvent(new Event(EVENTS.QUIZ_UPDATED));
     } catch (err) {
       alert("Failed to delete quiz: " + err.message);
     }

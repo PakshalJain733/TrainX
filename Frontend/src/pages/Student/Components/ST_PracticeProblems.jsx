@@ -7,6 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import "../Styles/ST_PracticeProblems.css";
+
+const isDeadlinePassed = (dueDate) => {
+  if (!dueDate || dueDate === "No Deadline" || dueDate === "N/A" || dueDate === "Flexible Deadline") return false;
+  const d = new Date(dueDate);
+  if (isNaN(d.getTime())) return false;
+  d.setHours(23, 59, 59, 999);
+  return d.getTime() < Date.now();
+};
+
 const practiceProblemsData = [];
 
 export default function PracticeProblems() {
@@ -35,6 +44,8 @@ export default function PracticeProblems() {
           description: p.description || "No problem description provided.",
           language: p.language || "",
           dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
+          rawDueDate: p.due_date || p.dueDate || null,
+          isExpired: Boolean(p.isExpired || p.is_expired || (p.due_date && isDeadlinePassed(p.due_date))),
         }));
         setProblemsList(mapped);
       } catch (err) {
@@ -285,13 +296,14 @@ export default function PracticeProblems() {
                   const isSolved = prob.solved || prob.solveStatus === "Solved";
                   const isPartial = prob.solveStatus === "Partial";
                   const hasAttempted = prob.solveStatus === "Attempted";
+                  const isExpired = !isSolved && (Boolean(prob.isExpired) || (prob.dueDate && isDeadlinePassed(prob.dueDate)));
                   return (
                     <tr key={prob.id} className="problem-row">
                       <td>
                         <div className="prob-title-box">
                           <Link
                             to={`/student/coding-platform/practice-${prob.id}`}
-                            state={{ task: prob, source: 'practice' }}
+                            state={{ task: { ...prob, isExpired }, source: 'practice' }}
                             className="prob-title-link"
                           >
                             {prob.title}
@@ -312,6 +324,10 @@ export default function PracticeProblems() {
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "3px 8px", borderRadius: "6px" }}>
                             <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : `${prob.points}/${prob.points}`}
                           </span>
+                        ) : isExpired ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: "6px" }}>
+                            <span>🔒</span> Expired
+                          </span>
                         ) : isPartial ? (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: "6px" }}>
                             <span>⚠️</span> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : "Partial"}
@@ -327,8 +343,11 @@ export default function PracticeProblems() {
                         )}
                       </td>
                       <td>
-                        <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                        <span style={{ color: isExpired ? '#dc2626' : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8'), fontWeight: isExpired ? 700 : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400), fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                           {prob.dueDate}
+                          {isExpired && (
+                            <span style={{ fontSize: '10px', background: '#fee2e2', color: '#991b1b', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>EXPIRED</span>
+                          )}
                         </span>
                       </td>
 
@@ -336,9 +355,10 @@ export default function PracticeProblems() {
                         <Button
                           size="sm"
                           className="solve-btn"
-                          onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: prob, source: 'practice' } })}
+                          onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: { ...prob, isExpired }, source: 'practice' } })}
+                          style={isExpired ? { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' } : {}}
                         >
-                          <Terminal size={14} /> {isSolved ? "Review" : isPartial ? "Resume" : "Solve"}
+                          <Terminal size={14} /> {isSolved ? "Review" : isExpired ? "Expired" : isPartial ? "Resume" : "Solve"}
                         </Button>
                       </td>
                     </tr>

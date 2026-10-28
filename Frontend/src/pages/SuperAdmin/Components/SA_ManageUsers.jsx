@@ -736,7 +736,13 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               <label className="fs-portal-label">Mentor / Leader</label>
               <MuSelect
                 value={selectedMentor}
-                options={mentors.map(m => ({ value: m.name, label: `${m.name} (${m.department || 'Computer Science'})` }))}
+                options={mentors.map(m => {
+                  const dept = (m.department || m.dept || "").trim();
+                  return {
+                    value: m.name,
+                    label: dept ? `${m.name} (${dept})` : m.name
+                  };
+                })}
                 onChange={val => setSelectedMentor(val)}
                 placeholder="-- Choose Mentor --"
                 icon={UserCheck}
@@ -919,7 +925,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                             {student.roll_number || student.rollNo || `ID-${student.id}`}
                           </span>
                           <span>·</span>
-                          <span style={{ fontWeight: 600, color: '#475569' }}>{student.department || 'Computer Science'}</span>
+                          <span style={{ fontWeight: 600, color: '#475569' }}>{student.department || '—'}</span>
                         </div>
                       </div>
                     </label>

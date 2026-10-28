@@ -749,12 +749,14 @@ export const createAdminPracticeProblem = async (req, res, next) => {
     next(error);
   }
 };
-
 export const updateAdminPracticeProblem = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
       title,
+      batch = null,
+      batch_id = null,
+      batchName = null,
       difficulty = 'Medium',
       category = 'General DSA',
       topic = '',
@@ -785,6 +787,9 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
 
     const tagsStr = Array.isArray(tags) ? tags.join(', ') : (Array.isArray(companies) ? companies.join(', ') : (tags || companies || ''));
     const langVal = language || lang || null;
+    const batchVal = batch || batchName || null;
+    let validBatchId = batch_id ? parseInt(batch_id, 10) : null;
+    if (isNaN(validBatchId)) validBatchId = null;
 
     try {
       await query(
@@ -796,9 +801,11 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
              tags = COALESCE(?, tags),
              points = COALESCE(?, points),
              due_date = ?,
-             language = COALESCE(?, language)
+             language = COALESCE(?, language),
+             batch_name = COALESCE(?, batch_name),
+             batch_id = COALESCE(?, batch_id)
          WHERE id = ?`,
-        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, langVal, id]
+        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, langVal, batchVal, validBatchId, id]
       );
     } catch (err) {
       await query(
@@ -808,9 +815,10 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
              difficulty = COALESCE(?, difficulty),
              category = COALESCE(?, category),
              tags = COALESCE(?, tags),
-             points = COALESCE(?, points)
+             points = COALESCE(?, points),
+             batch_name = COALESCE(?, batch_name)
          WHERE id = ?`,
-        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, id]
+        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, batchVal, id]
       );
     }
 
@@ -946,7 +954,7 @@ export const getAdminPerformance = async (req, res, next) => {
   try {
     const collegeId = getCallerCollegeFilter(req);
 
-    // 1. Fetch all real students with their attendance and assessment scores
+    // 1. Fetch all real students with their attendance, quiz, and task scores
     let studentSql = `
       SELECT u.id, u.name, u.email, s.roll_number, s.department, s.department_id, s.batch_id,
              d.name as dept_name, b.name as batch_name,
@@ -957,9 +965,12 @@ export const getAdminPerformance = async (req, res, next) => {
                0
              ) as attendance_pct,
              COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_assessment,
+             COALESCE((SELECT ROUND(AVG(ts.marks_obtained), 1) FROM task_submissions ts WHERE ts.user_id = u.id), 0) as avg_task,
+             COALESCE((SELECT COUNT(*) FROM task_submissions ts WHERE ts.user_id = u.id AND ts.status IN ('Submitted', 'Passed')), 0) as completed_tasks,
+             COALESCE((SELECT COUNT(*) FROM practice_problem_submissions pps WHERE pps.user_id = u.id AND pps.status = 'Solved'), 0) as coding_solved,
              sg.overall_status, sg.weak_areas
       FROM users u
-      JOIN students s ON u.id = s.user_id
+      LEFT JOIN students s ON u.id = s.user_id
       LEFT JOIN departments d ON s.department_id = d.id
       LEFT JOIN batches b ON s.batch_id = b.id
       LEFT JOIN attendance_summary att ON u.id = att.user_id
@@ -969,7 +980,7 @@ export const getAdminPerformance = async (req, res, next) => {
     `;
     const params = [];
     if (collegeId) {
-      studentSql += ' AND u.college_id = ?';
+      studentSql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
       params.push(collegeId);
     }
     studentSql += ' GROUP BY u.id, s.id, d.id, b.id, att.id, sg.id ORDER BY u.name ASC';
@@ -980,13 +991,17 @@ export const getAdminPerformance = async (req, res, next) => {
     let highPerforming = 0;
     let needsImprovement = 0;
 
-    const formattedStudents = rawStudents.map((s) => {
+    const formattedStudents = rawStudents.map((s, idx) => {
       const attendance = parseFloat(s.attendance_pct) || 0;
       const quiz = parseFloat(s.avg_assessment) || 0;
-      const coding = Math.round(quiz * 0.95);
-      const interview = Math.round(quiz * 0.9);
-      const progress = Math.round((attendance + quiz) / 2);
-      const overallScore = Math.round((attendance * 0.3) + (quiz * 0.4) + (coding * 0.3));
+      const task = parseFloat(s.avg_task) || (quiz > 0 ? Math.round(quiz * 0.95) : 0);
+      const coding = (s.coding_solved && s.coding_solved > 0)
+        ? Math.min(100, s.coding_solved * 40)
+        : (quiz > 0 ? Math.round(quiz * 0.9) : 0);
+      const interview = Math.round((quiz * 0.6) + (task * 0.4));
+      const completedTasks = Number(s.completed_tasks) || 0;
+      const overallScore = Math.round((attendance * 0.2) + (quiz * 0.35) + (task * 0.25) + (coding * 0.2));
+      const progress = overallScore;
 
       totalScoreSum += overallScore;
       if (overallScore >= 80) highPerforming++;
@@ -1009,12 +1024,14 @@ export const getAdminPerformance = async (req, res, next) => {
       } catch (_) {}
 
       if (parsedWeakAreas.length === 0 && overallScore < 70) {
-        if (attendance < 75) parsedWeakAreas.push({ skill: "Attendance", score: Math.round(attendance), target: 75 });
+        if (attendance < 75) parsedWeakAreas.push({ skill: "Attendance Regularity", score: Math.round(attendance), target: 75 });
         if (quiz < 65) parsedWeakAreas.push({ skill: "Quiz Assessment", score: Math.round(quiz), target: 75 });
+        if (task < 65) parsedWeakAreas.push({ skill: "Hands-on Tasks", score: Math.round(task), target: 75 });
       }
 
       const strongAreas = [];
       if (quiz >= 75) strongAreas.push("Quiz Assessment");
+      if (task >= 75) strongAreas.push("Practical Tasks");
       if (attendance >= 80) strongAreas.push("Attendance");
       if (coding >= 75) strongAreas.push("Coding / DSA");
 
@@ -1027,8 +1044,10 @@ export const getAdminPerformance = async (req, res, next) => {
         batch: s.batch_name || 'Unassigned Batch',
         overallScore,
         quiz: Math.round(quiz),
-        coding,
-        interview,
+        task: Math.round(task),
+        completedTasks,
+        coding: Math.round(coding),
+        interview: Math.round(interview),
         attendance: Math.round(attendance),
         progress,
         status,
@@ -1044,7 +1063,7 @@ export const getAdminPerformance = async (req, res, next) => {
     let deptSql = `SELECT id, name FROM departments`;
     const deptParams = [];
     if (collegeId) {
-      deptSql += ` WHERE college_id = ?`;
+      deptSql += ` WHERE (college_id = ? OR college_id IS NULL)`;
       deptParams.push(collegeId);
     }
     const rawDepts = await query(deptSql, deptParams);
@@ -1057,6 +1076,7 @@ export const getAdminPerformance = async (req, res, next) => {
       const avgPerf = count > 0 ? Math.round(deptStudents.reduce((sum, s) => sum + s.overallScore, 0) / count) : 0;
       const avgAtt = count > 0 ? Math.round(deptStudents.reduce((sum, s) => sum + s.attendance, 0) / count) : 0;
       const avgQ = count > 0 ? Math.round(deptStudents.reduce((sum, s) => sum + s.quiz, 0) / count) : 0;
+      const avgT = count > 0 ? Math.round(deptStudents.reduce((sum, s) => sum + s.task, 0) / count) : 0;
       const avgC = count > 0 ? Math.round(deptStudents.reduce((sum, s) => sum + s.coding, 0) / count) : 0;
       const attention = deptStudents.filter((s) => s.overallScore < 65 || s.attendance < 75).length;
 
@@ -1067,6 +1087,7 @@ export const getAdminPerformance = async (req, res, next) => {
         avgPerformance: avgPerf,
         avgAttendance: avgAtt,
         avgQuiz: avgQ,
+        avgTask: avgT,
         avgCoding: avgC,
         needsAttention: attention,
       };
@@ -1076,7 +1097,7 @@ export const getAdminPerformance = async (req, res, next) => {
     let batchSql = `SELECT id, name FROM batches`;
     const batchParams = [];
     if (collegeId) {
-      batchSql += ` WHERE college_id = ?`;
+      batchSql += ` WHERE (college_id = ? OR college_id IS NULL)`;
       batchParams.push(collegeId);
     }
     const rawBatches = await query(batchSql, batchParams);
@@ -1085,6 +1106,10 @@ export const getAdminPerformance = async (req, res, next) => {
       const batchStudents = formattedStudents.filter((s) => s.batch === b.name);
       const count = batchStudents.length;
       const avgPerf = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.overallScore, 0) / count) : 0;
+      const avgQuiz = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.quiz, 0) / count) : 0;
+      const avgTask = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.task, 0) / count) : 0;
+      const avgAtt = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.attendance, 0) / count) : 0;
+      const avgCoding = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.coding, 0) / count) : 0;
       const avgProg = count > 0 ? Math.round(batchStudents.reduce((sum, s) => sum + s.progress, 0) / count) : 0;
       const attention = batchStudents.filter((s) => s.overallScore < 65 || s.attendance < 75).length;
 
@@ -1093,10 +1118,22 @@ export const getAdminPerformance = async (req, res, next) => {
         name: b.name,
         students: count,
         avgPerformance: avgPerf,
+        avgQuiz,
+        avgTask,
+        avgAttendance: avgAtt,
+        avgCoding,
         avgProgress: avgProg,
         needsAttention: attention,
       };
     });
+
+    // 4. Score distribution for charts
+    const scoreRanges = [
+      { range: '90-100%', count: formattedStudents.filter(s => s.overallScore >= 90).length, label: 'Outstanding' },
+      { range: '75-89%', count: formattedStudents.filter(s => s.overallScore >= 75 && s.overallScore < 90).length, label: 'Proficient' },
+      { range: '60-74%', count: formattedStudents.filter(s => s.overallScore >= 60 && s.overallScore < 75).length, label: 'Average' },
+      { range: '<60%', count: formattedStudents.filter(s => s.overallScore < 60).length, label: 'Needs Support' },
+    ];
 
     const performanceData = {
       overview: {
@@ -1104,7 +1141,11 @@ export const getAdminPerformance = async (req, res, next) => {
         averagePerformance,
         highPerforming,
         needsImprovement,
+        averageQuiz: totalStudents > 0 ? Math.round(formattedStudents.reduce((acc, s) => acc + s.quiz, 0) / totalStudents) : 0,
+        averageTask: totalStudents > 0 ? Math.round(formattedStudents.reduce((acc, s) => acc + s.task, 0) / totalStudents) : 0,
+        averageAttendance: totalStudents > 0 ? Math.round(formattedStudents.reduce((acc, s) => acc + s.attendance, 0) / totalStudents) : 0,
       },
+      scoreRanges,
       departments,
       batches,
       students: formattedStudents,
@@ -1183,7 +1224,11 @@ export const assignMentorToStudents = async (req, res, next) => {
         UNIQUE KEY unique_mentor_student (mentor_name, student_id)
       )
     `);
+    try { await query("ALTER TABLE mentor_assignments ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await query("ALTER TABLE mentor_assignments ADD COLUMN mentor_email VARCHAR(150) NULL"); } catch (e) {}
+    try { await query("ALTER TABLE mentor_assignments ADD COLUMN student_id VARCHAR(100) NULL"); } catch (e) {}
     try { await query("ALTER TABLE mentor_assignments ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await query("ALTER TABLE mentor_assignments MODIFY COLUMN batch_id INT NULL"); } catch (e) {}
 
     await query(`
       CREATE TABLE IF NOT EXISTS mentor_student_assignments (
@@ -1226,15 +1271,19 @@ export const assignMentorToStudents = async (req, res, next) => {
       if (!targetStudentUserId) continue;
 
       // 3a. Save to mentor_assignments
-      await query(
-        `INSERT INTO mentor_assignments (mentor_id, mentor_name, mentor_email, student_id)
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           mentor_id = VALUES(mentor_id),
-           mentor_name = VALUES(mentor_name),
-           mentor_email = VALUES(mentor_email)`,
-        [resolvedMentorId || null, resolvedMentorName, resolvedMentorEmail || null, String(targetStudentUserId)]
-      );
+      try {
+        await query(
+          `INSERT INTO mentor_assignments (mentor_id, mentor_name, mentor_email, student_id)
+           VALUES (?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             mentor_id = VALUES(mentor_id),
+             mentor_name = VALUES(mentor_name),
+             mentor_email = VALUES(mentor_email)`,
+          [resolvedMentorId || null, resolvedMentorName, resolvedMentorEmail || null, String(targetStudentUserId)]
+        );
+      } catch (maErr) {
+        console.warn('[DB mentor_assignments insert notice]', maErr.message);
+      }
 
       // 3b. Save to mentor_student_assignments (PRIMARY TABLE for Mentor workspace)
       if (resolvedMentorId) {

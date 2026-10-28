@@ -13,7 +13,12 @@ export const getAssessments = async (req, res, next) => {
     const { batch } = req.query;
     let result = [];
     try {
-      const dbRows = await query(`SELECT * FROM assessments ORDER BY id DESC`);
+      const dbRows = await query(`
+        SELECT a.*, COALESCE(b.name, 'All Batches') AS batch_name 
+        FROM assessments a 
+        LEFT JOIN batches b ON a.batch_id = b.id 
+        ORDER BY a.id DESC
+      `);
       if (dbRows && dbRows.length > 0) {
         const assessmentIds = dbRows.map(r => r.id);
         let allQuestions = [];
@@ -60,7 +65,7 @@ export const getAssessments = async (req, res, next) => {
           console.warn('[DB submission counts query]', subErr.message);
         }
 
-        result = dbRows.map(r => {
+        const rawResult = dbRows.map(r => {
           const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === String(r.id));
           const memoryQs = mockQuestionsByAssessment[r.id] || [];
           const combinedQs = qsForThis.length > 0 ? qsForThis : memoryQs;
@@ -74,6 +79,17 @@ export const getAssessments = async (req, res, next) => {
             submission_count: subCount,
             submissions: subCount
           };
+        });
+
+        // Deduplicate assessments by normalized title and batch
+        const seenQuizzes = new Set();
+        result = rawResult.filter(r => {
+          const normTitle = (r.title || '').trim().toLowerCase();
+          const normBatch = (r.batch_name || 'All Batches').trim().toLowerCase();
+          const key = `${normTitle}__${normBatch}`;
+          if (seenQuizzes.has(key)) return false;
+          seenQuizzes.add(key);
+          return true;
         });
       }
     } catch (e) {
@@ -241,7 +257,18 @@ export const deleteAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     try {
+      const rows = await query(`SELECT title FROM assessments WHERE id = ?`, [id]);
+      const title = rows && rows.length > 0 ? rows[0].title : null;
+      await query(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE assessment_id = ?)`, [id]).catch(() => {});
+      await query(`DELETE FROM assessment_attempts WHERE assessment_id = ?`, [id]).catch(() => {});
+      await query(`DELETE FROM assessment_questions WHERE assessment_id = ?`, [id]).catch(() => {});
       await query(`DELETE FROM assessments WHERE id = ?`, [id]);
+      if (title) {
+        await query(`DELETE FROM shared_content WHERE type = 'quiz' AND (title = ? OR id = ?)`, [title, id]).catch(() => {});
+        await query(`DELETE FROM student_quiz_completions WHERE quiz_id = ? OR quiz_title = ?`, [id, title]).catch(() => {});
+      } else {
+        await query(`DELETE FROM shared_content WHERE type = 'quiz' AND id = ?`, [id]).catch(() => {});
+      }
     } catch (e) {
       console.warn('[DB deleteAssessment fallback]', e.message);
     }
@@ -464,43 +491,97 @@ export const getAssessmentResults = async (req, res, next) => {
     const { id } = req.params;
     let results = [];
     try {
-      results = await query(
-        `SELECT a.*, u.name as student_name, u.email as student_email
+      let assessTitle = '';
+      try {
+        const aRows = await query(`SELECT title FROM assessments WHERE id = ?`, [id]);
+        if (aRows && aRows.length > 0) assessTitle = aRows[0].title;
+      } catch (_) {}
+      if (!assessTitle) {
+        try {
+          const sRows = await query(`SELECT title FROM shared_content WHERE id = ?`, [id]);
+          if (sRows && sRows.length > 0) assessTitle = sRows[0].title;
+        } catch (_) {}
+      }
+
+      // Query assessment attempts
+      const attempts = await query(
+        `SELECT a.*, 
+                COALESCE(u.name, 'Student') as student_name, 
+                COALESCE(u.email, '') as student_email
          FROM assessment_attempts a
          LEFT JOIN users u ON a.user_id = u.id
          WHERE a.assessment_id = ?
+            OR (a.assessment_id IN (SELECT id FROM assessments WHERE title = ? AND ? != ''))
          ORDER BY a.id DESC`,
-        [id]
+        [id, assessTitle, assessTitle]
       );
-    } catch (e) {
-      console.warn('[DB getAssessmentResults fallback]', e.message);
-    }
+      if (Array.isArray(attempts) && attempts.length > 0) {
+        results = attempts.map(a => {
+          const marks = a.marks_obtained !== undefined && a.marks_obtained !== null ? Number(a.marks_obtained) : (a.score !== undefined ? Number(a.score) : 0);
+          const total = a.total_marks ? Number(a.total_marks) : 100;
+          const pct = a.percentage !== undefined && a.percentage !== null ? parseFloat(a.percentage) : (total > 0 ? Math.round((marks / total) * 100) : 0);
+          return {
+            id: a.id,
+            user_id: a.user_id,
+            student_name: a.student_name,
+            student_email: a.student_email,
+            marks_obtained: marks,
+            score: marks,
+            total_marks: total,
+            percentage: pct,
+            status: pct >= 50 || a.status === 'passed' ? 'passed' : 'failed',
+            submitted_at: a.submitted_at || a.completed_at || a.created_at || new Date().toISOString()
+          };
+        });
+      }
 
-    if (!results || results.length === 0) {
+      // Also merge any submissions from student_quiz_completions
       try {
         const compResults = await query(
-          `SELECT c.id, c.user_id, c.quiz_id AS assessment_id, c.completed_at AS submitted_at,
-                  u.name AS student_name, u.email AS student_email
+          `SELECT c.id, c.user_id, c.quiz_id AS assessment_id, c.score_text, c.completed_at AS submitted_at,
+                  COALESCE(u.name, 'Student') AS student_name, 
+                  COALESCE(u.email, '') AS student_email
            FROM student_quiz_completions c
            LEFT JOIN users u ON c.user_id = u.id
-           WHERE c.quiz_id = ?
+           WHERE c.quiz_id = ? 
+              OR (c.quiz_title = ? AND ? != '')
+              OR (c.quiz_id IN (SELECT id FROM assessments WHERE title = ? AND ? != ''))
            ORDER BY c.id DESC`,
-          [id]
+          [id, assessTitle, assessTitle, assessTitle, assessTitle]
         );
-        if (compResults && compResults.length > 0) {
-          results = compResults.map(r => ({
-            id: r.id,
-            user_id: r.user_id,
-            student_name: r.student_name || `Student #${r.user_id}`,
-            student_email: r.student_email || '',
-            marks_obtained: 100,
-            total_marks: 100,
-            percentage: 100,
-            status: 'passed',
-            submitted_at: r.submitted_at,
-          }));
+        if (Array.isArray(compResults) && compResults.length > 0) {
+          const existingUserIds = new Set(results.map(r => String(r.user_id)));
+          compResults.forEach(c => {
+            if (!existingUserIds.has(String(c.user_id))) {
+              let scoreVal = 100;
+              let totalVal = 100;
+              let pctVal = 100;
+              if (c.score_text && c.score_text.includes('/')) {
+                const parts = c.score_text.replace(/[^0-9/]/g, '').split('/');
+                if (parts.length === 2) {
+                  scoreVal = parseInt(parts[0], 10) * 10;
+                  totalVal = parseInt(parts[1], 10) * 10;
+                  pctVal = totalVal > 0 ? Math.round((scoreVal / totalVal) * 100) : 100;
+                }
+              }
+              results.push({
+                id: `comp-${c.id}`,
+                user_id: c.user_id,
+                student_name: c.student_name,
+                student_email: c.student_email,
+                marks_obtained: scoreVal,
+                score: scoreVal,
+                total_marks: totalVal,
+                percentage: pctVal,
+                status: pctVal >= 50 ? 'passed' : 'failed',
+                submitted_at: c.submitted_at || new Date().toISOString(),
+              });
+            }
+          });
         }
       } catch (_) {}
+    } catch (e) {
+      console.warn('[DB getAssessmentResults fallback]', e.message);
     }
 
     if (!results || results.length === 0) {
@@ -604,25 +685,33 @@ export const submitAssessment = async (req, res, next) => {
       if (attemptId && attemptId !== 'attempts') {
         try {
           await query(
-            `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-            [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, correct_answers = ?, attempted_questions = ?, total_questions = ?, status = 'completed', completed_at = NOW(), submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObtained, marksObtained, totalMarks, percentage, correctCount, correctCount, totalQuestions, totalQuestions, attemptId]
           );
         } catch (_) {
           await query(
-            `UPDATE assessment_attempts SET score = ?, percentage = ?, correct_answers = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-            [marksObtained, percentage, correctCount, status, attemptId]
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, percentage = ?, correct_count = ?, status = 'completed', submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObtained, marksObtained, percentage, correctCount, attemptId]
           );
         }
       } else if (targetAssessmentId) {
         try {
           await query(
-            `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, score, marks_obtained, total_marks, percentage, correct_count, correct_answers, attempted_questions, total_questions, status, started_at, completed_at, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), NOW(), NOW())`,
+            [targetAssessmentId, userId, marksObtained, marksObtained, totalMarks, percentage, correctCount, correctCount, totalQuestions, totalQuestions]
           );
         } catch (_) {
           await query(
-            `INSERT INTO assessment_attempts (assessment_id, user_id, score, percentage, correct_answers, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-            [targetAssessmentId, userId, marksObtained, percentage, correctCount, status]
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW())`,
+            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount]
           );
         }
       }
@@ -777,6 +866,54 @@ export const markQuizCompleted = async (req, res, next) => {
       } catch (e2) {
         console.warn('[markQuizCompleted fallback]', e2.message);
       }
+    }
+
+    // Also sync completion into assessment_attempts for real-time submission tracking
+    try {
+      let resolvedAssessmentId = null;
+      if (quiz_id && !isNaN(Number(quiz_id)) && Number(quiz_id) > 0) {
+        resolvedAssessmentId = Number(quiz_id);
+      } else if (quiz_title) {
+        const matchingAssessments = await query(
+          `SELECT id, total_questions FROM assessments WHERE title = ? ORDER BY id DESC LIMIT 1`,
+          [quiz_title]
+        ).catch(() => []);
+        if (Array.isArray(matchingAssessments) && matchingAssessments.length > 0) {
+          resolvedAssessmentId = matchingAssessments[0].id;
+        }
+      }
+
+      if (resolvedAssessmentId) {
+        const totalQ = total ? Number(total) : 5;
+        const scoreQ = score !== undefined ? Number(score) : 0;
+        const marksObt = scoreQ * 10;
+        const totalM = totalQ * 10;
+        const pct = totalM > 0 ? Math.round((marksObt / totalM) * 100) : 0;
+        const status = pct >= 50 ? 'completed' : 'completed';
+
+        const existingAttempts = await query(
+          `SELECT id FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1`,
+          [resolvedAssessmentId, userId]
+        ).catch(() => []);
+
+        if (Array.isArray(existingAttempts) && existingAttempts.length > 0) {
+          await query(
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, correct_answers = ?, attempted_questions = ?, total_questions = ?, status = 'completed', completed_at = NOW(), submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObt, marksObt, totalM, pct, scoreQ, scoreQ, totalQ, totalQ, existingAttempts[0].id]
+          ).catch(() => {});
+        } else {
+          await query(
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, score, marks_obtained, total_marks, percentage, correct_count, correct_answers, attempted_questions, total_questions, status, started_at, completed_at, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), NOW(), NOW())`,
+            [resolvedAssessmentId, userId, marksObt, marksObt, totalM, pct, scoreQ, scoreQ, totalQ, totalQ]
+          ).catch(() => {});
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[markQuizCompleted attempt sync warning]', syncErr.message);
     }
 
     return sendSuccess(res, 'Quiz completion recorded', { user_id: userId, quiz_id, score_text: calculatedScoreText, marked: true });

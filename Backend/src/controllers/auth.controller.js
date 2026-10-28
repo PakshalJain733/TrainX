@@ -178,6 +178,15 @@ export const getMe = async (req, res, next) => {
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...safeUser,
       ...studentProfile,
+      phone: user.mobile_number || '',
+      employee_id: user.employee_id || null,
+      empId: user.employee_id || null,
+      office_location: user.office_location || null,
+      officeLocation: user.office_location || null,
+      experience: user.experience || null,
+      specialization: user.specialization || user.target_track || null,
+      avatar_url: user.avatar_url || null,
+      avatarUrl: user.avatar_url || null,
       remember_me: Boolean(user.remember_me),
       is_profile_updated: isProfileUpdated,
       studentProfile: {

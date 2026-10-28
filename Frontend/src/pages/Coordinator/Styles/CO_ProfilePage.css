@@ -86,18 +86,19 @@
 .profile-change-pw-wrap,
 .profile-actions-wrapper {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  grid-template-columns: 1.35fr 1fr !important;
+  gap: 8px !important;
   width: 100% !important;
   margin-top: 18px !important;
   padding-top: 16px !important;
   border-top: 1px solid #f1f5f9;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .profile-change-pw-wrap,
   .profile-actions-wrapper {
     grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
 
@@ -107,22 +108,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px !important;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 10px !important;
   border: none !important;
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
 }
 
 .profile-change-pw-btn svg,
 .profile-change-pass-btn svg {
+  width: 13px;
+  height: 13px;
   color: #ffffff !important;
   stroke: #ffffff !important;
   flex-shrink: 0;
@@ -132,8 +136,8 @@
 .profile-change-pass-btn:hover {
   background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
-  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3) !important;
+  transform: translateY(-1px);
 }
 
 .profile-2fa-setup-btn {
@@ -141,21 +145,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px !important;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 10px !important;
   border: none !important;
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
 }
 
 .profile-2fa-setup-btn svg {
+  width: 13px;
+  height: 13px;
   color: #ffffff !important;
   stroke: #ffffff !important;
   flex-shrink: 0;
@@ -164,9 +171,10 @@
 .profile-2fa-setup-btn:hover {
   background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35) !important;
-  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.3) !important;
+  transform: translateY(-1px);
 }
+
 
 .profile-input:disabled,
 .profile-input-readonly {

@@ -85,6 +85,7 @@ const MentorHelp = lazy(() => import('./pages/Mentor/Components/MN_Help'));
 const MentorQuizzes = lazy(() => import('./pages/Mentor/Components/MN_Quizzes'));
 const MentorPerformance = lazy(() => import('./pages/Mentor/Components/MN_Performance'));
 const MentorBroadcast = lazy(() => import('./pages/Mentor/Components/MN_Broadcast'));
+const MentorPracticeProblems = lazy(() => import('./pages/Mentor/Components/MN_PracticeProblems'));
 
 // ── Coordinator Workspace Pages (Lazy Loaded) ──
 const CoordinatorLayout = lazy(() => import('./pages/Coordinator/Components/CO_Layout'));
@@ -191,6 +192,8 @@ function App() {
             >
               <Route index element={<MaintenanceGuard moduleKey="mentorDashboard"><MentorOverview /></MaintenanceGuard>} />
               <Route path="students" element={<MaintenanceGuard moduleKey="mentorStudents"><MentorStudents /></MaintenanceGuard>} />
+              <Route path="coding-practice" element={<MentorPracticeProblems />} />
+              <Route path="practice-problems" element={<MentorPracticeProblems />} />
               <Route path="quizzes" element={<MaintenanceGuard moduleKey="mentorQuizzes"><MentorQuizzes /></MaintenanceGuard>} />
               <Route path="assessments" element={<MaintenanceGuard moduleKey="mentorQuizzes"><MentorQuizzes /></MaintenanceGuard>} />
               <Route path="roadmaps" element={<MaintenanceGuard moduleKey="mentorRoadmaps"><MentorRoadmaps /></MaintenanceGuard>} />

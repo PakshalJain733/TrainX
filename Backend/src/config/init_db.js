@@ -884,6 +884,39 @@ export async function initializeDatabase() {
         UNIQUE KEY unique_mentor_student (mentor_name, student_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_email VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN student_id VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments MODIFY COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE students ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE students ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE users ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE users ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE broadcasts ADD COLUMN desc_text TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE live_sessions ADD COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE support_tickets ADD COLUMN escalated_to VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE support_tickets ADD COLUMN target_role VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN college_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN title VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN remarks TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE practice_problems ADD COLUMN language VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE student_quiz_completions ADD COLUMN score_text VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN title VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN status VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN current_step INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN final_score VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN feedback TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE training_programs ADD COLUMN upi_id VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE training_programs ADD COLUMN upi_payee_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE assessment_attempts ADD COLUMN completed_at TIMESTAMP NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_by VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_at DATETIME NULL"); } catch (e) {}
+
+
 
     // 32. Ensure Interventions Table
     await conn.query(`

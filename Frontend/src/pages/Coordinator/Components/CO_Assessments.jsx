@@ -56,9 +56,15 @@ export default function CoordinatorAssessments() {
   const fetchAssessments = async () => {
     try {
       const data = await assessmentAPI.getAssessments();
-      const shared = await getSharedQuizzes([]);
       const dbAssessments = Array.isArray(data) ? data : [];
-      const combined = [...dbAssessments, ...shared.map(s => ({
+      const existingTitles = new Set(dbAssessments.map(a => (a.title || '').trim().toLowerCase()));
+      const existingIds = new Set(dbAssessments.map(a => String(a.id)));
+
+      const shared = await getSharedQuizzes([]);
+      const sharedFiltered = shared.filter(s => {
+        const sTitle = (s.title || '').trim().toLowerCase();
+        return !existingIds.has(String(s.id)) && !existingTitles.has(sTitle);
+      }).map(s => ({
         id: s.id,
         title: s.title,
         batch: s.batch_name || s.data?.batch || "All Batches",
@@ -68,7 +74,18 @@ export default function CoordinatorAssessments() {
         avgScore: "--",
         passRate: "--",
         status: s.status || "Active",
-      }))];
+      }));
+
+      const seen = new Set();
+      const combined = [];
+      for (const item of [...dbAssessments, ...sharedFiltered]) {
+        const key = (item.title || '').trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          combined.push(item);
+        }
+      }
+
       if (combined.length > 0) {
         setAssessments(combined);
       }
@@ -122,12 +139,6 @@ export default function CoordinatorAssessments() {
     };
 
     try {
-      await addSharedQuiz({
-        title: title.trim(),
-        batch: batch,
-        category: type,
-        description: `Quiz for ${batch}`,
-      });
       await assessmentAPI.createAssessment({
         title: title.trim(),
         batch_id: selectedBatchObj ? selectedBatchObj.id : null,

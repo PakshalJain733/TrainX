@@ -586,7 +586,7 @@ export const createCoordinatorMentor = async (req, res, next) => {
       await query('UPDATE users SET role = ?, department = ?, college_id = ? WHERE id = ?', ['mentor', mentorDept, collegeId, mentorId]);
     } else {
       const result = await query(
-        'INSERT INTO users (name, email, role, department, college_id, password) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO users (name, email, role, department, college_id, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
         [name, email, 'mentor', mentorDept, collegeId, '$2a$10$abcdefghijklmnopqrstuu']
       );
       mentorId = result.insertId;

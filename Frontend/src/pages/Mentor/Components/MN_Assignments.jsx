@@ -254,8 +254,10 @@ export default function Assignments() {
                 <span className={`mentor-assign-status ${
                   a.status === 'Completed'
                     ? 'mentor-assign-status--completed'
+                    : a.status === 'Expired'
+                    ? 'mentor-assign-status--expired'
                     : 'mentor-assign-status--pending'
-                }`}>
+                }`} style={a.status === 'Expired' ? { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 } : {}}>
                   {a.status || 'Active'}
                 </span>
               </div>

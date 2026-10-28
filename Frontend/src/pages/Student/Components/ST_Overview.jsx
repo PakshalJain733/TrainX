@@ -262,6 +262,8 @@ export default function Overview() {
       if (data.success) {
         setModalSuccess(data.message || "Successfully joined batch!");
         setJoinCodeInput("");
+        window.dispatchEvent(new Event("batchJoined"));
+        window.dispatchEvent(new Event("portal_batch_updated"));
         setTimeout(() => {
           setShowJoinModal(false);
           setModalSuccess("");
@@ -416,7 +418,7 @@ export default function Overview() {
                       <h4 className="overview-item-title">{task.title}</h4>
                       <p className="overview-item-due">{task.dueDate}</p>
                     </div>
-                    <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
+                    <Badge variant={task.status === "Expired" ? "destructive" : (task.status === "Pending" ? "outline" : "success")}>{task.status}</Badge>
                   </div>
                 ))}
               </div>

@@ -164,6 +164,30 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     throw error;
   }
 
+  // ── ATTEMPT LIMIT: Maximum 3 submissions allowed per problem ──
+  const targetStudentId = student.id || student_id;
+  const targetProbId = parseInt(problem_id, 10);
+  let attemptCount = 0;
+  if (!isNaN(targetProbId)) {
+    try {
+      const prevSubmissions = await query(
+        `SELECT COUNT(*) as cnt FROM coding_submissions WHERE student_id = ? AND problem_id = ?`,
+        [targetStudentId, targetProbId]
+      );
+      attemptCount = (prevSubmissions && prevSubmissions[0]) ? parseInt(prevSubmissions[0].cnt, 10) : 0;
+      if (attemptCount >= 3) {
+        const limitError = new Error('Maximum submission limit reached (3 attempts allowed per problem). You cannot submit again.');
+        limitError.statusCode = 403;
+        limitError.attemptsUsed = attemptCount;
+        limitError.maxAttempts = 3;
+        throw limitError;
+      }
+    } catch (err) {
+      if (err.statusCode === 403) throw err;
+      console.warn('[submitCodeAndSaveService] check attempt count warning:', err.message);
+    }
+  }
+
   let problem = null;
   let testCases = [];
   let isBatchTask = false;
@@ -259,21 +283,60 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     }
   }
 
-  // Enforce single-submission rule: Reattempts are strictly not allowed once submitted
+  // Enforce single-submission rule for batch tasks: Reattempts are strictly not allowed once submitted
   if (isBatchTask && batchTaskRecord) {
     try {
-      const existing = await query(
-        `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND user_id = ? LIMIT 1`,
-        [batchTaskRecord.id, student.id || student_id]
+      const existingTask = await query(
+        `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND (user_id = ? OR user_id = ?) LIMIT 1`,
+        [batchTaskRecord.id, student.id || student_id, student_id]
       );
-      if (existing && existing.length > 0) {
-        const error = new Error('You have already submitted this task. Reattempts are not allowed.');
+      const existingCode = await query(
+        `SELECT id FROM coding_submissions WHERE problem_id = ? AND (student_id = ? OR student_id = ?) LIMIT 1`,
+        [batchTaskRecord.id, student.id || student_id, student_id]
+      );
+      if ((existingTask && existingTask.length > 0) || (existingCode && existingCode.length > 0)) {
+        const error = new Error('You have already submitted this batch task. The compiler is locked and reattempts are not allowed.');
         error.statusCode = 403;
+        error.isBatchLocked = true;
         throw error;
       }
     } catch (e) {
       if (e.statusCode) throw e;
       console.warn('[submitCodeAndSaveService] check existing task_submission fallback:', e.message);
+    }
+  }
+
+  // ── DEADLINE EXPIRATION CHECK: If deadline has passed, reject submission ──
+  const isDeadlineExpired = (deadline) => {
+    if (!deadline || typeof deadline !== 'string') return false;
+    const clean = deadline.replace(/^Due\s+/i, '').trim();
+    if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none') return false;
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+        d.setHours(23, 59, 59, 999);
+      }
+      return d.getTime() < Date.now();
+    }
+    return false;
+  };
+
+  if (isBatchTask && batchTaskRecord && batchTaskRecord.deadline) {
+    if (isDeadlineExpired(batchTaskRecord.deadline)) {
+      const error = new Error(`The submission deadline (${batchTaskRecord.deadline}) for this task has passed. Submissions are closed.`);
+      error.statusCode = 403;
+      error.isExpired = true;
+      throw error;
+    }
+  }
+
+  if (problem && (problem.due_date || problem.deadline)) {
+    const probDeadline = problem.due_date || problem.deadline;
+    if (isDeadlineExpired(String(probDeadline))) {
+      const error = new Error(`The deadline for this problem has passed. Submissions are closed.`);
+      error.statusCode = 403;
+      error.isExpired = true;
+      throw error;
     }
   }
 
@@ -432,51 +495,55 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     }
   }
 
-  // Ensure coding_problems table has an entry for this problem ID so foreign key constraint never fails
-  try {
-    await query(
-      `INSERT INTO coding_problems (id, title, description, difficulty, category, total_marks)
-       VALUES (?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-         title = COALESCE(VALUES(title), title), 
-         total_marks = COALESCE(VALUES(total_marks), total_marks)`,
-      [
-        problem.id,
-        problem.title || `Problem ${problem.id}`,
-        problem.description || '',
-        problem.difficulty || 'Medium',
-        problem.category || 'Practice',
-        problemTotalMarks,
-      ]
-    );
-  } catch (e) {
-    console.warn('[submitCodeAndSaveService] coding_problems sync notice:', e.message);
-  }
+  let submissionRecord = null;
 
-  const submissionRecord = await createSubmissionModel({
-    student_id: student.id || student_id,
-    problem_id: problem.id,
-    submitted_code: code,
-    language,
-    passed_test_cases: passedTests,
-    total_test_cases: totalTests,
-    score,
-    marks,
-    percentage,
-    status,
-    execution_details: {
-      sandbox: 'docker',
-      status,
-      score,
-      marks,
-      total_marks: problemTotalMarks,
-      percentage,
+  if (!isBatchTask) {
+    // Ensure coding_problems table has an entry for this problem ID so foreign key constraint never fails
+    try {
+      await query(
+        `INSERT INTO coding_problems (id, title, description, difficulty, category, total_marks)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+           title = COALESCE(VALUES(title), title), 
+           total_marks = COALESCE(VALUES(total_marks), total_marks)`,
+        [
+          problem.id,
+          problem.title || `Problem ${problem.id}`,
+          problem.description || '',
+          problem.difficulty || 'Medium',
+          problem.category || 'Practice',
+          problemTotalMarks,
+        ]
+      );
+    } catch (e) {
+      console.warn('[submitCodeAndSaveService] coding_problems sync notice:', e.message);
+    }
+
+    submissionRecord = await createSubmissionModel({
+      student_id: student.id || student_id,
+      problem_id: problem.id,
+      submitted_code: code,
+      language,
       passed_test_cases: passedTests,
       total_test_cases: totalTests,
-      execution_time_ms: totalExecutionMs,
-      results: executed,
-    },
-  });
+      score,
+      marks,
+      percentage,
+      status,
+      execution_details: {
+        sandbox: 'docker',
+        status,
+        score,
+        marks,
+        total_marks: problemTotalMarks,
+        percentage,
+        passed_test_cases: passedTests,
+        total_test_cases: totalTests,
+        execution_time_ms: totalExecutionMs,
+        results: executed,
+      },
+    });
+  }
 
   if (isBatchTask && batchTaskRecord) {
     const taskStatus = (status === 'accepted' || status === 'passed')
@@ -575,6 +642,9 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
   const { execution_details, submitted_code, ...safeSubmission } =
     submissionRecord && typeof submissionRecord === 'object' ? submissionRecord : {};
 
+  const currentAttempts = (attemptCount || 0) + 1;
+  const remainingAttempts = Math.max(0, 3 - currentAttempts);
+
   return {
     problem_id: problem.id,
     language,
@@ -590,6 +660,9 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     timed_out: overallTimedOut,
     test_results: executed,
     submission: safeSubmission || null,
+    attempts_used: currentAttempts,
+    attempts_remaining: remainingAttempts,
+    max_attempts: 3,
   };
 };
 
@@ -804,9 +877,9 @@ export const getAllCodingSubmissionsService = async (filters = {}) => {
       s.roll_number,
       COALESCE(d.name, s.department, 'General') AS department_name,
       cs.problem_id,
-      COALESCE(cp.title, CONCAT('Problem #', cs.problem_id)) AS problem_title,
-      cp.category AS problem_category,
-      cp.difficulty AS problem_difficulty,
+      COALESCE(pp.title, cp.title, CONCAT('Problem #', cs.problem_id)) AS problem_title,
+      COALESCE(pp.category, cp.category, 'General DSA') AS problem_category,
+      COALESCE(pp.difficulty, cp.difficulty, 'Medium') AS problem_difficulty,
       cs.language,
       cs.passed_test_cases,
       cs.total_test_cases,
@@ -817,8 +890,12 @@ export const getAllCodingSubmissionsService = async (filters = {}) => {
       cs.execution_details,
       cs.submitted_code,
       cs.submitted_at,
-      cs.created_at
+      cs.created_at,
+      cs.feedback,
+      cs.feedback_by,
+      cs.feedback_at
     FROM coding_submissions cs
+    INNER JOIN practice_problems pp ON cs.problem_id = pp.id
     LEFT JOIN users u ON cs.student_id = u.id
     LEFT JOIN students s ON u.id = s.user_id
     LEFT JOIN departments d ON s.department_id = d.id
@@ -919,7 +996,44 @@ export const getAllCodingSubmissionsService = async (filters = {}) => {
       submittedAt: formattedTime,
       submittedDate: r.submitted_at,
       submittedCode: r.submitted_code,
+      feedback: r.feedback || null,
+      feedbackBy: r.feedback_by || null,
+      feedbackAt: r.feedback_at ? new Date(r.feedback_at).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) : null,
     };
   });
+};
+
+/**
+ * Save optional mentor / admin code review feedback on a submission
+ */
+export const submitCodeFeedbackService = async ({ submission_id, feedback, feedback_by }) => {
+  const numSubId = parseInt(submission_id, 10);
+  if (isNaN(numSubId)) {
+    const err = new Error('Invalid submission_id');
+    err.statusCode = 400;
+    throw err;
+  }
+  const cleanFeedback = feedback !== undefined && feedback !== null ? String(feedback).trim() : null;
+  const reviewer = feedback_by || 'Mentor';
+
+  await query(
+    `UPDATE coding_submissions 
+     SET feedback = ?, feedback_by = ?, feedback_at = NOW() 
+     WHERE id = ?`,
+    [cleanFeedback, reviewer, numSubId]
+  );
+
+  return {
+    id: numSubId,
+    feedback: cleanFeedback,
+    feedbackBy: reviewer,
+    feedbackAt: new Date().toISOString(),
+  };
 };
 

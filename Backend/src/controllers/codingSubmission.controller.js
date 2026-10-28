@@ -4,6 +4,7 @@ import {
   getSubmissionByIdService,
   getStudentSubmissionsService,
   getAllCodingSubmissionsService,
+  submitCodeFeedbackService,
 } from '../services/codingSubmission.service.js';
 
 /**
@@ -118,6 +119,31 @@ export const getAllCodingSubmissionsAdmin = async (req, res, next) => {
       page,
     });
     return sendSuccess(res, 'Coding submissions retrieved successfully', submissions, 200);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.message, error.statusCode);
+    }
+    next(error);
+  }
+};
+
+/**
+ * Update / save optional review feedback on a coding submission
+ * PATCH /api/v1/coding-submissions/:id/feedback
+ */
+export const updateSubmissionFeedbackController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { feedback } = req.body || {};
+    const reviewerName = req.user?.name || (req.user?.role === 'mentor' ? 'Mentor' : 'Admin');
+
+    const result = await submitCodeFeedbackService({
+      submission_id: id,
+      feedback,
+      feedback_by: reviewerName,
+    });
+
+    return sendSuccess(res, 'Feedback saved successfully', result, 200);
   } catch (error) {
     if (error.statusCode) {
       return sendError(res, error.message, error.statusCode);

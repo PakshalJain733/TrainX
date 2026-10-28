@@ -109,7 +109,7 @@ export const applyStandardTieRanking = (items, scoreKey = 'score', timeKey = 'to
  * Fetch raw student performance data from MySQL DB or Fallback Data
  */
 export const getStudentsRawPerformance = async (filters = {}) => {
-  const { college_id, department_id, batch_id } = filters;
+  const { college_id, department_id, batch_id, mentor_id, mentor_name, mentor_email } = filters;
 
   try {
     let sql = `
@@ -118,6 +118,8 @@ export const getStudentsRawPerformance = async (filters = {}) => {
         s.id AS student_id,
         u.name,
         u.email,
+        u.is_approved,
+        u.is_active,
         u.created_at AS user_created_at,
         s.roll_number,
         s.college_id,
@@ -235,6 +237,8 @@ export const getStudentsRawPerformance = async (filters = {}) => {
       ) task_stats ON task_stats.user_id = u.id
 
       WHERE u.role IN ('student', 'STUDENT')
+        AND COALESCE(u.is_approved, 0) = 1
+        AND COALESCE(u.is_active, 1) = 1
     `;
 
     const params = [];
@@ -249,6 +253,30 @@ export const getStudentsRawPerformance = async (filters = {}) => {
     if (batch_id) {
       sql += ' AND s.batch_id = ?';
       params.push(parseInt(batch_id, 10));
+    }
+    if (mentor_id) {
+      sql += ` AND (
+        s.mentor_id = ?
+        OR u.mentor_id = ?
+        OR (s.mentor_name IS NOT NULL AND LOWER(s.mentor_name) = LOWER(?))
+        OR (u.mentor_name IS NOT NULL AND LOWER(u.mentor_name) = LOWER(?))
+        OR s.user_id IN (SELECT student_id FROM mentor_student_assignments WHERE mentor_id = ?)
+        OR s.user_id IN (SELECT student_id FROM mentor_assignments WHERE mentor_id = ? OR LOWER(mentor_name) = LOWER(?) OR LOWER(mentor_email) = LOWER(?))
+        OR s.batch_id IN (SELECT id FROM batches WHERE mentor = ? OR trainer = ? OR LOWER(mentor) = LOWER(?))
+      )`;
+      params.push(
+        mentor_id,
+        mentor_id,
+        mentor_name || '',
+        mentor_name || '',
+        mentor_id,
+        mentor_id,
+        mentor_name || '',
+        mentor_email || '',
+        mentor_name || '',
+        mentor_name || '',
+        mentor_name || ''
+      );
     }
 
     sql += ' ORDER BY u.created_at ASC, u.id ASC';
@@ -578,6 +606,9 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     if (userCollegeId) {
       filters.college_id = userCollegeId;
     }
+    filters.mentor_id = user.userId || user.id;
+    filters.mentor_name = user.name || '';
+    filters.mentor_email = user.email || '';
   } else if (role === ROLES.STUDENT) {
     if (userCollegeId) {
       filters.college_id = userCollegeId;

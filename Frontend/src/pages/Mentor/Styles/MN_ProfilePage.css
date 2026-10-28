@@ -124,18 +124,19 @@
 .profile-change-pw-wrap,
 .profile-actions-wrapper {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  grid-template-columns: 1.35fr 1fr !important;
+  gap: 8px !important;
   width: 100% !important;
   margin-top: 18px !important;
   padding-top: 16px !important;
   border-top: 1px solid #f1f5f9;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 480px) {
   .profile-change-pw-wrap,
   .profile-actions-wrapper {
     grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
 
@@ -145,22 +146,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px !important;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 10px !important;
   border: none !important;
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
 }
 
 .profile-change-pw-btn svg,
 .profile-change-pass-btn svg {
+  width: 13px;
+  height: 13px;
   color: #ffffff !important;
   stroke: #ffffff !important;
   flex-shrink: 0;
@@ -170,8 +174,8 @@
 .profile-change-pass-btn:hover {
   background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
-  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3) !important;
+  transform: translateY(-1px);
 }
 
 .profile-2fa-setup-btn {
@@ -179,21 +183,24 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px !important;
+  gap: 6px;
+  padding: 9px 8px;
+  border-radius: 10px !important;
   border: none !important;
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  box-sizing: border-box;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2) !important;
 }
 
 .profile-2fa-setup-btn svg {
+  width: 13px;
+  height: 13px;
   color: #ffffff !important;
   stroke: #ffffff !important;
   flex-shrink: 0;
@@ -202,39 +209,87 @@
 .profile-2fa-setup-btn:hover {
   background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35) !important;
-  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+.profile-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.profile-input-wrapper .profile-field-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+  transition: color 0.15s ease;
+  z-index: 2;
+}
+
+.profile-input-wrapper:focus-within .profile-field-icon {
+  color: #2563eb;
+}
+
+.profile-input-with-icon {
+  padding-left: 38px !important;
+}
+
+.profile-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-input:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.15) !important;
 }
 
 .profile-input:disabled,
 .profile-input-readonly {
-  background: #f1f5f9 !important;
-  color: #64748b !important;
+  background: #f8fafc !important;
+  color: #1e293b !important;
+  border: 1.5px solid #e2e8f0 !important;
+  font-weight: 500 !important;
+  cursor: default !important;
+  opacity: 1 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.profile-input-readonly:hover {
   border-color: #cbd5e1 !important;
-  cursor: not-allowed !important;
-  opacity: 0.85;
 }
 
 .profile-edit-trigger-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  background: #2563eb;
+  gap: 7px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   font-weight: 600;
   font-size: 13px;
   border: none;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
-  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .profile-edit-trigger-btn:hover {
-  background: #1d4ed8;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.38);
 }
 
 .profile-section-heading-flex {
@@ -243,6 +298,8 @@
   justify-content: space-between;
   width: 100%;
   margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .profile-heading-group {
@@ -262,20 +319,20 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border-radius: 9px;
   background: #ffffff;
-  color: #64748b;
+  color: #475569;
   font-weight: 600;
   font-size: 13px;
-  border: 1px solid #cbd5e1;
+  border: 1.5px solid #cbd5e1;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .profile-cancel-btn:hover {
-  background: #f8fafc;
-  color: #334155;
+  background: #f1f5f9;
+  color: #0f172a;
   border-color: #94a3b8;
 }
 
@@ -283,21 +340,115 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
   color: #ffffff;
-  border-radius: 8px;
+  border-radius: 9px;
   border: none;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
   transition: all 0.2s ease;
 }
 
 .profile-save-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.profile-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.profile-db-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #059669;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.profile-db-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: dbPulse 2s infinite ease-in-out;
+}
+
+@keyframes dbPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.6; }
+}
+
+.profile-edit-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.profile-alert-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.profile-stats-mini-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.profile-stat-mini-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-stat-mini-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-stat-mini-label {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 /* Google Authenticator 2FA Modal Styles */

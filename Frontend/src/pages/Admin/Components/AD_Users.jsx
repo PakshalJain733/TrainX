@@ -684,7 +684,13 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               <label className="fs-portal-label">Faculty Mentor / Leader</label>
               <AdminUserSelect
                 value={selectedMentor}
-                options={mentors.map(m => ({ value: m.name, label: `${m.name} (${m.department || 'Computer Science'})` }))}
+                options={mentors.map(m => {
+                  const dept = (m.department || m.dept || "").trim();
+                  return {
+                    value: m.name,
+                    label: dept ? `${m.name} (${dept})` : m.name
+                  };
+                })}
                 onChange={val => setSelectedMentor(val)}
                 placeholder="-- Choose Faculty Mentor --"
                 icon={UserCheck}
@@ -944,7 +950,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                             </div>
                           </td>
                           <td>
-                            <span className="fs-portal-dept-text">{student.department || student.dept || 'Computer Science'}</span>
+                            <span className="fs-portal-dept-text">{student.department || student.dept || '—'}</span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>

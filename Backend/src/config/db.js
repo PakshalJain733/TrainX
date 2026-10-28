@@ -38,6 +38,31 @@ export const checkDatabaseConnection = async () => {
     const connection = await pool.getConnection();
     connection.release();
     console.log(`[Database] Connected successfully to MySQL database: ${dbName}`);
+
+    // Ensure extended profile columns exist on users table
+    try {
+      const existingCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+      );
+      const colSet = new Set((existingCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      const colsToAdd = [
+        { name: 'employee_id', def: 'VARCHAR(100) DEFAULT NULL' },
+        { name: 'office_location', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'experience', def: 'VARCHAR(100) DEFAULT NULL' },
+        { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'avatar_url', def: 'LONGTEXT DEFAULT NULL' },
+        { name: 'bio', def: 'TEXT DEFAULT NULL' },
+      ];
+      for (const col of colsToAdd) {
+        if (!colSet.has(col.name.toLowerCase())) {
+          await query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`);
+          console.log(`[Database Migration] Added column ${col.name} to users table.`);
+        }
+      }
+    } catch (migErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
+    }
+
     return true;
   } catch (error) {
     console.warn(`[Database Warning] Database connection failed (${error.message}). Server running with fallback mode.`);

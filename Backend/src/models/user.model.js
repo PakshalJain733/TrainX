@@ -84,6 +84,12 @@ const SAFE_USER_FIELDS = [
   'is_verified',
   'is_approved',
   'is_profile_updated',
+  'employee_id',
+  'office_location',
+  'experience',
+  'specialization',
+  'avatar_url',
+  'bio',
   'created_at',
   'updated_at',
 ];
@@ -700,9 +706,9 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
            u.two_factor_enabled, u.two_factor_secret, u.two_factor_reset,
            c.name as college_name,
            s.roll_number,
-           COALESCE(s.department_id, u.department_id) as department_id,
+           COALESCE(s.department_id, u.department_id, d.id) as department_id,
            s.batch_id,
-           COALESCE(s.department, u.department) as department,
+           COALESCE(s.department, u.department, d.name) as department,
            s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
@@ -712,6 +718,7 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON (u.department_id = d.id OR s.department_id = d.id)
     WHERE 1=1
   `;
   const params = [];
@@ -721,7 +728,7 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
   }
   if (department && department !== 'all' && department !== 'All') {
     const cleanDept = String(department).trim().toLowerCase();
-    sql += ' AND (LOWER(COALESCE(s.department, u.department)) LIKE ? OR LOWER(COALESCE(s.department, u.department)) = ? OR CAST(COALESCE(s.department_id, u.department_id) AS CHAR) = ?)';
+    sql += ' AND (LOWER(COALESCE(s.department, u.department, d.name)) LIKE ? OR LOWER(COALESCE(s.department, u.department, d.name)) = ? OR CAST(COALESCE(s.department_id, u.department_id, d.id) AS CHAR) = ?)';
     params.push(`%${cleanDept}%`, cleanDept, cleanDept);
   }
   sql += ' ORDER BY u.id DESC';
@@ -738,9 +745,9 @@ export const getPendingUsersModel = async (collegeId = null) => {
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.two_factor_enabled, u.created_at,
            c.name as college_name,
            s.roll_number,
-           COALESCE(s.department_id, u.department_id) as department_id,
+           COALESCE(s.department_id, u.department_id, d.id) as department_id,
            s.batch_id,
-           COALESCE(s.department, u.department) as department,
+           COALESCE(s.department, u.department, d.name) as department,
            s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
@@ -749,6 +756,7 @@ export const getPendingUsersModel = async (collegeId = null) => {
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON (u.department_id = d.id OR s.department_id = d.id)
     WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false OR u.is_approved = 0)
       AND u.role != 'super_admin'
       AND (u.password_hash IS NOT NULL AND u.password_hash != '')
@@ -802,6 +810,15 @@ export const updateUserModel = async (id, data) => {
     two_factor_secret,
     two_factor_enabled,
     two_factor_reset,
+    employee_id,
+    empId,
+    office_location,
+    officeLocation,
+    experience,
+    specialization,
+    avatar_url,
+    avatarUrl,
+    bio,
   } = data;
 
   const rollVal = roll_number || rollNo || roll_no || null;
@@ -815,6 +832,13 @@ export const updateUserModel = async (id, data) => {
   const cityVal = city !== undefined ? city : null;
   const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
   const trackVal = target_track !== undefined ? target_track : (track !== undefined ? track : null);
+  const specVal = specialization !== undefined ? specialization : (trackVal || null);
+  const empIdVal = employee_id !== undefined ? employee_id : (empId !== undefined ? empId : null);
+  const officeLocVal = office_location !== undefined ? office_location : (officeLocation !== undefined ? officeLocation : null);
+  const expVal = experience !== undefined ? experience : null;
+  const avatarVal = avatar_url !== undefined ? avatar_url : (avatarUrl !== undefined ? avatarUrl : null);
+  const bioVal = bio !== undefined ? bio : null;
+
   const nameVal = name || null;
   const emailVal = email || null;
   const roleVal = role || null;
@@ -829,8 +853,31 @@ export const updateUserModel = async (id, data) => {
   const deptIdVal = department_id !== undefined ? (department_id ? parseInt(department_id, 10) : null) : null;
 
   await query(
-    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), department = COALESCE(?, department), department_id = COALESCE(?, department_id), is_active = COALESCE(?, is_active), is_verified = COALESCE(?, is_verified), is_approved = COALESCE(?, is_approved), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
-    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, deptVal, deptIdVal, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal, isProfileUpdatedVal, numId]
+    `UPDATE users SET
+       name = COALESCE(?, name),
+       email = COALESCE(?, email),
+       mobile_number = COALESCE(?, mobile_number),
+       password_hash = COALESCE(?, password_hash),
+       role = COALESCE(?, role),
+       college_id = COALESCE(?, college_id),
+       department = COALESCE(?, department),
+       department_id = COALESCE(?, department_id),
+       is_active = COALESCE(?, is_active),
+       is_verified = COALESCE(?, is_verified),
+       is_approved = COALESCE(?, is_approved),
+       gender = COALESCE(?, gender),
+       city = COALESCE(?, city),
+       emergency_contact = COALESCE(?, emergency_contact),
+       target_track = COALESCE(?, target_track),
+       is_profile_updated = COALESCE(?, is_profile_updated),
+       employee_id = COALESCE(?, employee_id),
+       office_location = COALESCE(?, office_location),
+       experience = COALESCE(?, experience),
+       specialization = COALESCE(?, specialization),
+       avatar_url = COALESCE(?, avatar_url),
+       bio = COALESCE(?, bio)
+     WHERE id = ?`,
+    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, deptVal, deptIdVal, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal || specVal, isProfileUpdatedVal, empIdVal, officeLocVal, expVal, specVal, avatarVal, bioVal, numId]
   );
 
   if (deptIdVal && (roleVal === 'coordinator' || (!roleVal && data.role === 'coordinator'))) {

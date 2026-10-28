@@ -26,7 +26,19 @@ import {
   createMentorSupportTicket,
   updateMentorSupportTicket,
   escalateMentorSupportTicket,
+  updateMentorProfile,
 } from '../controllers/mentor.controller.js';
+import {
+  getAdminPracticeProblems,
+  createAdminPracticeProblem,
+  updateAdminPracticeProblem,
+  deleteAdminPracticeProblem,
+  generateAIPracticeProblemController,
+} from '../controllers/admin.controller.js';
+import {
+  getAllCodingSubmissionsAdmin,
+  updateSubmissionFeedbackController,
+} from '../controllers/codingSubmission.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
@@ -50,6 +62,18 @@ router.post('/weekly-reports', mentorOnly, submitMentorWeeklyReport);
 router.get('/mentors-list', mentorOnly, getMentorDirectory);
 router.get('/interviews', mentorOnly, getMentorMenteeInterviews);
 router.get('/profile', mentorOnly, getMentorProfile);
+router.put('/profile', mentorOnly, updateMentorProfile);
+router.patch('/profile', mentorOnly, updateMentorProfile);
+
+// Mentor Coding Practice Problems Management (just like Admin)
+router.get('/practice-problems', mentorOnly, getAdminPracticeProblems);
+router.post('/practice-problems', mentorOnly, createAdminPracticeProblem);
+router.put('/practice-problems/:id', mentorOnly, updateAdminPracticeProblem);
+router.delete('/practice-problems/:id', mentorOnly, deleteAdminPracticeProblem);
+router.post('/practice-problems/generate-ai', mentorOnly, generateAIPracticeProblemController);
+router.get('/practice-problems/submissions', mentorOnly, getAllCodingSubmissionsAdmin);
+router.patch('/practice-problems/submissions/:id/feedback', mentorOnly, updateSubmissionFeedbackController);
+router.post('/practice-problems/submissions/:id/feedback', mentorOnly, updateSubmissionFeedbackController);
 
 router.get('/assignments', mentorOnly, getMentorAssignments);
 router.post('/assignments', mentorOnly, createMentorAssignment);

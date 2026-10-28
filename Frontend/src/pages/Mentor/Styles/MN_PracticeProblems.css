@@ -1,0 +1,6 @@
+/* MN_PracticeProblems.css - Imports Admin Practice Problems styles for 100% feature and visual parity */
+@import "../../Admin/Styles/AD_PracticeProblems.css";
+
+.mentor-practice-wrapper {
+  animation: fadeIn 0.2s ease-in-out;
+}

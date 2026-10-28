@@ -12,6 +12,11 @@ node_modules/
 
 # Build Outputs
 dist/
+**/dist/
+dist_staging/
+**/dist_staging/
+.dist_backup*
+**/.dist_backup*
 dist-ssr/
 build/
 out/

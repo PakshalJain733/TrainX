@@ -7,13 +7,21 @@ import { Card, CardContent } from "../../../components/ui/Card";
 import "../Styles/ST_AcademicQuiz.css";
 import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt || "";
+    } catch (e) {}
+  }
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -147,10 +155,15 @@ async function fetchApiQuizzes() {
       };
     });
 
-    const shared = await getSharedQuizzes([]);
+    const existingTitles = new Set(dbList.map(q => (q.title || '').trim().toLowerCase()));
     const existingIds = new Set(dbList.map(q => String(q.id)));
+
+    const shared = await getSharedQuizzes([]);
     const sharedMapped = shared
-      .filter(s => !existingIds.has(String(s.id)))
+      .filter(s => {
+        const sTitle = (s.title || '').trim().toLowerCase();
+        return !existingIds.has(String(s.id)) && !existingTitles.has(sTitle);
+      })
       .map(s => {
         const pastAttempt = attemptMap[String(s.id)];
         const localCompleted = typeof window !== 'undefined' && localStorage.getItem(`quiz_completed_${s.id}`) === 'true';
@@ -176,7 +189,17 @@ async function fetchApiQuizzes() {
         };
       });
 
-    return [...sharedMapped, ...dbList];
+    const seen = new Set();
+    const uniqueList = [];
+    for (const q of [...dbList, ...sharedMapped]) {
+      const key = (q.title || '').trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueList.push(q);
+      }
+    }
+
+    return uniqueList;
   } catch (err) {
     console.error("Failed to load API quizzes:", err);
     const shared = await getSharedQuizzes([]);
@@ -321,7 +344,8 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
 
   // Initialize or start assessment attempt with API
   useEffect(() => {
-    if (quiz.source === "admin" && !isReview && quiz.id) {
+    const isRealQuiz = quiz.id && (quiz.source === "admin" || !isNaN(Number(quiz.id)));
+    if (isRealQuiz && !isReview) {
       apiFetch(`/assessments/${quiz.id}/start`, { method: "POST" })
         .then((data) => {
           console.log("[Quiz Start Response]", data);
@@ -392,7 +416,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       window.dispatchEvent(new Event('portal_quiz_updated'));
     } catch (e) {}
 
-    if (quiz.source !== "admin") return; // builtin quizzes don't need backend
+    if (quiz.source === "practice" && isNaN(Number(quiz.id))) return; // builtin static practice doesn't need backend
 
     const optKeys = ["a", "b", "c", "d"];
     const formattedAnswers = questions.map((q, idx) => {

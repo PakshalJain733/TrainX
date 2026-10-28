@@ -34,7 +34,18 @@ const getInitials = (name) => {
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase();
+};
+
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) return false;
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none' || clean.toLowerCase() === 'flexible deadline') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
 };
 
 function mapApiBatch(b) {
@@ -88,7 +99,7 @@ export default function Batches() {
       if (data.success && Array.isArray(data.data)) {
         const activeOnly = data.data.filter(b => {
           const st = (b.status || "").toLowerCase();
-          return st !== "inactive" && st !== "deleted";
+          return st !== "deleted";
         });
         const mapped = activeOnly.map(mapApiBatch);
         setEnrolledBatches(mapped);
@@ -110,22 +121,28 @@ export default function Batches() {
       const res = await fetch(`${API_BASE}/batches/${batch.id}/tasks`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        const customTasks = data.data.map((t, idx) => ({
-          id: t.id,
-          taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
-          title: t.title,
-          type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
-          due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
-          status: t.status || "Pending",
-          platform: t.platform || "coding",
-          points: Number(t.points) || 100,
-          scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
-          alreadySubmitted: Boolean(t.alreadySubmitted),
-          language: t.language || "",
-          description: t.description || t.desc || "",
-          testCases: t.testCases || t.test_cases || [],
-          batch_id: t.batch_id || batch.id,
-        }));
+        const customTasks = data.data.map((t, idx) => {
+          const isExpired = Boolean(t.isExpired) || (isDeadlinePassed(t.deadline) && !t.alreadySubmitted && (t.status || '').toLowerCase() !== 'completed');
+          const finalStatus = (t.status || '').toLowerCase() === 'completed' || t.alreadySubmitted ? 'Completed' : (isExpired ? 'Expired' : (t.status || 'Pending'));
+          return {
+            id: t.id,
+            taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
+            title: t.title,
+            type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
+            due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
+            deadline: t.deadline || "",
+            status: finalStatus,
+            isExpired,
+            platform: t.platform || "coding",
+            points: Number(t.points) || 100,
+            scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
+            alreadySubmitted: Boolean(t.alreadySubmitted),
+            language: t.language || "",
+            description: t.description || t.desc || "",
+            testCases: t.testCases || t.test_cases || [],
+            batch_id: t.batch_id || batch.id,
+          };
+        });
 
         // Batch XP calculates according to task marks obtained
         const completedXp = customTasks
@@ -169,6 +186,13 @@ export default function Batches() {
       .finally(() => {
         fetchMyBatches();
       });
+
+    window.addEventListener("batchJoined", fetchMyBatches);
+    window.addEventListener("portal_batch_updated", fetchMyBatches);
+    return () => {
+      window.removeEventListener("batchJoined", fetchMyBatches);
+      window.removeEventListener("portal_batch_updated", fetchMyBatches);
+    };
   }, []);
 
   // Handle batch join submission
@@ -206,10 +230,12 @@ export default function Batches() {
         setModalSuccess(data.message || "Successfully joined batch!");
         setJoinCodeInput("");
         await fetchMyBatches();
+        window.dispatchEvent(new Event("batchJoined"));
+        window.dispatchEvent(new Event("portal_batch_updated"));
         setTimeout(() => {
           setShowJoinModal(false);
           setModalSuccess("");
-        }, 1500);
+        }, 1200);
       } else {
         setModalError(data.message || "Failed to join batch. Please check code.");
       }
@@ -376,6 +402,8 @@ export default function Batches() {
                             <span className="cw-task-num-badge">{task.taskNumber}</span>
                             {task.status === "Completed" ? (
                               <CheckCircle2 size={18} className="cw-item-icon-done" />
+                            ) : task.status === "Expired" ? (
+                              <AlertCircle size={18} style={{ color: "#dc2626" }} />
                             ) : (
                               <Clock3 size={18} className="cw-item-icon-pending" />
                             )}
@@ -384,7 +412,7 @@ export default function Batches() {
                               <p className="cw-item-meta-sub">
                                 <span>{task.type}</span>
                                 <span>•</span>
-                                <span className={task.urgent ? "cw-item-due--urgent" : ""}>
+                                <span className={task.status === "Expired" ? "cw-item-due--urgent" : (task.urgent ? "cw-item-due--urgent" : "")}>
                                   {task.due}
                                 </span>
                               </p>
@@ -401,6 +429,8 @@ export default function Batches() {
                               variant={
                                 task.status === "Completed"
                                   ? "success"
+                                  : task.status === "Expired"
+                                  ? "danger"
                                   : task.status === "Partial"
                                   ? "warning"
                                   : task.urgent

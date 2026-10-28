@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, PowerOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -150,6 +150,7 @@ export default function AdminBatches() {
   const [joinCode, setJoinCode] = useState("");
   const [copiedId, setCopiedId] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [enlargedBatchCode, setEnlargedBatchCode] = useState(null);
 
   // Visit Batch modal state
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -451,8 +452,8 @@ export default function AdminBatches() {
     }
   };
 
-  const handleDeleteBatch = async (batchId, batchName) => {
-    if (!window.confirm(`Are you sure you want to move batch "${batchName}" to Inactive?`)) {
+  const handleDeactivateBatch = async (batchId, batchName) => {
+    if (!window.confirm(`Are you sure you want to make batch "${batchName}" inactive?`)) {
       return;
     }
     setBatches((prev) =>
@@ -467,6 +468,7 @@ export default function AdminBatches() {
       console.warn("Updated batch status in local state fallback:", err);
     }
   };
+  const handleDeleteBatch = handleDeactivateBatch;
 
   const handleReactivateBatch = async (batchId, batchName) => {
     setBatches((prev) =>
@@ -1443,36 +1445,65 @@ export default function AdminBatches() {
                         </div>
                       </div>
                       <div className="batch-join-code-display">
-                        <span className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}>
+                        <span 
+                          className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}
+                          onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
+                          title="Click to enlarge join code"
+                          style={{ cursor: "pointer" }}
+                        >
                           {b.joinCode || "NO-CODE"}
                         </span>
-                        {timerInfo.expired ? (
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                           <button
                             type="button"
-                            className="batch-renew-code-btn"
-                            onClick={() => handleRegenerateCode(b.id, b.name)}
-                            title="Generate a new active 5-minute code"
+                            className="batch-enlarge-code-btn"
+                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
+                            title="Enlarge Join Code for presentation"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              padding: "6px 10px",
+                              background: "#f1f5f9",
+                              border: "1px solid #cbd5e1",
+                              borderRadius: "8px",
+                              color: "#334155",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
                           >
-                            <RefreshCw size={12} /> Renew Code
+                            <Maximize2 size={13} /> Enlarge
                           </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
-                            onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
-                            title="Copy Code to Clipboard"
-                          >
-                            {copiedId === b.id ? (
-                              <>
-                                <Check size={13} /> Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={13} /> Copy Code
-                              </>
-                            )}
-                          </button>
-                        )}
+                          {timerInfo.expired ? (
+                            <button
+                              type="button"
+                              className="batch-renew-code-btn"
+                              onClick={() => handleRegenerateCode(b.id, b.name)}
+                              title="Generate a new active 5-minute code"
+                            >
+                              <RefreshCw size={12} /> Renew Code
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
+                              onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
+                              title="Copy Code to Clipboard"
+                            >
+                              {copiedId === b.id ? (
+                                <>
+                                  <Check size={13} /> Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy size={13} /> Copy Code
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {timerInfo.expired && (
                         <span className="batch-expired-hint">This code expired after 5 minutes. Click "Renew Code" to create a fresh access code.</span>
@@ -1516,18 +1547,18 @@ export default function AdminBatches() {
                     ) : (
                       <button
                         type="button"
-                        className="batch-delete-card-btn"
-                        onClick={() => handleDeleteBatch(b.id, b.name)}
-                        title="Move to Inactive"
+                        className="batch-inactive-card-btn"
+                        onClick={() => handleDeactivateBatch(b.id, b.name)}
+                        title="Make Batch Inactive"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
                           gap: "6px",
                           padding: "10px 14px",
-                          background: "#fff1f2",
-                          color: "#e11d48",
-                          border: "1px solid #fecdd3",
+                          background: "#fffbeb",
+                          color: "#b45309",
+                          border: "1px solid #fde68a",
                           borderRadius: "10px",
                           fontWeight: 600,
                           fontSize: "13px",
@@ -1535,7 +1566,7 @@ export default function AdminBatches() {
                           transition: "all 0.2s ease"
                         }}
                       >
-                        <Trash2 size={16} /> Delete
+                        <PowerOff size={15} /> Make Inactive
                       </button>
                     )}
                   </div>
@@ -1545,6 +1576,182 @@ export default function AdminBatches() {
           })
         )}
       </div>
+
+      {/* Enlarge Batch Code Modal */}
+      {enlargedBatchCode && createPortal(
+        <div 
+          className="batch-enlarge-overlay"
+          onClick={() => setEnlargedBatchCode(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <div 
+            className="batch-enlarge-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "520px",
+              background: "#ffffff",
+              borderRadius: "24px",
+              padding: "36px 32px 32px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setEnlargedBatchCode(null)}
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                background: "#f1f5f9",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#64748b",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#e2e8f0"; e.currentTarget.style.color = "#0f172a"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "16px",
+              background: "#eff6ff",
+              color: "#2563eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "16px",
+            }}>
+              <Key size={28} />
+            </div>
+
+            <div style={{ fontSize: "12px", fontWeight: "800", color: "#6366f1", letterSpacing: "1px", textTransform: "uppercase", marginBottom: "4px" }}>
+              JOIN BATCH ACCESS CODE
+            </div>
+
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: "0 0 6px" }}>
+              {enlargedBatchCode.name}
+            </h2>
+
+            {enlargedBatchCode.trainer && (
+              <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 24px" }}>
+                Trainer: <strong style={{ color: "#334155" }}>{enlargedBatchCode.trainer}</strong>
+              </p>
+            )}
+
+            {/* Giant Enlarge Code Pill */}
+            <div style={{
+              width: "100%",
+              padding: "24px 20px",
+              background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)",
+              border: "2px dashed #93c5fd",
+              borderRadius: "18px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              marginBottom: "24px",
+            }}>
+              <span style={{
+                fontFamily: "monospace, 'Courier New', sans-serif",
+                fontSize: "44px",
+                fontWeight: "900",
+                letterSpacing: "4px",
+                color: "#1e40af",
+                textShadow: "0 2px 4px rgba(30, 64, 175, 0.1)",
+                userSelect: "all",
+              }}>
+                {enlargedBatchCode.code}
+              </span>
+              <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
+                Students enter this code in their portal to join
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(enlargedBatchCode.code);
+                  setCopiedId(enlargedBatchCode.code);
+                  setTimeout(() => setCopiedId(null), 2000);
+                }}
+                style={{
+                  flex: 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  padding: "12px 20px",
+                  background: copiedId === enlargedBatchCode.code ? "#16a34a" : "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                }}
+              >
+                {copiedId === enlargedBatchCode.code ? (
+                  <><Check size={16} /> Copied to Clipboard!</>
+                ) : (
+                  <><Copy size={16} /> Copy Join Code</>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEnlargedBatchCode(null)}
+                style={{
+                  padding: "12px 20px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

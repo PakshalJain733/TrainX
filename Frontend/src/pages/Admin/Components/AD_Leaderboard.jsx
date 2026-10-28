@@ -53,15 +53,30 @@ export default function AdminLeaderboard() {
     fetchLeaderboard();
   }, [selectedCollege, selectedDept]);
 
+  const isApprovedActiveStudent = (item) => {
+    if (!item) return false;
+    if (item.is_approved !== undefined && item.is_approved !== null) {
+      if (item.is_approved === 0 || item.is_approved === false || item.is_approved === '0') return false;
+    }
+    if (item.is_active !== undefined && item.is_active !== null) {
+      if (item.is_active === 0 || item.is_active === false || item.is_active === '0') return false;
+    }
+    const st = String(item.status || item.approval_status || '').toLowerCase().trim();
+    if (st === 'rejected' || st === 'inactive' || st === 'disabled' || st === 'pending') return false;
+    return true;
+  };
+
   const fetchLeaderboard = () => {
     setLoading(true);
 
     apiFetch("/leaderboards")
       .then((res) => {
         if (res && res.data) {
+          const overallList = (res.data.overall || []).filter(isApprovedActiveStudent);
+          const deptList = (res.data.department || []).filter(isApprovedActiveStudent);
           setData({
-            overall: res.data.overall || [],
-            department: res.data.department || []
+            overall: overallList,
+            department: deptList
           });
         } else {
           setData({ overall: [], department: [] });

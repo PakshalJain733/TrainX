@@ -27,7 +27,8 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true, moduleKey: "mentorDashboard" },
   { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
-  { title: "Batches", url: "/mentor/batches", icon: Code2, moduleKey: "mentorStudents" },
+  { title: "Batches", url: "/mentor/batches", icon: Users, moduleKey: "mentorStudents" },
+  { title: "Coding Practice", url: "/mentor/coding-practice", icon: Code2, moduleKey: "mentorCodingPractice" },
   { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
   { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap, moduleKey: "mentorQuizzes" },
   { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles, moduleKey: "mentorRoadmaps" },

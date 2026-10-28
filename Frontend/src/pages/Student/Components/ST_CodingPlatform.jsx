@@ -126,6 +126,18 @@ function getDynamicSampleTestCases(title = "", existingCases = []) {
   return [];
 }
 
+function isDeadlinePassed(deadline) {
+  if (!deadline) return false;
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'flexible deadline' || clean.toLowerCase() === 'none') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
+}
+
 const STARTER_TEMPLATES = {
   python: `# Write your Python solution here\nimport sys\n\ndef main():\n    # Read input from standard input\n    # lines = sys.stdin.read().splitlines()\n    pass\n\nif __name__ == '__main__':\n    main()\n`,
   node: `// Write your JavaScript (Node.js) solution here\nconst fs = require('fs');\n\nfunction main() {\n    // const input = fs.readFileSync(0, 'utf-8').trim();\n}\n\nmain();\n`,
@@ -299,6 +311,10 @@ export default function CodingPlatform() {
             }
             if (t.alreadySubmitted) {
               setHasSubmitted(true);
+              const prevCode = t.submission?.submitted_code || t.submission?.code_submission || t.submission?.code;
+              if (prevCode) {
+                setCode(prevCode);
+              }
             }
             setTaskData({
               id: t.id,
@@ -313,6 +329,7 @@ export default function CodingPlatform() {
               source: "batch_task",
               language: taskLang,
               alreadySubmitted: Boolean(t.alreadySubmitted),
+              isExpired: Boolean(t.isExpired),
             });
             return;
           }
@@ -343,6 +360,7 @@ export default function CodingPlatform() {
             testCases: getDynamicSampleTestCases(p.title, rawCases),
             source: "practice_problem",
             language: taskLang,
+            isExpired: Boolean(p.isExpired || p.is_expired),
           });
           return;
         }
@@ -410,6 +428,15 @@ export default function CodingPlatform() {
   const assignedLangKey = normalizeLanguageKey(taskData?.language || location.state?.task?.language);
   const isLanguageLocked = Boolean(assignedLangKey);
 
+  const rawDeadline = taskData?.deadline || location.state?.task?.deadline || location.state?.task?.dueDate || location.state?.task?.due;
+  const isDeadlinePassedVal = isDeadlinePassed(rawDeadline);
+  const isTaskExpired = Boolean(
+    taskData?.isExpired ||
+    location.state?.task?.isExpired ||
+    (isDeadlinePassedVal && !hasSubmitted)
+  );
+  const isCompilerLocked = hasSubmitted || isTaskExpired;
+
   const handleLanguageChange = (newLang) => {
     if (isLanguageLocked && newLang !== assignedLangKey) {
       return;
@@ -426,9 +453,19 @@ export default function CodingPlatform() {
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
+    if (isTaskExpired) {
+      setConsoleStatus("error");
+      setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Code execution and submissions are closed.");
+      return;
+    }
     if (hasSubmitted) {
       setConsoleStatus("error");
-      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
+      setConsoleOutput(
+        isBatch
+          ? "🔒 You have already submitted this batch task. The compiler is locked."
+          : "🔒 Maximum submission limit reached (3 attempts allowed per problem)."
+      );
       return;
     }
     if (!isModuleActive("codingCompiler")) {
@@ -508,10 +545,21 @@ export default function CodingPlatform() {
 
   const handleSubmit = async (opts = {}) => {
     const isAuto = opts?.isAutoSubmit === true;
+    const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
+
     if (isSubmitting || isRunning) return;
+    if (isTaskExpired) {
+      setConsoleStatus("error");
+      setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Submissions are closed.");
+      return;
+    }
     if (hasSubmitted) {
       setConsoleStatus("error");
-      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      setConsoleOutput(
+        isBatch
+          ? "🔒 You have already submitted this batch task. The compiler is locked and reattempts are not allowed."
+          : "🔒 Maximum submission limit reached (3 attempts allowed per problem)."
+      );
       return;
     }
     if (!isAuto && !isModuleActive("codingCompiler")) {
@@ -531,6 +579,20 @@ export default function CodingPlatform() {
     }
     if (!taskData?.id) {
       setConsoleOutput("⚠️  No problem ID found. Cannot submit.");
+      setConsoleStatus("error");
+      return;
+    }
+
+    if (isBatch && (submissions.length >= 1 || taskData?.alreadySubmitted)) {
+      setHasSubmitted(true);
+      setConsoleOutput("🔒 You have already submitted this batch task. The compiler is locked and reattempts are not allowed.");
+      setConsoleStatus("error");
+      return;
+    }
+
+    if (!isBatch && submissions.length >= 3) {
+      setHasSubmitted(true);
+      setConsoleOutput("🔒 Maximum submission limit reached (3/3 attempts used). You cannot submit again for this problem.");
       setConsoleStatus("error");
       return;
     }
@@ -559,9 +621,9 @@ export default function CodingPlatform() {
 
       if (!res.ok) {
         setConsoleStatus("error");
-        if (data?.message?.includes("already been submitted")) {
+        if (data?.message?.includes("Maximum submission limit") || data?.message?.includes("already been submitted") || res.status === 403) {
           setHasSubmitted(true);
-          setConsoleOutput(`🔒 ${data.message}`);
+          setConsoleOutput(`🔒 ${data.message || "Maximum submission limit reached (3 attempts allowed per problem)."}`);
         } else if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
           setConsoleOutput(`⚠️ Compiler service is currently unavailable. Please try again later.`);
         } else {
@@ -617,8 +679,14 @@ export default function CodingPlatform() {
         [header, scoreLine, timeLine, "\nTest Cases:", ...tcLines].filter(Boolean).join("\n")
       );
 
-      // Lock task against reattempt upon successful submission
-      setHasSubmitted(true);
+      // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions
+      const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
+      const attemptsCount = result.attempts_used ?? (submissions.length + 1);
+      if (isBatch || attemptsCount >= 3) {
+        setHasSubmitted(true);
+      } else {
+        setHasSubmitted(false);
+      }
       setActiveTab("submissions");
       loadSubmissions();
 
@@ -644,8 +712,18 @@ export default function CodingPlatform() {
         const problemId = String(taskData?.id || "");
         const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
         setSubmissions(matched);
-        if (matched.length > 0) {
-          setHasSubmitted(true);
+
+        const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
+        if (isBatch) {
+          if (matched.length > 0 || taskData?.alreadySubmitted) {
+            setHasSubmitted(true);
+          }
+        } else {
+          if (matched.length >= 3) {
+            setHasSubmitted(true);
+          } else {
+            setHasSubmitted(false);
+          }
         }
       }
     } catch { /* ignore */ } finally {
@@ -654,9 +732,9 @@ export default function CodingPlatform() {
   };
 
   useEffect(() => {
-    if (activeTab === "submissions" && taskData?.id) loadSubmissions();
+    if (taskData?.id) loadSubmissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, taskData?.id]);
+  }, [taskData?.id, activeTab]);
 
   
   const submitRef = useRef(null);
@@ -803,18 +881,24 @@ export default function CodingPlatform() {
             
             <button
               type="button"
-              className={`cp-run-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
+              className={`cp-run-btn ${!isModuleActive("codingCompiler") || isCompilerLocked ? 'cp-btn--off' : ''}`}
               onClick={handleRun}
-              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting || hasSubmitted}
+              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting || isCompilerLocked}
               title={
-                hasSubmitted 
-                  ? "This task has already been submitted. Reattempts are disabled." 
+                isTaskExpired
+                  ? "Deadline Expired: Submissions and code execution are closed."
+                  : hasSubmitted 
+                  ? (taskData?.source === 'batch_task' || taskData?.batch_id 
+                      ? "This batch task has been submitted. Compiler execution is locked." 
+                      : "Maximum submission limit reached (3/3 attempts used).")
                   : (!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code")
               }
-              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+              style={(!isModuleActive("codingCompiler") || isCompilerLocked) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {hasSubmitted ? (
-                <span>Run (Submitted)</span>
+              {isTaskExpired ? (
+                <span>Run (Expired)</span>
+              ) : hasSubmitted ? (
+                <span>Run (Locked)</span>
               ) : isRunning ? (
                 <span>Running...</span>
               ) : (
@@ -824,22 +908,32 @@ export default function CodingPlatform() {
             
             <button
               type="button"
-              className={`cp-submit-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
+              className={`cp-submit-btn ${!isModuleActive("codingCompiler") || isCompilerLocked ? 'cp-btn--off' : ''}`}
               onClick={handleSubmit}
-              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning || hasSubmitted}
+              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning || isCompilerLocked}
               title={
-                hasSubmitted 
-                  ? "This task has already been submitted. Reattempts are disabled." 
-                  : (!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code")
+                isTaskExpired
+                  ? "Deadline Expired: The submission deadline for this task has passed."
+                  : hasSubmitted 
+                  ? (taskData?.source === 'batch_task' || taskData?.batch_id 
+                      ? "This batch task has already been submitted. Reattempts are strictly disabled." 
+                      : "Maximum submission limit reached (3/3 attempts used).")
+                  : (!isModuleActive("codingCompiler") 
+                      ? "Code submission is currently disabled by administrator" 
+                      : (taskData?.source === 'batch_task' || taskData?.batch_id 
+                          ? "Submit Batch Task (Single Attempt Allowed)" 
+                          : `Submit Code (${Math.max(0, 3 - submissions.length)} attempts remaining)`))
               }
-              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+              style={(!isModuleActive("codingCompiler") || isCompilerLocked) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {hasSubmitted ? (
-                <><CheckCircle2 size={14} /> <span>Submitted</span></>
+              {isTaskExpired ? (
+                <><Lock size={14} /> <span>Deadline Expired</span></>
+              ) : hasSubmitted ? (
+                <><CheckCircle2 size={14} /> <span>{taskData?.source === 'batch_task' || taskData?.batch_id ? "Submitted (Locked)" : "3/3 Submitted"}</span></>
               ) : isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? "Submit" : "Submit (Off)"}</span></>
+                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? (taskData?.source === 'batch_task' || taskData?.batch_id ? "Submit Task" : `Submit (${Math.min(submissions.length, 3)}/3)`) : "Submit (Off)"}</span></>
               )}
             </button>
 
@@ -966,9 +1060,9 @@ export default function CodingPlatform() {
                   </div>
 
                   {taskData?.deadline && (
-                    <div className="cp-deadline-notice">
-                      <span className="cp-deadline-label">Submission Deadline:</span>
-                      <span className="cp-deadline-val">{taskData.deadline}</span>
+                    <div className="cp-deadline-notice" style={isTaskExpired ? { background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' } : {}}>
+                      <span className="cp-deadline-label">{isTaskExpired ? 'Deadline (Expired):' : 'Submission Deadline:'}</span>
+                      <span className="cp-deadline-val">{taskData.deadline} {isTaskExpired && '(Closed)'}</span>
                     </div>
                   )}
                 </>
@@ -989,12 +1083,18 @@ export default function CodingPlatform() {
                       const statusColor = isAccepted ? "#16a34a" : isPartial ? "#d97706" : s.status === "compilation_error" ? "#9333ea" : s.status === "time_limit_exceeded" ? "#d97706" : "#dc2626";
                       const statusLabel = isAccepted ? "✅ Accepted" : isPartial ? "⚠️ Partially Accepted" : s.status === "compilation_error" ? "🔴 Compilation Error" : s.status === "time_limit_exceeded" ? "⏱️ Time Limit Exceeded" : "❌ Wrong Answer";
                       const marksVal = s.marks ?? s.score ?? 0;
+                      const attemptNum = submissions.length - i;
                       return (
                         <div key={s.id || i} style={{ border: `1.5px solid ${isAccepted ? '#86efac' : isPartial ? '#fde68a' : '#e2e8f0'}`, borderRadius: "10px", padding: "12px 16px", background: isAccepted ? "#f0fdf4" : isPartial ? "#fffbeb" : "#fff" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
-                              {statusLabel}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
+                                {statusLabel}
+                              </span>
+                              <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 6px", borderRadius: "4px", background: "#f1f5f9", color: "#475569" }}>
+                                Attempt #{attemptNum}
+                              </span>
+                            </div>
                             <span style={{ fontSize: "12px", color: "#64748b" }}>
                               {s.language} &bull; {s.passed_test_cases ?? 0}/{s.total_test_cases ?? 0} tests passed
                             </span>
@@ -1004,6 +1104,17 @@ export default function CodingPlatform() {
                             {s.percentage ?? 0}% &nbsp;|&nbsp;
                             {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ""}
                           </div>
+                          {s.feedback && (
+                            <div style={{ marginTop: "10px", padding: "8px 12px", background: "#f8fafc", borderLeft: "3px solid #6366f1", borderRadius: "6px" }}>
+                              <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", marginBottom: "3px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>💬 Feedback {s.feedback_by ? `(by ${s.feedback_by})` : ""}:</span>
+                                {s.feedback_at && <span style={{ fontWeight: 400, color: "#94a3b8" }}>{new Date(s.feedback_at).toLocaleDateString()}</span>}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#334155", whiteSpace: "pre-wrap" }}>
+                                {s.feedback}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1015,7 +1126,7 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
-            {hasSubmitted && (
+            {isTaskExpired ? (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1028,24 +1139,45 @@ export default function CodingPlatform() {
                 fontWeight: 600,
               }}>
                 <Lock size={15} color="#dc2626" />
-                <span>Task Submitted — Reattempts are disabled for this assignment.</span>
+                <span>
+                  🔒 Deadline Expired ({taskData?.deadline || 'Past Due'}) — Submissions and compiler execution have ended.
+                </span>
               </div>
-            )}
+            ) : hasSubmitted ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                background: '#fef2f2',
+                borderBottom: '1px solid #fecaca',
+                color: '#991b1b',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}>
+                <Lock size={15} color="#dc2626" />
+                <span>
+                  {taskData?.source === 'batch_task' || taskData?.batch_id
+                    ? 'Batch Task Submitted — The compiler is locked. You cannot edit code or submit again.'
+                    : 'Maximum Attempts Reached (3/3 submitted) — Submission locked for this problem.'}
+                </span>
+              </div>
+            ) : null}
             <div className="cp-editor-area cp-editor-area--monaco">
               <MonacoCodeEditor
                 value={typeof code === "string" ? code : String(code ?? "")}
                 onChange={(val) => {
-                  if (hasSubmitted) return;
+                  if (isCompilerLocked) return;
                   const strVal = typeof val === "string" ? val : (val?.target?.value ?? "");
                   setCode(strVal);
                 }}
                 language={selectedLang}
                 height="100%"
-                readOnly={hasSubmitted}
+                readOnly={isCompilerLocked}
                 options={{
                   fontSize: 13,
                   padding: { top: 12, bottom: 12 },
-                  readOnly: hasSubmitted,
+                  readOnly: isCompilerLocked,
                 }}
               />
             </div>

@@ -18,6 +18,19 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, []);
 
+  const isApprovedActiveStudent = (item) => {
+    if (!item) return false;
+    if (item.is_approved !== undefined && item.is_approved !== null) {
+      if (item.is_approved === 0 || item.is_approved === false || item.is_approved === '0') return false;
+    }
+    if (item.is_active !== undefined && item.is_active !== null) {
+      if (item.is_active === 0 || item.is_active === false || item.is_active === '0') return false;
+    }
+    const st = String(item.status || item.approval_status || '').toLowerCase().trim();
+    if (st === 'rejected' || st === 'inactive' || st === 'disabled' || st === 'pending') return false;
+    return true;
+  };
+
   const fetchLeaderboard = () => {
     setLoading(true);
     apiFetch("/leaderboards")
@@ -25,7 +38,7 @@ export default function Leaderboard() {
         if (res && res.data) {
           if (Array.isArray(res.data)) {
             setLeaderboardData({
-              overall: res.data,
+              overall: res.data.filter(isApprovedActiveStudent),
               department: [],
               milestone: [],
               topBatches: [],
@@ -33,9 +46,9 @@ export default function Leaderboard() {
             });
           } else {
             setLeaderboardData({
-              overall: Array.isArray(res.data.overall) ? res.data.overall : [],
-              department: Array.isArray(res.data.department) ? res.data.department : [],
-              milestone: Array.isArray(res.data.milestone) ? res.data.milestone : [],
+              overall: (Array.isArray(res.data.overall) ? res.data.overall : []).filter(isApprovedActiveStudent),
+              department: (Array.isArray(res.data.department) ? res.data.department : []).filter(isApprovedActiveStudent),
+              milestone: (Array.isArray(res.data.milestone) ? res.data.milestone : []).filter(isApprovedActiveStudent),
               topBatches: Array.isArray(res.data.topBatches) ? res.data.topBatches : (Array.isArray(res.data.batches) ? res.data.batches : []),
               studentContext: res.data.studentContext || null,
             });

@@ -335,26 +335,55 @@ export const joinBatch = async (req, res, next) => {
   try {
     await ensureTables();
     const rawInput = (req.body.joinCode || req.body.join_code || req.body.code || '').trim();
-    const inputCode = rawInput.toUpperCase();
-    if (!inputCode) {
+    if (!rawInput) {
       return sendError(res, 'Join code is required', 400);
     }
 
-    // 1. Flexible matching: match by code, join_code, name, BATCH-id, BTCH-id, or numeric id
-    const numericId = parseInt(inputCode.replace(/[^0-9]/g, ''), 10) || -1;
-    const rows = await query(
+    const cleanRaw = rawInput.trim();
+    const upperInput = cleanRaw.toUpperCase();
+    const alphanumericOnly = upperInput.replace(/[^A-Z0-9]/g, '');
+    const numericOnly = parseInt(upperInput.replace(/[^0-9]/g, ''), 10);
+
+    // 1. Flexible multi-tier matching:
+    // (a) Exact match on code, join_code, or batch name (case-insensitive)
+    let rows = await query(
       `SELECT * FROM batches 
-       WHERE UPPER(COALESCE(code, '')) = ? 
-          OR UPPER(COALESCE(join_code, '')) = ? 
-          OR UPPER(name) = ?
-          OR UPPER(REPLACE(name, ' ', '')) = ?
-          OR UPPER(CONCAT('BATCH-', id)) = ?
-          OR UPPER(CONCAT('BTCH-', id)) = ?
-          OR UPPER(CONCAT('BTCH-', LPAD(id, 4, '0'))) = ?
-          OR (id = ? AND id > 0)
+       WHERE UPPER(TRIM(COALESCE(code, ''))) = ? 
+          OR UPPER(TRIM(COALESCE(join_code, ''))) = ? 
+          OR UPPER(TRIM(name)) = ?
        LIMIT 1`,
-      [inputCode, inputCode, inputCode, inputCode.replace(/\s+/g, ''), inputCode, inputCode, inputCode, numericId]
+      [upperInput, upperInput, upperInput]
     );
+
+    // (b) Alphanumeric match (ignoring dashes, underscores, spaces)
+    if (!rows || rows.length === 0) {
+      rows = await query(
+        `SELECT * FROM batches 
+         WHERE REPLACE(REPLACE(REPLACE(UPPER(COALESCE(code, '')), '-', ''), '_', ''), ' ', '') = ?
+            OR REPLACE(REPLACE(REPLACE(UPPER(COALESCE(join_code, '')), '-', ''), '_', ''), ' ', '') = ?
+            OR REPLACE(REPLACE(REPLACE(UPPER(name), '-', ''), '_', ''), ' ', '') = ?
+         LIMIT 1`,
+        [alphanumericOnly, alphanumericOnly, alphanumericOnly]
+      );
+    }
+
+    // (c) Standard generated batch code formats (e.g. BATCH-1, BTCH-0001)
+    if (!rows || rows.length === 0) {
+      rows = await query(
+        `SELECT * FROM batches 
+         WHERE UPPER(CONCAT('BATCH-', id)) = ?
+            OR UPPER(CONCAT('BTCH-', id)) = ?
+            OR UPPER(CONCAT('BTCH-', LPAD(id, 4, '0'))) = ?
+            OR UPPER(CONCAT('BTCH', LPAD(id, 4, '0'))) = ?
+         LIMIT 1`,
+        [upperInput, upperInput, upperInput, upperInput]
+      );
+    }
+
+    // (d) Direct numeric ID match if purely a number
+    if ((!rows || rows.length === 0) && !isNaN(numericOnly) && numericOnly > 0 && String(cleanRaw) === String(numericOnly)) {
+      rows = await query(`SELECT * FROM batches WHERE id = ? LIMIT 1`, [numericOnly]);
+    }
 
     const foundBatch = rows && rows.length > 0 ? rows[0] : null;
 
@@ -362,44 +391,62 @@ export const joinBatch = async (req, res, next) => {
       return sendError(res, `Invalid batch join code '${rawInput}'. No matching batch exists in the database.`, 404);
     }
 
-    // 2. Check whether batch is active
-    const batchStatus = (foundBatch.status || 'Active').toLowerCase();
-    if (batchStatus === 'inactive' || batchStatus === 'archived' || batchStatus === 'expired' || batchStatus === 'deleted') {
-      return sendError(res, `Batch '${foundBatch.name}' is currently ${batchStatus} and cannot be joined.`, 400);
+    // 2. Prevent joining permanently deleted batches
+    const batchStatus = (foundBatch.status || 'active').toLowerCase();
+    if (batchStatus === 'deleted') {
+      return sendError(res, `Batch '${foundBatch.name}' has been deleted and cannot be joined.`, 400);
     }
 
-    // 3. Expiration check: Only block if batch is not active and expiration timestamp was explicit
-    const expiresAtVal = foundBatch.code_expires_at || foundBatch.expires_at || foundBatch.code_expires;
-    if (expiresAtVal && String(expiresAtVal).toLowerCase() !== 'never') {
-      const expDate = new Date(Number(expiresAtVal) || expiresAtVal);
-      if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now() && batchStatus !== 'active') {
-        return sendError(res, `The join code for batch '${foundBatch.name}' has expired. Please request an updated code from your instructor or administrator.`, 400);
+    // 3. If batch exists in database but was inactive or archived, reactivate it so the student can access it
+    if (batchStatus !== 'active') {
+      try {
+        await query(`UPDATE batches SET status = 'active' WHERE id = ?`, [foundBatch.id]);
+        foundBatch.status = 'active';
+      } catch (err) {
+        console.warn('[joinBatch] auto-reactivate status warning:', err.message);
       }
     }
 
     const userId = req.user?.userId || req.user?.id || 1;
 
-    // 4. Check if student is already linked to this batch
-    const existingLinks = await query(
-      `SELECT * FROM student_batches WHERE user_id = ? AND batch_id = ? LIMIT 1`,
-      [userId, foundBatch.id]
-    );
-    if (existingLinks && existingLinks.length > 0) {
-      return sendSuccess(res, `You are already enrolled in batch '${foundBatch.name}'!`, {
-        batch: foundBatch,
-        batch_id: foundBatch.id,
-        batch_name: foundBatch.name,
-        join_code: foundBatch.code || foundBatch.join_code
-      });
-    }
-
-    // 5. Update batch student count and insert student batch link in DB
-    await query(`UPDATE batches SET students = GREATEST(COALESCE(students, 0) + 1, 1) WHERE id = ?`, [foundBatch.id]);
+    // 4. Link student in student_batches join table
     await query(
       `INSERT IGNORE INTO student_batches (user_id, batch_id) VALUES (?, ?)`,
       [userId, foundBatch.id]
     );
-    await query(`UPDATE students SET batch_id = ? WHERE user_id = ?`, [foundBatch.id, userId]);
+
+    // 5. Link student profile in students table
+    try {
+      const studentRows = await query(`SELECT id FROM students WHERE user_id = ? LIMIT 1`, [userId]);
+      if (studentRows && studentRows.length > 0) {
+        await query(
+          `UPDATE students 
+           SET batch_id = ?, 
+               college_id = COALESCE(college_id, ?) 
+           WHERE user_id = ?`,
+          [foundBatch.id, foundBatch.college_id, userId]
+        );
+      } else {
+        await query(
+          `INSERT INTO students (user_id, batch_id, college_id) VALUES (?, ?, ?)`,
+          [userId, foundBatch.id, foundBatch.college_id]
+        );
+      }
+    } catch (err) {
+      console.warn('[joinBatch] update students table warning:', err.message);
+    }
+
+    // 6. Update dynamic student enrollment count on batches table
+    try {
+      const countResult = await query(
+        `SELECT COUNT(DISTINCT user_id) as cnt FROM student_batches WHERE batch_id = ?`,
+        [foundBatch.id]
+      );
+      const studentCount = countResult && countResult[0] && Number(countResult[0].cnt) > 0 ? Number(countResult[0].cnt) : 1;
+      await query(`UPDATE batches SET students = ? WHERE id = ?`, [studentCount, foundBatch.id]);
+    } catch (err) {
+      console.warn('[joinBatch] update batches student count warning:', err.message);
+    }
 
     return sendSuccess(res, `Successfully joined batch '${foundBatch.name}'!`, {
       batch: foundBatch,
@@ -426,7 +473,7 @@ export const getMyBatches = async (req, res, next) => {
        LEFT JOIN student_batches sb ON b.id = sb.batch_id AND sb.user_id = ?
        LEFT JOIN students s ON s.user_id = ? AND s.batch_id = b.id
        WHERE (sb.id IS NOT NULL OR s.id IS NOT NULL) 
-         AND (b.status IS NULL OR (LOWER(b.status) != 'inactive' AND LOWER(b.status) != 'deleted'))
+         AND (b.status IS NULL OR LOWER(b.status) != 'deleted')
        ORDER BY b.id DESC`,
       [userId, userId]
     );
@@ -522,12 +569,27 @@ export const getBatchTasks = async (req, res, next) => {
       }
     }
 
+    const isDeadlineExpired = (deadline) => {
+      if (!deadline || typeof deadline !== 'string') return false;
+      const clean = deadline.replace(/^Due\s+/i, '').trim();
+      if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none') return false;
+      const d = new Date(clean);
+      if (!isNaN(d.getTime())) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+          d.setHours(23, 59, 59, 999);
+        }
+        return d.getTime() < Date.now();
+      }
+      return false;
+    };
+
     const formatted = (dbTasks || []).map(t => {
       const parsed = parseTaskRecord(t, isStudent);
       const sub = studentSubmissions.get(Number(t.id));
       let taskStatus = 'Pending';
       let scoreObtained = null;
       let alreadySubmitted = false;
+      const isExpired = isDeadlineExpired(t.deadline) && !sub;
 
       if (sub) {
         alreadySubmitted = true;
@@ -540,6 +602,8 @@ export const getBatchTasks = async (req, res, next) => {
         } else {
           taskStatus = 'Submitted';
         }
+      } else if (isExpired) {
+        taskStatus = 'Expired';
       }
 
       return {
@@ -548,6 +612,7 @@ export const getBatchTasks = async (req, res, next) => {
         alreadySubmitted,
         scoreObtained,
         marksObtained: scoreObtained,
+        isExpired,
       };
     });
 
@@ -601,11 +666,28 @@ export const getTaskById = async (req, res, next) => {
       }
     }
 
+    const isDeadlineExpired = (deadline) => {
+      if (!deadline || typeof deadline !== 'string') return false;
+      const clean = deadline.replace(/^Due\s+/i, '').trim();
+      if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none') return false;
+      const d = new Date(clean);
+      if (!isNaN(d.getTime())) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+          d.setHours(23, 59, 59, 999);
+        }
+        return d.getTime() < Date.now();
+      }
+      return false;
+    };
+
+    const isExpired = isDeadlineExpired(targetTask.deadline) && !alreadySubmitted;
     const parsed = parseTaskRecord(targetTask, isStudent);
     return sendSuccess(res, 'Task retrieved successfully', {
       ...parsed,
       alreadySubmitted,
       submission,
+      isExpired,
+      status: alreadySubmitted ? (submission?.status || 'Submitted') : (isExpired ? 'Expired' : 'Pending'),
     });
   } catch (error) {
     next(error);
@@ -854,31 +936,7 @@ export const getTaskSubmissions = async (req, res, next) => {
       [cleanId]
     );
 
-    if (rows && rows.length > 0) {
-      return sendSuccess(res, 'Submissions retrieved successfully', rows);
-    }
-
-    // Fallback: Check coding_submissions table for this problem/task
-    const codingRows = await query(
-      `SELECT cs.id, cs.problem_id AS task_id, cs.student_id AS user_id, NULL AS batch_id, 
-              cs.submitted_code AS code_submission,
-              IF(cs.status = 'accepted' OR cs.status = 'passed', 'Passed', IF(cs.status = 'partial', 'Partial', 'Wrong Answer')) AS status,
-              cs.marks AS marks_obtained,
-              cs.score AS score,
-              CONCAT('Passed ', cs.passed_test_cases, '/', cs.total_test_cases, ' test cases (', cs.percentage, '%)') AS feedback,
-              cs.submitted_at,
-              COALESCE(bt.points, 100) AS total_marks,
-              COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
-       FROM coding_submissions cs
-       JOIN users u ON cs.student_id = u.id
-       LEFT JOIN students s ON s.user_id = u.id
-       LEFT JOIN batch_tasks bt ON cs.problem_id = bt.id
-       WHERE cs.problem_id = ?
-       ORDER BY cs.submitted_at DESC`,
-      [cleanId]
-    );
-
-    return sendSuccess(res, 'Submissions retrieved successfully', codingRows || []);
+    return sendSuccess(res, 'Submissions retrieved successfully', rows || []);
   } catch (error) {
     next(error);
   }

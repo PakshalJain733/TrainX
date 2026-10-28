@@ -13,6 +13,21 @@ import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
 import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
 
+export const isDeadlineExpired = (deadline) => {
+  if (!deadline) return false;
+  if (deadline instanceof Date) {
+    return deadline.getTime() < Date.now();
+  }
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none' || clean.toLowerCase() === 'flexible deadline') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
+};
+
 export const getStudentData = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || req.query?.collegeId || null;
@@ -63,7 +78,7 @@ export const getStudentData = async (req, res, next) => {
         email: s.email,
         rollNo: s.roll_number || s.rollNo || `CS-${s.id}`,
         roll_number: s.roll_number || s.rollNo || `CS-${s.id}`,
-        department: s.department || 'Computer Science & Engineering',
+        department: s.department || null,
         department_id: s.department_id || 1,
         batch: s.batch_name || 'BE-CS-2026-A',
         year: s.year || 'TE',
@@ -240,13 +255,17 @@ export const getStudentDashboard = async (req, res, next) => {
         [collegeId]
       );
       if (problemRows && problemRows.length > 0) {
-        upcomingDeadlines = problemRows.map(p => ({
-          id: p.id,
-          title: p.title,
-          dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
-          status: 'Pending',
-          type: 'Coding Practice',
-        }));
+        upcomingDeadlines = problemRows.map(p => {
+          const expired = isDeadlineExpired(p.due_date);
+          return {
+            id: p.id,
+            title: p.title,
+            dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
+            status: expired ? 'Expired' : 'Pending',
+            isExpired: expired,
+            type: 'Coding Practice',
+          };
+        });
       }
     } catch (e) {
       console.warn('[getStudentDashboard practice problems deadlines warning]', e.message);
@@ -487,25 +506,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
               });
             }
           });
-        }
-        const taskSolved = await query(
-          `SELECT task_id, score, marks_obtained, status FROM task_submissions WHERE user_id = ?`,
-          [callerId]
-        );
-        if (Array.isArray(taskSolved)) {
-          taskSolved.forEach(r => {
-            const tId = Number(r.task_id);
-            const tScore = parseFloat(r.marks_obtained ?? r.score ?? 0);
-            const prev = submissionMap.get(tId);
-            if (!prev || tScore >= prev.score) {
-              submissionMap.set(tId, {
-                score: tScore,
-                percentage: 100,
-                status: r.status,
-              });
-            }
-          });
-        }
+        // Practice problems solve status is derived strictly from coding_submissions
       } catch (e) { }
     }
 
@@ -523,6 +524,11 @@ export const getStudentPracticeProblems = async (req, res, next) => {
             solveStatus = 'Attempted';
           }
         }
+        const hasPassedDeadline = isDeadlineExpired(p.due_date || p.dueDate);
+        const isExpired = hasPassedDeadline && solveStatus !== 'Solved';
+        if (isExpired && solveStatus === 'Unsolved') {
+          solveStatus = 'Expired';
+        }
         return {
           id: p.id,
           title: p.title,
@@ -536,6 +542,8 @@ export const getStudentPracticeProblems = async (req, res, next) => {
           description: p.description || '',
           language: p.language || null,
           solve_status: solveStatus,
+          is_expired: isExpired,
+          isExpired: isExpired,
           score_obtained: sub ? sub.score : null,
           marks_obtained: sub ? sub.score : null,
           percentage: sub ? sub.percentage : null,
@@ -557,7 +565,12 @@ export const getStudentPracticeProblemById = async (req, res, next) => {
     if (!problem) {
       return sendError(res, 'Practice problem not found', 404);
     }
-    return sendSuccess(res, 'Practice problem retrieved successfully', problem);
+    const isExpired = isDeadlineExpired(problem.due_date || problem.dueDate);
+    return sendSuccess(res, 'Practice problem retrieved successfully', {
+      ...problem,
+      isExpired,
+      is_expired: isExpired,
+    });
   } catch (error) {
     next(error);
   }
