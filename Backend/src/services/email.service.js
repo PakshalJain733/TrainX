@@ -11,22 +11,32 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 let brevoClient = null;
 let smtpTransporter = null;
 
-const getSmtpTransporter = () => {
-  if (!smtpTransporter && process.env.SMTP_HOST) {
-    const port = parseInt(process.env.SMTP_PORT || '465', 10);
-    const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
-    smtpTransporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port,
-      secure: isSecure,
-      auth: {
-        user: (process.env.SMTP_USER || '').trim(),
-        pass: (process.env.SMTP_PASS || '').trim(),
-      },
-      connectionTimeout: 20000, // 20s timeout for TLS connection establishment
-      greetingTimeout: 20000,   // 20s timeout for server greeting
-      socketTimeout: 30000,     // 30s timeout for socket activity
-    });
+const createTransporterInstance = (port, isSecure) => {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim();
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: isSecure,
+    auth: { user, pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000,
+  });
+};
+
+const getSmtpTransporter = (alternatePort = false) => {
+  const defaultPort = parseInt(process.env.SMTP_PORT || '465', 10);
+  const defaultSecure = process.env.SMTP_SECURE === 'true' || defaultPort === 465;
+
+  if (alternatePort) {
+    const fallbackPort = defaultPort === 465 ? 587 : 465;
+    return createTransporterInstance(fallbackPort, fallbackPort === 465);
+  }
+
+  if (!smtpTransporter) {
+    smtpTransporter = createTransporterInstance(defaultPort, defaultSecure);
   }
   return smtpTransporter;
 };
@@ -72,38 +82,43 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
     throw new Error('Email delivery system is currently disabled by Super Admin maintenance policy.');
   }
 
-  const provider = (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
-  const hasSmtpConfig = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-  const useSmtp = provider === 'smtp' || (!provider && hasSmtpConfig);
+  const provider = (process.env.EMAIL_PROVIDER || 'smtp').trim().toLowerCase();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpPass = (process.env.SMTP_PASS || '').trim();
+  const hasSmtpConfig = Boolean(smtpUser && smtpPass);
 
-  if (useSmtp) {
+  // SMTP is the primary mail delivery service
+  if (provider !== 'brevo' && hasSmtpConfig) {
+    const senderEmail = (process.env.SMTP_FROM_EMAIL || smtpUser || 'admin@trainingportal.com').trim();
+    const senderName = (process.env.SMTP_FROM_NAME || 'TrainX').trim();
+    const mailPayload = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: toName ? `"${toName}" <${to}>` : to,
+      subject,
+      text: textContent || '',
+      html: htmlContent || textContent || '',
+    };
+
+    // Attempt 1: Primary SMTP port (default 465 SSL)
     try {
-      const transporter = getSmtpTransporter();
-      if (!transporter) throw new Error('SMTP transporter is not configured. Check SMTP_HOST, SMTP_USER, and SMTP_PASS in .env.');
-      const senderEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'admin@trainingportal.com').trim();
-      const senderName = (process.env.SMTP_FROM_NAME || 'TrainX Portal').trim();
-      const info = await transporter.sendMail({
-        from: `"${senderName}" <${senderEmail}>`,
-        to: toName ? `"${toName}" <${to}>` : to,
-        subject,
-        text: textContent || '',
-        html: htmlContent || textContent || '',
-      });
-      console.log(`[SMTP] Email sent to ${to} (Message ID: ${info.messageId})`);
+      const transporter = getSmtpTransporter(false);
+      const info = await transporter.sendMail(mailPayload);
+      console.log(`[SMTP Primary] Email successfully delivered to ${to} (Message ID: ${info.messageId})`);
       return info;
-    } catch (smtpErr) {
-      console.error(`[SMTP Error] Failed to send email to ${to}:`, smtpErr.message);
-      if (smtpErr.code === 'ETIMEDOUT' || smtpErr.code === 'ECONNRESET' || smtpErr.message?.includes('timeout')) {
-        smtpTransporter = null;
+    } catch (smtpErr1) {
+      console.warn(`[SMTP Primary Warning] Delivery via primary port failed for ${to}: ${smtpErr1.message}. Trying alternate SMTP port...`);
+      smtpTransporter = null;
+
+      // Attempt 2: Alternate SMTP port (port 587 STARTTLS)
+      try {
+        const altTransporter = getSmtpTransporter(true);
+        const info2 = await altTransporter.sendMail(mailPayload);
+        console.log(`[SMTP Alternate] Email successfully delivered to ${to} via alternate port (Message ID: ${info2.messageId})`);
+        return info2;
+      } catch (smtpErr2) {
+        console.error(`[SMTP Error] Both SMTP attempts failed for ${to}: ${smtpErr2.message}`);
+        console.warn('[SMTP Fallback] Engaging Brevo as backup delivery to ensure OTP delivery...');
       }
-      // If EMAIL_PROVIDER is explicitly set to 'smtp', strictly do NOT fallback to Brevo
-      if (provider === 'smtp') {
-        throw new Error(`[SMTP Delivery Error] Failed to send email via SMTP: ${smtpErr.message}`);
-      }
-      if (!process.env.BREVO_API_KEY) {
-        throw smtpErr;
-      }
-      console.warn('[SMTP Warning] Falling back to Brevo HTTPS API...');
     }
   }
 
