@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -202,22 +202,273 @@ export default function CodingPlatform() {
   const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [isProctorActive, setIsProctorActive] = useState(() => Boolean(document.fullscreenElement));
+  const [proctorTerminated, setProctorTerminated] = useState(false);
+  const [terminationReason, setTerminationReason] = useState("");
+  const [clipboardWarning, setClipboardWarning] = useState("");
+  const proctorArmedRef = useRef(false);
+
+  const isBatchCoursework = Boolean(
+    location.state?.fromBatchCoursework ||
+    location.state?.task?.batch_id ||
+    taskData?.source === 'batch_task' ||
+    taskData?.batch_id ||
+    String(taskId || '').toLowerCase().startsWith('task-')
+  );
+
+  // Batch tasks list from navigation state (guaranteed isolated from practice problems)
+  const batchTasksList = Array.isArray(location.state?.batchTasks) ? location.state.batchTasks : [];
+
+  const currentBatchIndex = isBatchCoursework && batchTasksList.length > 0
+    ? batchTasksList.findIndex((bt) => {
+        const slug = String(bt.taskNumber || '').replace(/\s+/g, '-').toLowerCase();
+        return slug === String(taskId || '').toLowerCase() || String(bt.id) === String(taskData?.id);
+      })
+    : -1;
+
+  const canNavigatePrev = isBatchCoursework
+    ? (currentBatchIndex > 0)
+    : (parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10) > 1);
+
+  const canNavigateNext = isBatchCoursework
+    ? (currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1)
+    : false;
+
+  const handlePrevNavigation = () => {
+    if (isBatchCoursework) {
+      if (canNavigatePrev && currentBatchIndex > 0) {
+        const prevTask = batchTasksList[currentBatchIndex - 1];
+        const prevSlug = (prevTask.taskNumber || `task-${currentBatchIndex}`).replace(/\s+/g, '-').toLowerCase();
+        navigate(`/student/coding-platform/${prevSlug}`, {
+          state: {
+            task: prevTask,
+            batchTasks: batchTasksList,
+            batchId: location.state?.batchId || taskData?.batch_id,
+            fromBatchCoursework: true,
+            enterFullscreen: true,
+          }
+        });
+      }
+    } else {
+      const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
+      navigate(`/student/coding-platform/practice-${Math.max(1, num - 1)}`, {
+        state: { source: 'practice' }
+      });
+    }
+  };
+
+  const handleNextNavigation = () => {
+    if (isBatchCoursework) {
+      if (canNavigateNext && currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1) {
+        const nextTask = batchTasksList[currentBatchIndex + 1];
+        const nextSlug = (nextTask.taskNumber || `task-${currentBatchIndex + 2}`).replace(/\s+/g, '-').toLowerCase();
+        navigate(`/student/coding-platform/${nextSlug}`, {
+          state: {
+            task: nextTask,
+            batchTasks: batchTasksList,
+            batchId: location.state?.batchId || taskData?.batch_id,
+            fromBatchCoursework: true,
+            enterFullscreen: true,
+          }
+        });
+      }
+    }
+  };
+
+  const showClipboardToast = (msg) => {
+    setClipboardWarning(msg);
+    setTimeout(() => setClipboardWarning(""), 3500);
+  };
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
       setIsFullscreen(true);
+      if (isBatchCoursework) setIsProctorActive(true);
     } else {
       document.exitFullscreen?.().catch(() => {});
       setIsFullscreen(false);
     }
   };
 
+  const handleEnterFullscreenAndStart = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    } catch (err) {
+      console.warn("Fullscreen permission error:", err);
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    }
+  };
+
+  const handleToggleFullscreenClick = () => {
+    if (isBatchCoursework && !hasSubmitted) {
+      const confirmExit = window.confirm(
+        "⚠️ Warning: Exiting full-screen mode will automatically submit and end this task as per examination rules.\n\nAre you sure you want to exit and end your task?"
+      );
+      if (!confirmExit) return;
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+      endTaskDueToViolation("exit_fullscreen", "Full-screen mode was exited.");
+      return;
+    }
+    toggleFullscreen();
+  };
+
+  const endTaskDueToViolation = (reason, description) => {
+    if (hasAutoSubmittedRef.current || hasSubmitted) return;
+    hasAutoSubmittedRef.current = true;
+    proctorArmedRef.current = false;
+    setProctorTerminated(true);
+    setTerminationReason(reason);
+    setHasSubmitted(true);
+
+    setConsoleStatus("error");
+    const reasonLabel = reason === "exit_fullscreen"
+      ? "⚠️ Full-screen exited! Solution automatically submitted as per proctored coursework policy."
+      : "⚠️ Tab switch detected! Solution automatically submitted as per proctored coursework policy.";
+    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);
+
+    if (submitRef.current && !isSubmitting) {
+      submitRef.current({ isAutoSubmit: true, reason });
+    }
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+
+  // Fullscreen change listener
   useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const handleFsChange = () => {
+      const isFs = Boolean(document.fullscreenElement);
+      setIsFullscreen(isFs);
+
+      if (isBatchCoursework && !hasSubmitted && proctorArmedRef.current && !isFs) {
+        endTaskDueToViolation("exit_fullscreen", "Full-screen mode was exited.");
+      }
+    };
+
     document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
+  }, [isBatchCoursework, hasSubmitted]);
+
+  // Tab switching, blur, and anti-cheat keyboard shortcuts
+  useEffect(() => {
+    if (!isBatchCoursework || hasSubmitted) return;
+
+    let armTimer = null;
+    if (isProctorActive && isFullscreen) {
+      armTimer = setTimeout(() => {
+        proctorArmedRef.current = true;
+      }, 800);
+    } else {
+      proctorArmedRef.current = false;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+        endTaskDueToViolation("tab_switch", "Tab switching detected.");
+      }
+    };
+
+    const handleWindowBlur = () => {
+      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+        endTaskDueToViolation("tab_switch", "Window lost focus / tab switched.");
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      const key = (e.key || "").toLowerCase();
+      const code = e.code || "";
+
+      if (e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Alt key navigation is disabled during proctored tasks.");
+        return;
+      }
+
+      if (isMod && (key === "tab" || code === "Tab" || key === "w" || key === "t" || key === "n")) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Tab switching shortcuts are disabled during this task.");
+        return;
+      }
+
+      if (key === "f11" || code === "F11" || key === "f12" || code === "F12") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      if (
+        (isMod && (key === "v" || code === "KeyV" || key === "c" || code === "KeyC" || key === "x" || code === "KeyX")) ||
+        (e.shiftKey && (key === "insert" || code === "Insert"))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Copying, cutting, and pasting is disabled in the compiler! Type your code manually.");
+        return;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      if (armTimer) clearTimeout(armTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isBatchCoursework, hasSubmitted, isProctorActive, isFullscreen]);
+
+  // Global clipboard and drag/drop blockers (strict compiler anti-cheat)
+  useEffect(() => {
+    const blockClipboard = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showClipboardToast("⚠️ Copying, cutting, and pasting is strictly disabled in the compiler! You must type your solution manually.");
+    };
+
+    const blockContext = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const blockDragDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    document.addEventListener("copy", blockClipboard, true);
+    document.addEventListener("cut", blockClipboard, true);
+    document.addEventListener("paste", blockClipboard, true);
+    document.addEventListener("contextmenu", blockContext, true);
+    document.addEventListener("dragstart", blockDragDrop, true);
+    document.addEventListener("drop", blockDragDrop, true);
+
+    return () => {
+      document.removeEventListener("copy", blockClipboard, true);
+      document.removeEventListener("cut", blockClipboard, true);
+      document.removeEventListener("paste", blockClipboard, true);
+      document.removeEventListener("contextmenu", blockContext, true);
+      document.removeEventListener("dragstart", blockDragDrop, true);
+      document.removeEventListener("drop", blockDragDrop, true);
+    };
   }, []);
 
   const user = (() => {
@@ -241,162 +492,112 @@ export default function CodingPlatform() {
       setNotFound(false);
       const requested = String(taskId || '');
       const numeric = requested.replace(/[^0-9]/g, '');
-      const isPractice =
-        location.state?.source === 'practice' ||
-        location.state?.task?.source === 'practice_problem' ||
-        requested.toLowerCase().startsWith('practice') ||
-        Boolean(location.state?.task && !location.state?.task?.batch_id);
+
+      // Strict determination: Batch Coursework Task vs Practice Problem
+      const isBatch = Boolean(
+        location.state?.fromBatchCoursework ||
+        location.state?.task?.batch_id ||
+        taskData?.source === 'batch_task' ||
+        taskData?.batch_id ||
+        requested.toLowerCase().startsWith('task-')
+      );
 
       try {
-        if (isPractice) {
-          if (numeric) {
-            try {
-              const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
-              const probData = await probRes.json();
-              if (probRes.ok && probData.success && probData.data) {
-                const p = probData.data;
-                const rawCases = p.testCases || p.cases || p.test_cases || [];
-                const taskLang = p.language || "";
-                const taskNormKey = normalizeLanguageKey(taskLang);
-                if (taskNormKey) {
-                  setSelectedLang(taskNormKey);
-                  setCode((prevCode) => {
-                    const prev = typeof prevCode === "string" ? prevCode : "";
-                    return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
-                  });
-                }
-                setTaskData({
-                  id: p.id,
-                  title: p.title,
-                  topic: p.category || p.topic || "General DSA",
-                  difficulty: p.difficulty || "Medium",
-                  points: p.points || 100,
-                  deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
-                  description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
-                  testCases: getDynamicSampleTestCases(p.title, rawCases),
-                  source: "practice_problem",
-                  language: taskLang,
+        if (isBatch) {
+          // ── 1. STRICT BATCH TASK PIPELINE ──
+          // Never touch practice problems and never fallback to practice problems
+          try {
+            const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
+            const data = await res.json();
+            if (res.ok && data?.success && data?.data) {
+              const t = data.data;
+              const rawCases = t.testCases || t.test_cases || [];
+              const taskLang = t.language || "";
+              const taskNormKey = normalizeLanguageKey(taskLang);
+              if (taskNormKey) {
+                setSelectedLang(taskNormKey);
+                setCode((prevCode) => {
+                  const prev = typeof prevCode === "string" ? prevCode : "";
+                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
                 });
-                return;
               }
-            } catch (err) {
-              console.warn("Failed fetching practice problem details:", err);
+              if (t.alreadySubmitted) {
+                setHasSubmitted(true);
+                const prevCode = t.submission?.submitted_code || t.submission?.code_submission || t.submission?.code;
+                if (prevCode) {
+                  setCode(prevCode);
+                }
+              }
+              setTaskData({
+                id: t.id,
+                batch_id: t.batch_id,
+                title: t.title,
+                topic: t.topic || "General Assignment",
+                difficulty: t.difficulty || "Medium",
+                points: t.points || 100,
+                deadline: t.deadline || "",
+                description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
+                testCases: getDynamicSampleTestCases(t.title, rawCases),
+                source: "batch_task",
+                language: taskLang,
+                alreadySubmitted: Boolean(t.alreadySubmitted),
+                isExpired: Boolean(t.isExpired),
+              });
+              return;
             }
+          } catch (err) {
+            console.warn("Failed fetching batch task detail:", err);
           }
 
-          if (initialTask) {
+          if (initialTask && (initialTask.source === 'batch_task' || initialTask.batch_id || isBatch)) {
             setTaskData(initialTask);
             return;
           }
+
+          // If the batch task is not found, show Not Found! DO NOT fall back to practice problems!
+          setNotFound(true);
+          return;
         }
 
-        const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
-        const data = await res.json();
-        if (data.success && data.data) {
-          const t = data.data;
-          const batchId = String(t.id ?? '');
-          const idMatch =
-            (batchId && (batchId === requested || batchId === numeric)) ||
-            (numeric && parseInt(batchId, 10) === parseInt(numeric, 10));
-          if (idMatch) {
-            const rawCases = t.testCases || t.test_cases || [];
-            const taskLang = t.language || "";
-            const taskNormKey = normalizeLanguageKey(taskLang);
-            if (taskNormKey) {
-              setSelectedLang(taskNormKey);
-              setCode((prevCode) => {
-                const prev = typeof prevCode === "string" ? prevCode : "";
-                return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
-              });
-            }
-            if (t.alreadySubmitted) {
-              setHasSubmitted(true);
-              const prevCode = t.submission?.submitted_code || t.submission?.code_submission || t.submission?.code;
-              if (prevCode) {
-                setCode(prevCode);
+        // ── 2. STRICT PRACTICE PROBLEM PIPELINE ──
+        if (numeric) {
+          try {
+            const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
+            const probData = await probRes.json();
+            if (probRes.ok && probData.success && probData.data) {
+              const p = probData.data;
+              const rawCases = p.testCases || p.cases || p.test_cases || [];
+              const taskLang = p.language || "";
+              const taskNormKey = normalizeLanguageKey(taskLang);
+              if (taskNormKey) {
+                setSelectedLang(taskNormKey);
+                setCode((prevCode) => {
+                  const prev = typeof prevCode === "string" ? prevCode : "";
+                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                });
               }
+              setTaskData({
+                id: p.id,
+                title: p.title,
+                topic: p.category || p.topic || "General DSA",
+                difficulty: p.difficulty || "Medium",
+                points: p.points || 100,
+                deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
+                description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
+                testCases: getDynamicSampleTestCases(p.title, rawCases),
+                source: "practice_problem",
+                language: taskLang,
+                isExpired: Boolean(p.isExpired || p.is_expired),
+              });
+              return;
             }
-            setTaskData({
-              id: t.id,
-              batch_id: t.batch_id,
-              title: t.title,
-              topic: t.topic || "General Assignment",
-              difficulty: t.difficulty || "Medium",
-              points: t.points || 100,
-              deadline: t.deadline || "",
-              description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
-              testCases: getDynamicSampleTestCases(t.title, rawCases),
-              source: "batch_task",
-              language: taskLang,
-              alreadySubmitted: Boolean(t.alreadySubmitted),
-              isExpired: Boolean(t.isExpired),
-            });
-            return;
+          } catch (err) {
+            console.warn("Failed fetching practice problem details:", err);
           }
         }
 
-        const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
-        const probData = await probRes.json();
-        if (probRes.ok && probData.success && probData.data) {
-          const p = probData.data;
-          const rawCases = p.testCases || p.cases || p.test_cases || [];
-          const taskLang = p.language || "";
-          const taskNormKey = normalizeLanguageKey(taskLang);
-          if (taskNormKey) {
-            setSelectedLang(taskNormKey);
-            setCode((prevCode) => {
-              const prev = typeof prevCode === "string" ? prevCode : "";
-              return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
-            });
-          }
-          setTaskData({
-            id: p.id,
-            title: p.title,
-            topic: p.category || p.topic || "General DSA",
-            difficulty: p.difficulty || "Medium",
-            points: p.points || 100,
-            deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
-            description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
-            testCases: getDynamicSampleTestCases(p.title, rawCases),
-            source: "practice_problem",
-            language: taskLang,
-            isExpired: Boolean(p.isExpired || p.is_expired),
-          });
-          return;
-        }
-
-        if (initialTask) {
+        if (initialTask && initialTask.source === 'practice_problem') {
           setTaskData(initialTask);
-          return;
-        }
-
-        // Built-in standard problem fallback for seamless direct navigation
-        const defaultProblems = {
-          "1": {
-            id: "1",
-            title: "Return First Element",
-            topic: "Array Basics",
-            difficulty: "Easy",
-            points: 100,
-            deadline: "",
-            description: getDynamicProblemDescription("Return First Element", "Array Basics", "Write a program that returns the first element of a given array.\n\nInput Format:\n- Line 1: An integer n (length of array).\n- Line 2: n space-separated integers.\n\nOutput Format:\n- A single integer representing the first element."),
-            testCases: getDynamicSampleTestCases("Return First Element", []),
-          },
-          "2": {
-            id: "2",
-            title: "Multiply Two Numbers",
-            topic: "Math & Logic",
-            difficulty: "Easy",
-            points: 100,
-            deadline: "",
-            description: getDynamicProblemDescription("Multiply Two Numbers", "Math", "Write a program that takes two integers as input and prints their product.\n\nInput Format:\n- A single line containing two space-separated integers A and B.\n\nOutput Format:\n- Print the product of A and B as a single integer."),
-            testCases: getDynamicSampleTestCases("Multiply Two Numbers", []),
-          }
-        };
-
-        const fallbackKey = String(numeric || "1");
-        if (defaultProblems[fallbackKey]) {
-          setTaskData(defaultProblems[fallbackKey]);
           return;
         }
 
@@ -742,50 +943,6 @@ export default function CodingPlatform() {
     submitRef.current = handleSubmit;
   });
 
-  useEffect(() => {
-    const triggerTabSwitchAutoSubmit = () => {
-      if (taskData && !hasSubmitted && !hasAutoSubmittedRef.current) {
-        hasAutoSubmittedRef.current = true;
-        if (submitRef.current && !isSubmitting) {
-          submitRef.current({ isAutoSubmit: true, reason: "tab_switch" });
-        }
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        triggerTabSwitchAutoSubmit();
-      }
-    };
-
-    const handleWindowBlur = () => {
-      triggerTabSwitchAutoSubmit();
-    };
-
-    const preventCopy = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setConsoleStatus("error");
-      setConsoleOutput("⚠️ Copying, cutting, and pasting is strictly disabled in the coding compiler! You must type your solution manually.");
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleWindowBlur);
-    document.addEventListener("copy", preventCopy, true);
-    document.addEventListener("cut", preventCopy, true);
-    document.addEventListener("paste", preventCopy, true);
-    document.addEventListener("contextmenu", preventCopy, true);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleWindowBlur);
-      document.removeEventListener("copy", preventCopy, true);
-      document.removeEventListener("cut", preventCopy, true);
-      document.removeEventListener("paste", preventCopy, true);
-      document.removeEventListener("contextmenu", preventCopy, true);
-    };
-  }, [taskData, hasSubmitted, isSubmitting]);
-
   const testCasesList = taskData?.testCases || taskData?.test_cases || [];
 
   return (
@@ -797,7 +954,9 @@ export default function CodingPlatform() {
             <p style={{ color: "#64748b", marginBottom: "16px" }}>
               This task or problem is not available. It may have been deleted.
             </p>
-            <Link to="/student/practice" className="cp-back-btn">← Back to Practice</Link>
+            <Link to={isBatchCoursework ? "/student/batches" : "/student/practice"} className="cp-back-btn">
+              {isBatchCoursework ? "← Back to My Batches" : "← Back to Practice"}
+            </Link>
           </div>
         )}
         {!notFound && (
@@ -808,14 +967,19 @@ export default function CodingPlatform() {
             <button 
               type="button" 
               onClick={() => {
-                if (window.history.length > 2) navigate(-1);
-                else navigate('/student/practice');
+                if (isBatchCoursework) {
+                  navigate('/student/batches');
+                } else if (window.history.length > 2) {
+                  navigate(-1);
+                } else {
+                  navigate('/student/practice');
+                }
               }} 
               className="cp-back-btn"
-              title="Back to Problems"
+              title={isBatchCoursework ? "Back to Coursework" : "Back to Problems"}
             >
               <ArrowLeft size={15} />
-              <span>Problems</span>
+              <span>{isBatchCoursework ? "Coursework" : "Problems"}</span>
             </button>
 
             <div className="cp-header-divider" />
@@ -832,35 +996,30 @@ export default function CodingPlatform() {
               })()}
             </div>
 
-            <div className="cp-header-nav-group">
-              <button 
-                type="button"
-                className="cp-nav-btn" 
-                onClick={() => {
-                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
-                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
-                  const prefix = isPractice ? 'practice-' : 'task-';
-                  navigate(`/student/coding-platform/${prefix}${Math.max(1, num - 1)}`);
-                }}
-                disabled={parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10) <= 1}
-                title="Previous Problem"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button 
-                type="button"
-                className="cp-nav-btn" 
-                onClick={() => {
-                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
-                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
-                  const prefix = isPractice ? 'practice-' : 'task-';
-                  navigate(`/student/coding-platform/${prefix}${num + 1}`);
-                }}
-                title="Next Problem"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            {(!isBatchCoursework || batchTasksList.length > 1) && (
+              <div className="cp-header-nav-group">
+                <button 
+                  type="button"
+                  className="cp-nav-btn" 
+                  onClick={handlePrevNavigation}
+                  disabled={!canNavigatePrev}
+                  title={canNavigatePrev ? "Previous Task" : "No Previous Task"}
+                  style={!canNavigatePrev ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button 
+                  type="button"
+                  className="cp-nav-btn" 
+                  onClick={handleNextNavigation}
+                  disabled={!canNavigateNext}
+                  title={canNavigateNext ? "Next Task" : "No Next Task"}
+                  style={!canNavigateNext ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="cp-header-right">
@@ -937,13 +1096,20 @@ export default function CodingPlatform() {
               )}
             </button>
 
+            {isBatchCoursework && (
+              <div className="cp-proctor-live-badge" title="This task is actively proctored. Exiting full-screen or switching tabs will immediately end your task.">
+                <span className="cp-proctor-live-pulse" />
+                <span>Proctored Task (Anti-Cheat Active)</span>
+              </div>
+            )}
+
             <div className="cp-header-divider" />
 
             <button
               type="button"
               className="cp-fs-toggle-btn"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
+              onClick={handleToggleFullscreenClick}
+              title={isFullscreen ? (isBatchCoursework && !hasSubmitted ? "Locked Full-Screen (Exiting Ends Task)" : "Exit Full Screen") : "Full Screen"}
             >
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
@@ -1174,10 +1340,13 @@ export default function CodingPlatform() {
                 language={selectedLang}
                 height="100%"
                 readOnly={isCompilerLocked}
+                preventCopyPaste={true}
                 options={{
                   fontSize: 13,
                   padding: { top: 12, bottom: 12 },
                   readOnly: isCompilerLocked,
+                  contextmenu: false,
+                  formatOnPaste: false,
                 }}
               />
             </div>
@@ -1252,6 +1421,98 @@ export default function CodingPlatform() {
           </div>
         </div>
         </>
+        )}
+
+        {/* ── Anti-Cheat Clipboard Alert Toast ── */}
+        {clipboardWarning && (
+          <div className="cp-clipboard-toast">
+            <span>{clipboardWarning}</span>
+          </div>
+        )}
+
+        {/* ── Proctored Full-Screen Gate Overlay ── */}
+        {isBatchCoursework && !hasSubmitted && !isFullscreen && !proctorTerminated && (
+          <div className="proctor-fullscreen-gate-overlay">
+            <div className="proctor-gate-card">
+              <div className="proctor-gate-badge">
+                <Lock size={14} /> PROCTORED COURSEWORK ASSESSMENT
+              </div>
+              <h2 className="proctor-gate-title">Full-Screen Mode Required</h2>
+              <p className="proctor-gate-subtitle">
+                This batch task is monitored under examination mode. Once started, strict proctoring is enforced:
+              </p>
+              <div className="proctor-gate-rules">
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🖥️</span>
+                  <div>
+                    <strong>Full-Screen is Mandatory:</strong> Exiting full-screen at any time will automatically submit your code and end the task.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🚫</span>
+                  <div>
+                    <strong>Tab Switching Disabled:</strong> Switching tabs, leaving the window, or minimizing will immediately terminate your session.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">📋</span>
+                  <div>
+                    <strong>Copy / Paste Blocked:</strong> Copying, cutting, or pasting code into the compiler is strictly disabled. You must type your solution manually.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🔒</span>
+                  <div>
+                    <strong>Single Submission Attempt:</strong> Once submitted or ended, re-attempts are strictly locked.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleEnterFullscreenAndStart}
+                className="proctor-gate-btn"
+              >
+                <Maximize2 size={18} />
+                <span>Enter Full-Screen & Start Task</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Proctored Violation / Termination Modal ── */}
+        {proctorTerminated && (
+          <div className="proctor-termination-modal-overlay">
+            <div className="proctor-termination-card">
+              <div className="proctor-termination-icon-wrap">
+                <AlertCircle size={38} color="#dc2626" />
+              </div>
+              <h3 className="proctor-term-title">Task Ended — Exam Policy Violation</h3>
+              <p className="proctor-term-desc">
+                {terminationReason === "exit_fullscreen"
+                  ? "You exited full-screen mode during this proctored task. As per examination guidelines, your task has been ended and your current solution was automatically submitted."
+                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your task has been ended and your current solution was automatically submitted."}
+              </p>
+              <div className="proctor-term-status-box">
+                <span>🔒 The compiler is now locked. Your code has been submitted to Docker evaluation and marks will be recorded.</span>
+              </div>
+              <div className="proctor-term-btn-row">
+                <button
+                  type="button"
+                  onClick={() => setProctorTerminated(false)}
+                  className="proctor-term-btn-review"
+                >
+                  Review Code & Test Results
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/batches')}
+                  className="proctor-term-btn-exit"
+                >
+                  Back to My Batches
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -394,9 +394,20 @@ export default function Batches() {
                       return (
                         <Link
                           to={taskHref}
-                          state={{ task }}
+                          state={{ task, batchTasks: batchTasksList, batchId: selectedBatch?.id, fromBatchCoursework: true, enterFullscreen: true }}
                           key={idx}
                           className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
+                          onClick={async () => {
+                            if (platform === "coding" || platform === "submission") {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on coursework click:", err);
+                              }
+                            }
+                          }}
                         >
                           <div className="cw-item-left">
                             <span className="cw-task-num-badge">{task.taskNumber}</span>
