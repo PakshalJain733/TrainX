@@ -16,9 +16,6 @@ const getSmtpTransporter = () => {
     const port = parseInt(process.env.SMTP_PORT || '465', 10);
     const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
     smtpTransporter = nodemailer.createTransport({
-      pool: true,
-      maxConnections: 5,
-      maxMessages: 100,
       host: process.env.SMTP_HOST,
       port,
       secure: isSecure,
@@ -26,9 +23,9 @@ const getSmtpTransporter = () => {
         user: (process.env.SMTP_USER || '').trim(),
         pass: (process.env.SMTP_PASS || '').trim(),
       },
-      connectionTimeout: 4000, // 4s timeout for fast connection failover
-      greetingTimeout: 4000,   // 4s timeout for server greeting
-      socketTimeout: 8000,     // 8s timeout for socket activity
+      connectionTimeout: 20000, // 20s timeout for TLS connection establishment
+      greetingTimeout: 20000,   // 20s timeout for server greeting
+      socketTimeout: 30000,     // 30s timeout for socket activity
     });
   }
   return smtpTransporter;
@@ -75,13 +72,14 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
     throw new Error('Email delivery system is currently disabled by Super Admin maintenance policy.');
   }
 
-  const useSmtp = (process.env.EMAIL_PROVIDER || '').toLowerCase() === 'smtp' ||
-    Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const provider = (process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+  const hasSmtpConfig = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const useSmtp = provider === 'smtp' || (!provider && hasSmtpConfig);
 
   if (useSmtp) {
     try {
       const transporter = getSmtpTransporter();
-      if (!transporter) throw new Error('SMTP transporter is not configured');
+      if (!transporter) throw new Error('SMTP transporter is not configured. Check SMTP_HOST, SMTP_USER, and SMTP_PASS in .env.');
       const senderEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'admin@trainingportal.com').trim();
       const senderName = (process.env.SMTP_FROM_NAME || 'TrainX Portal').trim();
       const info = await transporter.sendMail({
@@ -97,6 +95,10 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
       console.error(`[SMTP Error] Failed to send email to ${to}:`, smtpErr.message);
       if (smtpErr.code === 'ETIMEDOUT' || smtpErr.code === 'ECONNRESET' || smtpErr.message?.includes('timeout')) {
         smtpTransporter = null;
+      }
+      // If EMAIL_PROVIDER is explicitly set to 'smtp', strictly do NOT fallback to Brevo
+      if (provider === 'smtp') {
+        throw new Error(`[SMTP Delivery Error] Failed to send email via SMTP: ${smtpErr.message}`);
       }
       if (!process.env.BREVO_API_KEY) {
         throw smtpErr;
@@ -342,7 +344,7 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
       textContent,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Failed to send OTP email to ${to}:`, error.message);
+    console.error(`[Email Error] Failed to send OTP email to ${to}:`, error.message);
     throw error;
   }
 };
@@ -465,7 +467,7 @@ export const sendWelcomeEmail = async ({
       textContent,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Welcome email dispatch failed for ${to}:`, error.message);
+    console.error(`[Email Error] Welcome email dispatch failed for ${to}:`, error.message);
     return null;
   }
 };
@@ -747,7 +749,7 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
       textContent: text,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Failed to send generic email to ${to}:`, error.message);
+    console.error(`[Email Error] Failed to send generic email to ${to}:`, error.message);
     throw error;
   }
 };
