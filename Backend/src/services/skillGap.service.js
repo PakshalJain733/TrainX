@@ -5,6 +5,7 @@ import {
   getRemedialInterventionsModel,
   getSkillGapByUserId,
   saveSkillGapAnalysis,
+  ensureSkillGapTablesExist,
 } from '../models/skillGap.model.js';
 import {
   generateAIDiagnostics,
@@ -18,13 +19,111 @@ import { query } from '../config/db.js';
  * Service: Retrieve batch-level skill gaps for mentor & coordinator analytics
  */
 export const getBatchSkillGapsService = async (collegeId = null, batchId = null) => {
+  await ensureSkillGapTablesExist();
   const gaps = await getBatchSkillGapsModel(collegeId, batchId);
+
+  // Retrieve per-student granular skill gaps
+  let studentSql = `
+    SELECT 
+      sg.id,
+      sg.topic,
+      sg.category,
+      ROUND(sg.deficiency_rate) as deficiency_rate,
+      ROUND(sg.avg_score) as avg_score,
+      sg.priority,
+      sg.status,
+      sg.student_id,
+      u.name as student_name,
+      u.email as student_email,
+      COALESCE(st.roll_number, CONCAT('STU-', u.id)) as roll_number,
+      COALESCE(b.id, sg.batch_id) as batch_id,
+      COALESCE(b.name, 'Unassigned Cohort') as batch_name
+    FROM skill_gaps sg
+    JOIN users u ON sg.student_id = u.id
+    LEFT JOIN students st ON u.id = st.user_id
+    LEFT JOIN batches b ON (st.batch_id = b.id OR sg.batch_id = b.id)
+    WHERE sg.student_id IS NOT NULL
+  `;
+  const studentParams = [];
+  if (collegeId) {
+    studentSql += ' AND (sg.college_id = ? OR u.college_id = ?)';
+    studentParams.push(Number(collegeId), Number(collegeId));
+  }
+  if (batchId) {
+    studentSql += ' AND (sg.batch_id = ? OR st.batch_id = ?)';
+    studentParams.push(Number(batchId), Number(batchId));
+  }
+  studentSql += ' ORDER BY FIELD(sg.priority, "High", "Medium", "Low"), sg.deficiency_rate DESC';
+
+  let studentRows = [];
+  try {
+    studentRows = await query(studentSql, studentParams);
+  } catch (err) {
+    console.warn(`[SkillGap Service] Query student gaps warning: ${err.message}`);
+  }
+
+  // Auto-populate from real assessment & coding attempts if table was just created
+  if (!studentRows || studentRows.length === 0) {
+    try {
+      const studentList = await query(
+        `SELECT u.id FROM users u WHERE u.role = 'student' ${collegeId ? 'AND u.college_id = ?' : ''} LIMIT 25`,
+        collegeId ? [Number(collegeId)] : []
+      );
+      for (const st of (studentList || [])) {
+        await getStudentSkillGapsModel(st.id);
+      }
+      studentRows = await query(studentSql, studentParams);
+    } catch (e) {
+      console.warn(`[SkillGap Service] Auto-diagnose students warning: ${e.message}`);
+    }
+  }
+
+  const formattedStudentGaps = (studentRows || []).map((r) => ({
+    id: r.id,
+    studentId: r.student_id,
+    studentName: r.student_name,
+    studentEmail: r.student_email,
+    rollNo: r.roll_number,
+    topic: r.topic,
+    category: r.category || 'Quiz & Conceptual',
+    batch: r.batch_name,
+    batchId: r.batch_id,
+    deficiencyRate: `${Math.round(r.deficiency_rate || 0)}%`,
+    deficiencyRateNum: Math.round(r.deficiency_rate || 0),
+    avgScore: `${Math.round(r.avg_score || 0)}%`,
+    avgScoreNum: Math.round(r.avg_score || 0),
+    priority: r.priority || 'Medium',
+    status: r.status || 'open',
+  }));
+
+  // Batches list for filter dropdown
+  let batchesList = [];
+  try {
+    batchesList = await query('SELECT id, name, join_code as code FROM batches ORDER BY name ASC');
+  } catch (bErr) {}
+
+  // Past remedial interventions
+  let interventions = [];
+  try {
+    interventions = await getRemedialInterventionsModel(collegeId, batchId);
+  } catch (iErr) {}
+
+  const uniqueStudentIds = new Set(formattedStudentGaps.map((g) => g.studentId));
+  const avgDeficiency = formattedStudentGaps.length > 0
+    ? Math.round(formattedStudentGaps.reduce((acc, curr) => acc + curr.deficiencyRateNum, 0) / formattedStudentGaps.length)
+    : 0;
+
   return {
-    totalGapsIdentified: gaps.length,
-    highPriorityCount: gaps.filter((g) => g.priority === 'High').length,
-    mediumPriorityCount: gaps.filter((g) => g.priority === 'Medium').length,
-    lowPriorityCount: gaps.filter((g) => g.priority === 'Low').length,
+    totalGapsIdentified: formattedStudentGaps.length,
+    highPriorityCount: formattedStudentGaps.filter((g) => g.priority === 'High').length,
+    mediumPriorityCount: formattedStudentGaps.filter((g) => g.priority === 'Medium').length,
+    lowPriorityCount: formattedStudentGaps.filter((g) => g.priority === 'Low').length,
+    uniqueStudentsAffected: uniqueStudentIds.size,
+    avgDeficiencyRate: `${avgDeficiency}%`,
     skillGaps: gaps,
+    studentGaps: formattedStudentGaps,
+    batches: batchesList,
+    interventions: interventions || [],
   };
 };
 

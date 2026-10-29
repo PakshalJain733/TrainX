@@ -1431,6 +1431,15 @@ export default function AdminBatches() {
                           <Key size={13} /> Join Batch Code
                         </span>
                         <div className="batch-code-header-right">
+                          <button
+                            type="button"
+                            className="batch-enlarge-icon-btn"
+                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
+                            title="Enlarge Join Code for presentation"
+                            aria-label="Enlarge Join Code"
+                          >
+                            <Maximize2 size={12} />
+                          </button>
                           <span className={`batch-code-expiry-badge ${timerInfo.expired ? "batch-code-expiry-badge--expired" : ""}`}>
                             {timerInfo.expired ? (
                               <>
@@ -1454,28 +1463,6 @@ export default function AdminBatches() {
                           {b.joinCode || "NO-CODE"}
                         </span>
                         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            className="batch-enlarge-code-btn"
-                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
-                            title="Enlarge Join Code for presentation"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              padding: "6px 10px",
-                              background: "#f1f5f9",
-                              border: "1px solid #cbd5e1",
-                              borderRadius: "8px",
-                              color: "#334155",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            <Maximize2 size={13} /> Enlarge
-                          </button>
                           {timerInfo.expired ? (
                             <button
                               type="button"

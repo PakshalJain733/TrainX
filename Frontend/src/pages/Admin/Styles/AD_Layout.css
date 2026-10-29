@@ -712,6 +712,62 @@ body {
   box-sizing: border-box;
 }
 
+/* Collapsed Header Brand */
+.admin-header__collapsed-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  margin-right: 4px;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.admin-header__collapsed-brand:hover {
+  opacity: 0.9;
+}
+
+.admin-header__collapsed-logo-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  overflow: hidden;
+}
+
+.admin-header__collapsed-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.admin-header__collapsed-brand-text {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.admin-header__collapsed-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.admin-header__collapsed-x {
+  height: 16px;
+  width: auto;
+  object-fit: contain;
+  margin-left: -1px;
+}
+
 /* Left Section: Sidebar Toggle */
 .admin-header__left {
   display: flex;

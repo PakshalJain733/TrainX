@@ -506,6 +506,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
               });
             }
           });
+        }
         // Practice problems solve status is derived strictly from coding_submissions
       } catch (e) { }
     }
