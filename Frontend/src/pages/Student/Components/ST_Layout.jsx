@@ -513,7 +513,7 @@ export default function StudentLayout() {
   };
 
   const isCodingPlatform = pathname.startsWith('/student/coding-platform');
-  const isFullScreenApp = Boolean(interviewLive);
+  const isFullScreenApp = Boolean(interviewLive || isCodingPlatform);
 
   return (
     <div className={`student-layout ${isFullScreenApp ? 'student-layout--fullscreen' : ''}`}>
