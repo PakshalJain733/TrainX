@@ -48,10 +48,9 @@ export const checkDatabaseConnection = async () => {
       );
       const colSet = new Set((existingCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
       const colsToAdd = [
-        { name: 'employee_id', def: 'VARCHAR(100) DEFAULT NULL' },
-        { name: 'office_location', def: 'VARCHAR(255) DEFAULT NULL' },
-        { name: 'experience', def: 'VARCHAR(100) DEFAULT NULL' },
-        { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'current_year', def: 'VARCHAR(50) DEFAULT NULL' },
+        { name: 'area_of_expertise', def: 'VARCHAR(255) DEFAULT NULL' },
+                { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
         { name: 'avatar_url', def: 'LONGTEXT DEFAULT NULL' },
         { name: 'bio', def: 'TEXT DEFAULT NULL' },
       ];

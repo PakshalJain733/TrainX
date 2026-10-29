@@ -11,11 +11,7 @@ import {
   CheckCircle2,
   Save,
   Sparkles,
-  MapPin,
-  Clock,
   Award,
-  BookOpen,
-  Star,
   Key,
   QrCode,
   Copy,
@@ -24,23 +20,38 @@ import {
   Edit2,
   Mail,
   Phone,
-  Briefcase,
   Database,
   AlertCircle,
+  Calendar,
+  Star,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { mentorProfile } from "../../../data/mentorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
-const specOptions = [
+// ── Year Options for Mentors ──
+const yearOptions = [
+  { value: "1st Year (FE)", label: "1st Year (FE)" },
+  { value: "2nd Year (SE)", label: "2nd Year (SE)" },
+  { value: "3rd Year (TE)", label: "3rd Year (TE)" },
+  { value: "Final Year (BE 2026)", label: "Final Year (BE 2026)" },
+  { value: "Academic Year 2025-2026", label: "Academic Year 2025-2026" },
+  { value: "Academic Year 2026-2027", label: "Academic Year 2026-2027" },
+];
+
+// ── Area of Expertise Options ──
+const expertiseOptions = [
   { value: "Full Stack Development", label: "Full Stack Development" },
   { value: "Data Structures & Algorithms", label: "Data Structures & Algorithms" },
   { value: "AI & Machine Learning", label: "AI & Machine Learning" },
-  { value: "Cloud & DevOps", label: "Cloud & DevOps" },
-  { value: "Cybersecurity", label: "Cybersecurity" },
+  { value: "Cloud Computing & DevOps", label: "Cloud Computing & DevOps" },
+  { value: "Cybersecurity & Network Defense", label: "Cybersecurity & Network Defense" },
+  { value: "Database Systems & SQL Optimization", label: "Database Systems & SQL Optimization" },
+  { value: "Mobile Application Engineering", label: "Mobile Application Engineering" },
+  { value: "Data Science & Big Data Analytics", label: "Data Science & Big Data Analytics" },
+  { value: "Software Architecture & System Design", label: "Software Architecture & System Design" },
 ];
 
 function MN_ProfilePage() {
@@ -67,29 +78,26 @@ function MN_ProfilePage() {
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile?.name || "Mentor";
-    let email = localUser.email || mentorProfile?.email || "mentor@pvppcoe.ac.in";
-    return { name, email, ...localUser };
+    try {
+      localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {}
+    return localUser;
   };
 
   const initialUser = resolveUser();
 
+  // Exactly the 6 profile fields requested
   const [form, setForm] = useState({
-    name: initialUser.name,
-    email: initialUser.email,
-    phone: initialUser.mobile_number || initialUser.phone || mentorProfile?.phone || "",
-    department: initialUser.department || mentorProfile?.department || "Computer Engineering",
-    specialization: initialUser.specialization || mentorProfile?.specialization || "Full Stack Development",
+    name: initialUser.name || "Mentor",
+    email: initialUser.email || "mentor@college.edu.in",
+    mobile_number: initialUser.mobile_number || initialUser.phone || "",
+    department: initialUser.department || "Computer Engineering",
+    current_year: initialUser.current_year || initialUser.currentYear || "Final Year (2026)",
+    area_of_expertise: initialUser.area_of_expertise || initialUser.areaOfExpertise || initialUser.specialization || "Full Stack Development",
     role: initialUser.role || "Mentor",
-    college: initialUser.college || mentorProfile?.college || "P.V.P.P. College of Engineering",
-    officeLocation: initialUser.officeLocation || initialUser.office_location || mentorProfile?.officeLocation || "Room 304, Block A",
-    officeHours: mentorProfile?.officeHours || "Mon-Fri 10:00 AM - 5:00 PM",
-    allocatedBatches: mentorProfile?.allocatedBatches || 0,
-    totalStudents: mentorProfile?.totalStudents || 0,
-    rating: mentorProfile?.rating || 4.9,
-    experience: initialUser.experience || mentorProfile?.experience || "5+ Years",
-    empId: initialUser.empId || initialUser.emp_id || initialUser.employee_id || "EMP-MN-201",
+    allocatedBatches: 0,
+    totalStudents: 0,
+    rating: 4.9,
   });
 
   useEffect(() => {
@@ -102,15 +110,11 @@ function MN_ProfilePage() {
             ...prev,
             name: u.name || prev.name,
             email: u.email || prev.email,
-            phone: u.phone || u.mobile || u.mobile_number || prev.phone,
+            mobile_number: u.mobile_number || u.phone || u.mobile || prev.mobile_number,
             department: u.department || prev.department,
-            specialization: u.specialization || prev.specialization,
+            current_year: u.current_year || u.currentYear || prev.current_year,
+            area_of_expertise: u.area_of_expertise || u.areaOfExpertise || u.specialization || prev.area_of_expertise,
             role: u.role || prev.role,
-            college: u.college || prev.college,
-            officeLocation: u.officeLocation || u.office_location || prev.officeLocation,
-            officeHours: u.officeHours || prev.officeHours,
-            experience: u.experience || prev.experience,
-            empId: u.empId || u.employee_id || prev.empId,
             allocatedBatches: u.allocatedBatches ?? prev.allocatedBatches,
             totalStudents: u.totalStudents ?? prev.totalStudents,
             rating: u.rating ?? prev.rating,
@@ -130,12 +134,10 @@ function MN_ProfilePage() {
                 ...prev,
                 name: u.name || prev.name,
                 email: u.email || prev.email,
-                phone: u.mobile_number || u.phone || prev.phone,
+                mobile_number: u.mobile_number || u.phone || prev.mobile_number,
                 department: u.department || prev.department,
-                specialization: u.specialization || prev.specialization,
-                empId: u.empId || u.employee_id || prev.empId,
-                officeLocation: u.officeLocation || u.office_location || prev.officeLocation,
-                experience: u.experience || prev.experience,
+                current_year: u.current_year || u.currentYear || prev.current_year,
+                area_of_expertise: u.area_of_expertise || u.areaOfExpertise || u.specialization || prev.area_of_expertise,
               }));
               if (u.avatarUrl || u.avatar_url) {
                 setAvatarUrl(u.avatarUrl || u.avatar_url);
@@ -280,6 +282,7 @@ function MN_ProfilePage() {
     }
   };
 
+  // Save the 6 fields directly to MySQL Database
   const handleSave = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setSaving(true);
@@ -288,16 +291,14 @@ function MN_ProfilePage() {
       const payload = {
         name: form.name,
         email: form.email,
-        phone: form.phone,
-        mobile_number: form.phone,
+        mobile_number: form.mobile_number,
+        phone: form.mobile_number,
         department: form.department,
-        specialization: form.specialization,
-        role: form.role,
-        employee_id: form.empId,
-        empId: form.empId,
-        office_location: form.officeLocation,
-        officeLocation: form.officeLocation,
-        experience: form.experience,
+        current_year: form.current_year,
+        currentYear: form.current_year,
+        area_of_expertise: form.area_of_expertise,
+        areaOfExpertise: form.area_of_expertise,
+        specialization: form.area_of_expertise,
         avatar_url: avatarUrl,
         avatarUrl: avatarUrl,
       };
@@ -308,24 +309,21 @@ function MN_ProfilePage() {
         body: JSON.stringify(payload),
       });
 
-      // 2. Also sync current user in sessionStorage for instantaneous UI reactivity
+      // 2. Also sync current user in storage for instantaneous UI reactivity
       try {
-        const stored = JSON.parse(sessionStorage.getItem("user") || "{}");
+        const stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
         const updatedUser = {
           ...stored,
           name: form.name,
           email: form.email,
-          mobile_number: form.phone,
+          mobile_number: form.mobile_number,
           department: form.department,
-          specialization: form.specialization,
-          employee_id: form.empId,
-          empId: form.empId,
-          office_location: form.officeLocation,
-          officeLocation: form.officeLocation,
-          experience: form.experience,
+          current_year: form.current_year,
+          area_of_expertise: form.area_of_expertise,
           avatar_url: avatarUrl,
         };
         sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
       } catch (_) {}
 
       // 3. Emit global event so Top Navbar and headers update instantly
@@ -361,7 +359,7 @@ function MN_ProfilePage() {
               </h2>
             </div>
             <p className="ui-section-desc">
-              Manage your mentor dossier, office availability, academic specialization, and security credentials.
+              Manage your mentor dossier, department affiliation, current cohort year, and area of expertise.
             </p>
           </div>
         </div>
@@ -443,17 +441,38 @@ function MN_ProfilePage() {
 
           <div className="profile-academic-divider" />
 
+          {/* Academic & Mentor Dossier List: Exactly the 6 Fields */}
           <div className="profile-academic-details">
-            <h4 className="profile-section-subtitle">Academic Dossier</h4>
+            <h4 className="profile-section-subtitle">Mentor Dossier</h4>
 
+            {/* 1. Full Name */}
             <div className="profile-detail-row">
-              <Building size={16} className="profile-detail-icon" />
+              <User size={16} className="profile-detail-icon" />
               <div>
-                <span className="profile-detail-label">Institution</span>
-                <p className="profile-detail-value">{form.college}</p>
+                <span className="profile-detail-label">Full Name</span>
+                <p className="profile-detail-value">{form.name}</p>
               </div>
             </div>
 
+            {/* 2. Email */}
+            <div className="profile-detail-row">
+              <Mail size={16} className="profile-detail-icon text-blue-500" />
+              <div>
+                <span className="profile-detail-label">Email Address</span>
+                <p className="profile-detail-value">{form.email}</p>
+              </div>
+            </div>
+
+            {/* 3. Mobile Number */}
+            <div className="profile-detail-row">
+              <Phone size={16} className="profile-detail-icon text-emerald-500" />
+              <div>
+                <span className="profile-detail-label">Mobile Number</span>
+                <p className="profile-detail-value">{form.mobile_number || "Not specified"}</p>
+              </div>
+            </div>
+
+            {/* 4. Department */}
             <div className="profile-detail-row">
               <GraduationCap size={16} className="profile-detail-icon" />
               <div>
@@ -462,43 +481,21 @@ function MN_ProfilePage() {
               </div>
             </div>
 
+            {/* 5. Current Year */}
+            <div className="profile-detail-row">
+              <Calendar size={16} className="profile-detail-icon text-purple-500" />
+              <div>
+                <span className="profile-detail-label">Current Year</span>
+                <p className="profile-detail-value">{form.current_year || "Final Year (2026)"}</p>
+              </div>
+            </div>
+
+            {/* 6. Area of Expertise */}
             <div className="profile-detail-row">
               <Award size={16} className="profile-detail-icon profile-icon-indigo" />
               <div>
-                <span className="profile-detail-label">Specialization</span>
-                <p className="profile-detail-value">{form.specialization}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
-              <Users size={16} className="profile-detail-icon profile-icon-emerald" />
-              <div>
-                <span className="profile-detail-label">Assigned Mentee Scope</span>
-                <p className="profile-detail-value">{form.allocatedBatches} Batches · {form.totalStudents} Mentees</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
-              <MapPin size={16} className="profile-detail-icon text-purple-500" />
-              <div>
-                <span className="profile-detail-label">Office Cabin Location</span>
-                <p className="profile-detail-value">{form.officeLocation}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
-              <Clock size={16} className="profile-detail-icon text-blue-500" />
-              <div>
-                <span className="profile-detail-label">Office Availability</span>
-                <p className="profile-detail-value">{form.officeHours}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
-              <Award size={16} className="profile-detail-icon text-amber-500" />
-              <div>
-                <span className="profile-detail-label">Teaching Experience</span>
-                <p className="profile-detail-value">{form.experience}</p>
+                <span className="profile-detail-label">Area of Expertise</span>
+                <p className="profile-detail-value">{form.area_of_expertise || "Full Stack Development"}</p>
               </div>
             </div>
 
@@ -531,7 +528,7 @@ function MN_ProfilePage() {
             {isEditing && (
               <div className="profile-edit-banner-info">
                 <Database size={16} />
-                <span>Edit Mode Active: Modifying profile fields. Click <strong>Save Profile</strong> to permanently commit updates to MySQL database.</span>
+                <span>Edit Mode Active: Modifying mentor profile. Click <strong>Save Profile</strong> to permanently commit updates to MySQL database.</span>
               </div>
             )}
 
@@ -540,8 +537,8 @@ function MN_ProfilePage() {
                 <div className="profile-heading-group">
                   <User size={18} className="profile-heading-icon profile-icon-indigo" />
                   <div>
-                    <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
-                    <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
+                    <h3 className="profile-heading-title">{isEditing ? "Edit Mentor Profile Details" : "Mentor Profile Details"}</h3>
+                    <p className="profile-heading-desc">Saved directly to your mentor profile in the database.</p>
                   </div>
                 </div>
 
@@ -590,7 +587,9 @@ function MN_ProfilePage() {
                 </div>
               </div>
 
+              {/* Exact 6 Fields Form Grid */}
               <div className="profile-form-grid">
+                {/* 1. Full Name */}
                 <div className="profile-field">
                   <label className="profile-label">Full Name *</label>
                   <div className="profile-input-wrapper">
@@ -608,8 +607,9 @@ function MN_ProfilePage() {
                   </div>
                 </div>
 
+                {/* 2. Email Address */}
                 <div className="profile-field">
-                  <label className="profile-label">Email Address *</label>
+                  <label className="profile-label">Email *</label>
                   <div className="profile-input-wrapper">
                     <Mail size={16} className="profile-field-icon" />
                     <input
@@ -625,65 +625,25 @@ function MN_ProfilePage() {
                   </div>
                 </div>
 
+                {/* 3. Mobile Number */}
                 <div className="profile-field">
-                  <label className="profile-label">Phone Number *</label>
+                  <label className="profile-label">Mobile Number *</label>
                   <div className="profile-input-wrapper">
                     <Phone size={16} className="profile-field-icon" />
                     <input
-                      type="text"
+                      type="tel"
                       className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
-                      value={form.phone}
-                      onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                      value={form.mobile_number}
+                      onChange={(e) => setForm((p) => ({ ...p, mobile_number: e.target.value }))}
                       readOnly={!isEditing}
                       disabled={!isEditing}
-                      placeholder="+91 98765 43210"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="profile-form-section mt-6">
-              <div className="profile-section-heading">
-                <div className="profile-heading-group">
-                  <Sparkles size={18} className="profile-heading-icon profile-icon-indigo" />
-                  <div>
-                    <h3 className="profile-heading-title">Specialization & Academic Governance</h3>
-                    <p className="profile-heading-desc">Configure your primary domain expertise, department, employee ID, and office cabin location.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="profile-form-grid">
-                <div className="profile-field">
-                  <label className="profile-label">Official Title / Role *</label>
-                  <div className="profile-input-wrapper">
-                    <Briefcase size={16} className="profile-field-icon" />
-                    <input
-                      type="text"
-                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
-                      value={form.role}
-                      onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      placeholder="e.g. Senior Mentor / Professor"
+                      placeholder="e.g. 7418529635"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Primary Specialization *</label>
-                  <CustomSelect
-                    value={form.specialization}
-                    options={specOptions}
-                    disabled={!isEditing}
-                    onChange={(val) => setForm((p) => ({ ...p, specialization: val }))}
-                    placeholder="Select Specialization"
-                    icon={Award}
-                  />
-                </div>
-
+                {/* 4. Department */}
                 <div className="profile-field">
                   <label className="profile-label">Department *</label>
                   <CustomSelect
@@ -693,6 +653,8 @@ function MN_ProfilePage() {
                       { value: "Information Technology", label: "Information Technology" },
                       { value: "Electronics & Telecommunication", label: "Electronics & Telecommunication" },
                       { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
+                      { value: "Mechanical Engineering", label: "Mechanical Engineering" },
+                      { value: "Civil Engineering", label: "Civil Engineering" },
                     ]}
                     disabled={!isEditing}
                     onChange={(val) => setForm((p) => ({ ...p, department: val }))}
@@ -701,53 +663,30 @@ function MN_ProfilePage() {
                   />
                 </div>
 
+                {/* 5. Current Year */}
                 <div className="profile-field">
-                  <label className="profile-label">Employee / Staff ID *</label>
-                  <div className="profile-input-wrapper">
-                    <Key size={16} className="profile-field-icon" />
-                    <input
-                      type="text"
-                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
-                      value={form.empId}
-                      onChange={(e) => setForm((p) => ({ ...p, empId: e.target.value }))}
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      placeholder="e.g. EMP-MN-201"
-                      required
-                    />
-                  </div>
+                  <label className="profile-label">Current Year *</label>
+                  <CustomSelect
+                    value={form.current_year}
+                    options={yearOptions}
+                    disabled={!isEditing}
+                    onChange={(val) => setForm((p) => ({ ...p, current_year: val }))}
+                    placeholder="Select Current Year"
+                    icon={Calendar}
+                  />
                 </div>
 
+                {/* 6. Area of Expertise */}
                 <div className="profile-field">
-                  <label className="profile-label">Office Location / Cabin</label>
-                  <div className="profile-input-wrapper">
-                    <MapPin size={16} className="profile-field-icon" />
-                    <input
-                      type="text"
-                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
-                      value={form.officeLocation}
-                      onChange={(e) => setForm((p) => ({ ...p, officeLocation: e.target.value }))}
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      placeholder="e.g. Faculty Block C, Room 302"
-                    />
-                  </div>
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Teaching Experience</label>
-                  <div className="profile-input-wrapper">
-                    <Clock size={16} className="profile-field-icon" />
-                    <input
-                      type="text"
-                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
-                      value={form.experience}
-                      onChange={(e) => setForm((p) => ({ ...p, experience: e.target.value }))}
-                      readOnly={!isEditing}
-                      disabled={!isEditing}
-                      placeholder="e.g. 6+ Years Teaching & Industry"
-                    />
-                  </div>
+                  <label className="profile-label">Area of Expertise *</label>
+                  <CustomSelect
+                    value={form.area_of_expertise}
+                    options={expertiseOptions}
+                    disabled={!isEditing}
+                    onChange={(val) => setForm((p) => ({ ...p, area_of_expertise: val }))}
+                    placeholder="Select Area of Expertise"
+                    icon={Award}
+                  />
                 </div>
               </div>
 

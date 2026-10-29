@@ -600,7 +600,6 @@ export default function StudentLayout() {
                       </div>
                       <div className="student-header__user-info">
                         <span className="student-header__name">{user.name || "Student"}</span>
-                        <span className="student-header__role">{user.role || "Student"}</span>
                       </div>
                     </button>
 

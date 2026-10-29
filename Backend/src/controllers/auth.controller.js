@@ -164,8 +164,8 @@ export const getMe = async (req, res, next) => {
     if (resolvedDeptId || resolvedDept) {
       try {
         const dRows = await query(
-          'SELECT id, name, code FROM departments WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
-          [resolvedDeptId || 0, resolvedDept, resolvedDept]
+          'SELECT id, name, code FROM departments WHERE (college_id = ? OR college_id IS NULL) AND (id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?)) ORDER BY (college_id = ?) DESC LIMIT 1',
+          [user.college_id || 0, resolvedDeptId || 0, resolvedDept, resolvedDept, user.college_id || 0]
         );
         if (dRows && dRows.length > 0) {
           resolvedDeptId = dRows[0].id;
@@ -179,12 +179,11 @@ export const getMe = async (req, res, next) => {
       ...safeUser,
       ...studentProfile,
       phone: user.mobile_number || '',
-      employee_id: user.employee_id || null,
-      empId: user.employee_id || null,
-      office_location: user.office_location || null,
-      officeLocation: user.office_location || null,
-      experience: user.experience || null,
-      specialization: user.specialization || user.target_track || null,
+      current_year: user.current_year || null,
+      currentYear: user.current_year || null,
+      area_of_expertise: user.area_of_expertise || user.specialization || null,
+      areaOfExpertise: user.area_of_expertise || user.specialization || null,
+      specialization: user.area_of_expertise || user.specialization || user.target_track || null,
       avatar_url: user.avatar_url || null,
       avatarUrl: user.avatar_url || null,
       remember_me: Boolean(user.remember_me),

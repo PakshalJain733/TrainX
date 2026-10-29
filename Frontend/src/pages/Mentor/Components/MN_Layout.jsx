@@ -461,7 +461,6 @@ export default function MentorLayout() {
                     </div>
                     <div className="mentor-header__user-info">
                       <span className="mentor-header__name">{user.name || "Mentor"}</span>
-                      <span className="mentor-header__role">{user.role || "Mentor"}</span>
                     </div>
                   </button>
 

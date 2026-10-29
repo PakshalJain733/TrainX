@@ -472,7 +472,6 @@ export default function CoordinatorLayout() {
                     </div>
                     <div className="coordinator-header__user-info">
                       <span className="coordinator-header__name">{user.name || "Coordinator"}</span>
-                      <span className="coordinator-header__role">{user.role || "Coordinator"}</span>
                     </div>
                   </button>
 

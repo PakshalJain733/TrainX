@@ -27,10 +27,26 @@ export const getDepartments = async (req, res, next) => {
   try {
     await ensureDeptTable();
     const { collegeId, college_id } = req.query;
-    const userCollegeId = req.user?.college_id || req.user?.collegeId;
-    let cid = collegeId || college_id;
-    if (!cid && userCollegeId && req.user?.role !== 'super_admin') {
+    let userCollegeId = req.user?.college_id || req.user?.collegeId;
+    const userRole = String(req.user?.role || '').toLowerCase();
+    const isSuperAdmin = userRole === 'super_admin';
+
+    if (!userCollegeId && req.user?.id) {
+      const uRows = await query('SELECT college_id, role FROM users WHERE id = ?', [req.user.id]);
+      if (uRows && uRows[0]) {
+        userCollegeId = uRows[0].college_id;
+      }
+    }
+
+    let cid = null;
+    if (isSuperAdmin) {
+      cid = collegeId || college_id || null;
+    } else {
+      // Non-super-admins strictly only see departments created for their own college!
       cid = userCollegeId;
+      if (!cid) {
+        return sendSuccess(res, 'Departments retrieved successfully', []);
+      }
     }
 
     let sql = `
@@ -44,6 +60,9 @@ export const getDepartments = async (req, res, next) => {
     if (cid && cid !== 'all') {
       sql += ' AND d.college_id = ?';
       params.push(cid);
+    } else if (!isSuperAdmin) {
+      sql += ' AND d.college_id = ?';
+      params.push(cid || -1);
     }
 
     sql += ' ORDER BY d.id ASC';
@@ -160,7 +179,20 @@ export const createDepartment = async (req, res, next) => {
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
-    const cId = collegeId || college_id || req.user?.college_id || req.user?.collegeId || 1;
+    let cId;
+    if (req.user?.role === 'super_admin') {
+      cId = collegeId || college_id || req.user?.college_id || req.user?.collegeId || 1;
+    } else {
+      let userCollegeId = req.user?.college_id || req.user?.collegeId;
+      if (!userCollegeId && req.user?.id) {
+        const uRows = await query('SELECT college_id FROM users WHERE id = ?', [req.user.id]);
+        userCollegeId = uRows && uRows[0]?.college_id;
+      }
+      cId = userCollegeId;
+      if (!cId) {
+        return sendError(res, 'Unable to identify your college. Cannot create department.', 400);
+      }
+    }
     const hName = hodName || hod_name || 'Dr. Department HOD';
     const hEmail = hodEmail || hod_email || `hod.${code.toLowerCase()}@college.edu.in`;
 
@@ -198,6 +230,14 @@ export const updateDepartment = async (req, res, next) => {
     const { id } = req.params;
     const { name, code, hodName, hodEmail, status } = req.body;
 
+    if (req.user?.role !== 'super_admin') {
+      const userCollegeId = req.user?.college_id || req.user?.collegeId;
+      const [existingDept] = await query('SELECT college_id FROM departments WHERE id = ?', [id]);
+      if (!existingDept || (userCollegeId && existingDept.college_id !== userCollegeId)) {
+        return sendError(res, 'Unauthorized to update this department', 403);
+      }
+    }
+
     await query(
       `UPDATE departments
        SET name = COALESCE(?, name),
@@ -224,6 +264,15 @@ export const deleteDepartment = async (req, res, next) => {
   try {
     await ensureDeptTable();
     const { id } = req.params;
+
+    if (req.user?.role !== 'super_admin') {
+      const userCollegeId = req.user?.college_id || req.user?.collegeId;
+      const [existingDept] = await query('SELECT college_id FROM departments WHERE id = ?', [id]);
+      if (!existingDept || (userCollegeId && existingDept.college_id !== userCollegeId)) {
+        return sendError(res, 'Unauthorized to delete this department', 403);
+      }
+    }
+
     await query('DELETE FROM departments WHERE id = ?', [id]);
     return sendSuccess(res, 'Department deleted successfully');
   } catch (error) {

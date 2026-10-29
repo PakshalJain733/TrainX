@@ -17,7 +17,7 @@ function SidebarBrand({ collapsed, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-mentor" />
           </div>
-          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
+          <span className="sidebar-brand-sub">{subtitle || "Mentor"}</span>
         </div>
       )}
     </div>
@@ -86,7 +86,7 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
     <aside className={`mentor-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       {/* Header */}
       <div className="sidebar-header-mentor">
-        <SidebarBrand collapsed={collapsed} />
+        <SidebarBrand collapsed={collapsed} subtitle="Mentor" />
       </div>
 
       {/* Nav */}

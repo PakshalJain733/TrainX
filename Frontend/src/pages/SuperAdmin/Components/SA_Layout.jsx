@@ -595,7 +595,6 @@ export default function SuperAdminLayout() {
                     </div>
                     <div className="sa-header__user-info">
                       <span className="sa-header__name">{userProfile.name}</span>
-                      <span className="sa-header__role">{userProfile.role || "Super Admin"}</span>
                     </div>
                   </button>
 

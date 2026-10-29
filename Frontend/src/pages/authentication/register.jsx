@@ -8,19 +8,23 @@ import { Card, CardContent } from "../../components/ui/Card";
 import "./register.css";
 
 /* ── Inline dropdown for Register page (CSS: register.css .reg-select-*) ── */
-function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, wrapperClass = '', triggerClass = '' }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
+  const selected = safeOptions.find(o =>
+    String(o.value) === String(value) ||
+    (o.code && String(o.code).toLowerCase() === String(value).toLowerCase()) ||
+    (o.name && String(o.name).toLowerCase() === String(value).toLowerCase())
+  );
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className={`reg-select-wrap${isOpen ? ' reg-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`} title={selected?.fullName || selected?.label || ""}>
+    <div className={`reg-select-wrap ${wrapperClass} ${isOpen ? 'reg-select-wrap--open is-open' : ''}`} ref={ref} style={isOpen ? { position: 'relative', zIndex: 99999 } : {}}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger ${triggerClass} ${isOpen ? 'reg-select-trigger--open' : ''}`} title={selected?.fullName || selected?.label || ""}>
         {Icon && <span className="reg-select-icon">{Icon}</span>}
         <span className="reg-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -28,7 +32,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
       {isOpen && (
         <div className="reg-select-dropdown">
           {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
+            const isSel = String(opt.value) === String(value) || (selected && opt.value === selected.value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`} title={opt.fullName || opt.label}>
                 <span className="reg-select-option-label">{opt.label}</span>
@@ -1090,7 +1094,7 @@ function Register() {
         ) : (
           <form onSubmit={handleSubmit}>
             {/* ── Select Role ── */}
-            <div className="role-select-container">
+            <div className="role-select-container" style={{ position: "relative", zIndex: 100 }}>
               <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
               <RegSelect
                 value={role}
@@ -1109,8 +1113,8 @@ function Register() {
             {/* ── STUDENT ROLE FIELDS ── */}
             {role === "Student" && (
               <div key="Student">
-                {/* Row 1: Full Name | College ID | Mobile Number */}
-                <div className="form-grid-student-row1">
+                {/* Row 1: Full Name | College ID */}
+                <div className="form-grid-2">
                   <div className="input-group">
                     <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
                     <input
@@ -1135,23 +1139,25 @@ function Register() {
                       onChange={handleChange}
                     />
                   </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      required
-                      placeholder="Mobile number"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
-                    />
-                  </div>
                 </div>
 
-                {/* Row 2: College Email & Inline 6-Digit OTP Code */}
+                {/* Row 2: Department (Full Width ~420px so long department names are completely visible) */}
+                <div className="input-group" style={{ marginBottom: "11px", position: 'relative', zIndex: 25 }}>
+                  <FieldLabel icon={Icons.dept}>Department</FieldLabel>
+                  <RegSelect
+                    value={formData.department}
+                    wrapperClass="reg-select reg-select-department"
+                    options={deptOptions}
+                    onChange={(val) => setFormData({ ...formData, department: val })}
+                    placeholder={
+                      deptOptions.length > 0
+                        ? "Select Department"
+                        : "No departments found"
+                    }
+                  />
+                </div>
+
+                {/* Row 3: College Email & Inline 6-Digit OTP Code */}
                 <div className="input-group" style={{ marginBottom: "11px" }}>
                   {emailVerified ? (
                     <div className="input-group" style={{ marginBottom: 0 }}>
@@ -1272,22 +1278,20 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Department | Year | Division */}
-                <div className="form-grid-student-row3">
+                {/* Row 4: Mobile No. | Year | Division */}
+                <div className="form-grid-3 form-grid-student-mobile-yr-div" style={{ position: 'relative', zIndex: 15 }}>
                   <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Department</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder={
-                        !formData.email || !formData.email.includes("@")
-                          ? "Enter college email first"
-                          : deptOptions.length > 0
-                            ? "Select Dept"
-                            : "No departments found"
-                      }
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      required
+                      placeholder="Mobile number"
+                      value={formData.mobile_number}
+                      onChange={handleChange}
+                      maxLength={10}
+                      className="reg-input-mobile"
                     />
                   </div>
 

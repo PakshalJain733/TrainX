@@ -1503,10 +1503,11 @@ export const getMentorProfile = async (req, res, next) => {
 
     const rows = await query(
       `SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.gender, u.city,
-              u.department, u.employee_id, u.office_location, u.experience,
+              u.department, u.department_id, u.current_year, u.area_of_expertise,
               u.specialization, u.avatar_url, u.bio,
               u.target_track, u.is_active, u.created_at,
               c.id AS college_id, c.name AS college_name, c.code AS college_code,
+              d.name AS department_name, d.code AS department_code,
               (SELECT COUNT(*) FROM mentor_student_assignments msa WHERE msa.mentor_id = u.id) AS assigned_students,
               (SELECT COUNT(DISTINCT COALESCE(msa.batch_id, s.batch_id))
                  FROM mentor_student_assignments msa
@@ -1514,6 +1515,7 @@ export const getMentorProfile = async (req, res, next) => {
                 WHERE msa.mentor_id = u.id) AS assigned_batches
          FROM users u
          LEFT JOIN colleges c ON c.id = u.college_id
+         LEFT JOIN departments d ON (u.department_id = d.id OR (u.college_id = d.college_id AND (LOWER(TRIM(u.department)) = LOWER(TRIM(d.code)) OR LOWER(TRIM(u.department)) = LOWER(TRIM(d.name)))))
         WHERE u.id = ?`,
       [mentorId]
     );
@@ -1566,16 +1568,20 @@ export const getMentorProfile = async (req, res, next) => {
       mobile: row.mobile_number || null,
       mobile_number: row.mobile_number || null,
       role: row.role || 'Mentor',
-      department: row.department || null,
+      department: row.department_code || row.department || null,
+      department_id: row.department_id || null,
+      department_code: row.department_code || null,
+      departmentCode: row.department_code || null,
+      department_name: row.department_name || row.department || null,
+      departmentName: row.department_name || row.department || null,
       gender: row.gender || null,
       city: row.city || null,
       targetTrack: row.target_track || null,
       specialization: row.specialization || row.target_track || 'Full Stack Development',
-      employee_id: row.employee_id || null,
-      empId: row.employee_id || null,
-      office_location: row.office_location || null,
-      officeLocation: row.office_location || null,
-      experience: row.experience || '5+ Years',
+      current_year: row.current_year || 'Final Year (2026)',
+      currentYear: row.current_year || 'Final Year (2026)',
+      area_of_expertise: row.area_of_expertise || row.specialization || 'Full Stack Development',
+      areaOfExpertise: row.area_of_expertise || row.specialization || 'Full Stack Development',
       avatar_url: row.avatar_url || null,
       avatarUrl: row.avatar_url || null,
       bio: row.bio || null,
@@ -1613,27 +1619,31 @@ export const updateMentorProfile = async (req, res, next) => {
       phone,
       mobile_number,
       department,
+      department_id,
+      departmentId,
+      current_year,
+      currentYear,
+      area_of_expertise,
+      areaOfExpertise,
       specialization,
-      employee_id,
-      empId,
-      office_location,
-      officeLocation,
-      experience,
       avatar_url,
       avatarUrl,
       bio,
     } = req.body;
+
+    const expertise = area_of_expertise || areaOfExpertise || specialization;
+    const yearVal = current_year || currentYear;
 
     const payload = {
       name,
       email,
       mobile_number: mobile_number || phone,
       department,
-      specialization,
-      target_track: specialization,
-      employee_id: employee_id || empId,
-      office_location: office_location || officeLocation,
-      experience,
+      department_id: department_id || departmentId,
+      current_year: yearVal,
+      area_of_expertise: expertise,
+      specialization: expertise,
+      target_track: expertise,
       avatar_url: avatar_url || avatarUrl,
       bio,
       is_profile_updated: true,

@@ -80,7 +80,14 @@ export default function CoordinatorProfilePage() {
         if (Array.isArray(list) && list.length > 0) {
           const opts = list.map((d) => {
             const code = (d.code && d.code.trim()) || d.name;
-            return { value: code, label: code };
+            const name = (d.name && d.name.trim()) || code;
+            return {
+              id: d.id,
+              value: code,
+              label: code,
+              code: code,
+              name: name,
+            };
           });
           setDeptOptions(opts);
         }
@@ -193,6 +200,7 @@ export default function CoordinatorProfilePage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const matchedDept = deptOptions.find(d => d.value === form.department || d.code === form.department || d.name === form.department);
     try {
       await apiFetch("/admin/profile", {
         method: "PUT",
@@ -201,8 +209,24 @@ export default function CoordinatorProfilePage() {
           email: form.email,
           phone: form.phone,
           department: form.department,
+          department_id: matchedDept?.id || form.department_id || null,
         }),
       });
+
+      let localUser = {};
+      try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"); } catch {}
+      const updatedUser = {
+        ...localUser,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        department: form.department,
+        department_id: matchedDept?.id || form.department_id || localUser.department_id,
+      };
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("coordinatorProfile", JSON.stringify(updatedUser));
+      localStorage.setItem("coordinatorProfile", JSON.stringify(updatedUser));
 
       window.dispatchEvent(new Event("userProfileUpdated"));
 
@@ -275,12 +299,8 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip">
-              <ShieldCheck size={14} />
-              <strong>{form.role}</strong>
-            </div>
 
-            <div className="profile-badges-wrap">
+            <div className="profile-badges-wrap" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Badge variant="success">Active Coordinator</Badge>
               <Badge variant="default">{form.department || "Engineering"}</Badge>
             </div>

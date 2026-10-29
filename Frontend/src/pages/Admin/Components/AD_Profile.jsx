@@ -4,6 +4,7 @@ import { Check, User, Camera, Mail, Phone, Building, Briefcase, CheckCircle2, Sa
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_Profile.css";
 
 export default function AdminProfile() {
@@ -38,6 +39,30 @@ export default function AdminProfile() {
     notifWeeklyReport: true,
     notifNewUsers: true,
   });
+
+  const [deptOptions, setDeptOptions] = useState([]);
+
+  useEffect(() => {
+    apiFetch("/departments")
+      .then((res) => {
+        const list = res?.data || res || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const opts = list.map((d) => {
+            const code = (d.code && d.code.trim()) || d.name;
+            const name = (d.name && d.name.trim()) || code;
+            return {
+              id: d.id,
+              value: code,
+              label: code,
+              code: code,
+              name: name,
+            };
+          });
+          setDeptOptions(opts);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const loadProfile = async () => {
     try {
@@ -263,12 +288,8 @@ export default function AdminProfile() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip" style={{ marginBottom: '6px' }}>
-              <ShieldCheck size={14} />
-              <strong>{form.role}</strong>
-            </div>
 
-            <div className="profile-badges-wrap" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="profile-badges-wrap" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Badge variant="default">
                 {(form.college && form.college.match(/\(([^)]+)\)/)?.[1]) || (form.college && form.college.length <= 15 ? form.college : form.college?.split(' ')[0]) || "PVPPCOE"}
               </Badge>
@@ -430,13 +451,16 @@ export default function AdminProfile() {
 
               <div className="profile-field">
                 <label className="profile-label">Department</label>
-                <input
-                  type="text"
-                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
+                <CustomSelect
                   value={form.department}
-                  onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
-                  readOnly={!isEditing}
+                  options={deptOptions}
                   disabled={!isEditing}
+                  onChange={(val) => {
+                    const matched = deptOptions.find(d => d.value === val || d.code === val || d.name === val);
+                    setForm((p) => ({ ...p, department: val, department_id: matched?.id || p.department_id }));
+                  }}
+                  placeholder="Select Department"
+                  icon={Building}
                 />
               </div>
 

@@ -885,7 +885,6 @@ export const updateAdminProfile = async (req, res, next) => {
     // Self-service profile edits may never change role, college or activation state
     const updates = pickUserUpdateFields(req.body);
     delete updates.is_active;
-    delete updates.department_id;
     delete updates.batch_id;
     delete updates.roll_number;
     const updated = await updateUserModel(userId, updates);

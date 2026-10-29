@@ -114,6 +114,55 @@
     z-index: 5;
 }
 
+/* Department dropdown: Full width (~420px) so even long names like ECS / AIDS are completely visible */
+.reg-select-department {
+    width: 100% !important;
+}
+
+.reg-select-department .reg-select-trigger {
+    width: 100% !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+}
+
+.reg-select-department .reg-select-text {
+    flex: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+}
+
+/* Student Row 4: Mobile Number, Year, Division (3 columns) */
+.form-grid-student-mobile-yr-div {
+    display: grid !important;
+    grid-template-columns: 1.35fr 0.85fr 0.85fr !important;
+    gap: 8px !important;
+    position: relative !important;
+    z-index: 8 !important;
+    margin-bottom: 11px !important;
+}
+
+.form-grid-student-mobile-yr-div .input-group {
+    margin-bottom: 0 !important;
+}
+
+.form-grid-student-mobile-yr-div input,
+.form-grid-student-mobile-yr-div .reg-select-trigger,
+.reg-input-mobile {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
+    box-sizing: border-box !important;
+}
+
 /* 3-column grid for Mobile / Year / Division (when Dept is omitted) */
 .form-grid-3 {
     display: grid;
@@ -160,13 +209,21 @@
 
 .role-select-container {
     margin-bottom: 12px;
-    position: relative;
-    z-index: 10;
+    position: relative !important;
+    z-index: 100 !important;
 }
 
-.input-group:has(.is-open) {
-    position: relative;
-    z-index: 50 !important;
+.role-select-container:has(.reg-select-wrap--open),
+.role-select-container:has(.is-open),
+.role-select-container.is-open,
+.input-group:has(.reg-select-wrap--open),
+.input-group:has(.is-open),
+.form-grid-student-mobile-yr-div:has(.reg-select-wrap--open),
+.form-grid-student-mobile-yr-div:has(.is-open),
+.form-grid-2:has(.reg-select-wrap--open),
+.form-grid-2:has(.is-open) {
+    position: relative !important;
+    z-index: 99999 !important;
 }
 
 /* Select wrapper for inline dropdowns (Dept, Year, Div, Sem) */
@@ -1359,19 +1416,19 @@
 }
 
 .reg-select-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    width: 100%;
-    max-height: 180px;
-    overflow-y: auto;
-    background: #ffffff;
-    border: 1.5px solid #e0e7ff;
-    border-radius: 12px;
-    box-shadow: 0 10px 28px -4px rgba(15, 23, 42, 0.13), 0 4px 10px -2px rgba(79, 70, 229, 0.08);
-    z-index: 99999;
-    padding: 5px;
-    box-sizing: border-box;
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-height: 220px !important;
+    overflow-y: auto !important;
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    z-index: 999999 !important;
+    padding: 6px !important;
+    box-sizing: border-box !important;
     animation: regSelectFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 @keyframes regSelectFadeIn {
@@ -2254,4 +2311,3 @@
   cursor: not-allowed;
   box-shadow: none;
 }
-

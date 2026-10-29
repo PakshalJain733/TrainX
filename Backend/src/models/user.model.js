@@ -84,9 +84,8 @@ const SAFE_USER_FIELDS = [
   'is_verified',
   'is_approved',
   'is_profile_updated',
-  'employee_id',
-  'office_location',
-  'experience',
+  'current_year',
+  'area_of_expertise',
   'specialization',
   'avatar_url',
   'bio',
@@ -810,11 +809,10 @@ export const updateUserModel = async (id, data) => {
     two_factor_secret,
     two_factor_enabled,
     two_factor_reset,
-    employee_id,
-    empId,
-    office_location,
-    officeLocation,
-    experience,
+    current_year,
+    currentYear,
+    area_of_expertise,
+    areaOfExpertise,
     specialization,
     avatar_url,
     avatarUrl,
@@ -833,9 +831,8 @@ export const updateUserModel = async (id, data) => {
   const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
   const trackVal = target_track !== undefined ? target_track : (track !== undefined ? track : null);
   const specVal = specialization !== undefined ? specialization : (trackVal || null);
-  const empIdVal = employee_id !== undefined ? employee_id : (empId !== undefined ? empId : null);
-  const officeLocVal = office_location !== undefined ? office_location : (officeLocation !== undefined ? officeLocation : null);
-  const expVal = experience !== undefined ? experience : null;
+  const currentYearVal = data.current_year !== undefined ? data.current_year : (data.currentYear !== undefined ? data.currentYear : null);
+  const areaOfExpVal = data.area_of_expertise !== undefined ? data.area_of_expertise : (data.areaOfExpertise !== undefined ? data.areaOfExpertise : (specVal || null));
   const avatarVal = avatar_url !== undefined ? avatar_url : (avatarUrl !== undefined ? avatarUrl : null);
   const bioVal = bio !== undefined ? bio : null;
 
@@ -849,8 +846,57 @@ export const updateUserModel = async (id, data) => {
   const isApprovedVal = is_approved !== undefined ? (is_approved ? 1 : 0) : null;
   const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : null;
 
-  const deptVal = department !== undefined ? (department || null) : null;
-  const deptIdVal = department_id !== undefined ? (department_id ? parseInt(department_id, 10) : null) : null;
+  // Resolve user current state from DB
+  const [currentUserRow] = await query('SELECT id, role, college_id, department, department_id FROM users WHERE id = ?', [numId]);
+  const effectiveRole = String(roleVal || currentUserRow?.role || '').toLowerCase();
+  const effectiveCollegeId = validCollegeId || currentUserRow?.college_id || 1;
+
+  let resolvedDeptId = department_id !== undefined ? (department_id ? parseInt(department_id, 10) : null) : (currentUserRow?.department_id || null);
+  let resolvedDeptVal = department !== undefined ? (department || null) : (currentUserRow?.department || null);
+  let resolvedDeptCode = null;
+  let resolvedDeptName = null;
+
+  if (department !== undefined || department_id !== undefined) {
+    const searchVal = department !== undefined && department !== null ? String(department).trim() : null;
+    const searchId = department_id !== undefined && department_id !== null && department_id !== '' ? parseInt(department_id, 10) : null;
+
+    if (searchId || searchVal) {
+      const deptRows = await query(
+        `SELECT id, name, code, college_id FROM departments
+         WHERE (college_id = ? OR college_id IS NULL)
+           AND (
+             (? IS NOT NULL AND id = ?)
+             OR (? IS NOT NULL AND (
+               code = ? OR name = ?
+               OR LOWER(TRIM(code)) = LOWER(TRIM(?))
+               OR LOWER(TRIM(name)) = LOWER(TRIM(?))
+               OR LOWER(TRIM(code)) LIKE LOWER(CONCAT('%', ?, '%'))
+               OR LOWER(TRIM(name)) LIKE LOWER(CONCAT('%', ?, '%'))
+             ))
+           )
+         ORDER BY (college_id = ?) DESC, id ASC LIMIT 1`,
+        [
+          effectiveCollegeId,
+          searchId, searchId,
+          searchVal, searchVal, searchVal, searchVal, searchVal, searchVal, searchVal,
+          effectiveCollegeId
+        ]
+      );
+      if (deptRows && deptRows.length > 0) {
+        const d = deptRows[0];
+        resolvedDeptId = d.id;
+        resolvedDeptCode = d.code;
+        resolvedDeptName = d.name;
+        if (searchVal && searchVal.toLowerCase() === (d.name || '').toLowerCase()) {
+          resolvedDeptVal = d.name;
+        } else if (searchVal && searchVal.toLowerCase() === (d.code || '').toLowerCase()) {
+          resolvedDeptVal = d.code;
+        } else {
+          resolvedDeptVal = d.code || d.name;
+        }
+      }
+    }
+  }
 
   await query(
     `UPDATE users SET
@@ -870,21 +916,20 @@ export const updateUserModel = async (id, data) => {
        emergency_contact = COALESCE(?, emergency_contact),
        target_track = COALESCE(?, target_track),
        is_profile_updated = COALESCE(?, is_profile_updated),
-       employee_id = COALESCE(?, employee_id),
-       office_location = COALESCE(?, office_location),
-       experience = COALESCE(?, experience),
+       current_year = COALESCE(?, current_year),
+       area_of_expertise = COALESCE(?, area_of_expertise),
        specialization = COALESCE(?, specialization),
        avatar_url = COALESCE(?, avatar_url),
        bio = COALESCE(?, bio)
      WHERE id = ?`,
-    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, deptVal, deptIdVal, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal || specVal, isProfileUpdatedVal, empIdVal, officeLocVal, expVal, specVal, avatarVal, bioVal, numId]
+    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, resolvedDeptVal, resolvedDeptId, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal || specVal, isProfileUpdatedVal, currentYearVal, areaOfExpVal, areaOfExpVal || specVal, avatarVal, bioVal, numId]
   );
 
-  if (deptIdVal && (roleVal === 'coordinator' || (!roleVal && data.role === 'coordinator'))) {
+  if (resolvedDeptId && (effectiveRole === 'coordinator' || effectiveRole.includes('coordinator'))) {
     try {
       await query(
         'INSERT INTO coordinator_departments (coordinator_id, department_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE department_id = VALUES(department_id)',
-        [numId, deptIdVal]
+        [numId, resolvedDeptId]
       );
     } catch (_) { }
   }
@@ -905,22 +950,8 @@ export const updateUserModel = async (id, data) => {
     } catch (_) { }
   }
 
-  if (
-    rollVal !== undefined ||
-    department !== undefined ||
-    department_id !== undefined ||
-    batch_id !== undefined ||
-    year !== undefined ||
-    division !== undefined ||
-    semester !== undefined ||
-    cgpa !== undefined ||
-    skills !== undefined ||
-    genderVal !== null ||
-    cityVal !== null ||
-    emergencyVal !== null ||
-    trackVal !== null ||
-    is_profile_updated !== undefined
-  ) {
+  // Only manage students table if this user is actually a student!
+  if (effectiveRole === 'student') {
     const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
     if (existing && existing.length > 0) {
       try {
@@ -946,10 +977,10 @@ export const updateUserModel = async (id, data) => {
           [
             rollVal,
             phoneVal,
-            validCollegeId,
-            department_id || null,
+            effectiveCollegeId,
+            resolvedDeptId,
             batch_id || null,
-            department || null,
+            resolvedDeptVal,
             year || null,
             division || null,
             semester || null,
@@ -984,10 +1015,10 @@ export const updateUserModel = async (id, data) => {
            WHERE user_id = ?`,
           [
             rollVal,
-            validCollegeId,
-            department_id || null,
+            effectiveCollegeId,
+            resolvedDeptId,
             batch_id || null,
-            department || null,
+            resolvedDeptVal,
             year || null,
             division || null,
             semester || null,
@@ -1008,14 +1039,14 @@ export const updateUserModel = async (id, data) => {
           `INSERT INTO students 
             (user_id, college_id, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', phoneVal, department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          [numId, effectiveCollegeId, resolvedDeptId, batch_id || null, rollVal || '', phoneVal, resolvedDeptVal || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
         );
       } catch (_) {
         await query(
           `INSERT INTO students 
             (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          [numId, effectiveCollegeId, resolvedDeptId, batch_id || null, rollVal || '', resolvedDeptVal || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
         );
       }
     }
@@ -1024,6 +1055,10 @@ export const updateUserModel = async (id, data) => {
   return {
     id: numId,
     ...data,
+    department: resolvedDeptVal,
+    department_id: resolvedDeptId,
+    departmentCode: resolvedDeptCode,
+    departmentName: resolvedDeptName,
     gender: genderVal,
     city: cityVal,
     emergency_contact: emergencyVal,

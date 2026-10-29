@@ -567,7 +567,6 @@ export default function AdminLayout() {
                     </div>
                     <div className="admin-header__user-info">
                       <span className="admin-header__name">{user.name || "Admin User"}</span>
-                      <span className="admin-header__role">{user.role || "Admin"}</span>
                     </div>
                   </button>
 
