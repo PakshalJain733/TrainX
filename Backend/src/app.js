@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -116,6 +117,9 @@ app.options('*', (req, res) => {
   res.status(204).end();
 });
 
+// HTTP Payload Compression (Gzip / Brotli) - reduces network payload by 70%+
+app.use(compression());
+
 // Production Security Headers via Helmet
 app.use(
   helmet({
@@ -134,7 +138,12 @@ app.use(apiMetricsMiddleware);
 // Security Rate Limiters (skip preflight OPTIONS and preserve CORS headers on 429)
 export const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 1000, // Limit each client IP to 1000 auth requests per windowMs
+  max: 3000, // High-concurrency headroom for campus Wi-Fi / NAT gateways
+  keyGenerator: (req) => {
+    // Key by email/token when available so students on shared campus IP don't lock each other out
+    return req.body?.email || (req.headers.authorization ? req.headers.authorization.slice(-16) : req.ip);
+  },
+  validate: { xForwardedForHeader: false },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.method === 'OPTIONS',

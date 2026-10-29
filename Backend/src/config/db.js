@@ -21,8 +21,10 @@ export const pool = mysql.createPool({
   password: dbPassword,
   database: dbName,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '40', 10),
+  queueLimit: parseInt(process.env.DB_QUEUE_LIMIT || '500', 10),
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   ...(dbSsl ? { ssl: dbSsl } : {}),
   connectTimeout: connectTimeout,
 });
@@ -62,6 +64,25 @@ export const checkDatabaseConnection = async () => {
     } catch (migErr) {
       console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
     }
+
+    // Auto-create essential performance indexes for 500+ concurrent users
+    try {
+      const performanceIndexes = [
+        { table: 'assessment_attempts', name: 'idx_perf_attempts_user_assessment', sql: 'CREATE INDEX idx_perf_attempts_user_assessment ON assessment_attempts (user_id, assessment_id, status)' },
+        { table: 'attendance', name: 'idx_perf_attendance_batch_date', sql: 'CREATE INDEX idx_perf_attendance_batch_date ON attendance (batch_id, session_date)' },
+        { table: 'users', name: 'idx_perf_users_role_active', sql: 'CREATE INDEX idx_perf_users_role_active ON users (role, is_active, college_id)' },
+        { table: 'practice_problems', name: 'idx_perf_practice_college_batch', sql: 'CREATE INDEX idx_perf_practice_college_batch ON practice_problems (college_id, batch_id)' },
+      ];
+      for (const idx of performanceIndexes) {
+        try {
+          const existingIdx = await query(`SHOW INDEX FROM \`${idx.table}\` WHERE Key_name = ?`, [idx.name]);
+          if (!existingIdx || existingIdx.length === 0) {
+            await query(idx.sql);
+            console.log(`[Database Migration] Created performance index ${idx.name} on ${idx.table}.`);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
 
     return true;
   } catch (error) {

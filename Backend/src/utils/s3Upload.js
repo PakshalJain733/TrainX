@@ -27,11 +27,23 @@ uploadDirs.forEach((dir) => {
 export const primaryUploadDir = uploadDirs[0];
 
 // Configure Multer Memory Storage for safe validation and streaming to local disk
-const storage = multer.memoryStorage();
+// High-concurrency disk storage streams chunks directly to disk instead of filling Node heap memory
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, primaryUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const originalName = file.originalname || 'file';
+    const fileExtension = path.extname(originalName) || '';
+    const baseNameWithoutExt = path.basename(originalName, fileExtension).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const localFileName = `${Date.now()}_${baseNameWithoutExt}${fileExtension}`;
+    cb(null, localFileName);
+  },
+});
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max limit
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max limit (prevents memory and disk exhaustion)
   fileFilter: (req, file, cb) => {
     // Allow documents, presentations, spreadsheets, archives, images, videos, audio, and code
     cb(null, true);
@@ -47,6 +59,23 @@ export const upload = multer({
  */
 export const uploadFileToStorage = async (file) => {
   if (!file) return null;
+
+  // Direct diskStorage efficiency: file is already safely streamed to primaryUploadDir
+  if (file.filename) {
+    uploadDirs.forEach((dir) => {
+      if (dir !== primaryUploadDir) {
+        try {
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const src = path.join(primaryUploadDir, file.filename);
+          const dest = path.join(dir, file.filename);
+          if (fs.existsSync(src) && !fs.existsSync(dest)) {
+            fs.copyFileSync(src, dest);
+          }
+        } catch (_) {}
+      }
+    });
+    return `/uploads/${file.filename}`;
+  }
 
   // Clean the original filename to be URL-safe while preserving extension
   const originalName = file.originalname || 'file';

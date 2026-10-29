@@ -98,7 +98,7 @@ let dockerProbeAt = 0;
 const DOCKER_PROBE_TTL_MS = 30000;
 
 const probeDocker = () =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     execFile(getDockerBinary(), ['version', '--format', '{{.Server.Version}}'], { timeout: 5000 }, (err, stdout) => {
       if (!err && stdout && stdout.trim()) resolve(true);
       else resolve(false);
@@ -127,15 +127,20 @@ export const compilerUnavailableError = () => {
 
 // Concurrency cap: each run boots a container, so limit how many can be in
 // flight at once to protect the host from unbounded `docker run` spawns.
-const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10));
+const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '12', 10));
 let activeRuns = 0;
 const runWaiters = [];
+const MAX_WAITING_RUNS = Math.max(50, parseInt(process.env.CODE_RUNNER_MAX_QUEUE || '200', 10));
 
 const acquireRunSlot = () =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     if (activeRuns < MAX_CONCURRENT_RUNS) {
       activeRuns += 1;
       resolve();
+    } else if (runWaiters.length >= MAX_WAITING_RUNS) {
+      const err = new Error('Compiler queue is at peak capacity. Please retry your submission in a moment.');
+      err.statusCode = 429;
+      reject(err);
     } else {
       runWaiters.push(resolve);
     }

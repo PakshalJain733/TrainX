@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { appCache } from '../utils/simpleCache.js';
 import { ROLES } from '../utils/constants.js';
 
 // Pre-seeded fallback dataset representing diverse students across colleges, departments, and batches
@@ -109,6 +110,14 @@ export const applyStandardTieRanking = (items, scoreKey = 'score', timeKey = 'to
  * Fetch raw student performance data from MySQL DB or Fallback Data
  */
 export const getStudentsRawPerformance = async (filters = {}) => {
+  const { college_id, department_id, batch_id, mentor_id, mentor_name } = filters;
+  const cacheKey = `raw_perf_${college_id || '0'}_${department_id || '0'}_${batch_id || '0'}_${mentor_id || '0'}_${mentor_name || ''}`;
+  return appCache.getOrSet(cacheKey, 30, async () => {
+    return await executeStudentsRawPerformance(filters);
+  });
+};
+
+const executeStudentsRawPerformance = async (filters = {}) => {
   const { college_id, department_id, batch_id, mentor_id, mentor_name, mentor_email } = filters;
 
   try {
