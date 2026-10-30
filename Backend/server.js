@@ -11,8 +11,22 @@ import http from 'node:http';
 const startServer = async () => {
   try {
     // Check DB connection and auto-initialize tables on startup
-    await checkDatabaseConnection();
-    await initializeDatabase();
+    try {
+      await checkDatabaseConnection();
+      await initializeDatabase();
+    } catch (dbErr) {
+      console.error('Initial database connection warning:', dbErr.message);
+      console.log('Server will continue starting to serve CORS and health check endpoints. Retrying DB in background...');
+      setTimeout(async () => {
+        try {
+          await checkDatabaseConnection();
+          await initializeDatabase();
+          console.log('Background database initialization succeeded.');
+        } catch (retryErr) {
+          console.error('Background DB retry error:', retryErr.message);
+        }
+      }, 5000);
+    }
 
     // Trigger reload: 2026-10-19
     const PORT = process.env.PORT || 5000;
@@ -23,18 +37,18 @@ const startServer = async () => {
 
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`==================================================`);
-      console.log(`🚀 Training Portal Backend Server running on port ${PORT}`);
-      console.log(`📡 Environment: ${NODE_ENV}`);
-      console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
-      console.log(`🔌 Socket.IO interview namespace: /interviews`);
+      console.log(`Training Portal Backend Server running on port ${PORT}`);
+      console.log(`Environment: ${NODE_ENV}`);
+      console.log(`Health Check: http://localhost:${PORT}/api/v1/health`);
+      console.log(`Socket.IO interview namespace: /interviews`);
       console.log(`==================================================`);
     });
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${PORT} is already in use by another process.`);
+        console.error(`Port ${PORT} is already in use by another process.`);
       } else {
-        console.error(`❌ Server error: ${err.message}`);
+        console.error(`Server error: ${err.message}`);
       }
     });
 
@@ -46,7 +60,7 @@ const startServer = async () => {
       console.error('[Uncaught Exception]:', err);
     });
   } catch (error) {
-    console.error(`❌ Fatal Startup Error: ${error.message}`);
+    console.error(`Fatal Startup Error: ${error.message}`);
     process.exit(1);
   }
 };

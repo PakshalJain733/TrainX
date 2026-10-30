@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../config/jwt.js';
+import { socketCorsConfig } from '../config/cors.js';
 import {
   generateOpeningQuestion,
   generateFollowUpQuestion,
@@ -158,12 +159,11 @@ async function finalizeSession(io, socket, session, reason = 'completed', explic
 
 export function initInterviewSocket(httpServer) {
   const io = new Server(httpServer, {
-    cors: {
-      origin: true,
-      credentials: true,
-      methods: ['GET', 'POST'],
-    },
+    cors: socketCorsConfig,
     path: '/socket.io',
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   const interviews = io.of('/interviews');
