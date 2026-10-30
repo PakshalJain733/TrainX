@@ -44,33 +44,28 @@ export const fetchSuperAdminNotifications = async () => {
       });
     });
 
-    // 2. Pending user registrations alert
+    // 2. Pending Admin user registrations alert
     const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
       ? pendingRes.data
       : (Array.isArray(pendingRes) ? pendingRes : []);
 
-    const pendingCount = rawPending.filter((u) => {
-      return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-             u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-    }).length;
-
-    if (pendingCount > 0) {
+    rawPending.forEach((u) => {
       notifItems.push({
-        id: 'pending-users-approval-alert',
-        title: `⚠️ ${pendingCount} User Registration(s) Pending Approval`,
-        desc: `New user account(s) have registered and are waiting for administrator review and approval.`,
-        message: `New user account(s) have completed registration & 2FA setup and are waiting for administrator review and approval.`,
-        time: 'Action Required',
+        id: `pending-admin-user-${u.id}`,
+        title: `👤 Admin Approval Needed: ${u.name}`,
+        desc: `${u.name} (${u.college_name || 'College Admin'}) has completed registration and awaits account approval.`,
+        message: `${u.name} (${u.email || u.mobile_number || 'N/A'}) registered as ${String(u.role || '').toUpperCase()} at ${u.college_name || 'Institution'}. Action required: Review and approve or reject this administrator.`,
+        time: u.created_at ? new Date(u.created_at).toLocaleString() : 'Action Required',
         unread: true,
         type: 'alert',
         target: 'Super Admin',
         priority: 'High Priority',
-        created_by_name: 'Registration System',
+        created_by_name: u.name,
         actionUrl: '/super-admin/approve-users',
-        actionLabel: 'Review & Approve Users →',
+        actionLabel: 'Review & Approve →',
         actionColor: '#d97706',
       });
-    }
+    });
 
     // 3. Broadcast announcements
     if (broadcastRes && broadcastRes.data && Array.isArray(broadcastRes.data) && broadcastRes.data.length > 0) {
@@ -658,6 +653,7 @@ export default function SuperAdminLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}

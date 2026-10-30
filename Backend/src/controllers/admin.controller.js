@@ -420,6 +420,16 @@ export const createUserAdmin = async (req, res, next) => {
 
     let studentProfile = null;
     if (canonicalRole === ROLES.STUDENT) {
+      const cleanYear = String(year || 'FE').toUpperCase().trim();
+      let defaultSem = '1';
+      if (cleanYear === 'FE') defaultSem = '1';
+      else if (cleanYear === 'SE') defaultSem = '3';
+      else if (cleanYear === 'TE') defaultSem = '5';
+      else if (cleanYear === 'BE') defaultSem = '7';
+
+      let finalSem = semester ? String(semester).replace(/^[^\d]*/, '').trim() : '';
+      if (!finalSem) finalSem = defaultSem;
+
       studentProfile = await saveStudentDetails({
         user_id: newUser.id,
         college_id: targetCollegeId,
@@ -427,9 +437,9 @@ export const createUserAdmin = async (req, res, next) => {
         batch_id: batch_id ? parseInt(batch_id, 10) : null,
         roll_number: roll_number || `AUTO_${newUser.id}`,
         department: validatedDeptName,
-        year: year || 'TE',
+        year: year || 'FE',
         division: division || 'A',
-        semester: semester || 'Semester 6',
+        semester: finalSem,
         cgpa: cgpa || '8.5',
         skills: skills || '',
       });

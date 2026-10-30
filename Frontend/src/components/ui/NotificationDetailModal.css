@@ -295,3 +295,102 @@
   background: #f1f5f9;
   color: #0f172a;
 }
+
+
+/* Meeting Notification Card Styling */
+.notif-meet-highlight-box {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif-meet-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notif-meet-label-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-meet-label {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #166534;
+}
+
+.notif-meet-code-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #bbf7d0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: #15803d;
+}
+
+.notif-meet-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  color: #16a34a;
+  border-radius: 4px;
+  transition: opacity 0.15s ease;
+}
+
+.notif-meet-copy-btn:hover {
+  opacity: 0.8;
+}
+
+.notif-meet-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-meet-url-text {
+  font-size: 12px;
+  color: #475569;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  word-break: break-all;
+}
+
+.notif-meet-join-btn {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  padding: 8px 16px !important;
+  border-radius: 9px !important;
+  font-weight: 700 !important;
+  font-size: 12.5px !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+
+.notif-meet-join-btn:hover {
+  background: #15803d !important;
+  transform: translateY(-1px);
+}

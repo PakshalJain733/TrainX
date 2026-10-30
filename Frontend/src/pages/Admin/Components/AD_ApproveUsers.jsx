@@ -35,11 +35,7 @@ export default function AD_ApproveUsers() {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
         // Both Super Admin and College Admin receive their respective pending users directly from the backend API
-        const verifiedOnly = res.data.filter((u) => {
-          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-        });
-        setPendingUsers(verifiedOnly);
+        setPendingUsers(res.data);
       } else {
         setPendingUsers([]);
       }

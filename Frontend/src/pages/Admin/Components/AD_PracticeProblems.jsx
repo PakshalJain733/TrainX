@@ -1518,28 +1518,122 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                   }}
                 />
 
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", flexWrap: "wrap", gap: "8px" }}>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>
+                    {viewingSubmission.feedback ? "Feedback currently saved for this student" : "Feedback will be visible on the student's dashboard"}
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleSaveFeedback(viewingSubmission.id)}
                     disabled={savingFeedback}
                     className="admin-action-btn admin-action-btn--primary"
-                    style={{ padding: "6px 14px", fontSize: "12.5px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 18px",
+                      background: savingFeedback ? "#94a3b8" : "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: savingFeedback ? "not-allowed" : "pointer",
+                      boxShadow: "0 2px 5px rgba(79, 70, 229, 0.25)",
+                      transition: "all 0.15s ease"
+                    }}
+                    onMouseEnter={(e) => { if (!savingFeedback) e.currentTarget.style.transform = "translateY(-1px)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
                   >
-                    {savingFeedback ? "Saving..." : (viewingSubmission.feedback ? "Update Feedback" : "Save Feedback (Optional)")}
+                    {savingFeedback ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    <span>{savingFeedback ? "Saving..." : (viewingSubmission.feedback ? "Update Feedback" : "Save Feedback (Optional)")}</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer" style={{ justifyContent: "flex-end", padding: "14px 20px" }}>
-              <button
-                type="button"
-                className="admin-action-btn admin-action-btn--secondary"
-                onClick={() => setViewingSubmission(null)}
-              >
-                Close
-              </button>
+            <div className="modal-footer" style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "16px 24px",
+              borderTop: "1px solid #e2e8f0",
+              background: "#f8fafc"
+            }}>
+              <div style={{ fontSize: "12.5px", color: "#64748b" }}>
+                <span>Language: <strong style={{ color: "#334155" }}>{viewingSubmission.language}</strong> • Score: <strong style={{ color: "#10b981" }}>+{viewingSubmission.score} XP</strong></span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="admin-action-btn admin-action-btn--secondary"
+                  onClick={() => setViewingSubmission(null)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 18px",
+                    background: "#ffffff",
+                    color: "#475569",
+                    border: "1.5px solid #cbd5e1",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                    transition: "all 0.15s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#f1f5f9";
+                    e.currentTarget.style.borderColor = "#94a3b8";
+                    e.currentTarget.style.color = "#0f172a";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.borderColor = "#cbd5e1";
+                    e.currentTarget.style.color = "#475569";
+                  }}
+                >
+                  <X size={15} />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveFeedback(viewingSubmission.id)}
+                  disabled={savingFeedback}
+                  className="admin-action-btn admin-action-btn--primary"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "8px 20px",
+                    background: savingFeedback ? "#94a3b8" : "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: savingFeedback ? "not-allowed" : "pointer",
+                    boxShadow: "0 2px 6px rgba(79, 70, 229, 0.25)",
+                    transition: "all 0.15s ease"
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!savingFeedback) {
+                      e.currentTarget.style.background = "linear-gradient(135deg, #4338ca 0%, #3730a3 100%)";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!savingFeedback) {
+                      e.currentTarget.style.background = "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)";
+                      e.currentTarget.style.transform = "none";
+                    }
+                  }}
+                >
+                  {savingFeedback ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                  <span>{savingFeedback ? "Saving..." : (viewingSubmission.feedback ? "Update Feedback" : "Save Feedback")}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>,

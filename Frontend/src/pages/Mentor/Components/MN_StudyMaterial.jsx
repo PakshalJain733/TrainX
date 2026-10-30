@@ -23,6 +23,7 @@ export default function StudyMaterial() {
   const [batch, setBatch] = useState("All Batches");
   const [selectedFile, setSelectedFile] = useState(null);
   const [resourceLink, setResourceLink] = useState("");
+  const [deadline, setDeadline] = useState("");
 
   const fetchBatches = async () => {
     try {
@@ -98,6 +99,7 @@ export default function StudyMaterial() {
         formData.append("batch", batch);
         formData.append("type", category);
         formData.append("link", resourceLink || "");
+        formData.append("deadline", deadline || "");
         formData.append("file", selectedFile);
 
         const res = await fetch(`${getApiBaseUrl()}/mentor/materials`, {
@@ -119,6 +121,7 @@ export default function StudyMaterial() {
             batch,
             type: category,
             link: resourceLink,
+            deadline: deadline || "",
           }),
         });
       }
@@ -128,6 +131,7 @@ export default function StudyMaterial() {
         description,
         batch,
         type: category,
+        deadline,
         url: uploadedUrl,
       });
 
@@ -413,6 +417,19 @@ export default function StudyMaterial() {
                         className="mentor-input-text"
                       />
                     </div>
+                  </div>
+
+                  {/* Task Deadline / Due Date (Optional) */}
+                  <div>
+                    <label className="mentor-form-label">
+                      Task Deadline / Due Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className="mentor-input-text"
+                    />
                   </div>
 
                   {/* Modal Footer Actions */}

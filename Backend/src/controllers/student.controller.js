@@ -245,8 +245,51 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = realLeaderboard.findIndex((s) => s.you);
     const currentRank = currentStudentIdx !== -1 ? `${realLeaderboard[currentStudentIdx].rank} / ${realLeaderboard.length}` : `1 / ${Math.max(1, realLeaderboard.length)}`;
 
-    // Fetch upcoming deadlines: prioritize practice problems and coding tasks
+    // Fetch upcoming deadlines: combine batch tasks, practice problems, and study materials
     let upcomingDeadlines = [];
+
+    // 1. Check Coursework Tasks from batch_tasks (assigned to student's batch)
+    try {
+      const studentBatchId = callerStudent?.batch_id;
+      let taskSql = `
+        SELECT bt.id, bt.title, bt.deadline, bt.topic, bt.difficulty, bt.created_at,
+               ts.status as submission_status
+        FROM batch_tasks bt
+        LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ?)
+      `;
+      const taskParams = [callerId];
+      if (studentBatchId) {
+        taskSql += ` WHERE bt.batch_id = ? OR bt.batch_id = 0 OR bt.batch_id IS NULL`;
+        taskParams.push(studentBatchId);
+      }
+      taskSql += ` ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5`;
+
+      const batchTaskRows = await query(taskSql, taskParams);
+      if (batchTaskRows && batchTaskRows.length > 0) {
+        batchTaskRows.forEach((t) => {
+          const expired = isDeadlineExpired(t.deadline);
+          const status = t.submission_status === 'submitted' 
+            ? 'Completed' 
+            : (expired ? 'Expired' : 'Pending');
+          const formattedDeadline = t.deadline 
+            ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
+            : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
+          upcomingDeadlines.push({
+            id: `task-${t.id}`,
+            title: t.title,
+            deadline: formattedDeadline,
+            dueDate: formattedDeadline,
+            status: status,
+            isExpired: expired,
+            type: t.topic || 'Batch Task',
+          });
+        });
+      }
+    } catch (taskErr) {
+      console.warn('[getStudentDashboard batch_tasks query notice]', taskErr.message);
+    }
+
+    // 2. Check Practice Problems
     try {
       const problemRows = await query(
         `SELECT id, title, due_date, difficulty FROM practice_problems 
@@ -255,36 +298,62 @@ export const getStudentDashboard = async (req, res, next) => {
         [collegeId]
       );
       if (problemRows && problemRows.length > 0) {
-        upcomingDeadlines = problemRows.map(p => {
+        problemRows.forEach((p) => {
           const expired = isDeadlineExpired(p.due_date);
-          return {
-            id: p.id,
+          const formattedDue = p.due_date 
+            ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) 
+            : 'Flexible Deadline';
+          upcomingDeadlines.push({
+            id: `problem-${p.id}`,
             title: p.title,
-            dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
+            deadline: formattedDue.startsWith('Due') ? formattedDue : `Due ${formattedDue}`,
+            dueDate: formattedDue.startsWith('Due') ? formattedDue : `Due ${formattedDue}`,
             status: expired ? 'Expired' : 'Pending',
             isExpired: expired,
             type: 'Coding Practice',
-          };
+          });
         });
       }
     } catch (e) {
       console.warn('[getStudentDashboard practice problems deadlines warning]', e.message);
     }
 
-    if (upcomingDeadlines.length === 0) {
-      try {
-        const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
-        if (materials && materials.length > 0) {
-          upcomingDeadlines = materials.map(m => ({
+    // 3. Check Uploaded Study Materials & Tasks
+    try {
+      const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
+      if (materials && materials.length > 0) {
+        materials.forEach((m) => {
+          const formattedDeadline = m.deadline
+            ? (String(m.deadline).toLowerCase().startsWith('due') ? m.deadline : `Due ${m.deadline}`)
+            : (m.created_at ? `Uploaded ${new Date(m.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
+
+          upcomingDeadlines.push({
+            id: `mat-${m.id}`,
             title: m.title,
-            dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
+            deadline: formattedDeadline,
+            dueDate: formattedDeadline,
             status: 'Published',
-          }));
-        }
-      } catch (e) {
-        console.warn('[getStudentDashboard materials query warning]', e.message);
+            isExpired: m.deadline ? isDeadlineExpired(m.deadline) : false,
+            type: m.type === 'Link' ? 'Web Link' : (m.type || 'Study Resource'),
+          });
+        });
       }
+    } catch (e) {
+      console.warn('[getStudentDashboard materials query warning]', e.message);
     }
+
+    // Deduplicate by title and cap to 5 items
+    const seenTitles = new Set();
+    const finalDeadlines = [];
+    for (const d of upcomingDeadlines) {
+      const key = (d.title || '').trim().toLowerCase();
+      if (!seenTitles.has(key)) {
+        seenTitles.add(key);
+        finalDeadlines.push(d);
+      }
+      if (finalDeadlines.length >= 5) break;
+    }
+    upcomingDeadlines = finalDeadlines;
 
     let callerUser = await findUserById(callerId);
     if (!callerUser) {
@@ -1093,35 +1162,8 @@ export const getStudentWeeklyReports = async (req, res, next) => {
       };
     });
 
-    if (formatted.length === 0) {
-      formatted = [
-        {
-          id: "week-current",
-          title: "Current Training Cycle: Week 1 Performance Evaluation",
-          week: "Week 1",
-          score: "88%",
-          overallScore: 88,
-          attendance: 96,
-          quiz: 85,
-          quizzes: 85,
-          coding: 90,
-          assignments: 90,
-          interview: 82,
-          tasks: 82,
-          milestones: "Completed all Week 1 foundation modules, solved 12 practice problems with >85% accuracy.",
-          skillGaps: ["Asynchronous Event Loop Depth", "Complex SQL Joins"],
-          strongAreas: ["Data Structures & Algorithmic Problem Solving", "Lecture Presence & Active Participation"],
-          weakAreas: ["Asynchronous Event Loop Depth", "Complex SQL Joins"],
-          nextSteps: ["Complete assigned coding tasks on time", "Practice weekly mock tests", "Schedule office hours with mentor if needed"],
-          suggestions: ["Complete assigned coding tasks on time", "Practice weekly mock tests"],
-          mentor: "Assigned Faculty Mentor",
-          date: new Date().toLocaleDateString(),
-          trendStatus: "On Track",
-        }
-      ];
-    }
-
-    return sendSuccess(res, 'Student weekly reports retrieved successfully', formatted);
+    // Return only genuinely submitted weekly reports (no hardcoded mock fallbacks)
+    return sendSuccess(res, 'Student weekly reports retrieved successfully', formatted || []);
   } catch (error) {
     next(error);
   }

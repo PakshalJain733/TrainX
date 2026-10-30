@@ -47,8 +47,9 @@ export default function WeeklyReports() {
     alert(`Downloading ${reportTitle} dossier summary (PDF)...`);
   };
 
-  const activeMentor = reports[0]?.mentor || "Assigned Faculty Mentor";
-  const activeTrend = reports[0]?.trendStatus || "On Track";
+  const hasReports = reports && reports.length > 0;
+  const activeMentor = hasReports ? (reports[0]?.mentor || "Assigned Faculty Mentor") : "Assigned Faculty Mentor";
+  const activeTrend = hasReports ? (reports[0]?.trendStatus || "On Track") : "Pending Review";
 
   return (
     <div className="weekly-reports-page stack-6">
@@ -73,12 +74,20 @@ export default function WeeklyReports() {
           <span>Current status</span>
         </div>
         <p className="weekly-status-desc">
-          Supervised by Mentor: <strong>{activeMentor}</strong> · Academic Oversight: ECS / Training Cell
+          {hasReports ? (
+            <>Supervised by Mentor: <strong>{activeMentor}</strong> · Academic Oversight: ECS / Training Cell</>
+          ) : (
+            <>Weekly evaluation scorecards submitted by your faculty mentor will appear here for each training cycle.</>
+          )}
         </p>
         <div className="weekly-status-pills">
-          <span className="weekly-track-badge">{activeTrend}</span>
+          <span className="weekly-track-badge" style={!hasReports ? { background: '#f1f5f9', color: '#64748b', border: '1.5px solid #e2e8f0' } : {}}>
+            {hasReports ? activeTrend : "Pending Mentor Review"}
+          </span>
           <span className="weekly-track-note">
-            {activeTrend === "On Track" ? "Progress aligned with target placement readiness." : "Attention recommended on highlighted skill gaps."}
+            {hasReports
+              ? (activeTrend === "On Track" ? "Progress aligned with target placement readiness." : "Attention recommended on highlighted skill gaps.")
+              : "No weekly report has been submitted by your mentor for this week yet."}
           </span>
         </div>
       </div>
@@ -91,10 +100,12 @@ export default function WeeklyReports() {
             <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Loading weekly performance dossier...</p>
           </div>
         ) : reports.length === 0 ? (
-          <div className="admin-empty-state-card" style={{ padding: '40px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <FileCheck2 size={36} className="weekly-empty-icon" />
-            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>No weekly reports available</h3>
-            <p style={{ color: '#64748b' }}>Your weekly performance reports will appear here once generated.</p>
+          <div className="admin-empty-state-card" style={{ padding: '48px 20px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1.5px dashed #cbd5e1' }}>
+            <FileCheck2 size={38} className="weekly-empty-icon" style={{ margin: '0 auto 12px auto', color: '#94a3b8' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>No Weekly Reports Available Yet</h3>
+            <p style={{ color: '#64748b', fontSize: '13px', margin: 0, maxWidth: '460px', marginInline: 'auto' }}>
+              Your weekly performance evaluations will appear here once your assigned faculty mentor completes and submits the weekly mentor evaluation form.
+            </p>
           </div>
         ) : (
           reports.map((report) => {

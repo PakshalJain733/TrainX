@@ -2222,6 +2222,32 @@ button:active:not(:disabled),
   }
 }
 
+.student-header-box {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  margin-bottom: 20px !important;
+  width: 100% !important;
+}
+
+.student-header-box.student-header-flex-row,
+.student-header-box:has(> .join-batch-header-btn),
+.student-header-box:has(> .student-header-actions) {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+}
+
+.student-header-left {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  width: 100% !important;
+}
+
 .student-header-title {
   display: flex !important;
   align-items: center !important;

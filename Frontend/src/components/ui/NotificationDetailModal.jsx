@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   X, Bell, Calendar, FileText, CheckCircle2,
-  AlertTriangle, Trash2, Check, ExternalLink, Clock, User
+  AlertTriangle, Trash2, Check, ExternalLink, Clock, User, Video, Copy
 } from "lucide-react";
 import "./NotificationDetailModal.css";
 
@@ -40,6 +40,13 @@ export default function NotificationDetailModal({
         </div>
       );
     }
+    if (titleLower.includes("meeting") || titleLower.includes("call") || t === "video" || t === "meeting") {
+      return (
+        <div className="notif-modal-icon-box notif-icon-emerald">
+          <Video size={22} />
+        </div>
+      );
+    }
     return (
       <div className="notif-modal-icon-box notif-icon-amber">
         <AlertTriangle size={22} />
@@ -47,8 +54,27 @@ export default function NotificationDetailModal({
     );
   };
 
+  const [copiedCode, setCopiedCode] = useState(false);
   const titleLower = (notification.title || "").toLowerCase();
   const isSupportTicket = titleLower.includes("ticket") || titleLower.includes("support");
+
+  const fullText = `${notification.title || ''} ${notification.message || ''} ${notification.desc || ''}`;
+  const meetUrlMatch = fullText.match(/https?:\/\/[^\s)]+/);
+  let extractedMeetUrl = meetUrlMatch ? meetUrlMatch[0] : null;
+  if (!extractedMeetUrl && notification.actionUrl && notification.actionUrl.startsWith("http")) {
+    extractedMeetUrl = notification.actionUrl;
+  }
+
+  let meetCode = null;
+  const explicitCodeMatch = fullText.match(/Meeting Code:\s*([a-zA-Z0-9-]+)/i);
+  if (explicitCodeMatch) {
+    meetCode = explicitCodeMatch[1].trim();
+  } else if (extractedMeetUrl && extractedMeetUrl.includes("meet.google.com/")) {
+    const rawCode = extractedMeetUrl.split("meet.google.com/")[1]?.split(/[?#\s]/)[0];
+    if (rawCode && rawCode !== "new" && rawCode.length >= 3) {
+      meetCode = rawCode;
+    }
+  }
 
   return createPortal(
     <div className="notif-modal-overlay" onClick={onClose}>
@@ -94,9 +120,49 @@ export default function NotificationDetailModal({
             )}
           </div>
 
+          {extractedMeetUrl && (
+            <div className="notif-meet-highlight-box">
+              <div className="notif-meet-top-row">
+                <div className="notif-meet-label-group">
+                  <Video size={18} color="#16a34a" />
+                  <span className="notif-meet-label">Google Meet Video Room</span>
+                </div>
+                {meetCode && (
+                  <div className="notif-meet-code-chip">
+                    <span>Code: {meetCode}</span>
+                    <button
+                      type="button"
+                      className="notif-meet-copy-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(meetCode);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      title="Copy meeting code"
+                    >
+                      {copiedCode ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="notif-meet-link-row">
+                <span className="notif-meet-url-text">{extractedMeetUrl}</span>
+                <a
+                  href={extractedMeetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="notif-meet-join-btn"
+                >
+                  <Video size={14} /> Join Meeting Now →
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="notif-modal-message-box">
             <h4 className="notif-message-heading">Notification Message</h4>
-            <p className="notif-message-text">
+            <p className="notif-message-text" style={{ whiteSpace: 'pre-line' }}>
               {notification.message || notification.desc || "No additional detailed message provided for this alert."}
             </p>
           </div>
@@ -126,7 +192,24 @@ export default function NotificationDetailModal({
           </div>
 
           <div className="notif-modal-footer-right">
-            {isSupportTicket && onNavigate && (
+            {notification.actionUrl && onNavigate && (
+              <button
+                className="notif-modal-btn notif-modal-btn-primary"
+                onClick={() => {
+                  if (notification.unread && onMarkRead) onMarkRead(notification.id);
+                  onClose();
+                  onNavigate(notification.actionUrl);
+                }}
+                style={{
+                  background: notification.actionColor || '#2563eb',
+                  borderColor: notification.actionColor || '#2563eb',
+                  color: '#ffffff'
+                }}
+              >
+                <ExternalLink size={14} /> {notification.actionLabel || 'Review & Take Action'}
+              </button>
+            )}
+            {isSupportTicket && !notification.actionUrl && onNavigate && (
               <button
                 className="notif-modal-btn notif-modal-btn-primary"
                 onClick={() => {

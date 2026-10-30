@@ -759,7 +759,6 @@ export const getPendingUsersModel = async (collegeId = null) => {
     WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false OR u.is_approved = 0)
       AND u.role != 'super_admin'
       AND (u.password_hash IS NOT NULL AND u.password_hash != '')
-      AND (u.is_verified = 1 OR u.two_factor_enabled = 1)
   `;
   const params = [];
   if (collegeId) {

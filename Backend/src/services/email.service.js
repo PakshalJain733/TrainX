@@ -11,6 +11,13 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 let brevoClient = null;
 let smtpTransporter = null;
 
+export const getPrimaryFrontendUrl = () => {
+  const raw = process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com';
+  // If multiple URLs are provided (comma-separated, e.g. for CORS allowlists), take the primary URL
+  const firstUrl = raw.split(',')[0].trim();
+  return firstUrl.replace(/\/+$/, '');
+};
+
 const createTransporterInstance = (port, isSecure) => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const user = (process.env.SMTP_USER || '').trim();
@@ -398,7 +405,7 @@ export const sendWelcomeEmail = async ({
     }
 
     const queryParams = new URLSearchParams(queryParamsObj).toString();
-    const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?${queryParams}`;
+    const regUrl = `${getPrimaryFrontendUrl()}/register?${queryParams}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
@@ -489,7 +496,7 @@ export const sendWelcomeEmail = async ({
 
 export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
   try {
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/`;
+    const loginUrl = `${getPrimaryFrontendUrl()}/`;
     const roleUpper = String(role).toUpperCase();
 
     const contentHtml = `

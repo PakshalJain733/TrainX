@@ -64,6 +64,21 @@ export const checkDatabaseConnection = async () => {
       console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
     }
 
+    // Auto-normalize student semesters according to academic year (FE -> 1, SE -> 3, TE -> 5, BE -> 7)
+    try {
+      await query(`
+        UPDATE students 
+        SET semester = CASE 
+          WHEN UPPER(TRIM(year)) IN ('FE', '1', 'FIRST') THEN '1'
+          WHEN UPPER(TRIM(year)) IN ('SE', '2', 'SECOND') THEN '3'
+          WHEN UPPER(TRIM(year)) IN ('TE', '3', 'THIRD') THEN '5'
+          WHEN UPPER(TRIM(year)) IN ('BE', '4', 'FINAL') THEN '7'
+          ELSE semester
+        END
+        WHERE semester IS NULL OR semester IN ('', '1', 'Semester 1', 'Semester 6')
+      `);
+    } catch (_) {}
+
     // Auto-create essential performance indexes for 500+ concurrent users
     try {
       const performanceIndexes = [

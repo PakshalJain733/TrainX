@@ -1494,8 +1494,17 @@ export default function AdminUsers() {
     setFeedback({ type: "", message: "" });
 
     try {
+      let finalSem = formData.semester;
+      if (formData.role === "student") {
+        if (formData.year === "SE") finalSem = "3";
+        else if (formData.year === "TE") finalSem = "5";
+        else if (formData.year === "BE") finalSem = "7";
+        else if (formData.year === "FE") finalSem = "1";
+      }
+
       const payload = {
         ...formData,
+        semester: finalSem || "1",
         secure_code: generatedCode || formData.secure_code || "",
       };
       const res = await apiFetch("/admin/users", {
@@ -2037,7 +2046,7 @@ export default function AdminUsers() {
                             departments.length > 0
                               ? departments.map((d) => ({
                                   value: d.code || d.name,
-                                  label: d.code ? `${d.code} – ${d.name}` : d.name,
+                                  label: d.code || d.name,
                                 }))
                               : [{ value: formData.department, label: formData.department }]
                           }
@@ -2051,7 +2060,17 @@ export default function AdminUsers() {
                         <label>Academic Year</label>
                         <AdminUserSelect
                           value={formData.year}
-                          onChange={(val) => setFormData({ ...formData, year: val })}
+                          onChange={(val) => {
+                            let autoSem = "1";
+                            if (val === "SE") autoSem = "3";
+                            else if (val === "TE") autoSem = "5";
+                            else if (val === "BE") autoSem = "7";
+                            setFormData((prev) => ({
+                              ...prev,
+                              year: val,
+                              semester: autoSem,
+                            }));
+                          }}
                           options={[
                             { value: "FE", label: "FE" },
                             { value: "SE", label: "SE" },
@@ -2066,9 +2085,9 @@ export default function AdminUsers() {
                           value={formData.division}
                           onChange={(val) => setFormData({ ...formData, division: val })}
                           options={[
-                            { value: "A", label: "Division A" },
-                            { value: "B", label: "Division B" },
-                            { value: "C", label: "Division C" }
+                            { value: "A", label: "A" },
+                            { value: "B", label: "B" },
+                            { value: "C", label: "C" }
                           ]}
                         />
                       </div>

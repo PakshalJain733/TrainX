@@ -185,6 +185,11 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
+                  if (n.actionUrl) {
+                    if (onClose) onClose();
+                    if (onNavigate) onNavigate(n.actionUrl);
+                    return;
+                  }
                   if (onClose) onClose();
                   if (onSelectNotification) {
                     onSelectNotification(n);
@@ -202,6 +207,35 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
+
+                  {n.actionUrl && (
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.unread) toggleSingleRead(n.id);
+                          if (onClose) onClose();
+                          if (onNavigate) onNavigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: n.actionColor || '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {n.actionLabel || 'Review & Approve →'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -255,27 +289,85 @@ export default function AdminLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    const loadNotifications = () => {
-      let prefs = { notifSystemAlerts: true, notifWeeklyReport: true, notifNewUsers: true };
+    const loadNotifications = async () => {
       try {
-        const stored = JSON.parse(sessionStorage.getItem("adminNotifPrefs") || "{}");
-        prefs = { ...prefs, ...stored };
-      } catch (_) {}
+        const [broadcastRes, pendingUsersRes, c2cRes] = await Promise.all([
+          apiFetch("/admin/broadcast").catch(() => null),
+          apiFetch("/admin/pending-users").catch(() => null),
+          apiFetch("/trainings/enrollments?approval_status=pending").catch(() => null),
+        ]);
 
-      apiFetch("/admin/broadcast")
-        .then((res) => {
-          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-          const serverItems = rawItems
-            .filter((b) => {
-              const role = String(b.sender_role || "").toLowerCase();
-              const creator = String(b.created_by_name || "").toLowerCase();
-              // Do not notify admin of announcements that admin himself created
-              if (role.includes("admin") || creator.includes("admin")) {
-                return false;
-              }
-              return true;
-            })
-            .map((b) => ({
+        const notifItems = [];
+
+        // 1. Live Pending User Approvals (Students, Mentors, Coordinators)
+        const pendingUsers = Array.isArray(pendingUsersRes?.data)
+          ? pendingUsersRes.data
+          : (Array.isArray(pendingUsersRes) ? pendingUsersRes : []);
+
+        if (pendingUsers.length > 0) {
+          pendingUsers.forEach((u) => {
+            const roleStr = String(u.role || 'student').toUpperCase();
+            const deptStr = u.department ? ` · ${u.department}` : '';
+            const yearStr = u.year ? ` (${u.year}${u.division ? ` Div ${u.division}` : ''})` : '';
+            notifItems.push({
+              id: `pending-user-${u.id}`,
+              title: `👤 Approval Needed: ${u.name} (${roleStr})`,
+              desc: `${u.name}${deptStr}${yearStr} has completed registration and is awaiting account approval.`,
+              message: `${u.name} (${u.email || u.mobile_number || 'N/A'}) registered as ${roleStr} in ${u.department || 'General'}${yearStr}. Action required: Review and approve or reject this user account.`,
+              time: u.created_at ? new Date(u.created_at).toLocaleString() : 'Action Required',
+              unread: true,
+              type: 'alert',
+              target: u.department || 'Campus Users',
+              priority: 'High Priority',
+              created_by_name: u.name,
+              actionUrl: '/admin/approve-users',
+              actionLabel: 'Review & Approve →',
+              actionColor: '#2563eb'
+            });
+          });
+        }
+
+        // 2. Live Pending Training / C2C Course Registrations
+        const c2cPending = Array.isArray(c2cRes?.data)
+          ? c2cRes.data
+          : (Array.isArray(c2cRes?.enrollments) ? c2cRes.enrollments : (Array.isArray(c2cRes) ? c2cRes : []));
+        const pendingC2CList = c2cPending.filter(
+          (e) => String(e.approval_status || e.approvalStatus || '').toLowerCase() === 'pending'
+        );
+        if (pendingC2CList.length > 0) {
+          notifItems.push({
+            id: 'pending-c2c-enrollments',
+            title: `🎓 ${pendingC2CList.length} Training Registration(s) Pending Approval`,
+            desc: `${pendingC2CList.length} student course application(s) have submitted verification/payment proof and are waiting for your approval.`,
+            message: `${pendingC2CList.length} training enrollment(s) are awaiting approval. Review fee receipts and approve students.`,
+            time: 'Action Required',
+            unread: true,
+            type: 'calendar',
+            target: 'Trainings / C2C',
+            priority: 'Action Required',
+            created_by_name: 'Training Desk',
+            actionUrl: '/admin/c2c-enrollments',
+            actionLabel: 'Review Enrollments →',
+            actionColor: '#059669'
+          });
+        }
+
+        // 3. Real Broadcasts / Announcements
+        const rawBroadcasts = Array.isArray(broadcastRes?.data)
+          ? broadcastRes.data
+          : (Array.isArray(broadcastRes) ? broadcastRes : []);
+
+        const serverBroadcasts = rawBroadcasts
+          .filter((b) => {
+            const role = String(b.sender_role || "").toLowerCase();
+            const creator = String(b.created_by_name || "").toLowerCase();
+            // Do not notify admin of announcements that admin himself created
+            if (role.includes("admin") || creator.includes("admin")) {
+              return false;
+            }
+            return true;
+          })
+          .map((b) => ({
             id: b.id || `notif-${Math.random()}`,
             title: b.title || "Announcement",
             desc: b.message || b.desc || b.description || "",
@@ -288,55 +380,23 @@ export default function AdminLayout() {
             created_by_name: b.created_by_name || "Admin",
           }));
 
-          const prefItems = [];
-          if (prefs.notifSystemAlerts) {
-            prefItems.push({
-              id: "pref-sec-alert",
-              title: "🛡️ System Security Alert",
-              desc: "2FA Authentication & System Security monitoring active.",
-              message: "2FA Authentication & System Security monitoring active.",
-              time: "Just now",
-              unread: true,
-              type: "alert",
-              target: "System Security",
-              priority: "High Priority",
-              created_by_name: "Security Engine"
-            });
-          }
-          if (prefs.notifWeeklyReport) {
-            prefItems.push({
-              id: "pref-weekly-audit",
-              title: "📊 Weekly Audit Digest",
-              desc: "Weekly institutional audit report and analytics digest is available.",
-              message: "Weekly institutional audit report and analytics digest is available.",
-              time: "Today",
-              unread: true,
-              type: "calendar",
-              target: "Institutional Audit",
-              priority: "Weekly Digest",
-              created_by_name: "Analytics Service"
-            });
-          }
-          if (prefs.notifNewUsers) {
-            prefItems.push({
-              id: "pref-new-users",
-              title: "👤 New User Enrollment",
-              desc: "New student and faculty registration applications pending verification.",
-              message: "New student and faculty registration applications pending verification.",
-              time: "Today",
-              unread: true,
-              type: "alert",
-              target: "User Management",
-              priority: "Action Required",
-              created_by_name: "Enrollment Desk"
-            });
-          }
+        notifItems.push(...serverBroadcasts);
 
-          // Combine server items and active preference items
-          const combined = [...prefItems, ...serverItems];
-          setNotifications(combined);
-        })
-        .catch(() => { });
+        // De-duplicate items by id
+        const unique = [];
+        const seenIds = new Set();
+        for (const item of notifItems) {
+          const key = String(item.id || item.title);
+          if (!seenIds.has(key)) {
+            seenIds.add(key);
+            unique.push(item);
+          }
+        }
+
+        setNotifications(unique);
+      } catch (err) {
+        console.warn("[AD_Layout] Notification load notice:", err);
+      }
     };
 
     loadNotifications();
@@ -649,6 +709,7 @@ export default function AdminLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}

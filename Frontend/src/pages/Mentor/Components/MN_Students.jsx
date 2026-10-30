@@ -110,7 +110,9 @@ export default function Students() {
   const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
 
   const generateGoogleMeetLink = () => {
-    return "https://meet.google.com/new";
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    const part = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return `https://meet.google.com/${part(3)}-${part(4)}-${part(3)}`;
   };
 
   // Helper to build a Google Calendar Event creation link prefilled with Meet details
@@ -552,15 +554,29 @@ export default function Students() {
               )}
 
               <div className="mentor-meet-field">
-                <label>Google Meet Room Link</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label>Google Meet Room Link &amp; Code</label>
+                  <button
+                    type="button"
+                    onClick={() => setMeetForm({ ...meetForm, meetingLink: generateGoogleMeetLink() })}
+                    style={{ background: 'none', border: 'none', color: '#4f46e5', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                  >
+                    Generate New Room Code
+                  </button>
+                </div>
                 <input
                   type="url"
                   required
-                  placeholder="https://meet.google.com/new or paste existing meeting link"
+                  placeholder="https://meet.google.com/abc-defg-hij or paste existing meeting link"
                   value={meetForm.meetingLink}
                   onChange={(e) => setMeetForm({ ...meetForm, meetingLink: e.target.value })}
                   className="mentor-meet-input"
                 />
+                {meetForm.meetingLink && meetForm.meetingLink.includes('meet.google.com/') && (
+                  <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700, marginTop: '3px', display: 'block' }}>
+                    Meeting Code: {meetForm.meetingLink.split('meet.google.com/')[1]?.split(/[?#\s]/)[0] || ''}
+                  </span>
+                )}
               </div>
 
               <div className="mentor-meet-field">

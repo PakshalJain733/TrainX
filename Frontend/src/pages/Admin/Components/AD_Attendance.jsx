@@ -102,44 +102,56 @@ export default function AdminAttendance() {
   const canvasRef = useRef(null);
   const isDirtyRef = useRef(false);
 
-  // Fetch all active system & enrolled batches from backend API
+  // Fetch all strictly active system batches from backend API (filter out inactive batches)
   useEffect(() => {
     const loadBatches = async () => {
       try {
-        let fetchedList = [];
-        const res = await apiFetch("/batches");
-        const list1 = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
-        if (list1.length > 0) {
-          fetchedList = list1;
-        }
+        const res = await apiFetch("/batches?status=active");
+        const list = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
 
-        const myRes = await apiFetch("/batches/my-batches");
-        const list2 = Array.isArray(myRes) ? myRes : (myRes && Array.isArray(myRes.data) ? myRes.data : []);
-        if (list2.length > 0) {
-          const combined = [...fetchedList];
-          list2.forEach(mb => {
-            if (!combined.some(b => b.id === mb.id || b.code === mb.code || b.join_code === mb.join_code)) {
-              combined.push(mb);
-            }
-          });
-          fetchedList = combined;
-        }
+        // Filter strictly for active batches (excluding inactive, disabled, or archived)
+        const isActiveBatch = (b) => {
+          if (!b) return false;
+          const s = String(b.status || 'Active').toLowerCase().trim();
+          return s === 'active' || s === 'ongoing' || s === 'in progress';
+        };
 
-        if (fetchedList.length > 0) {
-          const mapped = fetchedList.map(b => ({
-            id: b.id,
-            name: b.name || b.title || "Training Batch",
-            code: b.join_code || b.code || `BATCH-${b.id}`
-          }));
-          setBatches(mapped);
-          if (mapped[0]) {
-            setSelectedBatchCode(mapped[0].code);
+        const activeList = list.filter(isActiveBatch);
+
+        // Deduplicate batches by ID and Code
+        const seenIds = new Set();
+        const seenCodes = new Set();
+        const uniqueActive = [];
+
+        for (const b of activeList) {
+          const id = b.id;
+          const code = b.join_code || b.code || `BATCH-${id}`;
+          if (!seenIds.has(id) && !seenCodes.has(code)) {
+            seenIds.add(id);
+            seenCodes.add(code);
+            uniqueActive.push({
+              id: b.id,
+              name: b.name || b.title || "Training Batch",
+              code: code,
+              status: b.status || 'Active'
+            });
           }
+        }
+
+        // Sort alphabetically by batch name
+        uniqueActive.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        setBatches(uniqueActive);
+        if (uniqueActive.length > 0) {
+          setSelectedBatchCode((prev) => {
+            const exists = uniqueActive.some((b) => b.code === prev);
+            return exists ? prev : uniqueActive[0].code;
+          });
         } else {
-          setBatches([]);
+          setSelectedBatchCode("");
         }
       } catch (err) {
-        console.error("Failed to load batches:", err);
+        console.error("Failed to load active batches:", err);
         setBatches([]);
       }
     };

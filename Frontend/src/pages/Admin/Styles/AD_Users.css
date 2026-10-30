@@ -575,7 +575,7 @@ textarea.form-input-admin:focus,
   padding: 16px 24px;
   border-top: 1px solid #f1f5f9;
   display: flex !important;
-  justify-content: space-between !important;
+  justify-content: flex-end !important;
   align-items: center !important;
   gap: 12px !important;
   background: #f8fafc;

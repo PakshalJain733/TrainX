@@ -412,15 +412,28 @@ export default function Overview() {
               </div>
             ) : (
               <div className="overview-tasks-list">
-                {upcoming.map((task, i) => (
-                  <div key={i} className="overview-task-item">
-                    <div>
-                      <h4 className="overview-item-title">{task.title}</h4>
-                      <p className="overview-item-due">{task.dueDate}</p>
+                {upcoming.map((task, i) => {
+                  const deadlineStr = task.deadline || task.dueDate || "Flexible Deadline";
+                  const typeStr = task.type || "Task";
+                  const isExpired = task.status === "Expired" || task.isExpired;
+                  return (
+                    <div key={i} className="overview-task-item">
+                      <div className="overview-task-info">
+                        <div className="overview-task-title-row">
+                          <h4 className="overview-item-title">{task.title}</h4>
+                          {typeStr && <span className="overview-task-type-badge">{typeStr}</span>}
+                        </div>
+                        <p className="overview-item-due">
+                          <Clock size={12} className="overview-item-due-icon" />
+                          <span>{deadlineStr.startsWith("Due") || deadlineStr.startsWith("Uploaded") || deadlineStr.startsWith("Assigned") ? deadlineStr : `Due: ${deadlineStr}`}</span>
+                        </p>
+                      </div>
+                      <Badge variant={isExpired ? "destructive" : (task.status === "Pending" ? "outline" : "success")}>
+                        {task.status || "Pending"}
+                      </Badge>
                     </div>
-                    <Badge variant={task.status === "Expired" ? "destructive" : (task.status === "Pending" ? "outline" : "success")}>{task.status}</Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

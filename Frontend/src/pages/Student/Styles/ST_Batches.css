@@ -825,7 +825,7 @@
 
 /* ─── Join Batch Header Action & Header Row ───────────────────── */
 
-.student-header-box {
+.batches-page-container .student-header-box {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;

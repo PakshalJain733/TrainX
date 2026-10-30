@@ -135,7 +135,7 @@ function parseTaskRecord(t, isStudent = false) {
 export const getBatches = async (req, res, next) => {
   try {
     await ensureTables();
-    const { collegeId, departmentId, date: filterDate } = req.query;
+    const { collegeId, departmentId, date: filterDate, status: filterStatus } = req.query;
     const queryDate = (filterDate || new Date().toISOString().split('T')[0]).trim();
 
     let sql = `
@@ -187,6 +187,11 @@ export const getBatches = async (req, res, next) => {
     if (effDeptId && effDeptId !== 'all') {
       sql += ' AND (b.department_id = ? OR b.department_id IS NULL)';
       params.push(effDeptId);
+    }
+
+    if (filterStatus && filterStatus !== 'all') {
+      sql += ' AND (LOWER(COALESCE(b.status, "Active")) = ?)';
+      params.push(filterStatus.toLowerCase().trim());
     }
 
     sql += ' ORDER BY b.id DESC';
@@ -925,6 +930,8 @@ export const getTaskSubmissions = async (req, res, next) => {
               COALESCE(ts.score, ts.marks_obtained, 0) AS score,
               ts.feedback, 
               ts.submitted_at,
+              COALESCE(bt.language, 'Java') AS language,
+              bt.title AS task_title,
               COALESCE(bt.points, 100) AS total_marks,
               COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
        FROM task_submissions ts

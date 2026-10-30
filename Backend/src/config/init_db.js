@@ -483,6 +483,9 @@ export async function initializeDatabase() {
     try {
       await conn.query(`ALTER TABLE study_materials ADD COLUMN link VARCHAR(500) NULL`);
     } catch (_) { }
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN deadline VARCHAR(100) NULL`);
+    } catch (_) { }
 
     // 13. Ensure Support Tickets Table
     await conn.query(`

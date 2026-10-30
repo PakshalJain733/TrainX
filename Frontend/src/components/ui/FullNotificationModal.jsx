@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Bell, X, Search, Check, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Filter } from "lucide-react";
 import "./FullNotificationModal.css";
 
-export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications }) {
+export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications, onNavigate }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
@@ -163,6 +163,25 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
                   </div>
 
                   <div className="full-notif-card-actions">
+                    {n.actionUrl && onNavigate && (
+                      <button
+                        className="full-notif-action-btn"
+                        onClick={() => {
+                          if (n.unread) toggleSingleRead(n.id);
+                          onClose();
+                          onNavigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: n.actionColor || '#2563eb',
+                          color: '#ffffff',
+                          fontWeight: 600,
+                          borderColor: n.actionColor || '#2563eb',
+                          marginRight: '4px'
+                        }}
+                      >
+                        {n.actionLabel || 'Review & Take Action →'}
+                      </button>
+                    )}
                     <button
                       className="full-notif-action-btn"
                       onClick={() => toggleSingleRead(n.id)}
