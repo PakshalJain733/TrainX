@@ -744,7 +744,7 @@ export default function Batches() {
                 {(!batchDetails?.tasks || batchDetails.tasks.length === 0) ? (
                   <div className="mentor-batch-empty">
                     <FileText size={36} />
-                    <p className="mentor-batch-empty-title">No tasks assigned yet</p>
+                    <p className="mentor-batch-empty-title">No tasks assigned to this batch yet</p>
                     <p className="mentor-batch-empty-sub">
                       There are no active tasks registered for this batch yet.
                     </p>
@@ -768,6 +768,13 @@ export default function Batches() {
 
                           <h4 className="mentor-task-card-title">{task.title}</h4>
                           <p className="mentor-task-card-topic">{task.topic || "General Assignment"}</p>
+
+                          {(task.task_date || task.taskDate || task.date) && (
+                            <div className="mentor-task-deadline-row" style={{ color: "#4f46e5", marginBottom: "4px" }}>
+                              <Calendar size={13} />
+                              <span>Scheduled: {task.task_date || task.taskDate || task.date}</span>
+                            </div>
+                          )}
 
                           {task.deadline && (
                             <div className="mentor-task-deadline-row">

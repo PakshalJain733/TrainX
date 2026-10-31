@@ -11,6 +11,7 @@ import {
   getBatchTasks,
   getTaskById,
   createBatchTask,
+  updateBatchTask,
   deleteBatchTask,
   getBatchById,
   getBatchDailyTopics,
@@ -33,11 +34,12 @@ router.get('/tasks/:taskId/submissions', getTaskSubmissions);
 router.get('/:id/tasks/:taskId/submissions', getTaskSubmissions);
 router.get('/:id/tasks', getBatchTasks);
 router.post('/:id/tasks', createBatchTask);
+router.put('/:id/tasks/:taskId', updateBatchTask);
+router.put('/tasks/:taskId', updateBatchTask);
+router.delete('/:id/tasks/:taskId', deleteBatchTask);
 router.delete('/tasks/:taskId', deleteBatchTask);
 router.get('/:id', getBatchById);
 router.put('/:id', updateBatch);
 router.delete('/:id', deleteBatch);
 
 export default router;
-
-

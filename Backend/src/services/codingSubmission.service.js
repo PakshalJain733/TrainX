@@ -283,12 +283,30 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     }
   }
 
-  // Enforce single-submission rule for batch tasks: Reattempts are strictly not allowed once submitted
+  // Enforce batch enrollment and single-submission rule for batch tasks
   if (isBatchTask && batchTaskRecord) {
+    const sId = student.id || student_id;
+    try {
+      const enrollment = await query(
+        `SELECT 1 FROM student_batches WHERE user_id = ? AND batch_id = ?
+         UNION
+         SELECT 1 FROM students WHERE user_id = ? AND batch_id = ? LIMIT 1`,
+        [sId, batchTaskRecord.batch_id, sId, batchTaskRecord.batch_id]
+      );
+      if (!enrollment || enrollment.length === 0) {
+        const error = new Error('You are not enrolled in the batch this task belongs to.');
+        error.statusCode = 403;
+        throw error;
+      }
+    } catch (enrErr) {
+      if (enrErr.statusCode) throw enrErr;
+      console.warn('[submitCodeAndSaveService] enrollment check notice:', enrErr.message);
+    }
+
     try {
       const existingTask = await query(
-        `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND (user_id = ? OR user_id = ?) LIMIT 1`,
-        [batchTaskRecord.id, student.id || student_id, student_id]
+        `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND (user_id = ? OR user_id = ?) AND batch_id = ? LIMIT 1`,
+        [batchTaskRecord.id, sId, sId, batchTaskRecord.batch_id]
       );
       const existingCode = await query(
         `SELECT id FROM coding_submissions WHERE problem_id = ? AND (student_id = ? OR student_id = ?) LIMIT 1`,
@@ -553,8 +571,8 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
 
     try {
       const existingSub = await query(
-        `SELECT id FROM task_submissions WHERE task_id = ? AND user_id = ? LIMIT 1`,
-        [batchTaskRecord.id, student.id || student_id]
+        `SELECT id FROM task_submissions WHERE task_id = ? AND user_id = ? AND batch_id = ? LIMIT 1`,
+        [batchTaskRecord.id, student.id || student_id, batchTaskRecord.batch_id]
       );
 
       if (existingSub && existingSub.length > 0) {
@@ -602,9 +620,9 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
       console.warn('[task_submissions save error]', e.message);
       try {
         await query(
-          `INSERT INTO task_submissions (task_id, user_id, status, score, submitted_code, submitted_at)
-           VALUES (?, ?, ?, ?, ?, NOW())`,
-          [batchTaskRecord.id, student.id || student_id, taskStatus, score, code]
+          `INSERT INTO task_submissions (task_id, user_id, batch_id, status, score, submitted_code, submitted_at)
+           VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [batchTaskRecord.id, student.id || student_id, batchTaskRecord.batch_id, taskStatus, score, code]
         );
       } catch (innerErr) {
         console.warn('[task_submissions fallback error]', innerErr.message);

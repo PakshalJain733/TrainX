@@ -2282,31 +2282,21 @@ export const getMentorBatchDetails = async (req, res, next) => {
       }
     });
 
-    // 3. Fetch tasks assigned to this batch
+    // 3. Fetch tasks assigned strictly to this batch
     let batchTasks = [];
     if (numericBatchId) {
       try {
         batchTasks = (await query(
-          `SELECT bt.id, bt.batch_id, bt.title, bt.topic, bt.difficulty, bt.points, bt.deadline, bt.description,
+          `SELECT bt.id, bt.batch_id, bt.title, bt.topic, bt.difficulty, bt.points, bt.deadline, bt.task_date, bt.description,
                   COALESCE(bt.language, 'Java') AS language, bt.created_at
              FROM batch_tasks bt
-            WHERE bt.batch_id = ? OR bt.batch_id = 0
+            WHERE bt.batch_id = ?
             ORDER BY bt.id DESC`,
           [numericBatchId]
         )) || [];
-      } catch (e) {}
-    }
-
-    // Fallback if no batch-specific tasks found: return all batch_tasks
-    if (!batchTasks || batchTasks.length === 0) {
-      try {
-        batchTasks = (await query(
-          `SELECT bt.id, bt.batch_id, bt.title, bt.topic, bt.difficulty, bt.points, bt.deadline, bt.description,
-                  COALESCE(bt.language, 'Java') AS language, bt.created_at
-             FROM batch_tasks bt
-            ORDER BY bt.id DESC`
-        )) || [];
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[getMentorBatchDetails batchTasks query warning]', e.message);
+      }
     }
 
     // 4. Fetch all code submissions of these allocated students
@@ -2334,9 +2324,9 @@ export const getMentorBatchDetails = async (req, res, next) => {
              JOIN users u ON ts.user_id = u.id
              LEFT JOIN students s ON s.user_id = u.id
              LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
-            WHERE ts.user_id IN (${inPlaceholders(studentUserIds)})
+            WHERE ts.user_id IN (${inPlaceholders(studentUserIds)}) AND ts.batch_id = ?
             ORDER BY ts.submitted_at DESC`,
-          studentUserIds
+          [...studentUserIds, numericBatchId]
         );
         taskSubmissionsList = subRows || [];
       } catch (e) {

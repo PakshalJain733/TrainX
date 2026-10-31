@@ -248,42 +248,51 @@ export const getStudentDashboard = async (req, res, next) => {
     // Fetch upcoming deadlines: combine batch tasks, practice problems, and study materials
     let upcomingDeadlines = [];
 
-    // 1. Check Coursework Tasks from batch_tasks (assigned to student's batch)
+    // 1. Check Coursework Tasks from batch_tasks (assigned strictly to student's enrolled batches)
     try {
-      const studentBatchId = callerStudent?.batch_id;
-      let taskSql = `
-        SELECT bt.id, bt.title, bt.deadline, bt.topic, bt.difficulty, bt.created_at,
-               ts.status as submission_status
-        FROM batch_tasks bt
-        LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ?)
-      `;
-      const taskParams = [callerId];
-      if (studentBatchId) {
-        taskSql += ` WHERE bt.batch_id = ? OR bt.batch_id = 0 OR bt.batch_id IS NULL`;
-        taskParams.push(studentBatchId);
-      }
-      taskSql += ` ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5`;
+      const studentBatches = await query(
+        `SELECT DISTINCT batch_id FROM (
+           SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
+           UNION
+           SELECT batch_id FROM student_batches WHERE user_id = ? AND batch_id IS NOT NULL
+         ) as eb`,
+        [callerId, callerId]
+      );
+      const enrolledBatchIds = (studentBatches || []).map(r => r.batch_id).filter(Boolean);
 
-      const batchTaskRows = await query(taskSql, taskParams);
-      if (batchTaskRows && batchTaskRows.length > 0) {
-        batchTaskRows.forEach((t) => {
-          const expired = isDeadlineExpired(t.deadline);
-          const status = t.submission_status === 'submitted' 
-            ? 'Completed' 
-            : (expired ? 'Expired' : 'Pending');
-          const formattedDeadline = t.deadline 
-            ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
-            : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
-          upcomingDeadlines.push({
-            id: `task-${t.id}`,
-            title: t.title,
-            deadline: formattedDeadline,
-            dueDate: formattedDeadline,
-            status: status,
-            isExpired: expired,
-            type: t.topic || 'Batch Task',
+      if (enrolledBatchIds.length > 0) {
+        const placeholders = enrolledBatchIds.map(() => '?').join(',');
+        const taskSql = `
+          SELECT bt.id, bt.title, bt.deadline, bt.task_date, bt.topic, bt.difficulty, bt.created_at, bt.batch_id,
+                 ts.status as submission_status
+          FROM batch_tasks bt
+          LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ? AND ts.batch_id = bt.batch_id)
+          WHERE bt.batch_id IN (${placeholders})
+          ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5
+        `;
+        const batchTaskRows = await query(taskSql, [callerId, ...enrolledBatchIds]);
+        if (batchTaskRows && batchTaskRows.length > 0) {
+          batchTaskRows.forEach((t) => {
+            const expired = isDeadlineExpired(t.deadline);
+            const status = t.submission_status === 'submitted' || t.submission_status === 'completed' || t.submission_status === 'passed'
+              ? 'Completed' 
+              : (expired ? 'Expired' : 'Pending');
+            const formattedDeadline = t.deadline 
+              ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
+              : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
+            upcomingDeadlines.push({
+              id: `task-${t.id}`,
+              title: t.title,
+              deadline: formattedDeadline,
+              dueDate: formattedDeadline,
+              status: status,
+              isExpired: expired,
+              type: t.topic || 'Batch Task',
+              taskDate: t.task_date || '',
+              batchId: t.batch_id,
+            });
           });
-        });
+        }
       }
     } catch (taskErr) {
       console.warn('[getStudentDashboard batch_tasks query notice]', taskErr.message);

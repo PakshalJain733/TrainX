@@ -84,6 +84,7 @@ async function ensureTables() {
     await safeAlter("ALTER TABLE batches ADD COLUMN date VARCHAR(100) NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN test_cases TEXT NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN language VARCHAR(50) DEFAULT 'Java'");
+    await safeAlter("ALTER TABLE batch_tasks ADD COLUMN task_date VARCHAR(50) NULL AFTER deadline");
     await safeAlter("ALTER TABLE task_submissions ADD COLUMN batch_id INT NULL");
     await safeAlter("ALTER TABLE task_submissions ADD COLUMN code_submission TEXT NULL");
     await safeAlter("ALTER TABLE task_submissions ADD COLUMN marks_obtained INT DEFAULT 0");
@@ -486,34 +487,26 @@ export const getMyBatches = async (req, res, next) => {
     const batchesWithProgress = await Promise.all((dbEnrolled || []).map(async (b) => {
       let progress = 0;
       try {
-        const tasks = await query(`SELECT id FROM batch_tasks WHERE batch_id = ?`, [b.id]);
+        const tasks = await query('SELECT id FROM batch_tasks WHERE batch_id = ?', [b.id]);
         if (tasks && tasks.length > 0) {
           const taskIds = tasks.map(t => t.id);
+          const placeholders = taskIds.map(() => '?').join(',');
           const completed = await query(
             `SELECT COUNT(DISTINCT task_id) as count FROM task_submissions 
-             WHERE user_id = ? AND task_id IN (?) AND LOWER(status) IN ('completed', 'passed')`,
-            [userId, taskIds]
+             WHERE user_id = ? AND batch_id = ? AND task_id IN (${placeholders}) AND LOWER(status) IN ('completed', 'passed')`,
+            [userId, b.id, ...taskIds]
           );
           const done = completed && completed[0] ? Number(completed[0].count) : 0;
           progress = Math.round((done / tasks.length) * 100);
         } else {
-          // If no specific batch tasks, check general activity or fallback
-          const generalSub = await query(
-            `SELECT COUNT(*) as count FROM task_submissions WHERE user_id = ? AND LOWER(status) IN ('completed', 'passed')`,
-            [userId]
-          );
-          if (generalSub && generalSub[0] && Number(generalSub[0].count) > 0) {
-            progress = Math.min(100, Number(generalSub[0].count) * 20);
-          } else {
-            progress = Number(b.progress) || 0;
-          }
+          progress = 0;
         }
       } catch (e) {
-        progress = Number(b.progress) || 0;
+        progress = 0;
       }
       return {
         ...b,
-        progress: Number(progress) || Number(b.progress) || 0
+        progress: Number(progress) || 0
       };
     }));
 
@@ -527,46 +520,60 @@ export const getBatchTasks = async (req, res, next) => {
   try {
     await ensureTables();
     const { id } = req.params;
-    const cleanId = String(id).replace(/[^0-9]/g, '') || id;
-    const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
-    const studentId = req.user?.userId || req.user?.id;
-
-    let dbTasks = await query(
-      `SELECT * FROM batch_tasks WHERE batch_id = ? OR batch_id = ? OR batch_id = '0' ORDER BY id DESC`,
-      [id, cleanId]
-    );
-
-    // Fallback: If no batch-specific tasks found, return all assigned batch_tasks in DB so none are lost
-    if (!dbTasks || dbTasks.length === 0) {
-      dbTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC`);
+    const cleanId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+    if (!cleanId) {
+      return sendError(res, 'Invalid batch ID', 400);
     }
 
+    // 1. Verify batch exists
+    const [batchRow] = await query('SELECT id, college_id, name FROM batches WHERE id = ? LIMIT 1', [cleanId]);
+    if (!batchRow) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    const studentId = req.user?.userId || req.user?.id;
+    const isStudent = role === 'student';
+
+    // 2. Strict Role Scoping:
+    // Students can ONLY view tasks of batches they are enrolled in
+    if (isStudent && studentId) {
+      const enrollment = await query(
+        `SELECT 1 FROM student_batches WHERE user_id = ? AND batch_id = ?
+         UNION
+         SELECT 1 FROM students WHERE user_id = ? AND batch_id = ? LIMIT 1`,
+        [studentId, cleanId, studentId, cleanId]
+      );
+      if (!enrollment || enrollment.length === 0) {
+        return sendError(res, 'Access denied. You are not enrolled in this batch.', 403);
+      }
+    }
+
+    // Multi-college data isolation: College Admins, Mentors, and Coordinators can only access batches of their college
+    if (role !== 'super_admin' && req.user?.college_id && batchRow.college_id) {
+      if (Number(req.user.college_id) !== Number(batchRow.college_id)) {
+        return sendError(res, 'Access denied. This batch belongs to another college.', 403);
+      }
+    }
+
+    // 3. Query tasks strictly belonging to this batch_id (NO fallback to all tasks, NO batch_id=0)
+    const dbTasks = await query(
+      `SELECT * FROM batch_tasks WHERE batch_id = ? ORDER BY id DESC`,
+      [cleanId]
+    );
+
     let studentSubmissions = new Map();
-    if (studentId) {
+    if (studentId && dbTasks && dbTasks.length > 0) {
       try {
         const subRows = await query(
           `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score
            FROM task_submissions 
-           WHERE user_id = ?`,
-          [studentId]
+           WHERE user_id = ? AND batch_id = ?`,
+          [studentId, cleanId]
         );
         if (Array.isArray(subRows)) {
           subRows.forEach(s => {
             studentSubmissions.set(Number(s.task_id), s);
-          });
-        }
-        const cSubRows = await query(
-          `SELECT problem_id as task_id, status, marks as marks_obtained, score
-           FROM coding_submissions
-           WHERE student_id = ?`,
-          [studentId]
-        );
-        if (Array.isArray(cSubRows)) {
-          cSubRows.forEach(s => {
-            const tId = Number(s.task_id);
-            if (!studentSubmissions.has(tId)) {
-              studentSubmissions.set(tId, s);
-            }
           });
         }
       } catch (e) {
@@ -631,43 +638,62 @@ export const getTaskById = async (req, res, next) => {
   try {
     await ensureTables();
     const { taskId } = req.params;
-    const cleanId = String(taskId).replace(/[^0-9]/g, '') || taskId;
-    const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
-    const studentId = req.user?.userId || req.user?.id;
-
-    let targetTask = null;
-    const dbTasks = await query(
-      `SELECT * FROM batch_tasks WHERE id = ? OR id = ? LIMIT 1`,
-      [taskId, cleanId]
-    );
-
-    if (dbTasks && dbTasks.length > 0) {
-      targetTask = dbTasks[0];
+    const cleanTaskId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanTaskId) {
+      return sendError(res, 'Invalid task ID', 400);
     }
 
-    if (!targetTask) {
-      return sendSuccess(res, 'Task retrieved successfully', null);
+    const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
+    const studentId = req.user?.userId || req.user?.id;
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+
+    // Fetch task and its batch info
+    const dbTasks = await query(
+      `SELECT bt.*, b.name as batch_name, b.college_id
+       FROM batch_tasks bt
+       JOIN batches b ON bt.batch_id = b.id
+       WHERE bt.id = ? LIMIT 1`,
+      [cleanTaskId]
+    );
+
+    if (!dbTasks || dbTasks.length === 0) {
+      return sendError(res, 'Task not found', 404);
+    }
+
+    const targetTask = dbTasks[0];
+
+    // Authorization: Students must be enrolled in this task's batch
+    if (isStudent && studentId) {
+      const enrollment = await query(
+        `SELECT 1 FROM student_batches WHERE user_id = ? AND batch_id = ?
+         UNION
+         SELECT 1 FROM students WHERE user_id = ? AND batch_id = ? LIMIT 1`,
+        [studentId, targetTask.batch_id, studentId, targetTask.batch_id]
+      );
+      if (!enrollment || enrollment.length === 0) {
+        return sendError(res, 'Access denied. You are not enrolled in the batch this task belongs to.', 403);
+      }
+    }
+
+    // College isolation
+    if (role !== 'super_admin' && req.user?.college_id && targetTask.college_id) {
+      if (Number(req.user.college_id) !== Number(targetTask.college_id)) {
+        return sendError(res, 'Access denied. This task belongs to another college.', 403);
+      }
     }
 
     let alreadySubmitted = false;
     let submission = null;
     if (studentId) {
       const subRows = await query(
-        `SELECT * FROM task_submissions WHERE task_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1`,
-        [targetTask.id, studentId]
+        `SELECT * FROM task_submissions 
+         WHERE task_id = ? AND user_id = ? AND batch_id = ? 
+         ORDER BY id DESC LIMIT 1`,
+        [targetTask.id, studentId, targetTask.batch_id]
       );
       if (subRows && subRows.length > 0) {
         alreadySubmitted = true;
         submission = subRows[0];
-      } else {
-        const codeSubRows = await query(
-          `SELECT * FROM coding_submissions WHERE problem_id = ? AND student_id = ? ORDER BY id DESC LIMIT 1`,
-          [targetTask.id, studentId]
-        );
-        if (codeSubRows && codeSubRows.length > 0) {
-          alreadySubmitted = true;
-          submission = codeSubRows[0];
-        }
       }
     }
 
@@ -703,9 +729,32 @@ export const createBatchTask = async (req, res, next) => {
   try {
     await ensureTables();
     const { id } = req.params;
-    const { title, topic, difficulty, points, deadline, desc, description, language, testCases, test_cases } = req.body;
+    const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+    if (!cleanBatchId) {
+      return sendError(res, 'Invalid batch ID', 400);
+    }
 
-    if (!title) {
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (role === 'student') {
+      return sendError(res, 'Access denied. Students cannot create tasks.', 403);
+    }
+
+    // Verify batch exists
+    const [batchRow] = await query('SELECT id, college_id, name FROM batches WHERE id = ? LIMIT 1', [cleanBatchId]);
+    if (!batchRow) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    // College data isolation
+    if (role !== 'super_admin' && req.user?.college_id && batchRow.college_id) {
+      if (Number(req.user.college_id) !== Number(batchRow.college_id)) {
+        return sendError(res, 'Access denied. Cannot create tasks for another college.', 403);
+      }
+    }
+
+    const { title, topic, difficulty, points, deadline, task_date, taskDate, date, desc, description, language, testCases, test_cases } = req.body;
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
       return sendError(res, 'Task title is required', 400);
     }
 
@@ -714,19 +763,144 @@ export const createBatchTask = async (req, res, next) => {
     const taskDiff = difficulty || 'Medium';
     const taskPoints = points ? Number(points) : 100;
     const taskDeadline = deadline || '';
+    const scheduledDate = String(task_date || taskDate || date || new Date().toISOString().split('T')[0]).trim();
     const taskLang = language || 'Java';
     const tcList = testCases || test_cases || [];
     const testCasesJson = typeof tcList === 'string' ? tcList : JSON.stringify(tcList);
 
     const result = await query(
-      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, language, test_cases)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, taskDesc, taskLang, testCasesJson]
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, task_date, description, language, test_cases)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [cleanBatchId, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, scheduledDate, taskDesc, taskLang, testCasesJson]
     );
 
     const [newTask] = await query('SELECT * FROM batch_tasks WHERE id = ?', [result.insertId]);
 
     return sendSuccess(res, 'Task created and assigned to batch successfully', parseTaskRecord(newTask), 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateBatchTask = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id, taskId } = req.params;
+    const cleanTaskId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanTaskId) {
+      return sendError(res, 'Invalid task ID', 400);
+    }
+
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (role === 'student') {
+      return sendError(res, 'Access denied. Students cannot modify tasks.', 403);
+    }
+
+    // Verify task exists and belongs to batch
+    const [taskRow] = await query(
+      `SELECT bt.*, b.college_id 
+       FROM batch_tasks bt
+       JOIN batches b ON bt.batch_id = b.id
+       WHERE bt.id = ? LIMIT 1`,
+      [cleanTaskId]
+    );
+
+    if (!taskRow) {
+      return sendError(res, 'Task not found', 404);
+    }
+
+    if (id) {
+      const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+      if (cleanBatchId && Number(taskRow.batch_id) !== cleanBatchId) {
+        return sendError(res, 'Task does not belong to the specified batch', 400);
+      }
+    }
+
+    // College isolation
+    if (role !== 'super_admin' && req.user?.college_id && taskRow.college_id) {
+      if (Number(req.user.college_id) !== Number(taskRow.college_id)) {
+        return sendError(res, 'Access denied. Cannot modify tasks of another college.', 403);
+      }
+    }
+
+    const { title, topic, difficulty, points, deadline, task_date, taskDate, date, desc, description, language, testCases, test_cases } = req.body;
+
+    const taskTitle = title !== undefined ? String(title).trim() : taskRow.title;
+    const taskDesc = desc !== undefined ? desc : (description !== undefined ? description : taskRow.description);
+    const taskTopic = topic !== undefined ? String(topic).trim() : taskRow.topic;
+    const taskDiff = difficulty !== undefined ? difficulty : taskRow.difficulty;
+    const taskPoints = points !== undefined ? Number(points) : taskRow.points;
+    const taskDeadline = deadline !== undefined ? deadline : taskRow.deadline;
+    const scheduledDate = task_date !== undefined ? String(task_date).trim() : (taskDate !== undefined ? String(taskDate).trim() : (date !== undefined ? String(date).trim() : (taskRow.task_date || new Date().toISOString().split('T')[0])));
+    const taskLang = language !== undefined ? language : taskRow.language;
+    let testCasesJson = taskRow.test_cases;
+    if (testCases !== undefined || test_cases !== undefined) {
+      const tc = testCases !== undefined ? testCases : test_cases;
+      testCasesJson = typeof tc === 'string' ? tc : JSON.stringify(tc);
+    }
+
+    await query(
+      `UPDATE batch_tasks 
+       SET title = ?, topic = ?, difficulty = ?, points = ?, deadline = ?, task_date = ?, description = ?, language = ?, test_cases = ?
+       WHERE id = ?`,
+      [taskTitle, taskTopic, taskDiff, taskPoints, taskDeadline, scheduledDate, taskDesc, taskLang, testCasesJson, cleanTaskId]
+    );
+
+    const [updatedTask] = await query('SELECT * FROM batch_tasks WHERE id = ?', [cleanTaskId]);
+    return sendSuccess(res, 'Batch task updated successfully', parseTaskRecord(updatedTask));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteBatchTask = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id, taskId } = req.params;
+    const cleanTaskId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanTaskId) {
+      return sendError(res, 'Invalid task ID', 400);
+    }
+
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (role === 'student') {
+      return sendError(res, 'Access denied. Students cannot delete tasks.', 403);
+    }
+
+    // Verify task exists
+    const [taskRow] = await query(
+      `SELECT bt.*, b.college_id 
+       FROM batch_tasks bt
+       JOIN batches b ON bt.batch_id = b.id
+       WHERE bt.id = ? LIMIT 1`,
+      [cleanTaskId]
+    );
+
+    if (!taskRow) {
+      return sendError(res, 'Task not found', 404);
+    }
+
+    if (id) {
+      const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+      if (cleanBatchId && Number(taskRow.batch_id) !== cleanBatchId) {
+        return sendError(res, 'Task does not belong to the specified batch', 400);
+      }
+    }
+
+    // College isolation
+    if (role !== 'super_admin' && req.user?.college_id && taskRow.college_id) {
+      if (Number(req.user.college_id) !== Number(taskRow.college_id)) {
+        return sendError(res, 'Access denied. Cannot delete tasks of another college.', 403);
+      }
+    }
+
+    // Delete task submissions belonging to this specific task and batch
+    await query('DELETE FROM task_submissions WHERE task_id = ? AND batch_id = ?', [cleanTaskId, taskRow.batch_id]);
+
+    // Delete task
+    await query('DELETE FROM batch_tasks WHERE id = ?', [cleanTaskId]);
+
+    return sendSuccess(res, 'Batch task deleted successfully');
   } catch (error) {
     next(error);
   }
@@ -768,17 +942,7 @@ export const getBatchStudents = async (req, res, next) => {
   }
 };
 
-export const deleteBatchTask = async (req, res, next) => {
-  try {
-    await ensureTables();
-    const { taskId } = req.params;
-    const cleanId = String(taskId).replace(/[^0-9]/g, '') || taskId;
-    await query('DELETE FROM batch_tasks WHERE id = ? OR id = ?', [taskId, cleanId]);
-    return sendSuccess(res, 'Batch task deleted successfully');
-  } catch (error) {
-    next(error);
-  }
-};
+
 
 export const getBatchById = async (req, res, next) => {
   try {
@@ -916,10 +1080,41 @@ export const saveBatchDailyTopic = async (req, res, next) => {
 export const getTaskSubmissions = async (req, res, next) => {
   try {
     await ensureTables();
-    const { taskId } = req.params;
-    const cleanId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
-    if (!cleanId) {
+    const { id, taskId } = req.params;
+    const cleanTaskId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanTaskId) {
       return sendSuccess(res, 'Submissions retrieved successfully', []);
+    }
+
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    if (role === 'student') {
+      return sendError(res, 'Access denied. Students cannot view all batch submissions.', 403);
+    }
+
+    // Verify task exists and get batch_id
+    const [taskRow] = await query(
+      `SELECT bt.*, b.college_id 
+       FROM batch_tasks bt
+       JOIN batches b ON bt.batch_id = b.id
+       WHERE bt.id = ? LIMIT 1`,
+      [cleanTaskId]
+    );
+
+    if (!taskRow) {
+      return sendError(res, 'Task not found', 404);
+    }
+
+    if (id) {
+      const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+      if (cleanBatchId && Number(taskRow.batch_id) !== cleanBatchId) {
+        return sendError(res, 'Task does not belong to specified batch', 400);
+      }
+    }
+
+    if (role !== 'super_admin' && req.user?.college_id && taskRow.college_id) {
+      if (Number(req.user.college_id) !== Number(taskRow.college_id)) {
+        return sendError(res, 'Access denied. Cannot view submissions of another college.', 403);
+      }
     }
 
     const rows = await query(
@@ -938,9 +1133,9 @@ export const getTaskSubmissions = async (req, res, next) => {
        JOIN users u ON ts.user_id = u.id
        LEFT JOIN students s ON s.user_id = u.id
        LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
-       WHERE ts.task_id = ?
+       WHERE ts.task_id = ? AND ts.batch_id = ?
        ORDER BY ts.submitted_at DESC`,
-      [cleanId]
+      [cleanTaskId, taskRow.batch_id]
     );
 
     return sendSuccess(res, 'Submissions retrieved successfully', rows || []);

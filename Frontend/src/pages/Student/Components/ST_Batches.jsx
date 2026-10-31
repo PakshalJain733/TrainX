@@ -129,6 +129,7 @@ export default function Batches() {
             taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
             title: t.title,
             type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
+            taskDate: t.task_date || t.taskDate || t.date || "",
             due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
             deadline: t.deadline || "",
             status: finalStatus,
@@ -379,7 +380,7 @@ export default function Batches() {
                   {batchTasksList.length === 0 ? (
                     <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
                       <BookOpen size={36} className="admin-empty-state-icon" style={{ margin: "0 auto 8px" }} />
-                      <p className="admin-empty-state-title">No tasks currently assigned</p>
+                      <p className="admin-empty-state-title">No tasks assigned to this batch yet</p>
                       <p className="admin-empty-state-sub">Your mentor/admin will post new problem sets and assignments here.</p>
                     </div>
                   ) : (
@@ -422,6 +423,12 @@ export default function Batches() {
                               <h5 className="cw-item-title">{task.title}</h5>
                               <p className="cw-item-meta-sub">
                                 <span>{task.type}</span>
+                                {task.taskDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span style={{ color: "#4f46e5", fontWeight: 600 }}>Date: {task.taskDate}</span>
+                                  </>
+                                )}
                                 <span>•</span>
                                 <span className={task.status === "Expired" ? "cw-item-due--urgent" : (task.urgent ? "cw-item-due--urgent" : "")}>
                                   {task.due}

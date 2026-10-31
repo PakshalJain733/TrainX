@@ -164,6 +164,7 @@ export default function AdminBatches() {
     topic: "",
     difficulty: "Medium",
     points: 100,
+    taskDate: new Date().toISOString().split("T")[0],
     deadline: "",
     desc: "",
     language: "Java",
@@ -414,6 +415,8 @@ export default function AdminBatches() {
       topic: taskForm.topic || "General Assignment",
       difficulty: taskForm.difficulty || "Medium",
       points: taskForm.points || 100,
+      task_date: taskForm.taskDate || new Date().toISOString().split("T")[0],
+      taskDate: taskForm.taskDate || new Date().toISOString().split("T")[0],
       deadline: taskForm.deadline || "",
       description: taskForm.desc || "",
       language: taskForm.language || "Java",
@@ -427,6 +430,7 @@ export default function AdminBatches() {
       topic: "",
       difficulty: "Medium",
       points: 100,
+    taskDate: new Date().toISOString().split("T")[0],
       deadline: "",
       desc: "",
       language: "Java",
@@ -441,6 +445,7 @@ export default function AdminBatches() {
         method: "POST",
         body: JSON.stringify({
           batch_id: selectedBatch.id,
+          task_date: taskForm.taskDate || new Date().toISOString().split("T")[0],
           ...taskForm,
         }),
       });
@@ -749,7 +754,7 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-row-4">
+                  <div className="form-row-3">
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Code size={14} color="#4f46e5" />
@@ -799,9 +804,25 @@ export default function AdminBatches() {
                         onChange={(e) => setTaskForm((p) => ({ ...p, points: e.target.value }))}
                       />
                     </div>
+                  </div>
+
+                  <div className="form-row-2">
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Calendar size={14} color="#4f46e5" />
+                        <span>Task Date / Scheduled For *</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        className="form-input-admin"
+                        value={taskForm.taskDate}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, taskDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Clock size={14} color="#4f46e5" />
                         <span>Submission Deadline</span>
                       </label>
                       <input
@@ -943,7 +964,7 @@ export default function AdminBatches() {
               {batchTasks.length === 0 ? (
                 <div className="admin-empty-state-card" style={{ padding: "60px 20px" }}>
                   <CheckSquare size={44} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
-                  <p className="admin-empty-state-title" style={{ fontSize: "16px" }}>No tasks assigned yet</p>
+                  <p className="admin-empty-state-title" style={{ fontSize: "16px" }}>No tasks assigned to this batch yet</p>
                   <p className="admin-empty-state-sub" style={{ fontSize: "14px" }}>Click "Create New Task" or "Add Batch Task" above to assign problem sets to this batch.</p>
                 </div>
               ) : (
@@ -1009,10 +1030,17 @@ export default function AdminBatches() {
                           )}
                         </div>
 
-                        <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "#64748b" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <Clock size={14} /> Deadline: {t.deadline || "No deadline"}
-                          </span>
+                        <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "#64748b", flexWrap: "wrap", gap: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                            {(t.task_date || t.taskDate || t.date) && (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#4f46e5", fontWeight: "600" }}>
+                                <Calendar size={14} /> Date: {t.task_date || t.taskDate || t.date}
+                              </span>
+                            )}
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <Clock size={14} /> Deadline: {t.deadline || "No deadline"}
+                            </span>
+                          </div>
                           <span style={{ fontWeight: "600", color: "#334155" }}>
                             {parsedTestCases.length} Test Case{parsedTestCases.length !== 1 ? "s" : ""}
                           </span>
