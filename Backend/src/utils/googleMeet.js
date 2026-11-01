@@ -38,7 +38,12 @@ function getClientConfig() {
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'https://trainingportal.getflytechnologies.com/api/google/auth/callback';
 
   if (clientId && clientSecret) {
-    return { client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, source: 'env' };
+    return {
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      source: 'env'
+    };
   }
 
   if (fs.existsSync(CREDENTIALS_PATH)) {
