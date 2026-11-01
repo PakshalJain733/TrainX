@@ -1412,10 +1412,10 @@ export const getMentorAttendanceBatches = async (req, res, next) => {
     if (availability.attendance && students.length > 0) {
       const userIds = students.map((s) => Number(s.user_id));
       const markedRows = await query(
-        `SELECT user_id, status FROM attendance WHERE user_id IN (${inPlaceholders(userIds)}) AND session_date = ?`,
+        `SELECT user_id, batch_id, status FROM attendance WHERE user_id IN (${inPlaceholders(userIds)}) AND session_date = ?`,
         [...userIds, sessionDate]
       );
-      markedByStudent = new Map((markedRows || []).map((r) => [toInt(r.user_id), r.status]));
+      markedByStudent = new Map((markedRows || []).map((r) => [`${toInt(r.user_id)}_${toInt(r.batch_id)}`, r.status]));
     }
 
     const batches = await Promise.all(batchIds.map(async (batchId) => {
@@ -1429,7 +1429,7 @@ export const getMentorAttendanceBatches = async (req, res, next) => {
         students: students
           .filter((s) => s.batch_id != null && toInt(s.batch_id) === batchId)
           .map((s) => {
-            const raw = markedByStudent.get(toInt(s.user_id));
+            const raw = markedByStudent.get(`${toInt(s.user_id)}_${batchId}`);
             const stat = raw ? (raw.toLowerCase() === 'present' ? 'Present' : 'Absent') : null;
             return {
               id: toInt(s.user_id),

@@ -330,6 +330,12 @@ function Register() {
     }
   }, [searchParams]);
 
+  // Admin approval pending state
+  const [showPendingApproval, setShowPendingApproval] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
+
   // Live polling for Admin approval while on the pending approval screen
   useEffect(() => {
     if (!showPendingApproval || isApproved) return undefined;

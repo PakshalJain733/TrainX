@@ -1012,140 +1012,129 @@ console.log("Output Result:", JSON.stringify(output, null, 2));
 }
 
 /**
- * Generates deep, crystal-clear educational theory for a milestone topic using AI
+ * Generates deep, crystal-clear, informative technical educational theory for a milestone topic using AI
  */
 export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '') => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
   const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
 
-  const prompt = `You are an extraordinary Computer Science Educator, Senior Staff Engineer, and Author (in the pedagogy style of top authors and clean-code educators).
-Generate a comprehensive, crystal-clear, highly educational theory guide specifically for the topic: "${cleanTitle}" tailored for the role: "${cleanRole}".
+  const prompt = `You are a Principal Software Engineer and Computer Science Professor.
+Generate an in-depth, strictly informative, and technically authoritative curriculum guide for the topic: "${cleanTitle}" tailored for the role: "${cleanRole}".
 
-CRITICAL PEDAGOGICAL MISSION:
-The user is a student or learner reading this guide so they can 100% UNDERSTAND "${cleanTitle}".
-When reading this theory, the student must have an "Aha!" moment and be able to clearly explain:
-1. What is this topic? (Explain in plain English with a relatable everyday real-world analogy so the concept clicks immediately).
-2. Why do we need it? (What real-world problem does it solve in modern applications? What goes wrong without it?).
-3. How does it work under the hood? (Step-by-step execution lifecycle, flow of data, components, and mechanics).
-4. Practical Code Walkthrough: (A clean, fully functional, realistic code snippet with comments on every important line explaining how it works).
-5. Common Mistakes to Avoid: (The top 2-3 traps or bugs beginners create with this topic and the exact fix).
-6. Industry Best Practices & Senior Takeaways: (Production rules used by senior engineers at top tech companies).
+CRITICAL EDUCATIONAL REQUIREMENTS:
+- Strictly INFORMATIVE and TECHNICAL content. Explain the actual concepts, specifications, browser/runtime architectures, and workflows directly.
+- STRICTLY FORBIDDEN: Do NOT use childish, fluffy, or unrelated everyday analogies (NO comparisons to kitchen timers, theater stages, houses, cakes, recipe books, or restaurant waiters). Keep every explanation professional, rigorous, and directly on-topic.
+- SYNTAX REQUIREMENT: The codeExample must contain ONLY pure, clean, idiomatic SYNTAX for "${cleanTitle}". Do NOT wrap the code in generic dummy classes (e.g. NO "class ProductionModule"). Do NOT output lengthy comment intros or file headers. Show only the clean, essential syntax directly illustrating the topic.
 
-MANDATORY 4-LEVEL PEDAGOGICAL STRUCTURE (Strictly in this order):
-1. SECTION 1 [Level 1: Core Concept & Real-World Intuition]
-   - "level": "Level 1: Core Concept & Real-World Intuition"
-   - "levelBadge": "Intuition"
-   - "title": Engaging title explaining what "${cleanTitle}" is in simple terms
-   - "explanation": 3-4 sentence plain-English explanation introducing the concept, why it exists, and an intuitive real-world analogy (e.g. comparing an API to a restaurant waiter, Git to video game save points, CSS Flexbox to arranging items on a conveyor belt, database indexes to book indexes).
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**What It Is:** [Simple, memorable plain-English definition]"
-     * "**Real-World Analogy:** [Relatable everyday analogy that cements the mental model]"
-     * "**The Problem It Solves:** [Why we need it and the headaches developers face without it]"
-     * "**Core Mental Model:** [How to think about and visualize this concept intuitively]"
-   - "takeaway": High-impact foundational rule or mental model to remember forever.
+MANDATORY 4-LEVEL STRUCTURE (Strictly in this order):
+1. Level 1: Core Technical Foundations & Architecture
+   - "level": "Level 1: Core Technical Foundations & Architecture"
+   - "levelBadge": "Foundations"
+   - "title": Technical definition and architectural role of "${cleanTitle}"
+   - "explanation": 3-4 sentence technically accurate explanation defining what the technology is, its governing specifications (W3C, WHATWG, ECMAScript, Git DAG), and why it is indispensable in modern software architecture.
+   - "points": 4 bullet points formatted as:
+     * "**Technical Definition:** [Clear, standard-based definition of ${cleanTitle}]"
+     * "**Architectural Purpose:** [The exact technical problem it solves in software systems]"
+     * "**Core Specifications:** [Standards, protocols, or fundamental design specifications]"
+     * "**Ecosystem Integration:** [How it interfaces with other layers of the modern technology stack]"
+   - "takeaway": Authoritative engineering principle.
 
-2. SECTION 2 [Level 2: Working Mechanics & Step-by-Step Flow]
-   - "level": "Level 2: Working Mechanics & Step-by-Step Flow"
+2. Level 2: Working Mechanics & Execution Flow
+   - "level": "Level 2: Working Mechanics & Execution Flow"
    - "levelBadge": "Mechanics"
-   - "title": Specific technical title for the operational lifecycle and workflow of "${cleanTitle}"
-   - "explanation": Step-by-step breakdown of how "${cleanTitle}" actually operates when executed, how data moves through it, and the key components involved.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Step-by-Step Execution:** [Clear sequence of actions from start to finish]"
-     * "**Key Building Blocks:** [The essential keywords, components, parameters, or methods]"
-     * "**Data & State Transitions:** [How inputs transform into outputs]"
-     * "**Standard Patterns:** [The idiomatic, clean way developers structure this in real projects]"
-   - "takeaway": Practical rule for writing clean, structured code with "${cleanTitle}".
+   - "title": Lifecycle, operational mechanics, and step-by-step workflow of "${cleanTitle}"
+   - "explanation": Step-by-step technical breakdown of how the browser engine, runtime, or CLI parses, builds, and executes it.
+   - "points": 4 bullet points:
+     * "**Parsing & Execution Pipeline:** [Sequence of operations from source parsing to execution/rendering]"
+     * "**Core Building Blocks:** [Essential syntax constructs, keywords, APIs, or commands]"
+     * "**State & Data Flow:** [How data, events, or state changes propagate through the system]"
+     * "**Standard Implementation Patterns:** [Idiomatic architectural patterns used in modern production code]"
+   - "takeaway": Practical rule for clean, robust implementation.
 
-3. SECTION 3 [Level 3: Deep Core Internals & Architecture]
-   - "level": "Level 3: Deep Core Internals & Architecture"
+3. Level 3: Deep Core Internals & Runtime Engine
+   - "level": "Level 3: Deep Core Internals & Runtime Engine"
    - "levelBadge": "Core Internals"
-   - "title": Specific technical title naming the underlying engine, runtime, or architectural mechanics of "${cleanTitle}"
-   - "explanation": Under-the-hood explanation of how the engine, runtime, VM, database, or operating system executes this behind the scenes.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Under-the-Hood Engine:** [How the runtime, compiler, or browser processes this]"
-     * "**Memory & Resource Mechanics:** [How memory, handles, or system resources are allocated]"
-     * "**Performance & Big-O Complexity:** [Time/Space efficiency, latency impact, or throughput]"
-     * "**Underlying Guarantees:** [Thread safety, immutability, or consistency mechanics]"
-   - "takeaway": Low-level optimization rule to write high-performance code.
+   - "title": Underlying runtime engine, memory management, and performance mechanics of "${cleanTitle}"
+   - "explanation": Under-the-hood analysis of the browser rendering engine (DOM/CSSOM/Render Tree), JS execution context/event loop, or Git content-addressable object store (Blobs, Trees, Commits).
+   - "points": 4 bullet points:
+     * "**Under-the-Hood Engine:** [How the runtime, VM, or storage engine processes this]"
+     * "**Memory & Resource Management:** [Heap, stack, node references, or disk object allocations]"
+     * "**Performance & Complexity Bounds:** [Time/space complexity, reflow/repaint triggers, or I/O efficiency]"
+     * "**Guarantees & Consistency:** [Immutability, task queue ordering, or ACID/history integrity]"
+   - "takeaway": Deep performance optimization principle.
 
-4. SECTION 4 [Level 4: Common Pitfalls & Senior Best Practices]
+4. Level 4: Common Pitfalls & Senior Best Practices
    - "level": "Level 4: Common Pitfalls & Senior Best Practices"
-   - "levelBadge": "Advanced Mastery"
-   - "title": Specific technical title covering beginner traps, debugging, and production standards for "${cleanTitle}"
-   - "explanation": Detailed analysis of common mistakes developers make with "${cleanTitle}", how subtle bugs happen, and how senior engineers build resilient production applications.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Common Beginner Trap #1:** [The mistake, why it happens, and how to fix it]"
-     * "**Common Beginner Trap #2:** [Another subtle bug or anti-pattern and the solution]"
-     * "**Defensive Edge-Cases:** [How to handle unexpected inputs, nulls, or failures safely]"
-     * "**Senior Engineering Checklist:** [Verification criteria for shipping to production]"
-   - "takeaway": Golden takeaway rule for writing production-grade code.
-
-CODE EXAMPLE REQUIREMENT:
-- "codeExample": Provide a REAL, fully functional, beautifully commented code snippet specifically for "${cleanTitle}".
-  * Show basic usage first, then demonstrate an idiomatic, production-grade pattern.
-  * Every important line MUST have an inline comment explaining what it does so the student learns by reading the code.
-  * Must be 100% relevant to "${cleanTitle}". Never output generic placeholder code.
+   - "levelBadge": "Senior Practices"
+   - "title": Edge cases, security anti-patterns, and production engineering standards for "${cleanTitle}"
+   - "explanation": Detailed analysis of common developer mistakes, edge cases, security hazards, and senior production verification standards.
+   - "points": 4 bullet points:
+     * "**Common Anti-Pattern & Fix:** [Specific technical error, why it fails, and the direct solution]"
+     * "**Security & Defensive Handling:** [Vulnerabilities (e.g. XSS, secret leaks) and defense mechanisms]"
+     * "**Performance Bottlenecks:** [Critical performance pitfall and the mitigation strategy]"
+     * "**Production Readiness Checklist:** [Verification criteria for shipping to production]"
+   - "takeaway": Production engineering golden rule.
 
 Output ONLY valid JSON strictly matching this schema without markdown fences:
 {
-  "title": "Master Guide to ${cleanTitle}: Concept, Mechanics & Production",
-  "overview": "Comprehensive 2-3 paragraph educational overview explaining ${cleanTitle} simply, why it is essential for ${cleanRole}, and what the student will master...",
-  "difficultyProgression": "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+  "title": "Technical Curriculum Guide: ${cleanTitle}",
+  "overview": "Comprehensive 2-3 paragraph technical overview explaining ${cleanTitle}, its foundational standards, architectural importance for ${cleanRole}, and core competencies covered.",
+  "difficultyProgression": "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
   "sections": [
     {
-      "level": "Level 1: Core Concept & Real-World Intuition",
-      "levelBadge": "Intuition",
-      "title": "Understanding ${cleanTitle}: What It Is & Why It Matters",
-      "explanation": "Plain English explanation with real-world analogy...",
+      "level": "Level 1: Core Technical Foundations & Architecture",
+      "levelBadge": "Foundations",
+      "title": "Technical definition and architectural role of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**What It Is:** Plain English definition...",
-        "**Real-World Analogy:** Relatable comparison...",
-        "**The Problem It Solves:** Real-world problem addressed...",
-        "**Core Mental Model:** How to visualize this concept..."
+        "**Technical Definition:** ...",
+        "**Architectural Purpose:** ...",
+        "**Core Specifications:** ...",
+        "**Ecosystem Integration:** ..."
       ],
-      "takeaway": "Actionable foundational takeaway..."
+      "takeaway": "..."
     },
     {
-      "level": "Level 2: Working Mechanics & Step-by-Step Flow",
+      "level": "Level 2: Working Mechanics & Execution Flow",
       "levelBadge": "Mechanics",
-      "title": "How ${cleanTitle} Works: Lifecycle & Architecture",
-      "explanation": "Detailed step-by-step breakdown of how it works...",
+      "title": "Operational lifecycle and workflow of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Step-by-Step Execution:** Sequential flow...",
-        "**Key Building Blocks:** Essential components...",
-        "**Data & State Transitions:** Transformations...",
-        "**Standard Patterns:** Idiomatic usage..."
+        "**Parsing & Execution Pipeline:** ...",
+        "**Core Building Blocks:** ...",
+        "**State & Data Flow:** ...",
+        "**Standard Implementation Patterns:** ..."
       ],
-      "takeaway": "Actionable design takeaway..."
+      "takeaway": "..."
     },
     {
-      "level": "Level 3: Deep Core Internals & Architecture",
+      "level": "Level 3: Deep Core Internals & Runtime Engine",
       "levelBadge": "Core Internals",
-      "title": "Under the Hood: Engine Internals & Performance of ${cleanTitle}",
-      "explanation": "Under the hood deep dive...",
+      "title": "Under the hood: Runtime engine and resource mechanics of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Under-the-Hood Engine:** Runtime mechanics...",
-        "**Memory & Resource Mechanics:** Allocations and lifecycle...",
-        "**Performance & Big-O Complexity:** Efficiency bounds...",
-        "**Underlying Guarantees:** Concurrency or state guarantees..."
+        "**Under-the-Hood Engine:** ...",
+        "**Memory & Resource Management:** ...",
+        "**Performance & Complexity Bounds:** ...",
+        "**Guarantees & Consistency:** ..."
       ],
-      "takeaway": "Actionable optimization takeaway..."
+      "takeaway": "..."
     },
     {
       "level": "Level 4: Common Pitfalls & Senior Best Practices",
-      "levelBadge": "Advanced Mastery",
-      "title": "Mistakes to Avoid & Senior Best Practices for ${cleanTitle}",
-      "explanation": "Common pitfalls and production standards...",
+      "levelBadge": "Senior Practices",
+      "title": "Production pitfalls, security, and standards for ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Common Beginner Trap #1:** The mistake and fix...",
-        "**Common Beginner Trap #2:** The anti-pattern and fix...",
-        "**Defensive Edge-Cases:** Resilience checks...",
-        "**Senior Engineering Checklist:** Production rules..."
+        "**Common Anti-Pattern & Fix:** ...",
+        "**Security & Defensive Handling:** ...",
+        "**Performance Bottlenecks:** ...",
+        "**Production Readiness Checklist:** ..."
       ],
-      "takeaway": "Actionable production takeaway..."
+      "takeaway": "..."
     }
   ],
-  "codeExample": "// Fully commented working code for ${cleanTitle}...",
+  "codeExample": "// Pure syntax demonstrating ${cleanTitle}...",
   "bestPractices": [
     "Specific production rule 1...",
     "Specific production rule 2...",
@@ -1156,8 +1145,8 @@ Output ONLY valid JSON strictly matching this schema without markdown fences:
 
   try {
     const parsed = await generateJSON(prompt, {
-      system: 'You are an extraordinary Computer Science Educator and Senior Staff Architect. Output valid JSON strictly matching the 4-tier educational theory schema. Prioritize crystal-clear pedagogical explanations that make the concept click instantly for the student.',
-      temperature: 0.7,
+      system: 'You are a Principal Software Engineer and Computer Science Professor. Output valid JSON strictly matching the 4-tier educational theory schema. Provide rigorous, highly informative, technical explanations without childish analogies. The codeExample must be pure syntax.',
+      temperature: 0.5,
       maxTokens: 4000,
       timeoutMs: 60000,
     });
@@ -1175,136 +1164,195 @@ Output ONLY valid JSON strictly matching this schema without markdown fences:
 export function generateRoleSpecificTheoryFallback(cleanTitle, cleanRole) {
   const lower = `${cleanTitle} ${cleanRole}`.toLowerCase();
 
-  // 1. React / Frontend Hooks & State
-  if (lower.includes("hook") || lower.includes("state") || lower.includes("react") || lower.includes("component")) {
+  // 1. Web Fundamentals: HTML5, CSS3, JavaScript & Git
+  if (lower.includes("html") || lower.includes("css") || lower.includes("web") || (lower.includes("javascript") && lower.includes("git"))) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is a cornerstone of modern frontend web engineering in React. In modern user interfaces, components need to remember data—like user inputs, modal toggles, or fetched API responses—and re-render the view whenever that data changes. This guide breaks down how state and lifecycle work from intuitive mental models to Virtual DOM reconciliation and senior production practices.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} constitutes the foundational layer of web client engineering and distributed source code management. HTML5 provides semantic element trees, CSS3 enforces styling rules and cascade layout engines, ECMAScript (JavaScript) manages dynamic asynchronous runtime logic, and Git tracks repository state via directed acyclic graphs (DAGs). Mastering these core technologies is essential for building scalable applications.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} gives React components a memory. In regular JavaScript functions, local variables disappear when the function finishes running. In React, state hooks instruct the React runtime to preserve values across consecutive renders.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Architectural Foundation & Technical Standards of ${cleanTitle}`,
+          explanation: `Modern web architecture relies on a strict separation of concerns between document structure (HTML5), visual presentation (CSS3), dynamic behavior (ECMAScript), and versioned state persistence (Git). Each component adheres to W3C, WHATWG, and ECMA specifications.`,
           points: [
-            `**What It Is:** A declarative mechanism that binds reactive data to the user interface, automatically re-rendering when updated.`,
-            `**Real-World Analogy:** Think of component state like a digital scoreboard at a basketball match. Whenever points are scored (state update), the scoreboard instantly refreshes without having to rebuild the entire stadium.`,
-            `**The Problem It Solves:** In traditional vanilla JS, updating a UI required manually selecting DOM elements and mutating them (document.getElementById.innerText = ...). State makes the UI a direct reflection of data: UI = f(state).`,
-            `**Core Mental Model:** Never mutate state directly. Always treat state values as read-only snapshots and call updater functions to schedule transitions.`
+            `**Technical Definition:** A standardized technology stack comprising HTML5 for DOM tree structuring, CSS3 for cascade and layout computation, ECMAScript for event-driven logic, and Git for distributed version control.`,
+            `**Architectural Purpose:** Enforces separation of concerns, guarantees cross-browser standard compliance, and enables deterministic team collaboration through cryptographically hashed commit graphs.`,
+            `**Core Specifications:** W3C HTML5 Semantic Standards, CSS Cascading and Inheritance Level 3/4, ECMAScript 2023 language specification, and Git SHA-1/SHA-256 object store model.`,
+            `**Ecosystem Integration:** HTML and CSS feed the browser rendering pipeline (DOM/CSSOM), JavaScript binds to browser Web APIs, and Git hooks into automated CI/CD deployment pipelines.`
           ],
-          takeaway: "State represents a snapshot of your component at a single moment in time. When state updates, React re-invokes the component with the new snapshot."
+          takeaway: "Build on semantic markup and standard specifications to guarantee cross-platform accessibility, SEO indexability, and maintainable architectures."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
-          title: `How ${cleanTitle} Works: Lifecycle, Re-renders & State Transitions`,
-          explanation: `When a state setter is invoked, React enqueues the update, schedules a re-render, re-executes the component function, and reconciles the new output with the browser DOM.`,
+          title: `Parsing Pipeline, DOM/CSSOM Trees & Git Directed Acyclic Graph`,
+          explanation: `When a browser parses an HTML document, it tokenizes bytes into tokens, builds DOM nodes, computes the CSSOM, constructs the render tree, and computes layout coordinates before painting pixels. Git simultaneously manages file state across working tree, staging index, and object database.`,
           points: [
-            `**Step-by-Step Execution:** 1. User interacts (clicks button) ➔ 2. State setter called with new value ➔ 3. React schedules component re-render ➔ 4. Function re-executes with new state snapshot ➔ 5. Virtual DOM diffed and minimal browser DOM updated.`,
-            `**Key Building Blocks:** Declare state with \`const [value, setValue] = useState(initialState)\`, or use \`useReducer\` for complex multi-step state machines.`,
-            `**Batching & Asynchronous Updates:** React batches multiple state updates executed inside the same event loop tick to prevent multiple jarring re-renders.`,
-            `**Standard Patterns:** Keep state as close as possible to the component that uses it. Lift state up only when sibling components genuinely need to share it.`
+            `**Parsing & Execution Pipeline:** HTML bytes ➔ Tokens ➔ DOM Nodes ➔ CSSOM Tree calculation ➔ Render Tree construction ➔ Layout reflow calculation ➔ Raster painting.`,
+            `**Core Building Blocks:** Semantic tags (<main>, <nav>, <article>), CSS selectors and Flexbox/Grid properties, JavaScript event listeners, and Git CLI primitives (status, add, commit, push).`,
+            `**State & Data Flow:** User actions dispatch DOM events through capture and bubbling phases, triggering asynchronous JavaScript handlers that update element attributes or fetch remote payloads.`,
+            `**Standard Implementation Patterns:** Use semantic HTML for accessibility (a11y), responsive modern CSS Flexbox/Grid without fragile absolute coordinates, and atomic feature-branch Git workflows.`
           ],
-          takeaway: "State updates are scheduled, not applied instantaneously within the current function line. Always use functional updates `setVal(prev => prev + 1)` when depending on prior state."
+          takeaway: "Minimize DOM reflows and repaints by batching style mutations, and keep Git commits atomic with descriptive imperative commit headers."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
-          title: `Under the Hood: React Fiber Tree, Hook Linked-Lists & Reconciliation`,
-          explanation: `React stores hook states in a singly linked list attached to the component's Fiber node. The order of hook calls is the single source of truth for their identity.`,
+          title: `Browser Rendering Engine, V8 Event Loop & Git Content-Addressable Storage`,
+          explanation: `Browser engines (e.g. Blink, Gecko) maintain multi-threaded pipelines separating the compositor thread from the main UI thread. JavaScript executes on a single thread using the V8 engine, coordinating microtasks (Promises) and macrotasks (timers) via the Event Loop. Git stores all repository files as immutable SHA-hashed blobs, trees, and commit nodes.`,
           points: [
-            `**Under-the-Hood Engine:** Each component instance is represented by a Fiber object in memory. Hook records are linked sequentially (hook.next).`,
-            `**Why Rules of Hooks Exist:** Because React matches state to hooks strictly by their call order, hooks must NEVER be placed inside conditionals, loops, or nested functions.`,
-            `**Fiber Reconciliation Diffing:** React uses an O(N) heuristic diffing algorithm to compare the new virtual tree against the old one, patching only changed browser nodes.`,
-            `**Memory & Garbage Collection:** Unmounted component Fibers are detached and reclaimed by the browser's Garbage Collector.`
+            `**Under-the-Hood Engine:** The browser's C++ rendering engine handles layout and rasterization on GPU layers, while the V8 runtime compiles JavaScript to native machine instructions via ignition interpreter and Turbofan JIT compiler.`,
+            `**Memory & Resource Management:** DOM nodes are managed C++ objects bridged to the JavaScript garbage collector. Orphaned element references prevent memory reclamation.`,
+            `**Performance & Complexity Bounds:** CSS selector matching occurs right-to-left. Deep nesting increases matching complexity. Git commit lookups and branch pointer adjustments are O(1) constant-time operations.`,
+            `**Guarantees & Consistency:** Git's cryptographic SHA hashing guarantees complete repository immutability: history cannot be rewritten without altering all downstream commit hashes.`
           ],
-          takeaway: "Never call hooks conditionally. Hook call order must remain 100% deterministic between every render cycle."
+          takeaway: "Understand the single-threaded nature of the JavaScript event loop: long-running synchronous code freezes the browser compositor thread."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
-          title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Mastering state requires avoiding infinite re-render loops, stale closures in effect hooks, and unnecessary re-render waterfalls.`,
+          levelBadge: "Senior Practices",
+          title: `Production Pitfalls, Security Standards & Verification for ${cleanTitle}`,
+          explanation: `Production web applications must defend against Cross-Site Scripting (XSS), eliminate accidental credential commits in Git, and prevent layout thrashing.`,
           points: [
-            `**Common Beginner Trap #1 (Direct Mutation):** Doing \`state.items.push(newItem)\` mutates the existing reference, so React fails to detect the change. Solution: Always return a new array or object (\`[...prev, newItem]\`).`,
-            `**Common Beginner Trap #2 (Stale Closures):** Capturing an old state variable inside a \`setInterval\` or \`useEffect\` without listing it in the dependency array. Solution: Use functional updates (\`setCount(c => c + 1)\`).`,
-            `**Defensive Edge-Cases:** Provide sensible initial state values (e.g., empty array \`[]\` instead of \`null\`) to prevent runtime 'Cannot read properties of undefined' errors.`,
-            `**Senior Engineering Checklist:** Derive state whenever possible instead of storing redundant state (e.g. calculate \`fullName = firstName + ' ' + lastName\` on the fly rather than keeping a third state).`
+            `**Common Anti-Pattern & Fix:** Directly setting element.innerHTML with untrusted user input causes XSS vulnerabilities. Fix: Always use element.textContent or sanitized templates.`,
+            `**Security & Defensive Handling:** Never commit .env secrets or private SSH keys to Git repositories. Configure robust .gitignore files and commit verification hooks (pre-commit).`,
+            `**Performance Bottlenecks:** Layout thrashing caused by reading DOM layout geometry (e.g. offsetWidth) immediately after writing styles. Fix: Batch all reads before executing writes.`,
+            `**Production Readiness Checklist:** Ensure semantic HTML passes accessibility audits (WCAG AA), responsive styles adapt across viewports, and branch protection rules enforce code reviews.`
           ],
-          takeaway: "Don't put values in state if they can be calculated on the fly during render from existing props or state."
+          takeaway: "Never use innerHTML with dynamic content; sanitize all inputs, configure strict .gitignore rules, and profile layout rendering in browser DevTools."
         }
       ],
-      codeExample: `// Production-Grade React Implementation: ${cleanTitle}
-import React, { useState, useCallback, useMemo } from 'react';
+      codeExample: `<!-- 1. HTML5 Semantic Syntax -->
+<header>
+  <nav aria-label="Main Navigation">
+    <a href="#dashboard">Dashboard</a>
+  </nav>
+</header>
+<main class="content-container">
+  <article>
+    <h1>System Status</h1>
+    <button id="refreshBtn" type="button">Refresh Metrics</button>
+  </article>
+</main>
 
-export default function InteractiveCounterModule() {
-  // Level 1: Declarative state with clean initial primitives
-  const [items, setItems] = useState([
-    { id: 1, title: 'Master Core Concepts', completed: true },
-    { id: 2, title: 'Understand Execution Flow', completed: false }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+/* 2. Modern CSS3 Responsive Syntax */
+.content-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
 
-  // Level 2: Functional updater to avoid stale state bugs
-  const handleToggleItem = useCallback((id) => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
-    );
+// 3. JavaScript DOM Event & Async Syntax
+const refreshBtn = document.getElementById('refreshBtn');
+refreshBtn?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/metrics');
+    const data = await res.json();
+    console.log('Metrics loaded:', data);
+  } catch (err) {
+    console.error('Fetch error:', err);
+  }
+});
+
+# 4. Essential Git Terminal Syntax
+git init
+git checkout -b feature/metrics-dashboard
+git add .
+git commit -m "feat(dashboard): integrate metrics refresh endpoint"
+git push -u origin feature/metrics-dashboard`,
+      bestPractices: [
+        "Enforce strict separation between HTML semantic structure, CSS styling, and JavaScript logic.",
+        "Use modern CSS Flexbox and Grid layouts; avoid brittle absolute positioning and inline styles.",
+        "Prevent XSS security vulnerabilities by never assigning unsanitized user inputs to innerHTML.",
+        "Always maintain an up-to-date .gitignore file to prevent secrets and build artifacts from entering Git history."
+      ]
+    };
+  }
+
+  // 2. React / Frontend Hooks & State
+  if (lower.includes("hook") || lower.includes("state") || lower.includes("react") || lower.includes("component")) {
+    return {
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} is a core foundation of React component state architecture. React components declare state hooks to bind reactive data to the user interface, scheduling reconciliation passes whenever state updates occur. Understanding hook execution lifecycles, closure captures, and Fiber reconciliation is critical for writing robust frontend code.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      sections: [
+        {
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Declarative State & Component Architecture`,
+          explanation: `In React's declarative paradigm, the user interface is a pure function of component state: UI = f(state). State hooks instruct the React runtime to preserve and track values across consecutive render passes.`,
+          points: [
+            `**Technical Definition:** A declarative state management API that preserves values across component re-render lifecycles without requiring class instances.`,
+            `**Architectural Purpose:** Eliminates direct imperative DOM mutation by making UI components declarative reflections of reactive state snapshots.`,
+            `**Core Specifications:** React Hooks specification, immutable state transitions, and deterministic render contracts.`,
+            `**Ecosystem Integration:** Integrates with React Fiber reconciliation, Context API, and state machines (e.g. Redux, Zustand).`
+          ],
+          takeaway: "Always treat state as strictly read-only snapshots; schedule state transitions using immutable updates."
+        },
+        {
+          level: "Level 2: Working Mechanics & Execution Flow",
+          levelBadge: "Mechanics",
+          title: `How ${cleanTitle} Works: Lifecycle, Re-renders & State Transitions`,
+          explanation: `When a state setter is invoked, React enqueues the state update, schedules a component re-render, re-executes the component function, and reconciles the new output with the browser DOM.`,
+          points: [
+            `**Parsing & Execution Pipeline:** 1. User event triggers setter ➔ 2. Update enqueued in Fiber work queue ➔ 3. Re-render executed with new snapshot ➔ 4. Virtual DOM diffed ➔ 5. Minimal browser DOM patched.`,
+            `**Core Building Blocks:** useState for local state, useReducer for complex state transitions, useEffect for side-effects, and useMemo/useCallback for referential stability.`,
+            `**State & Data Flow:** React batches state updates inside event ticks to coalesce renders and prevent UI stutter.`,
+            `**Standard Implementation Patterns:** Keep state as local as possible. Lift state up only when siblings must synchronize on shared data.`
+          ],
+          takeaway: "State updates are scheduled asynchronously; always use functional updates setVal(prev => prev + 1) when depending on current state."
+        },
+        {
+          level: "Level 3: Deep Core Internals & Runtime Engine",
+          levelBadge: "Core Internals",
+          title: `Under the Hood: React Fiber Tree, Hook Linked-Lists & Reconciliation`,
+          explanation: `React stores hook state in a singly linked list attached to the component Fiber node. The sequence of hook calls is the single source of truth for matching state to hook invocations.`,
+          points: [
+            `**Under-the-Hood Engine:** Each component instance is represented by a Fiber object in memory. Hook records are linked sequentially (hook.next).`,
+            `**Memory & Resource Management:** Unmounted Fibers are garbage-collected; uncleaned subscriptions cause retained memory leaks.`,
+            `**Performance & Complexity Bounds:** React's heuristic diffing algorithm executes in O(N) linear time by comparing component types and keys.`,
+            `**Guarantees & Consistency:** Hook call order must remain 100% deterministic between every render cycle (Rules of Hooks).`
+          ],
+          takeaway: "Never call hooks conditionally or inside loops to guarantee deterministic Fiber linked-list traversals."
+        },
+        {
+          level: "Level 4: Common Pitfalls & Senior Best Practices",
+          levelBadge: "Senior Practices",
+          title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
+          explanation: `Mastering state requires avoiding direct mutations, stale closures in effect hooks, and unnecessary re-render waterfalls.`,
+          points: [
+            `**Common Anti-Pattern & Fix:** Mutating state objects directly (state.items.push(x)) bypasses React change detection. Fix: Always return a new reference ([...prev, x]).`,
+            `**Security & Defensive Handling:** Validate external API payloads before setting them into state to prevent undefined property crashes.`,
+            `**Performance Bottlenecks:** Passing inline object or function references down to memoized child components forces redundant re-renders. Fix: Use useCallback and useMemo.`,
+            `**Production Readiness Checklist:** Derive calculated values on the fly during render rather than storing synchronized redundant state.`
+          ],
+          takeaway: "Calculate derived state during render rather than syncing duplicate state variables."
+        }
+      ],
+      codeExample: `// React State & Hook Syntax
+import React, { useState, useEffect, useCallback } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  // Synchronize side effects with dependency array
+  useEffect(() => {
+    document.title = \`Count: \${count}\`;
+  }, [count]);
+
+  // Functional update prevents stale closure bugs
+  const increment = useCallback(() => {
+    setCount(prev => prev + 1);
   }, []);
 
-  const handleAddItem = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return; // Defensive validation
-
-    const newItem = {
-      id: Date.now(),
-      title: inputValue.trim(),
-      completed: false
-    };
-
-    // Level 4 Best Practice: Immutable state update via spread operator
-    setItems((prev) => [...prev, newItem]);
-    setInputValue('');
-  };
-
-  // Level 3: Memoized computation to avoid wasteful recalculations
-  const completedCount = useMemo(() => {
-    return items.filter((item) => item.completed).length;
-  }, [items]);
-
   return (
-    <div style={{ padding: '20px', background: '#0f172a', color: '#f8fafc', borderRadius: '12px' }}>
-      <h3 style={{ margin: '0 0 10px', color: '#38bdf8' }}>${cleanTitle} - Interactive Demo</h3>
-      <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-        Progress: {completedCount} of {items.length} completed
-      </p>
-
-      <form onSubmit={handleAddItem} style={{ display: 'flex', gap: '8px', margin: '16px 0' }}>
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Add a new milestone item..."
-          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', background: '#1e293b', color: '#fff' }}
-        />
-        <button type="submit" style={{ padding: '8px 16px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-          Add Item
-        </button>
-      </form>
-
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {items.map((item) => (
-          <li key={item.id} onClick={() => handleToggleItem(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', cursor: 'pointer', borderBottom: '1px solid #1e293b' }}>
-            <span>{item.completed ? '✅' : '⏳'}</span>
-            <span style={{ textDecoration: item.completed ? 'line-through' : 'none', color: item.completed ? '#64748b' : '#f8fafc' }}>
-              {item.title}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div className="counter-container">
+      <p>Current Count: {count}</p>
+      <button onClick={increment} type="button">Increment</button>
     </div>
   );
 }`,
@@ -1317,107 +1365,84 @@ export default function InteractiveCounterModule() {
     };
   }
 
-  // 2. SQL & Databases
+  // 3. SQL & Databases
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join") || lower.includes("mongo")) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is a foundational pillar of database management and backend architecture. Whether managing user profiles, transaction logs, or relational entities, understanding how data is organized, queried, indexed, and preserved with ACID guarantees is essential for building scalable applications.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} forms the data persistence and query layer of modern software architecture. Relational databases manage structured schemas, indexes, and relations while enforcing ACID transaction guarantees (Atomicity, Consistency, Isolation, Durability) to ensure data reliability under concurrent load.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} allows software systems to store, structure, and retrieve persistent information reliably. Relational databases organize information into strongly typed tables with relationships, guaranteeing integrity.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Relational Schemas & ACID Guarantees`,
+          explanation: `Relational databases organize information into strongly typed tables with primary and foreign key constraints, guaranteeing integrity and ACID transactional compliance.`,
           points: [
-            `**What It Is:** A structured system and query language designed to store, manage, and query structured data with transactional guarantees.`,
-            `**Real-World Analogy:** Think of a relational database like a massive excel ledger maintained by a strict bank auditor. Every account has an exact schema, and money can never be deducted from one account without successfully being added to another (ACID transactions).`,
-            `**The Problem It Solves:** Without structured databases, storing data in raw text or JSON files causes data corruption, race conditions during simultaneous writes, and terrible search performance as datasets grow.`,
-            `**Core Mental Model:** Tables represent entities (e.g. Users, Orders). Foreign keys represent relationships. Indexes represent sorted lookups for lightning-fast search.`
+            `**Technical Definition:** A declarative query and management system for structured data providing ACID guarantees.`,
+            `**Architectural Purpose:** Eliminates data corruption, prevents race conditions during concurrent mutations, and enables high-speed indexing.`,
+            `**Core Specifications:** ANSI SQL standard, Relational Algebra, and relational constraint specifications.`,
+            `**Ecosystem Integration:** Interfaces with backend ORMs, database connection pools, and migration pipelines.`
           ],
-          takeaway: "Design your schema around data integrity and entity relationships first, before attempting query micro-optimizations."
+          takeaway: "Design schemas around relational integrity and normalization first before applying query micro-optimizations."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
           title: `How ${cleanTitle} Works: Query Parsing, Execution Plans & Joins`,
-          explanation: `When a client sends a SQL query, the database server parses the syntax, compiles an optimized execution plan using cost-based metrics, reads pages into the buffer pool, and returns the result set.`,
+          explanation: `When a client sends a SQL query, the database server parses syntax, compiles an optimized cost-based execution plan, retrieves data pages from buffer pools, and returns filtered rows.`,
           points: [
-            `**Step-by-Step Execution:** 1. Query received ➔ 2. Parser validates syntax & permissions ➔ 3. Query Optimizer evaluates index statistics and plans join order ➔ 4. Storage Engine fetches data pages from RAM buffer or disk ➔ 5. Rows filtered, sorted, and returned to client.`,
-            `**Key Building Blocks:** Primary Keys (unique identifier), Foreign Keys (referential integrity), JOIN operations (INNER, LEFT, RIGHT), and Aggregations (GROUP BY, SUM, COUNT).`,
-            `**JOIN Mechanics:** INNER JOIN returns records that match in both tables; LEFT JOIN returns all rows from the primary table plus matched rows from the secondary table.`,
-            `**Transactions & ACID:** Atomicity (all or nothing), Consistency (valid states), Isolation (concurrent safety), and Durability (persisted to disk).`
+            `**Parsing & Execution Pipeline:** Query receipt ➔ Lexical and syntactic parse ➔ Query Optimizer evaluates index statistics ➔ Storage Engine reads disk/buffer pages ➔ Result set filtered and returned.`,
+            `**Core Building Blocks:** Primary Keys, Foreign Keys, Index constraints, INNER/LEFT JOINs, and GROUP BY aggregations.`,
+            `**State & Data Flow:** Write-Ahead Logging (WAL) writes disk change logs sequentially before updating data pages in memory.`,
+            `**Standard Implementation Patterns:** Always use parameterized queries and explicit transaction boundaries (BEGIN ... COMMIT).`
           ],
-          takeaway: "Always inspect queries with `EXPLAIN` or `EXPLAIN ANALYZE` to ensure queries leverage indexes rather than executing full-table sequential scans."
+          takeaway: "Inspect slow queries with EXPLAIN ANALYZE to verify index lookups instead of sequential full-table scans."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
           title: `Under the Hood: B-Tree Indexes, Write-Ahead Logs (WAL) & Buffer Pools`,
-          explanation: `Relational databases use B-Tree and B+Tree disk data structures for logarithmic O(log N) searches and Write-Ahead Logging (WAL) to ensure crash recovery.`,
+          explanation: `Relational engines use B+Tree disk data structures for O(log N) searches and Multi-Version Concurrency Control (MVCC) for non-blocking reads.`,
           points: [
-            `**Under-the-Hood Engine:** Data is stored in fixed-size blocks (pages, typically 8KB to 16KB). The database keeps frequent pages cached in memory in the Buffer Pool.`,
-            `**B+Tree Indexing:** Intermediate nodes store navigation keys, while leaf nodes store pointers to rows or table clusters linked together sequentially for fast range scans.`,
-            `**Write-Ahead Logging (WAL):** Modifications are written sequentially to a crash-recovery log on disk before being applied to data pages in memory, guaranteeing durability at high speed.`,
-            `**Locking & Concurrency:** Multi-Version Concurrency Control (MVCC) allows readers to read consistent snapshots without blocking concurrent writers.`
+            `**Under-the-Hood Engine:** Storage engines (e.g. InnoDB) read and write fixed-size 16KB disk pages cached in the buffer pool.`,
+            `**Memory & Resource Management:** B+Trees balance leaf nodes containing sorted row pointers or clustered primary index data.`,
+            `**Performance & Complexity Bounds:** Index lookups run in O(log N) time; full table scans run in O(N) time.`,
+            `**Guarantees & Consistency:** MVCC ensures concurrent readers do not block writers and writers do not block readers.`
           ],
-          takeaway: "Adding too many indexes speeds up reads but slows down INSERT, UPDATE, and DELETE operations because every write must update all related B-Trees."
+          takeaway: "Balance indexes carefully: excessive indexes speed up SELECTs but degrade INSERT, UPDATE, and DELETE throughput."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
+          levelBadge: "Senior Practices",
           title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Poor database access patterns cause severe application latency bottlenecks. Senior engineers guard against N+1 query problems and SQL injection vulnerabilities.`,
+          explanation: `Preventing N+1 query patterns, SQL injection, and database connection exhaustion are vital production disciplines.`,
           points: [
-            `**Common Beginner Trap #1 (The N+1 Query Problem):** Fetching 50 items and then issuing 50 separate queries inside a loop to fetch their child relations. Fix: Use single JOINs or batching (e.g. \`WHERE id IN (...)\`).`,
-            `**Common Beginner Trap #2 (SQL Injection):** Concatenating raw user inputs into query strings. Fix: Always use parameterized queries / prepared statements (e.g. \`db.query('SELECT * FROM users WHERE id = ?', [userId])\`).`,
-            `**Defensive Edge-Cases:** Always enforce foreign key cascade constraints cautiously, and wrap multiple interdependent database operations inside a formal transaction (\`BEGIN ... COMMIT\`).`,
-            `**Senior Engineering Checklist:** Use pagination (LIMIT / OFFSET or Keyset Cursor) for large datasets; never run unrestricted \`SELECT * FROM table\` in production.`
+            `**Common Anti-Pattern & Fix:** The N+1 query problem executes individual queries in loops. Fix: Use single JOINs or batched IN queries.`,
+            `**Security & Defensive Handling:** Concatenating raw user inputs into queries creates SQL injection vulnerabilities. Fix: Always use prepared statements.`,
+            `**Performance Bottlenecks:** Unindexed columns in WHERE, ORDER BY, or JOIN clauses force expensive full-table scans.`,
+            `**Production Readiness Checklist:** Enforce connection pooling limits and pagination (LIMIT / OFFSET) on public APIs.`
           ],
-          takeaway: "Never concatenate raw user input into SQL queries; always use parameterized statements to prevent catastrophic SQL injection attacks."
+          takeaway: "Never concatenate raw inputs into SQL queries; always use parameterized statements to eliminate injection vulnerabilities."
         }
       ],
-      codeExample: `-- Production SQL Schema & Query Blueprint for: ${cleanTitle}
-
--- Level 1 & 2: Relational Schema with Constraints
-CREATE TABLE IF NOT EXISTS departments (
+      codeExample: `-- Relational Schema Definition Syntax
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS team_members (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    department_id INT NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    email VARCHAR(200) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
     status ENUM('active', 'inactive') DEFAULT 'active',
-    salary DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Level 2: Foreign Key constraint enforces relational integrity
-    CONSTRAINT fk_member_dept FOREIGN KEY (department_id) 
-        REFERENCES departments(id) ON DELETE CASCADE,
-        
-    -- Level 3: Composite Index for fast filtering and sorting
-    INDEX idx_dept_status (department_id, status)
+    INDEX idx_user_status (status)
 );
 
--- Level 2 & 4: Optimized Parametric Reporting Query with Joins & Aggregations
--- Explains how to fetch department metrics without N+1 query bottlenecks
-SELECT 
-    d.id AS department_id,
-    d.name AS department_name,
-    COUNT(m.id) AS total_active_members,
-    COALESCE(AVG(m.salary), 0) AS average_salary
-FROM departments d
-LEFT JOIN team_members m 
-    ON d.id = m.department_id AND m.status = 'active'
-GROUP BY d.id, d.name
-HAVING COUNT(m.id) > 0
-ORDER BY total_active_members DESC;`,
+-- Parameterized Query Syntax
+SELECT id, name, email, created_at
+FROM users
+WHERE status = 'active'
+ORDER BY created_at DESC
+LIMIT 20;`,
       bestPractices: [
-        "Always use prepared statements / parameterized queries to completely eliminate SQL injection risks.",
+        "Always use parameterized queries / prepared statements to completely eliminate SQL injection risks.",
         "Add indexes to columns used frequently in WHERE clauses, JOIN conditions, and ORDER BY fields.",
         "Prevent N+1 query anti-patterns by utilizing eager JOINs or batched IN queries in your backend API.",
         "Wrap all multi-table business mutations inside explicit database transactions with rollback handlers."
@@ -1425,227 +1450,163 @@ ORDER BY total_active_members DESC;`,
     };
   }
 
-  // 3. Git, Version Control & DevOps
+  // 4. Git, Version Control & DevOps
   if (lower.includes("git") || lower.includes("github") || lower.includes("docker") || lower.includes("devops") || lower.includes("ci/cd")) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is an indispensable discipline for professional software engineering. In modern engineering teams, multiple engineers write code concurrently. Understanding version control, branching strategies, automated testing, and deployment pipelines ensures code changes can be tracked, merged, and shipped reliably without breaking production systems.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} provides distributed version control, cryptographic revision tracking, and automated deployment pipelines for modern software engineering teams.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} provides a distributed time-machine and collaboration hub for software projects. Every commit captures a snapshot of the codebase at a specific point in history.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Distributed Version Control & DAG Architecture`,
+          explanation: `Git is a content-addressable key-value store that tracks snapshots of a project over time. Every commit is linked in a directed acyclic graph (DAG).`,
           points: [
-            `**What It Is:** A distributed version control system that tracks file modifications and enables seamless branch-based team collaboration.`,
-            `**Real-World Analogy:** Think of Git like a video game save system with parallel universes. Every commit is a checkpoint you can travel back to, and branches are parallel universes where you experiment with new quests without risking your main world.`,
-            `**The Problem It Solves:** Before version control, teams shared code by emailing zip files (project_final_v2_new.zip), leading to overwritten code, lost work, and zero audit trails of who made what change.`,
-            `**Core Mental Model:** Working Directory (where you edit) ➔ Staging Area (what you prepare to commit) ➔ Local Repository (saved history) ➔ Remote (shared GitHub cloud).`
+            `**Technical Definition:** A distributed version control system where every client retains a full mirror of the repository repository and history.`,
+            `**Architectural Purpose:** Enables non-linear, branch-based team development and cryptographically verified audit trails.`,
+            `**Core Specifications:** Git Object Model (Blobs, Trees, Commits, Annotated Tags), SHA-1/SHA-256 hash trees.`,
+            `**Ecosystem Integration:** Interfaces with remote hosting services (GitHub, GitLab) and CI/CD pipelines.`
           ],
-          takeaway: "Make small, atomic commits that do one thing well with clear, descriptive commit messages."
+          takeaway: "Structure work into small, atomic commits with clear, descriptive imperative commit messages."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
           title: `How ${cleanTitle} Works: Branching, Merging & Pull Requests`,
-          explanation: `In standard feature-branch workflows, developers branch off the main branch, make atomic commits, push to remote repositories, and open Pull Requests for peer review before merging.`,
+          explanation: `Developers branch off the main line, stage changes in the index, commit snapshots to the local database, and push to remotes for review.`,
           points: [
-            `**Step-by-Step Execution:** 1. \`git checkout -b feature/auth\` ➔ 2. Make code edits ➔ 3. \`git add .\` to stage changes ➔ 4. \`git commit -m 'feat: implement JWT authentication'\` ➔ 5. \`git push origin feature/auth\` ➔ 6. Open Pull Request on GitHub.`,
-            `**Key Building Blocks:** Branches (lightweight movable pointers to commits), HEAD (pointer to currently checked out branch), Merge (combining branch histories), and Rebase (re-applying commits on top of another base).`,
-            `**Merge Conflicts:** Occur when two branches modify the exact same line in a file. Git pauses and highlights conflict markers (\`<<<<<<< HEAD\`), requiring the developer to choose the correct final code.`,
-            `**Standard Conventions:** Adopt Conventional Commits (\`feat:\`, \`fix:\`, \`docs:\`, \`refactor:\`) to maintain an automated, machine-readable changelog.`
+            `**Parsing & Execution Pipeline:** Working Directory ➔ git add stages to Index ➔ git commit writes objects ➔ git push synchronizes with remote.`,
+            `**Core Building Blocks:** Branches (movable 41-byte pointers to commits), HEAD pointer, Fast-forward and 3-way Merges.`,
+            `**State & Data Flow:** Merge conflicts trigger when concurrent branches edit identical file lines, requiring manual conflict resolution.`,
+            `**Standard Implementation Patterns:** Adopt Conventional Commits (feat:, fix:, docs:) and short-lived feature branches.`
           ],
-          takeaway: "Always pull the latest changes from main into your branch before opening a Pull Request to resolve conflicts early."
+          takeaway: "Pull the latest changes from main before opening a Pull Request to resolve merge conflicts early."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
           title: `Under the Hood: Git Directed Acyclic Graph (DAG) & Content-Addressable Storage`,
-          explanation: `Under the hood, Git is a content-addressable key-value store. Git stores all data as immutable objects identified by their SHA-1/SHA-256 hash.`,
+          explanation: `Git objects are stored compressed in .git/objects/ named by their SHA hash. Branches are simply text files pointing to a 40-character commit hash.`,
           points: [
-            `**The 4 Core Git Objects:** Blobs (raw file contents), Trees (directories and file names), Commits (metadata, author, timestamp, parent pointer), and Tags.`,
-            `**Directed Acyclic Graph (DAG):** Commits form an immutable directed graph where each commit node points backward to its parent commit(s).`,
-            `**Branches are Just Pointers:** A branch in Git is simply a 41-byte text file inside \`.git/refs/heads/\` containing the 40-character SHA hash of the latest commit. Creating a branch is instantaneous (O(1) time).`,
-            `**Garbage Collection:** Orphaned commits (unreachable by any branch or tag) are eventually cleaned up by \`git gc\` via the reflog.`
+            `**Under-the-Hood Engine:** 4 core object types: Blobs (contents), Trees (directories), Commits (metadata + tree pointer), Tags.`,
+            `**Memory & Resource Management:** Branch creation is instantaneous (O(1) time and 41 bytes of storage).`,
+            `**Performance & Complexity Bounds:** History traversal operates over the commit DAG in O(V + E) time.`,
+            `**Guarantees & Consistency:** Commit hashes guarantee complete cryptographic integrity of all prior parent commits.`
           ],
-          takeaway: "Because branches are just lightweight 40-byte pointers, creating and switching branches in Git is practically free in CPU and memory."
+          takeaway: "Because branches are just 41-byte pointer files, branching and switching branches is practically free."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
+          levelBadge: "Senior Practices",
           title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Careless Git habits can leak sensitive secrets, destroy commit histories, or paralyze continuous deployment pipelines.`,
+          explanation: `Careless Git workflows can leak API keys, clobber shared histories, or break automated continuous deployment pipelines.`,
           points: [
-            `**Common Beginner Trap #1 (Committing Secrets):** Committing \`.env\` files containing API keys or database passwords to public repositories. Fix: Always configure a robust \`.gitignore\` file before your very first commit.`,
-            `**Common Beginner Trap #2 (Force Pushing to Main):** Running \`git push --force\` on shared production branches overwrites your teammates' commits. Fix: Enable Branch Protection Rules in GitHub settings.`,
-            `**Defensive Edge-Cases:** Use \`git stash\` to temporarily park uncommitted work when you need to switch branches urgently without creating sloppy half-baked commits.`,
-            `**Senior Engineering Checklist:** Squash or rebase messy exploratory commits into clean logical units before merging into production.`
+            `**Common Anti-Pattern & Fix:** Committing .env secrets to public repositories. Fix: Configure .gitignore before the first commit.`,
+            `**Security & Defensive Handling:** Force-pushing (git push -f) on shared branches overwrites teammate work. Fix: Enable branch protection rules.`,
+            `**Performance Bottlenecks:** Storing large binary files in Git bloats repository clone sizes. Fix: Use Git LFS for binaries.`,
+            `**Production Readiness Checklist:** Ensure atomic commits, rebase or squash feature branches before merging, and enforce CI pass requirements.`
           ],
-          takeaway: "Never commit API keys or credentials; always verify your `.gitignore` is properly configured before staging files."
+          takeaway: "Never commit API keys or credentials; always verify .gitignore before staging files."
         }
       ],
-      codeExample: `# Professional Git & CI/CD Terminal Workflow: ${cleanTitle}
-
-# 1. Start fresh from up-to-date main branch
+      codeExample: `# Core Git Workflow Syntax
 git checkout main
 git pull origin main
-
-# 2. Create and switch to a descriptive feature branch
-git checkout -b feature/user-profile-module
-
-# 3. Work on changes, check status and differences
-git status
-git diff
-
-# 4. Stage specific files (never blindly stage secrets or binaries)
-git add src/components/UserProfile.jsx
-git add src/styles/UserProfile.css
-
-# 5. Commit with semantic, clear commit message
-git commit -m "feat(profile): add responsive user badge and college metadata"
-
-# 6. Rebase on latest main if teammate merged code in the interim
-git fetch origin
-git rebase origin/main
-
-# 7. Push to GitHub and set upstream tracking
-git push -u origin feature/user-profile-module
-
-# 8. If merge conflict happens during rebase, resolve files and continue:
-# git status
-# (edit conflicted files and remove markers)
-# git add src/components/UserProfile.jsx
-# git rebase --continue`,
+git checkout -b feature/auth-service
+git add src/auth/
+git commit -m "feat(auth): add JWT token validation middleware"
+git push -u origin feature/auth-service`,
       bestPractices: [
-        "Configure `.gitignore` immediately to prevent secret credentials and node_modules from being tracked.",
+        "Configure .gitignore immediately to prevent secret credentials and node_modules from being tracked.",
         "Keep commits atomic: each commit should represent a single cohesive, working change.",
-        "Never run `git push --force` on main or shared branches; use branch protection rules.",
-        "Write meaningful commit messages following Conventional Commits (e.g. `feat:`, `fix:`, `refactor:`)."
+        "Never run git push --force on main or shared branches; use branch protection rules.",
+        "Write meaningful commit messages following Conventional Commits (e.g. feat:, fix:, refactor:)."
       ]
     };
   }
 
-  // 4. Default Comprehensive & Educational Fallback for Any Role/Topic
+  // 5. Default General Technical Fallback
   return {
-    title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-    overview: `Comprehensive master curriculum for ${cleanTitle} tailored specifically for ${cleanRole}. This guide systematically guides you from foundational intuition, real-world analogies, and core definitions up to step-by-step operational mechanics, underlying architectural principles, and senior production standards.`,
-    difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+    title: `Technical Curriculum Guide: ${cleanTitle}`,
+    overview: `Comprehensive technical curriculum for ${cleanTitle} tailored specifically for ${cleanRole}. This guide systematically breaks down foundational architecture, core standards, operational workflows, runtime execution mechanics, and senior production verification standards.`,
+    difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
     sections: [
       {
-        level: "Level 1: Core Concept & Real-World Intuition",
-        levelBadge: "Intuition",
-        title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-        explanation: `${cleanTitle} is a foundational concept essential for mastering ${cleanRole}. Having a clear mental model of what it does and why it was created is the key to mastering its practical application.`,
+        level: "Level 1: Core Technical Foundations & Architecture",
+        levelBadge: "Foundations",
+        title: `Technical Architecture & Core Principles of ${cleanTitle}`,
+        explanation: `${cleanTitle} is a foundational construct in modern software engineering. Understanding its architectural specifications and standard models is essential for building scalable applications.`,
         points: [
-          `**What It Is:** A fundamental methodology and structural construct in ${cleanRole} that organizes workflows, ensures reliability, and solves domain challenges.`,
-          `**Real-World Analogy:** Think of ${cleanTitle} like a standardized architectural blueprint in construction. Without blueprints, builders work with conflicting measurements and structural flaws emerge; with blueprints, every artisan coordinates smoothly.`,
-          `**The Problem It Solves:** Eliminates chaotic ad-hoc implementations, reduces operational bugs, and establishes a standardized, repeatable approach to solving problems.`,
-          `**Core Mental Model:** Understand the inputs required, the transformation that takes place, and the guaranteed output delivered.`
+          `**Technical Definition:** A core architectural construct and standard methodology utilized within ${cleanRole} systems.`,
+          `**Architectural Purpose:** Solves domain problems systematically by providing structured execution, modularity, and operational predictability.`,
+          `**Core Specifications:** Governed by established technical standards, interface contracts, and architectural protocols.`,
+          `**Ecosystem Integration:** Interfaces cleanly with surrounding application components, APIs, and runtime pipelines.`
         ],
-        takeaway: "Always understand what problem a tool or concept solves before attempting to implement complex advanced variations."
+        takeaway: "Master core architectural principles and standard contracts before implementing complex variations."
       },
       {
-        level: "Level 2: Working Mechanics & Step-by-Step Flow",
+        level: "Level 2: Working Mechanics & Execution Flow",
         levelBadge: "Mechanics",
-        title: `How ${cleanTitle} Works: Operational Lifecycle & Execution`,
-        explanation: `In daily practice, ${cleanTitle} operates through structured sequential stages. Following this standardized workflow ensures consistency and peak efficiency.`,
+        title: `Operational Lifecycle & Step-by-Step Execution of ${cleanTitle}`,
+        explanation: `In operational environments, ${cleanTitle} executes through structured sequential phases, transforming inputs into validated outputs.`,
         points: [
-          `**Step-by-Step Execution:** 1. Initialization & requirement validation ➔ 2. Core parameter processing ➔ 3. Execution of business logic ➔ 4. Verification and quality assurance ➔ 5. Delivery and output logging.`,
-          `**Key Building Blocks:** The core components, standard parameters, and configuration options required to achieve the desired outcome.`,
-          `**Data & State Transitions:** How input data is validated, transformed, and packaged for downstream consumption.`,
-          `**Standard Patterns:** The industry-accepted patterns and idioms that professionals adhere to in day-to-day work.`
+          `**Parsing & Execution Pipeline:** 1. Initialization ➔ 2. Input validation ➔ 3. Core execution logic ➔ 4. Verification ➔ 5. Output delivery.`,
+          `**Core Building Blocks:** Standard syntax constructs, configuration parameters, and execution hooks.`,
+          `**State & Data Flow:** How data is parsed, passed across execution boundaries, and managed in memory.`,
+          `**Standard Implementation Patterns:** Industry-standard idioms that ensure modularity, high cohesion, and low coupling.`
         ],
-        takeaway: "Break complex workflows down into small, verifiable operational steps with explicit validation checks."
+        takeaway: "Structure operational workflows into small, deterministic steps with explicit validation checks."
       },
       {
-        level: "Level 3: Deep Core Internals & Architecture",
+        level: "Level 3: Deep Core Internals & Runtime Engine",
         levelBadge: "Core Internals",
-        title: `Under the Hood: Architecture, Resource Management & Performance`,
-        explanation: `Under the surface, ${cleanTitle} relies on specific resource allocation models, throughput pipelines, and execution dependencies that govern its scalability.`,
+        title: `Under the Hood: Engine Architecture & Resource Management`,
+        explanation: `Under the surface, ${cleanTitle} relies on resource management models, runtime allocation structures, and throughput pipelines.`,
         points: [
-          `**Under-the-Hood Engine:** The underlying architecture and structural dependencies that drive execution.`,
-          `**Memory & Resource Lifecycle:** How resources, connections, or state allocations are managed to prevent bottlenecks or leaks.`,
-          `**Performance & Big-O Efficiency:** How processing time scales as volume increases, and the architectural levers used to maintain sub-second responsiveness.`,
-          `**Systemic Guarantees:** Consistency checks, fail-safe fallbacks, and fault isolation mechanisms.`
+          `**Under-the-Hood Engine:** The underlying execution runtime and structural mechanics driving system operations.`,
+          `**Memory & Resource Management:** How memory handles, connections, or system resources are allocated and reclaimed.`,
+          `**Performance & Complexity Bounds:** Algorithmic efficiency bounds, time/space trade-offs, and throughput scalability.`,
+          `**Guarantees & Consistency:** Concurrency guarantees, fault isolation boundaries, and fail-safe recovery mechanisms.`
         ],
-        takeaway: "Anticipate how your system behaves under peak load by designing for asynchronous processing and resource pooling."
+        takeaway: "Design for scale by profiling resource allocation and memory usage under production load conditions."
       },
       {
         level: "Level 4: Common Pitfalls & Senior Best Practices",
-        levelBadge: "Advanced Mastery",
-        title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-        explanation: `Real-world production environments require defensive planning, clean error boundaries, and proactive risk mitigation.`,
+        levelBadge: "Senior Practices",
+        title: `Production Pitfalls & Senior Engineering Standards for ${cleanTitle}`,
+        explanation: `Real-world production environments require defensive error boundaries, boundary validation, and proactive risk mitigation.`,
         points: [
-          `**Common Beginner Trap #1:** Skipping input validation at system boundaries, leading to cascading runtime failures. Fix: Always sanitize and validate inputs upfront.`,
-          `**Common Beginner Trap #2:** Over-engineering simple requirements with unnecessary layers of complexity. Fix: Favor simplicity and readability over premature optimization.`,
-          `**Defensive Edge-Cases:** Handle unexpected edge cases, null or empty states, and network timeouts gracefully with clear user feedback.`,
-          `**Senior Engineering Checklist:** Follow clean code conventions, maintain comprehensive automated tests, and document non-obvious architecture decisions.`
+          `**Common Anti-Pattern & Fix:** Neglecting perimeter input validation causes cascading runtime exceptions. Fix: Validate inputs upfront.`,
+          `**Security & Defensive Handling:** Defensive boundary checks, sanitized parameter handling, and strict type verification.`,
+          `**Performance Bottlenecks:** Unnecessary resource allocations and synchronous blocking on critical execution paths.`,
+          `**Production Readiness Checklist:** Clean code conventions, automated test coverage, and comprehensive telemetry/logging.`
         ],
-        takeaway: "Keep code and architectures simple, defensively validate all inputs at the perimeter, and profile under real-world loads."
+        takeaway: "Defensively validate all inputs at the perimeter and profile under realistic load."
       }
     ],
-    codeExample: `// Professional Implementation Blueprint for: ${cleanTitle}
-/**
- * Role: ${cleanRole}
- * Module: ${cleanTitle}
- * Purpose: Demonstrates clear, robust, production-ready execution with defensive handling
- */
+    codeExample: `// Syntax & Core Execution Pattern for: ${cleanTitle}
 
-class ProductionModule {
-  constructor(name) {
-    if (!name || typeof name !== 'string') {
-      throw new Error("Invalid module name: A non-empty string is required.");
-    }
-    this.name = name;
-    this.records = [];
-  }
+// 1. Module Definition & Parameter Validation
+export function executeOperation(config = {}) {
+  const { enabled = true, options = {} } = config;
+  if (!enabled) return { status: "SKIPPED" };
 
-  // Level 2: Controlled operational method with input validation
-  addRecord(record) {
-    if (!record || typeof record !== 'object') {
-      console.warn("[Module] Skipped invalid record payload.");
-      return false;
-    }
-    this.records.push({
-      ...record,
-      timestamp: new Date().toISOString()
-    });
-    return true;
-  }
+  // 2. Core Operational Logic
+  const result = {
+    module: "${cleanTitle}",
+    timestamp: new Date().toISOString(),
+    status: "SUCCESS"
+  };
 
-  // Level 3 & 4: Defensive processing with O(N) efficiency
-  executePipeline() {
-    if (this.records.length === 0) {
-      return { status: "EMPTY", count: 0, items: [] };
-    }
-
-    console.log(\`[Pipeline] Processing \${this.records.length} items for \${this.name}...\`);
-    
-    // Clean transformation without side-effects
-    const processed = this.records.map((item, idx) => ({
-      index: idx + 1,
-      id: item.id || \`rec_\${idx + 1}\`,
-      processedAt: item.timestamp
-    }));
-
-    return {
-      status: "SUCCESS",
-      count: processed.length,
-      module: this.name,
-      items: processed
-    };
-  }
+  return result;
 }
 
-// Example Execution:
-const moduleInstance = new ProductionModule("${cleanTitle}");
-moduleInstance.addRecord({ id: 101, title: "Foundational Setup" });
-moduleInstance.addRecord({ id: 102, title: "Applied Implementation" });
-const outcome = moduleInstance.executePipeline();
-console.log("✅ Execution Result:", outcome);`,
+// 3. Invocation Syntax
+const outcome = executeOperation({ enabled: true });
+console.log(outcome);`,
     bestPractices: [
-      "Master fundamental mental models and core definitions before implementing advanced features.",
+      "Master fundamental technical contracts and definitions before implementing advanced features.",
       "Defensively validate inputs and boundaries to catch errors early and gracefully.",
       "Structure workflows into modular, reusable components with single responsibilities.",
       "Profile performance and resource allocations under real production load conditions."

@@ -92,37 +92,91 @@ export const getLowAttendanceStudents = async (req, res, next) => {
  */
 export const getAllStudentsAttendance = async (req, res, next) => {
   try {
-    const { department, batch, threshold, date, session_date } = req.query;
+    const { department, batch, batch_id, threshold, date, session_date } = req.query;
     const collegeId = req.user?.college_id || req.user?.collegeId || null;
     const targetDate = date || session_date || new Date().toISOString().split('T')[0];
+
+    // Resolve target batch ID to enforce strict batch isolation
+    let resolvedBatchId = batch_id ? parseInt(String(batch_id).replace(/[^0-9]/g, ''), 10) : null;
+    if (!resolvedBatchId && batch && String(batch).trim()) {
+      const cleanTerm = String(batch).trim();
+      if (cleanTerm.toUpperCase().startsWith('BATCH-')) {
+        resolvedBatchId = parseInt(cleanTerm.toUpperCase().replace('BATCH-', ''), 10) || null;
+      } else if (!isNaN(parseInt(cleanTerm, 10)) && /^\d+$/.test(cleanTerm)) {
+        resolvedBatchId = parseInt(cleanTerm, 10);
+      } else {
+        const bRows = await query(
+          'SELECT id FROM batches WHERE UPPER(code) = UPPER(?) OR UPPER(join_code) = UPPER(?) OR UPPER(name) = UPPER(?) LIMIT 1',
+          [cleanTerm, cleanTerm, cleanTerm]
+        );
+        if (bRows && bRows.length > 0) {
+          resolvedBatchId = bRows[0].id;
+        }
+      }
+    }
 
     const data = await getFilteredStudentsAttendanceService({
       collegeId,
       department: department || null,
+      batchId: resolvedBatchId || null,
       batchName: batch || null,
       threshold: threshold ? Number(threshold) : 75,
       onlyLowAttendance: false,
     });
 
-    // Enrich with specific date attendance and scan records
+    // Enrich with specific date attendance and scan records strictly scoped to this batch
     try {
-      const dayRecords = await query(
-        `SELECT user_id, status FROM attendance WHERE DATE(session_date) = DATE(?)`,
-        [targetDate]
-      );
-      const dayScans = await query(
-        `SELECT DISTINCT user_id FROM attendance_scans WHERE DATE(session_date) = DATE(?)`,
-        [targetDate]
-      );
+      let dayRecords = [];
+      let dayScans = [];
+
+      if (resolvedBatchId) {
+        dayRecords = await query(
+          'SELECT user_id, batch_id, status FROM attendance WHERE DATE(session_date) = DATE(?) AND batch_id = ?',
+          [targetDate, resolvedBatchId]
+        );
+        dayScans = await query(
+          'SELECT DISTINCT user_id, batch_id FROM attendance_scans WHERE DATE(session_date) = DATE(?) AND batch_id = ?',
+          [targetDate, resolvedBatchId]
+        );
+      } else {
+        dayRecords = await query(
+          'SELECT user_id, batch_id, status FROM attendance WHERE DATE(session_date) = DATE(?)',
+          [targetDate]
+        );
+        dayScans = await query(
+          'SELECT DISTINCT user_id, batch_id FROM attendance_scans WHERE DATE(session_date) = DATE(?)',
+          [targetDate]
+        );
+      }
+
       const statusMap = new Map();
-      (dayRecords || []).forEach(r => statusMap.set(Number(r.user_id), r.status));
-      const scanSet = new Set((dayScans || []).map(s => Number(s.user_id)));
+      (dayRecords || []).forEach(r => {
+        statusMap.set(Number(r.user_id), r.status);
+        if (r.batch_id) statusMap.set(`${r.user_id}_${r.batch_id}`, r.status);
+      });
+
+      const scanSet = new Set();
+      (dayScans || []).forEach(s => {
+        scanSet.add(Number(s.user_id));
+        if (s.batch_id) scanSet.add(`${s.user_id}_${s.batch_id}`);
+      });
 
       if (Array.isArray(data)) {
         data.forEach(st => {
           const uId = Number(st.userId || st.user_id || st.studentId || st.student_id || st.id);
-          const dayStat = statusMap.get(uId) || null;
-          const isScanned = scanSet.has(uId);
+          const stBatchId = resolvedBatchId || st.batch_id || st.batchId || null;
+
+          let dayStat = null;
+          let isScanned = false;
+
+          if (stBatchId) {
+            dayStat = statusMap.get(`${uId}_${stBatchId}`) || (resolvedBatchId ? statusMap.get(uId) : null);
+            isScanned = scanSet.has(`${uId}_${stBatchId}`) || (resolvedBatchId ? scanSet.has(uId) : false);
+          } else {
+            dayStat = statusMap.get(uId) || null;
+            isScanned = scanSet.has(uId);
+          }
+
           st.today_status = dayStat || (isScanned ? 'present' : null);
           st.todayStatus = st.today_status;
           st.is_scanned = Boolean(isScanned);
@@ -429,7 +483,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       collegeId: validCollegeId,
       batchId: targetBatchId,
       sessionCode: primaryCode || 'VALIDATED',
-      title: `Training Lecture (${primaryCode || 'Regular'})`,
+      title: `${batchCheck[0]?.name || 'Training'} Session`,
       sessionDate: todayStr,
     });
 

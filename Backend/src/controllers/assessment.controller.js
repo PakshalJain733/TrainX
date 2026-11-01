@@ -653,18 +653,40 @@ export const submitAssessment = async (req, res, next) => {
           const normSelected = optLetters[parseInt(rawSelected, 10)] !== undefined ? optLetters[parseInt(rawSelected, 10)] : rawSelected;
           const normCorrect = optLetters[parseInt(targetCorrect, 10)] !== undefined ? optLetters[parseInt(targetCorrect, 10)] : targetCorrect;
 
-          if (normSelected && normSelected === normCorrect) {
+          let isMatch = normSelected && (normSelected === normCorrect || rawSelected === normCorrect);
+
+          if (!isMatch) {
+            const optTextA = (q.option_a || q.options?.a || '').toString().trim().toLowerCase();
+            const optTextB = (q.option_b || q.options?.b || '').toString().trim().toLowerCase();
+            const optTextC = (q.option_c || q.options?.c || '').toString().trim().toLowerCase();
+            const optTextD = (q.option_d || q.options?.d || '').toString().trim().toLowerCase();
+
+            const correctText = normCorrect === 'a' ? optTextA : normCorrect === 'b' ? optTextB : normCorrect === 'c' ? optTextC : optTextD;
+            if (correctText && (rawSelected === correctText || normSelected === correctText)) {
+              isMatch = true;
+            }
+          }
+
+          if (isMatch) {
             correctCount++;
           }
         }
       });
-    } else {
-      // Fallback if no question schema found
-      correctCount = answers.filter(a => a && (a.selected_option || a.selectedOption || a.answer)).length;
     }
 
-    const totalMarks = totalQuestions * 10;
-    const marksObtained = correctCount * 10;
+    // Determine actual total marks from assessment definition if present
+    let assessmentTotalMarks = totalQuestions * 10;
+    try {
+      if (targetAssessmentId) {
+        const aRows = await query('SELECT total_marks FROM assessments WHERE id = ?', [targetAssessmentId]);
+        if (aRows && aRows.length > 0 && aRows[0].total_marks) {
+          assessmentTotalMarks = Number(aRows[0].total_marks);
+        }
+      }
+    } catch (_) {}
+
+    const totalMarks = assessmentTotalMarks;
+    const marksObtained = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * totalMarks) : 0;
     const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
     const status = percentage >= 50 ? 'passed' : 'failed';
 
@@ -886,9 +908,15 @@ export const markQuizCompleted = async (req, res, next) => {
       if (resolvedAssessmentId) {
         const totalQ = total ? Number(total) : 5;
         const scoreQ = score !== undefined ? Number(score) : 0;
-        const marksObt = scoreQ * 10;
-        const totalM = totalQ * 10;
-        const pct = totalM > 0 ? Math.round((marksObt / totalM) * 100) : 0;
+        let totalM = totalQ * 10;
+        try {
+          const aRows = await query('SELECT total_marks FROM assessments WHERE id = ?', [resolvedAssessmentId]);
+          if (aRows && aRows.length > 0 && aRows[0].total_marks) {
+            totalM = Number(aRows[0].total_marks);
+          }
+        } catch (_) {}
+        const marksObt = totalQ > 0 ? Math.round((scoreQ / totalQ) * totalM) : 0;
+        const pct = totalQ > 0 ? Math.round((scoreQ / totalQ) * 100) : 0;
         const status = pct >= 50 ? 'completed' : 'completed';
 
         const existingAttempts = await query(

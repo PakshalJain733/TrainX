@@ -134,8 +134,10 @@ export default function AdminAttendance() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodePayload, setQrCodePayload] = useState("");
   const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(5); // 5 secs validity
-  const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState(5); // Refresh seconds (default 5s)
+  const [maxRefreshCycles, setMaxRefreshCycles] = useState(10); // Number of times it will refresh (default 10 times)
+  const [timeLeft, setTimeLeft] = useState(5);
+  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
   const canvasRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -233,7 +235,7 @@ export default function AdminAttendance() {
       // Query database for attendance marked on the selected date or present via live scan
       try {
         const queryDate = sessionDate || new Date().toISOString().split('T')[0];
-        const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}`);
+        const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}&batch_id=${batchId || ''}`);
         const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
 
         const attendanceMap = {};
@@ -320,12 +322,12 @@ export default function AdminAttendance() {
   }, [handleQrScanCheckIn]);
 
   // Generate unique payload string
-  const generateNewQrCode = useCallback(() => {
+    const generateNewQrCode = useCallback(() => {
     const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
     const payload = `${selectedBatchCode || "JAVA-QRVL"}:${randomSalt}`;
     setQrCodePayload(payload);
-    setTimeLeft(5);
-  }, [selectedBatchCode]);
+    setTimeLeft(refreshIntervalSec);
+  }, [selectedBatchCode, refreshIntervalSec]);
 
   // Manual regenerate button resets auto-refresh counter
   const handleManualRegenerate = () => {
@@ -354,7 +356,7 @@ export default function AdminAttendance() {
     }
   }, [qrModalOpen, qrCodePayload]);
 
-  // QR Validity Timer & 18 Auto-Refresh Logic (5s per cycle)
+  // QR Validity Timer & Auto-Refresh Logic with custom interval & times
   useEffect(() => {
     let timer = null;
     if (qrModalOpen) {
@@ -363,15 +365,15 @@ export default function AdminAttendance() {
           setTimeLeft(prev => prev - 1);
         }, 1000);
       } else if (timeLeft === 0) {
-        // Trigger auto-refresh up to 18 times
-        if (autoRefreshCount < 18) {
+        // Trigger auto-refresh up to maxRefreshCycles
+        if (autoRefreshCount < maxRefreshCycles - 1) {
           setAutoRefreshCount(prev => prev + 1);
           generateNewQrCode();
         }
       }
     }
     return () => { if (timer) clearInterval(timer); };
-  }, [qrModalOpen, timeLeft, autoRefreshCount, generateNewQrCode]);
+  }, [qrModalOpen, timeLeft, autoRefreshCount, maxRefreshCycles, generateNewQrCode]);
 
   const openQrModal = () => {
     setAutoRefreshCount(0);
@@ -497,16 +499,22 @@ export default function AdminAttendance() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
-                    background: "rgba(255, 255, 255, 0.88)",
+                    background: "rgba(255, 255, 255, 0.94)",
                     borderRadius: "14px",
                     padding: "16px",
                     textAlign: "center"
                   }}>
                     <XCircle size={36} color="#ef4444" />
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>5 second session window reached</span>
-                    <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
-                      <RefreshCw size={14} /> Regenerate QR
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
+                      {autoRefreshCount + 1 >= maxRefreshCycles ? "QR Session Completed" : "Refreshing QR..."}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>
+                      {autoRefreshCount + 1 >= maxRefreshCycles 
+                        ? `All ${maxRefreshCycles} auto-refresh cycles (${refreshIntervalSec}s each) finished.` 
+                        : `${refreshIntervalSec} second window reached. Generating next cycle...`}
+                    </span>
+                    <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "6px", background: "#2563eb", color: "#ffffff", border: "none" }}>
+                      <RefreshCw size={14} /> Restart QR Cycles
                     </button>
                   </div>
                 )}
@@ -515,12 +523,17 @@ export default function AdminAttendance() {
                 </div>
               </div>
 
-              {/* Timer Countdown */}
+              {/* Timer Countdown & Cycle Progress */}
               <div className="admin-qr-details">
-                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "none" }}>
-                  <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
-                  <span>Valid for: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
-                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (5-Sec Limit)</span>}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center", flexWrap: "wrap", width: "100%" }}>
+                  <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "1px solid #e2e8f0" }}>
+                    <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
+                    <span>Valid: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
+                  </div>
+                  <div className="admin-qr-timer-box" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                    <RefreshCw size={14} color="#6366f1" />
+                    <span>Cycle: <strong>{autoRefreshCount + 1}</strong> of <strong>{maxRefreshCycles}</strong> ({refreshIntervalSec}s)</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -751,6 +764,41 @@ export default function AdminAttendance() {
               onChange={e => setSessionDate(e.target.value)}
             />
           </div>
+
+          {/* Refresh Seconds & Number of Times Input Boxes */}
+          <div className="attendance-qr-config-inputs">
+            <div className="qr-config-field" title="Select refresh interval in seconds">
+              <label className="qr-config-label">
+                <Clock size={13} />
+                <span>Refresh Sec:</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                className="qr-config-input"
+                value={refreshIntervalSec}
+                onChange={(e) => setRefreshIntervalSec(Math.max(1, Number(e.target.value) || 5))}
+              />
+            </div>
+
+            <div className="qr-config-field" title="Type how many times the QR will refresh">
+              <label className="qr-config-label">
+                <RefreshCw size={13} />
+                <span>Times:</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                className="qr-config-input"
+                placeholder="Times"
+                value={maxRefreshCycles}
+                onChange={(e) => setMaxRefreshCycles(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              />
+            </div>
+          </div>
+
           <button className="admin-create-qr-btn" onClick={openQrModal}>
             <QrCode size={18} />
             Create Session QR

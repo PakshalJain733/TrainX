@@ -947,7 +947,7 @@ function getQuizQuestionsForMilestone(m, targetRole) {
 /* ── Theory Formatters & VS Code Code Highlighting ── */
 function renderFormattedTheoryText(textStr = "") {
   if (!textStr) return null;
-  const parts = String(textStr).split(/(`[^`]+`)/g);
+  const parts = String(textStr).split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
 
   return parts.map((part, pIdx) => {
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
@@ -958,8 +958,39 @@ function renderFormattedTheoryText(textStr = "") {
         </code>
       );
     }
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      const boldVal = part.slice(2, -2);
+      return (
+        <strong key={pIdx} className="roadmap-theory-bold" style={{ fontWeight: 700, color: "inherit" }}>
+          {boldVal}
+        </strong>
+      );
+    }
     return part;
   });
+}
+
+function formatPureSyntaxCode(rawCode = "") {
+  if (!rawCode || typeof rawCode !== "string") return "";
+  let lines = rawCode.trim().split("\n");
+
+  if (rawCode.includes("class ProductionModule")) {
+    lines = lines.filter(l => !l.includes("class ProductionModule") && !l.includes("constructor(name)") && !l.includes("this.name = name") && !l.includes("this.records = []"));
+  }
+
+  if (lines.length > 0 && lines[0].trim().startsWith("/**")) {
+    const endDocIdx = lines.findIndex(l => l.includes("*/"));
+    if (endDocIdx !== -1) {
+      lines = lines.slice(endDocIdx + 1);
+    }
+  }
+
+  while (lines.length > 0 && (lines[0].trim().startsWith("// Professional Implementation Blueprint") || lines[0].trim().startsWith("// Production-Grade React Implementation"))) {
+    lines.shift();
+  }
+
+  const cleaned = lines.join("\n").trim();
+  return cleaned || rawCode.trim();
 }
 
 /* ── VS Code Theme Code Syntax & Editor Component ── */
@@ -2410,7 +2441,7 @@ export default function AIRoadmap() {
                         Synthesizing authentic, topic-specific curriculum from foundational basics to working mechanics, practical code, and senior best practices.
                       </p>
                       <div className="roadmap-loading-steps-pills">
-                        <span className="roadmap-load-step-chip">L1: Intuition & Concepts</span>
+                        <span className="roadmap-load-step-chip">L1: Foundations</span>
                         <span className="roadmap-load-step-chip">L2: Working Mechanics</span>
                         <span className="roadmap-load-step-chip">L3: Core Internals</span>
                         <span className="roadmap-load-step-chip">L4: Senior Best Practices</span>
@@ -2494,7 +2525,7 @@ export default function AIRoadmap() {
                         <div className="roadmap-theory-level-steps">
                           <div className="roadmap-theory-step-pill step-lvl-1">
                             <span className="step-num">L1</span>
-                            <span className="step-lbl">Intuition</span>
+                            <span className="step-lbl">Foundations</span>
                           </div>
                           <span className="roadmap-theory-step-arrow">→</span>
                           <div className="roadmap-theory-step-pill step-lvl-2">
@@ -2524,9 +2555,9 @@ export default function AIRoadmap() {
                         const points = extractPointsFromSection(sec);
                         const lvlTier = sIdx % 4;
                         const levelConfig = [
-                          { label: "Level 1: Core Concept & Real-World Intuition", badge: "Intuition", colorClass: "lvl-emerald", Icon: BookOpen },
+                          { label: "Level 1: Core Technical Foundations & Architecture", badge: "Foundations", colorClass: "lvl-emerald", Icon: BookOpen },
                           { label: "Level 2: Working Mechanics & Step-by-Step Flow", badge: "Mechanics", colorClass: "lvl-sky", Icon: Cpu },
-                          { label: "Level 3: Deep Core Internals & Architecture", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
+                          { label: "Level 3: Deep Core Internals & Runtime Engine", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
                           { label: "Level 4: Common Pitfalls & Senior Best Practices", badge: "Senior Best Practices", colorClass: "lvl-amber", Icon: ShieldCheck }
                         ][lvlTier];
 
@@ -2571,12 +2602,10 @@ export default function AIRoadmap() {
                     {theoryData.codeExample && (
                       <div>
                         <h4 className="roadmap-section-subheading">
-                          {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
-                            ? "Working Syntax & Execution Pattern" 
-                            : "Practical Workflow & Domain Case Study"}
+                          Syntax
                         </h4>
                         <div className="vscode-editor-container roadmap-editor-padded">
-                          <VSCodeCodeHighlighter code={theoryData.codeExample} />
+                          <VSCodeCodeHighlighter code={formatPureSyntaxCode(theoryData.codeExample)} />
                         </div>
                       </div>
                     )}

@@ -587,7 +587,12 @@ export const getCachedMilestoneTheory = async (milestoneTitle, targetRole = '') 
     );
     if (rows && rows.length > 0) {
       const data = typeof rows[0].theory_json === 'string' ? JSON.parse(rows[0].theory_json) : rows[0].theory_json;
-      if (data && data.title && Array.isArray(data.sections) && data.sections.some(s => Array.isArray(s.points) && s.points.length > 0)) {
+      const dataStr = JSON.stringify(data || '');
+      const isOutdated = dataStr.includes('Real-World Analogy') ||
+                         dataStr.includes('kitchen timer') ||
+                         dataStr.includes('theater stage') ||
+                         dataStr.includes('class ProductionModule');
+      if (data && data.title && Array.isArray(data.sections) && data.sections.some(s => Array.isArray(s.points) && s.points.length > 0) && !isOutdated) {
         globalTheoryCache.set(key, data);
         return data;
       }

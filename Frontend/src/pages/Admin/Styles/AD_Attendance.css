@@ -907,3 +907,148 @@
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
 }
+/* QR Code Dynamic Refresh Parameters (Seconds & Number of Times) */
+.attendance-qr-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.att-qr-ctrl-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 10px;
+  height: 40px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.att-qr-ctrl-box:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.att-qr-ctrl-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.att-qr-ctrl-input {
+  width: 52px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.att-qr-ctrl-input:focus {
+  background: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.admin-qr-modal-config-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .attendance-qr-controls-group {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* QR Configuration Input Boxes Near QR Generation */
+.attendance-qr-config-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-config-field {
+  display: inline-flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  height: 40px;
+  padding: 0 10px;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.qr-config-field:hover {
+  border-color: #94a3b8;
+}
+
+.qr-config-field:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.qr-config-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.qr-config-select {
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  padding: 0 18px 0 2px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+}
+
+.qr-config-input {
+  width: 36px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+  padding: 0 2px;
+  text-align: center;
+}

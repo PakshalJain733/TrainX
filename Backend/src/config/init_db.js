@@ -322,7 +322,15 @@ export async function initializeDatabase() {
     } catch (_) { }
 
     try {
-      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_user_session_date UNIQUE (user_id, session_date)`);
+      await conn.query(`ALTER TABLE attendance ADD INDEX idx_attendance_user (user_id)`);
+    } catch (_) { }
+
+    try {
+      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_user_batch_date UNIQUE (batch_id, user_id, session_date)`);
+    } catch (_) { }
+
+    try {
+      await conn.query(`ALTER TABLE attendance DROP INDEX unique_user_session_date`);
     } catch (_) { }
 
     // 9c. Ensure Attendance Summary Table

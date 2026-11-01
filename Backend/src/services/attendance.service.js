@@ -6,6 +6,7 @@ import {
   getBatchAttendanceStatsModel,
   upsertStudentAttendanceSummary,
   findOrCreateAttendanceSession,
+  getStudentBatchAttendanceBreakdownModel,
 } from '../models/attendance.model.js';
 
 /**
@@ -89,9 +90,13 @@ export const getStudentAttendanceSummaryService = async (userId) => {
 export const getStudentAttendanceHistoryService = async (userId, limit = 50) => {
   const summary = await getStudentAttendanceSummaryService(userId);
   const logs = await getStudentAttendanceLogs(userId, limit);
+  const batches = await getStudentBatchAttendanceBreakdownModel(userId);
   return {
     summary,
     history: logs,
+    batches,
+    batchBreakdown: batches,
+    subjects: batches,
   };
 };
 

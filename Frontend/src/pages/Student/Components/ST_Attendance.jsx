@@ -117,7 +117,7 @@ export default function Attendance() {
               id: item.id || Math.random(),
               date: formattedDate,
               month: monthName,
-              subject: item.session_title || item.batch_name || item.subject || "Training Session",
+              subject: item.batch_name || item.session_title || item.subject || "Training Session",
               status: statusDisplay,
               slot: item.session_code || item.slot || "Regular",
               faculty: item.marked_by_name || item.faculty || "Course Instructor"
@@ -138,7 +138,7 @@ export default function Attendance() {
             status: pct >= 75 ? "Good" : "Low",
             isLowAttendance: pct < 75 && total > 0,
             warningMessage: "⚠ Attendance is below the required 75% threshold.",
-            subjects: formattedHistory,
+            subjects: (res.data.batches && Array.isArray(res.data.batches) && res.data.batches.length > 0) ? res.data.batches : (res.data.subjects && Array.isArray(res.data.subjects) && res.data.subjects.length > 0) ? res.data.subjects : [],
             attendanceHistory: formattedHistory,
             verifications: res.data.verifications || []
           });
@@ -242,7 +242,7 @@ export default function Attendance() {
                 status: pct >= 75 ? "Good" : "Low",
                 isLowAttendance: pct < 75 && total > 0,
                 warningMessage: "⚠ Attendance is below the required 75% threshold.",
-                subjects: mergedHistory,
+                subjects: (attRes.data?.batches && Array.isArray(attRes.data.batches) && attRes.data.batches.length > 0) ? attRes.data.batches : prev.subjects,
                 attendanceHistory: mergedHistory,
                 verifications: attRes.data.verifications || []
               };
@@ -647,7 +647,64 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* Attendance History Section (Always Visible) */}
+      
+      {/* Navigation Tabs (Moved Up): Batch-Wise Breakdown & Apply Leave */}
+      <Tabs defaultValue="batch" className="attendance-main-tabs">
+        <TabsList className="attendance-nav-tabs-list">
+          <TabsTrigger value="batch">Batch-Wise Breakdown</TabsTrigger>
+          <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Batch-Wise Breakdown (Joined Batches Attendance + History) */}
+        <TabsContent value="batch" className="stack-6">
+          <div className="attendance-subject-grid">
+            {(!data.subjects || data.subjects.length === 0) ? (
+              <div className="attendance-empty-batch-box">
+                <Layers size={36} color="#94a3b8" />
+                <h4>No Enrolled Batches Found</h4>
+                <p>You have not joined any training batches yet or no sessions have been conducted.</p>
+              </div>
+            ) : (
+              data.subjects.map((s) => (
+                <Card key={s.id || s.code} className="attendance-subject-card">
+                  <CardContent className="attendance-subject-content">
+                    <div className="attendance-subject-header">
+                      <div>
+                        <p className="attendance-subject-code">{s.code}</p>
+                        <h4 className="attendance-subject-name">{s.name}</h4>
+                      </div>
+                      <Badge variant={s.pct >= 75 ? "secondary" : "destructive"}>
+                        {s.pct}%
+                      </Badge>
+                    </div>
+                    <div className="attendance-progress-wrapper">
+                      <Progress value={s.pct} />
+                    </div>
+                    <div className="attendance-subject-stats-row">
+                      <div className="attendance-stat-box">
+                        <span className="attendance-stat-label">Conducted</span>
+                        <span className="attendance-stat-val">{s.total}</span>
+                      </div>
+                      <div className="attendance-stat-box">
+                        <span className="attendance-stat-label">Attended</span>
+                        <span className="attendance-stat-val attendance-val-green">{s.attended}</span>
+                      </div>
+                      <div className="attendance-stat-box">
+                        <span className="attendance-stat-label">Absent</span>
+                        <span className="attendance-stat-val attendance-val-red">{s.total - s.attended}</span>
+                      </div>
+                    </div>
+                    <div className="attendance-margin-footer">
+                      <Info size={13} />
+                      <span>{s.safeMargin}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Attendance History Section (Always Visible) */}
       <Card className="attendance-log-card">
         <CardHeader className="attendance-log-header">
           <div className="attendance-row-between flex-wrap gap-4">
@@ -756,57 +813,9 @@ export default function Attendance() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Additional Tabs Layout */}
-      <Tabs defaultValue="subjects">
-        <TabsList>
-          <TabsTrigger value="batch">Batch-Wise Breakdown</TabsTrigger>
-          <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
-        </TabsList>
-
-        {/* Subject-Wise Breakdown Tab */}
-        <TabsContent value="batch" className="stack-6">
-          <div className="attendance-subject-grid">
-            {data.subjects.map((s) => (
-              <Card key={s.id} className="attendance-subject-card">
-                <CardContent className="attendance-subject-content">
-                  <div className="attendance-subject-header">
-                    <div>
-                      <p className="attendance-subject-code">{s.code}</p>
-                      <h4 className="attendance-subject-name">{s.name}</h4>
-                    </div>
-                    <Badge variant={s.pct >= 75 ? "secondary" : "destructive"}>
-                      {s.pct}%
-                    </Badge>
-                  </div>
-                  <div className="attendance-progress-wrapper">
-                    <Progress value={s.pct} />
-                  </div>
-                  <div className="attendance-subject-stats-row">
-                    <div className="attendance-stat-box">
-                      <span className="attendance-stat-label">Conducted</span>
-                      <span className="attendance-stat-val">{s.total}</span>
-                    </div>
-                    <div className="attendance-stat-box">
-                      <span className="attendance-stat-label">Attended</span>
-                      <span className="attendance-stat-val attendance-val-green">{s.attended}</span>
-                    </div>
-                    <div className="attendance-stat-box">
-                      <span className="attendance-stat-label">Absent</span>
-                      <span className="attendance-stat-val attendance-val-red">{s.total - s.attended}</span>
-                    </div>
-                  </div>
-                  <div className="attendance-margin-footer">
-                    <Info size={13} />
-                    <span>{s.safeMargin}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         </TabsContent>
 
-        {/* Leave Application Tab */}
+        {/* Tab 2: Apply Leave / Absence */}
         <TabsContent value="leave" className="attendance-leave-container">
           <div className="attendance-leave-layout">
             <Card className="attendance-leave-form-card">
@@ -843,6 +852,7 @@ export default function Attendance() {
           </div>
         </TabsContent>
       </Tabs>
+  
 
       {/* Leave Application Confirmation Modal */}
       {leaveSuccessModal && (

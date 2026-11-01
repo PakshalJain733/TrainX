@@ -30,8 +30,11 @@ function getAuthHeaders() {
 
 export function formatScoreDisplay(scoreVal, totalQs = 5, totalMarks = null) {
   const safeTotal = typeof totalQs === "number" && totalQs > 0 ? totalQs : parseInt(totalQs, 10) || 5;
-  if (!scoreVal || String(scoreVal).trim() === "" || String(scoreVal).toLowerCase() === "completed" || String(scoreVal).toLowerCase() === "score: completed") {
-    return `Score: ${safeTotal}/${safeTotal}`;
+  if (!scoreVal || String(scoreVal).trim() === "") {
+    return `Score: --/${safeTotal}`;
+  }
+  if (String(scoreVal).toLowerCase() === "completed" || String(scoreVal).toLowerCase() === "score: completed") {
+    return "Completed";
   }
   const clean = String(scoreVal).trim();
   if (/Score:\s*\d+\s*\/\s*\d+/i.test(clean)) {
@@ -116,7 +119,7 @@ async function fetchApiQuizzes() {
           return cached.startsWith('Score:') ? cached : `Score: ${cached}`;
         }
       }
-      return `Score: ${totalQs}/${totalQs}`;
+      return `Score: --/${totalQs}`;
     };
 
     // Map assessment DB shape -> student quiz shape
@@ -255,18 +258,80 @@ function useTimer(initialSecs, onExpire) {
 }
 
 /* ─── Quiz Platform (Google-Forms style) ──────────────────────── */
+function isAnswerCorrect(userAnswerIndex, qItem) {
+  if (userAnswerIndex === null || userAnswerIndex === undefined) return false;
+  if (typeof qItem?.correct === "number") {
+    return userAnswerIndex === qItem.correct;
+  }
+  const optKeys = ["a", "b", "c", "d"];
+  const selectedKey = optKeys[userAnswerIndex];
+  const targetKey = String(qItem?.correct ?? "").trim().toLowerCase();
+  if (selectedKey === targetKey) return true;
+  if (String(userAnswerIndex) === targetKey) return true;
+  if (Array.isArray(qItem?.options) && qItem.options[userAnswerIndex]) {
+    return String(qItem.options[userAnswerIndex]).trim().toLowerCase() === targetKey;
+  }
+  return false;
+}
+
 function normalizeAdminQuestion(q, idx) {
-  // Admin questions: { id, text, options: {a,b,c,d}, correct: 'a' }
-  // -> standard: { id, question, options: [], correct: index, explanation }
+  if (!q) return defaultQuizQuestions[0];
+
+  let optionsArr = [];
+  if (Array.isArray(q.options) && q.options.length > 0) {
+    optionsArr = q.options.filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  } else if (q.options && typeof q.options === 'object') {
+    const rawOpts = q.options;
+    optionsArr = [
+      rawOpts.a ?? rawOpts.A ?? rawOpts.option_a ?? q.option_a ?? '',
+      rawOpts.b ?? rawOpts.B ?? rawOpts.option_b ?? q.option_b ?? '',
+      rawOpts.c ?? rawOpts.C ?? rawOpts.option_c ?? q.option_c ?? '',
+      rawOpts.d ?? rawOpts.D ?? rawOpts.option_d ?? q.option_d ?? '',
+    ].filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  } else if (q.option_a || q.option_b) {
+    optionsArr = [
+      q.option_a || '',
+      q.option_b || '',
+      q.option_c || '',
+      q.option_d || '',
+    ].filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  }
+
+  if (optionsArr.length === 0) {
+    optionsArr = ["Option A", "Option B", "Option C", "Option D"];
+  }
+
   const optKeys = ['a', 'b', 'c', 'd'];
-  const optionsArr = optKeys.map(k => q.options[k] || '').filter(v => v && v !== 'N/A');
-  const correctIdx = optKeys.indexOf(q.correct);
+  const rawCorrect = (q.correct_option ?? q.correct ?? q.correctOptionVerified ?? q.answer ?? 'a').toString().trim().toLowerCase();
+
+  let correctIdx = 0;
+  if (rawCorrect === 'a' || rawCorrect === '0' || rawCorrect === 'option a' || rawCorrect === 'option 1') {
+    correctIdx = 0;
+  } else if (rawCorrect === 'b' || rawCorrect === '1' || rawCorrect === 'option b' || rawCorrect === 'option 2') {
+    correctIdx = 1;
+  } else if (rawCorrect === 'c' || rawCorrect === '2' || rawCorrect === 'option c' || rawCorrect === 'option 3') {
+    correctIdx = 2;
+  } else if (rawCorrect === 'd' || rawCorrect === '3' || rawCorrect === 'option d' || rawCorrect === 'option 4') {
+    correctIdx = 3;
+  } else {
+    const textIdx = optionsArr.findIndex(o => String(o).trim().toLowerCase() === rawCorrect);
+    if (textIdx >= 0) {
+      correctIdx = textIdx;
+    } else {
+      const parsedNum = parseInt(rawCorrect, 10);
+      if (!isNaN(parsedNum) && parsedNum >= 0 && parsedNum < optionsArr.length) {
+        correctIdx = parsedNum;
+      }
+    }
+  }
+
+  const optLetter = optKeys[correctIdx] ? optKeys[correctIdx].toUpperCase() : 'A';
   return {
     id: q.id || idx + 1,
-    question: q.text || `Question ${idx + 1}`,
+    question: q.question_text || q.text || q.question || `Question ${idx + 1}`,
     options: optionsArr,
-    correct: correctIdx >= 0 ? correctIdx : 0,
-    explanation: `The correct answer is Option ${(q.correct || 'A').toUpperCase()}.`
+    correct: correctIdx,
+    explanation: q.explanation || `The correct answer is Option ${optLetter}: "${optionsArr[correctIdx] || ''}".`
   };
 }
 
@@ -388,7 +453,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
     setWasSubmitted(true);
 
     const calculatedScore = questions.reduce(
-      (acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0),
+      (acc, qItem, i) => acc + (isAnswerCorrect(answers[i], qItem) ? 1 : 0),
       0
     );
     const scoreText = `Score: ${calculatedScore}/${questions.length}`;
@@ -494,7 +559,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   const userAnswer = answers[safeCurrent];
 
   const score = submitted
-    ? questions.reduce((acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0), 0)
+    ? questions.reduce((acc, qItem, i) => acc + (isAnswerCorrect(answers[i], qItem) ? 1 : 0), 0)
     : 0;
 
   // Determine status for review sidebar
@@ -503,7 +568,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       if (reviewMarks[idx]) return "review";
       return answers[idx] !== null ? "completed" : "unattempted";
     }
-    return answers[idx] === questions[idx]?.correct ? "correct" : "wrong";
+    return isAnswerCorrect(answers[idx], questions[idx]) ? "correct" : "wrong";
   }
 
   return createPortal(
