@@ -249,6 +249,7 @@ export const registerUser = async (data) => {
     if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
     else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
     else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
+    else if (lowerRole.includes('trainer') || lowerRole.includes('instructor')) canonicalRole = ROLES.TRAINER;
   }
 
   if (isBlank(email) && isBlank(mobile_number)) {

@@ -430,7 +430,7 @@ export default function AdminBatches() {
       topic: "",
       difficulty: "Medium",
       points: 100,
-    taskDate: new Date().toISOString().split("T")[0],
+      taskDate: new Date().toISOString().split("T")[0],
       deadline: "",
       desc: "",
       language: "Java",
@@ -449,12 +449,18 @@ export default function AdminBatches() {
           ...taskForm,
         }),
       });
-      setBatchFeedback({ type: "success", message: `Task "${taskForm.title}" successfully assigned to batch "${selectedBatch.name}"!` });
+      setBatchFeedback({
+        type: "success",
+        message: `Task "${taskForm.title}" successfully assigned to batch "${selectedBatch.name}"!`,
+      });
       setTaskForm(resetForm);
       fetchBatchTasks(selectedBatch.id);
     } catch (err) {
-      setBatchFeedback({ type: "success", message: `Task "${taskForm.title}" assigned successfully to batch "${selectedBatch.name}"!` });
-      setTaskForm(resetForm);
+      console.error("Failed to assign task:", err);
+      setBatchFeedback({
+        type: "error",
+        message: err?.message || `Failed to assign task "${taskForm.title}".`,
+      });
       fetchBatchTasks(selectedBatch.id);
     }
   };

@@ -1,0 +1,179 @@
+/* Trainer Overview CSS */
+.trainer-overview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.trainer-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%);
+  border-radius: 16px;
+  padding: 32px 36px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.trainer-hero-tag {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.trainer-hero-title {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.trainer-hero-sub {
+  font-size: 14.5px;
+  color: #94a3b8;
+  max-width: 580px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.trainer-hero-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.trainer-btn-hero-action {
+  background: #38bdf8 !important;
+  color: #0f172a !important;
+}
+
+.trainer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.trainer-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.trainer-stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-stat-icon--blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.trainer-stat-icon--green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.trainer-stat-icon--amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.trainer-stat-icon--purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.trainer-stat-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.trainer-stat-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Panel Card */
+.trainer-card-panel {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+}
+
+.trainer-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.trainer-panel-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+
+.trainer-panel-sub {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.trainer-loading-state {
+  padding: 30px;
+  text-align: center;
+  color: #64748b;
+}
+
+.trainer-empty-state-box {
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+}
+
+.trainer-empty-state-icon {
+  color: #94a3b8;
+  margin: 0 auto 10px;
+}
+
+.trainer-empty-state-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #334155;
+}
+
+.trainer-empty-state-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px;
+}
+
+.trainer-text-accent {
+  color: #0284c7;
+}
+
+.trainer-btn-full {
+  text-decoration: none;
+  justify-content: center;
+}

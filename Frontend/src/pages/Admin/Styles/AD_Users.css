@@ -90,6 +90,7 @@
 .stat-icon--blue { background: #dbeafe; color: #2563eb; }
 .stat-icon--purple { background: #f3e8ff; color: #7e22ce; }
 .stat-icon--emerald { background: #d1fae5; color: #059669; }
+.stat-icon--cyan { background: #e0f2fe; color: #0284c7; }
 
 .admin-user-stat-info {
   display: flex;
@@ -293,6 +294,7 @@
 }
 
 .role-badge--student { background: #dbeafe; color: #1d4ed8; }
+.role-badge--trainer { background: #e0f2fe; color: #0369a1; }
 .role-badge--mentor { background: #ede9fe; color: #6d28d9; }
 .role-badge--coordinator { background: #fef3c7; color: #b45309; }
 .role-badge--admin { background: #fee2e2; color: #b91c1c; }

@@ -72,6 +72,9 @@ async function ensureTables() {
     const safeAlter = async (colSql) => {
       try { await query(colSql); } catch (e) {}
     };
+    await safeAlter("ALTER TABLE users MODIFY COLUMN role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student', 'trainer') NOT NULL DEFAULT 'student'");
+    await safeAlter("ALTER TABLE batches ADD COLUMN trainer_id INT NULL");
+    await safeAlter("ALTER TABLE batch_tasks ADD COLUMN created_by INT NULL");
     await safeAlter("ALTER TABLE batches ADD COLUMN code VARCHAR(50) NULL");
     await safeAlter("ALTER TABLE batches ADD COLUMN join_code VARCHAR(50) NULL");
     await safeAlter("ALTER TABLE batches ADD COLUMN code_expires_at VARCHAR(100) NULL");
@@ -316,6 +319,28 @@ export const updateBatch = async (req, res, next) => {
       [name, code, code, trainer, schedule, status, topic, description, date, id, id]
     );
 
+    if (trainer) {
+      try {
+        const [trainerUser] = await query(
+          "SELECT id, name FROM users WHERE name = ? AND role = 'trainer' LIMIT 1",
+          [trainer]
+        );
+        if (trainerUser) {
+          const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+          await query(
+            `UPDATE batches SET trainer_id = ? WHERE id = ? OR code = ?`,
+            [trainerUser.id, id, id]
+          );
+          await query(
+            `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+            [trainerUser.id, cleanId]
+          );
+        }
+      } catch (linkErr) {
+        console.warn('[updateBatch trainer link warning]', linkErr.message);
+      }
+    }
+
     const [updatedBatch] = await query('SELECT * FROM batches WHERE id = ? OR code = ? LIMIT 1', [id, id]);
 
     return sendSuccess(res, 'Batch updated successfully in database', updatedBatch || { id, name, trainer, schedule, status, topic, description, date });
@@ -340,7 +365,7 @@ export const deleteBatch = async (req, res, next) => {
 export const joinBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const rawInput = (req.body.joinCode || req.body.join_code || req.body.code || '').trim();
+    const rawInput = (req.body.joinCode || req.body.join_code || req.body.code || req.body.batch_id || req.body.batchId || '').toString().trim();
     if (!rawInput) {
       return sendError(res, 'Join code is required', 400);
     }
@@ -414,6 +439,52 @@ export const joinBatch = async (req, res, next) => {
     }
 
     const userId = req.user?.userId || req.user?.id || 1;
+    const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    const isTrainerOrMentor = role === 'mentor' || role === 'trainer' || role === 'faculty' || role === 'coordinator' || role === 'admin' || role === 'college_admin';
+
+    if (isTrainerOrMentor) {
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS batch_trainers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            batch_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `);
+
+        await query(
+          `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+          [userId, foundBatch.id]
+        );
+
+        let trainerName = req.user?.name;
+        if (!trainerName) {
+          const [uRow] = await query(`SELECT name FROM users WHERE id = ? LIMIT 1`, [userId]);
+          trainerName = uRow?.name || 'Trainer';
+        }
+
+        await query(
+          `UPDATE batches 
+             SET trainer = ?,
+                 trainer_id = ?,
+                 mentor = CASE WHEN mentor IS NULL OR mentor = '' OR mentor = 'Faculty Mentor' THEN ? ELSE mentor END
+           WHERE id = ?`,
+          [trainerName, userId, trainerName, foundBatch.id]
+        );
+
+        return sendSuccess(res, `Successfully joined batch '${foundBatch.name}' as Trainer!`, {
+          batch: foundBatch,
+          batch_id: foundBatch.id,
+          batch_name: foundBatch.name,
+          join_code: foundBatch.code || foundBatch.join_code,
+          is_trainer: true
+        });
+      } catch (err) {
+        console.error('[joinBatch trainer link error]', err.message);
+      }
+    }
 
     // 4. Link student in student_batches join table
     await query(
@@ -475,13 +546,21 @@ export const getMyBatches = async (req, res, next) => {
     }
 
     const dbEnrolled = await query(
-      `SELECT DISTINCT b.* FROM batches b
+      `SELECT DISTINCT b.*,
+              c.name AS collegeName,
+              d.name AS departmentName,
+              (SELECT COUNT(*) FROM students st WHERE st.batch_id = b.id) AS dynamicStudentsCount,
+              (SELECT COUNT(*) FROM batch_tasks bt2 WHERE bt2.batch_id = b.id) AS tasksCount
+       FROM batches b
        LEFT JOIN student_batches sb ON b.id = sb.batch_id AND sb.user_id = ?
        LEFT JOIN students s ON s.user_id = ? AND s.batch_id = b.id
-       WHERE (sb.id IS NOT NULL OR s.id IS NOT NULL) 
+       LEFT JOIN batch_trainers bt ON bt.batch_id = b.id AND bt.user_id = ?
+       LEFT JOIN colleges c ON b.college_id = c.id
+       LEFT JOIN departments d ON b.department_id = d.id
+       WHERE (sb.id IS NOT NULL OR s.id IS NOT NULL OR bt.id IS NOT NULL OR b.trainer_id = ?) 
          AND (b.status IS NULL OR LOWER(b.status) != 'deleted')
        ORDER BY b.id DESC`,
-      [userId, userId]
+      [userId, userId, userId, userId]
     );
 
     const batchesWithProgress = await Promise.all((dbEnrolled || []).map(async (b) => {
@@ -768,10 +847,11 @@ export const createBatchTask = async (req, res, next) => {
     const tcList = testCases || test_cases || [];
     const testCasesJson = typeof tcList === 'string' ? tcList : JSON.stringify(tcList);
 
+    const createdBy = req.user?.userId || req.user?.id || null;
     const result = await query(
-      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, task_date, description, language, test_cases)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cleanBatchId, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, scheduledDate, taskDesc, taskLang, testCasesJson]
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, task_date, description, language, test_cases, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [cleanBatchId, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, scheduledDate, taskDesc, taskLang, testCasesJson, createdBy]
     );
 
     const [newTask] = await query('SELECT * FROM batch_tasks WHERE id = ?', [result.insertId]);
@@ -1065,6 +1145,27 @@ export const saveBatchDailyTopic = async (req, res, next) => {
        WHERE id = ? OR id = ? OR code = ?`,
       [tTopic, tDesc, tDate, tStatus, tTrainer, id, numericBatchId, id]
     );
+
+    if (tTrainer) {
+      try {
+        const [trainerUser] = await query(
+          "SELECT id, name FROM users WHERE name = ? AND role = 'trainer' LIMIT 1",
+          [tTrainer]
+        );
+        if (trainerUser) {
+          await query(
+            `UPDATE batches SET trainer_id = ? WHERE id = ? OR id = ?`,
+            [trainerUser.id, id, numericBatchId]
+          );
+          await query(
+            `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+            [trainerUser.id, numericBatchId]
+          );
+        }
+      } catch (linkErr) {
+        console.warn('[saveDailyTopic trainer link warning]', linkErr.message);
+      }
+    }
 
     const dbTopics = await query(
       `SELECT * FROM batch_daily_topics WHERE batch_id = ? OR batch_id = ? ORDER BY topic_date DESC`,

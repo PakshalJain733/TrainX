@@ -132,6 +132,7 @@ export async function initializeDatabase() {
     `);
 
     try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL UNIQUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student', 'trainer') NOT NULL DEFAULT 'student'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users DROP COLUMN password`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`); } catch (_) { }
@@ -824,6 +825,19 @@ export async function initializeDatabase() {
         batch_id INT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY unique_user_batch (user_id, batch_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 27.5 Ensure Batch Trainers Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4

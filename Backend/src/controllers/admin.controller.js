@@ -36,6 +36,7 @@ const normalizeRole = (role) => {
   if (r.includes('super')) return ROLES.SUPER_ADMIN;
   if (r.includes('admin') || r.includes('hod')) return ROLES.COLLEGE_ADMIN;
   if (r.includes('coordinator')) return ROLES.COORDINATOR;
+  if (r.includes('trainer') || r.includes('instructor')) return ROLES.TRAINER;
   if (r.includes('mentor') || r.includes('faculty')) return ROLES.MENTOR;
   return ROLES.STUDENT;
 };
@@ -46,7 +47,7 @@ const normalizeRole = (role) => {
  */
 const canAssignRole = (callerRole, targetRole) => {
   if (callerRole === ROLES.SUPER_ADMIN) return true;
-  return [ROLES.COORDINATOR, ROLES.MENTOR, ROLES.STUDENT].includes(targetRole);
+  return [ROLES.COORDINATOR, ROLES.MENTOR, ROLES.TRAINER, ROLES.STUDENT].includes(targetRole);
 };
 
 /**
@@ -110,6 +111,11 @@ export const getAdminUsers = async (req, res, next) => {
 
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
     let users = await getAllUsersModel(collegeId);
+
+    // Only admin-approved users are considered as registered active users
+    users = users.filter((u) => {
+      return u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+    });
 
     // College Admins can only view/manage Students, Mentors, and Coordinators (not other Admins)
     if (req.user?.role !== ROLES.SUPER_ADMIN) {
@@ -365,10 +371,10 @@ export const createUserAdmin = async (req, res, next) => {
     // For non-student staff roles (Coordinator, Mentor) or self-registering College Admins:
     // Ensure a Secure Access Code exists so user can complete registration with it if needed.
     let targetSecureCode = (secure_code || code || '').trim().toUpperCase();
-    const isStaffRole = canonicalRole === ROLES.COORDINATOR || canonicalRole === ROLES.MENTOR || canonicalRole === ROLES.COLLEGE_ADMIN;
+    const isStaffRole = canonicalRole === ROLES.COORDINATOR || canonicalRole === ROLES.MENTOR || canonicalRole === ROLES.TRAINER || canonicalRole === ROLES.COLLEGE_ADMIN;
     if (isStaffRole && !isSuperAdminAddingAdmin) {
       if (!targetSecureCode) {
-        const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : 'ADM');
+        const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : (canonicalRole === ROLES.TRAINER ? 'TRN' : 'ADM'));
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
         targetSecureCode = `${prefix}-${randomHex}`;
       }
@@ -409,9 +415,9 @@ export const createUserAdmin = async (req, res, next) => {
       college_id: targetCollegeId,
       department: validatedDeptName,
       department_id: validatedDeptId,
-      is_active: isSuperAdminAddingAdmin ? 1 : 0,
-      is_verified: isSuperAdminAddingAdmin ? 1 : 0,
-      is_approved: isSuperAdminAddingAdmin ? 1 : 0,
+      is_active: 1,
+      is_verified: 1,
+      is_approved: 1,
     });
 
     let studentProfile = null;
@@ -481,8 +487,8 @@ export const createUserAdmin = async (req, res, next) => {
       {
         ...newUser,
         secure_code: isSuperAdminAddingAdmin ? null : (targetSecureCode || null),
-        is_verified: isSuperAdminAddingAdmin ? 1 : 0,
-        is_approved: isSuperAdminAddingAdmin ? 1 : 0,
+        is_verified: 1,
+        is_approved: 1,
         studentProfile,
       },
       201
@@ -542,13 +548,16 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
         }
       }
 
-      // Create User
+      // Create User (admin-created bulk users are automatically approved)
       const newUser = await createUser({
         name,
         email,
         mobile_number,
         role: ROLES.STUDENT,
         college_id: targetCollegeId,
+        is_active: 1,
+        is_verified: 1,
+        is_approved: 1,
       });
 
       // Create Student Profile

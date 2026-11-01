@@ -1010,9 +1010,12 @@ export const deleteUserModel = async (id) => {
 };
 
 export const getUserStatsModel = async (collegeId = null) => {
-  const users = await getAllUsersModel(collegeId);
+  const allUsers = await getAllUsersModel(collegeId);
+  // Only admin-approved users are counted in user statistics
+  const users = allUsers.filter((u) => u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1');
   const totalUsers = users.length;
   const students = users.filter((u) => u.role === ROLES.STUDENT).length;
+  const trainers = users.filter((u) => u.role === ROLES.TRAINER).length;
   const mentors = users.filter((u) => u.role === ROLES.MENTOR).length;
   const coordinators = users.filter((u) => u.role === ROLES.COORDINATOR).length;
   const admins = users.filter((u) => u.role === ROLES.COLLEGE_ADMIN || u.role === ROLES.SUPER_ADMIN).length;

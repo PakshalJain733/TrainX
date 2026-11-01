@@ -1,0 +1,139 @@
+/* Trainer Leaderboard CSS */
+.trainer-lb-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trainer-lb-select-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.trainer-lb-select {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: #ffffff;
+}
+
+.trainer-lb-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.trainer-lb-loading {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+}
+
+.trainer-lb-empty-box {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.trainer-lb-trophy-icon {
+  color: #f59e0b;
+  margin: 0 auto 12px;
+}
+
+.trainer-lb-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #1e293b;
+}
+
+.trainer-lb-empty-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-lb-table-wrapper {
+  overflow-x: auto;
+}
+
+.trainer-lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.trainer-lb-table-head-row {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.trainer-lb-th {
+  padding: 14px 20px;
+  color: #475569;
+}
+
+.trainer-lb-th--rank {
+  width: 80px;
+}
+
+.trainer-lb-row {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.trainer-lb-td {
+  padding: 14px 20px;
+}
+
+.trainer-lb-td--rank {
+  font-weight: 800;
+}
+
+.trainer-lb-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.trainer-lb-rank-badge--1 {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.trainer-lb-rank-badge--2 {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.trainer-lb-rank-badge--3 {
+  background: #fed7aa;
+  color: #c2410c;
+}
+
+.trainer-lb-td--student {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.trainer-lb-td--dept {
+  color: #64748b;
+}
+
+.trainer-lb-td--solved {
+  font-weight: 600;
+}
+
+.trainer-lb-td--points {
+  font-weight: 800;
+  color: #0284c7;
+}
+

@@ -1,0 +1,203 @@
+/* Trainer Layout CSS */
+.trainer-layout-container {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.trainer-main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.trainer-topbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.trainer-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.trainer-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.trainer-toggle-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.trainer-topbar-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #bae6fd;
+}
+
+.trainer-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.trainer-topbar-join-btn {
+  padding: 7px 14px;
+  font-size: 12.5px;
+}
+
+.trainer-logout-btn {
+  color: #ef4444;
+}
+
+.trainer-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px 5px 6px;
+  border-radius: 24px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.trainer-user-pill:hover {
+  background: #e2e8f0;
+}
+
+.trainer-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.trainer-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.trainer-user-role {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.trainer-content-area {
+  flex: 1;
+  padding: 24px 28px;
+  min-height: calc(100vh - 64px);
+}
+
+/* Modal Elements */
+.trainer-modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-modal-desc {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0 0 16px;
+}
+
+.trainer-feedback-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trainer-feedback-alert--success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.trainer-feedback-alert--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.trainer-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trainer-form-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.trainer-form-input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .trainer-content-area {
+    padding: 16px;
+  }
+  .trainer-topbar {
+    padding: 0 16px;
+  }
+}

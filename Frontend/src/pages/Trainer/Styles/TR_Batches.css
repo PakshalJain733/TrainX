@@ -1,0 +1,1001 @@
+/* Trainer Batches & Tasks Styling */
+.trainer-batches-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.trainer-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.trainer-page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.trainer-page-sub {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trainer-search-wrap {
+  position: relative;
+}
+
+.trainer-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.trainer-search-input {
+  padding: 9px 14px 9px 36px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13px;
+  width: 260px;
+}
+
+.trainer-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trainer-btn-primary:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+.trainer-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1.5px solid #bae6fd;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.trainer-btn-outline:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* Tabs */
+.trainer-tabs-bar {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 2px;
+}
+
+.trainer-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.trainer-tab-btn:hover {
+  color: #0f172a;
+}
+
+.trainer-tab-btn.active {
+  color: #0284c7;
+  font-weight: 700;
+  border-bottom-color: #0284c7;
+}
+
+.trainer-tab-count {
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.trainer-tab-btn.active .trainer-tab-count {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* Batch Grid */
+.trainer-batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.trainer-batch-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.trainer-batch-card:hover {
+  border-color: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.12);
+}
+
+.trainer-batch-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.trainer-batch-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.trainer-batch-meta {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trainer-batch-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.trainer-batch-badge.joined {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.trainer-batch-card-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-batch-meta-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trainer-batch-dept-text {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.trainer-batch-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0284c7;
+  background: #f0f9ff;
+  border: 1px dashed #7dd3fc;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.trainer-batch-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+}
+
+.trainer-batch-stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.trainer-batch-stat-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.trainer-batch-stat-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.trainer-batch-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.trainer-batch-open-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Detail View Components */
+.trainer-detail-top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trainer-batch-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%);
+  color: #ffffff;
+  padding: 26px 30px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.trainer-batch-hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.trainer-batch-hero-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.trainer-batch-hero-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  background: #22c55e;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.trainer-batch-hero-sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: #bae6fd;
+}
+
+.trainer-batch-hero-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.trainer-btn-hero-assign {
+  background: #ffffff !important;
+  color: #0369a1 !important;
+  box-shadow: none !important;
+}
+
+.trainer-feedback-banner {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trainer-feedback-banner--success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.trainer-feedback-banner--error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* Tasks Tab */
+.trainer-tasks-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trainer-tasks-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trainer-tasks-list-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0;
+  color: #0f172a;
+}
+
+.trainer-btn-compact {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+
+.trainer-task-empty-card {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.trainer-task-empty-icon {
+  color: #94a3b8;
+  margin: 0 auto 12px;
+}
+
+.trainer-task-empty-icon--success {
+  color: #22c55e;
+  margin: 0 auto 12px;
+}
+
+.trainer-task-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #334155;
+}
+
+.trainer-task-empty-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px;
+}
+
+.trainer-tasks-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trainer-task-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.trainer-task-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.trainer-task-item-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.trainer-task-item-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.trainer-task-diff-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.trainer-task-diff-badge--easy {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.trainer-task-diff-badge--medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trainer-task-diff-badge--hard {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trainer-task-lang-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.trainer-task-item-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-task-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trainer-task-delete-btn {
+  background: #fee2e2;
+  border: none;
+  color: #ef4444;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trainer-task-desc-text {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Add Task Form */
+.trainer-add-task-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 28px;
+}
+
+.trainer-add-task-header {
+  margin-bottom: 20px;
+}
+
+.trainer-add-task-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #0f172a;
+}
+
+.trainer-add-task-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.trainer-form-grid-2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+.trainer-form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.trainer-field-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.trainer-field-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+}
+
+.trainer-field-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+  background: #ffffff;
+}
+
+.trainer-field-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.trainer-test-cases-builder {
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.trainer-test-cases-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.trainer-test-cases-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+}
+
+.trainer-test-cases-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.trainer-test-cases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trainer-test-case-row {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.trainer-test-case-input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+}
+
+.trainer-test-case-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #475569;
+}
+
+.trainer-test-case-del-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.trainer-form-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Roster Tab */
+.trainer-roster-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.trainer-roster-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.trainer-roster-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  color: #0f172a;
+}
+
+.trainer-roster-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.trainer-table-responsive {
+  overflow-x: auto;
+}
+
+.trainer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.trainer-table-head-row {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.trainer-th {
+  padding: 12px 18px;
+  color: #475569;
+}
+
+.trainer-table-row {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.trainer-td {
+  padding: 12px 18px;
+}
+
+.trainer-td-roll {
+  padding: 12px 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.trainer-td-name {
+  padding: 12px 18px;
+  font-weight: 600;
+}
+
+.trainer-td-email {
+  padding: 12px 18px;
+  color: #64748b;
+}
+
+.trainer-td-dept {
+  padding: 12px 18px;
+  color: #475569;
+}
+
+.trainer-td--score {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+.trainer-status-badge--active {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* Submissions Modal Elements */
+.trainer-modal-header-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.trainer-modal-body--compact {
+  padding: 16px;
+}
+
+.trainer-sub-loading {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+}
+
+.trainer-sub-empty {
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.trainer-sub-empty-icon {
+  color: #94a3b8;
+  margin: 0 auto 10px;
+}
+
+.trainer-sub-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #334155;
+}
+
+.trainer-sub-empty-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.trainer-sub-th {
+  padding: 10px 14px;
+  color: #475569;
+}
+
+.trainer-sub-td {
+  padding: 10px 14px;
+}
+
+.trainer-sub-td--student {
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.trainer-sub-td--roll {
+  padding: 10px 14px;
+  color: #64748b;
+}
+
+.trainer-sub-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.trainer-sub-status-badge--passed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.trainer-sub-status-badge--partial {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trainer-sub-status-badge--failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trainer-sub-score {
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #0284c7;
+}
+
+.trainer-sub-date {
+  padding: 10px 14px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* Code Viewer Modal Elements */
+.trainer-modal-backdrop--high {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 20px;
+}
+
+.trainer-code-viewer-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.trainer-code-viewer-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.trainer-code-viewer-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.trainer-code-viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trainer-code-copy-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trainer-code-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.trainer-code-viewer-body {
+  background: #090d16;
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.trainer-code-pre {
+  margin: 0;
+  color: #e2e8f0;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.trainer-code-feedback-bar {
+  padding: 12px 18px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12.5px;
+}
+
+/* Modal styles base */
+.trainer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.trainer-modal-box {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 620px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.trainer-modal-box.large {
+  max-width: 950px;
+}
+
+.trainer-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trainer-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.trainer-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.trainer-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .trainer-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .trainer-test-case-row {
+    grid-template-columns: 1fr;
+  }
+}

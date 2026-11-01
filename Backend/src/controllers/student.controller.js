@@ -42,7 +42,11 @@ export const getStudentData = async (req, res, next) => {
     }
 
     const allUsers = await getAllUsersModel(collegeId, deptFilter);
-    let students = (allUsers || []).filter((u) => u.role === ROLES.STUDENT || u.role === 'student');
+    let students = (allUsers || []).filter((u) => {
+      const isStudent = u.role === ROLES.STUDENT || u.role === 'student';
+      const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+      return isStudent && isApproved;
+    });
 
     // Extra safety in-memory filter if deptFilter is present
     if (deptFilter && deptFilter !== 'all' && deptFilter !== 'All') {
@@ -186,7 +190,11 @@ export const getStudentDashboard = async (req, res, next) => {
 
     // Multi-college isolation: retrieve students from the same college
     const allUsers = await getAllUsersModel(collegeId);
-    const students = allUsers.filter((u) => u.role === ROLES.STUDENT);
+    const students = allUsers.filter((u) => {
+      const isStudent = u.role === ROLES.STUDENT;
+      const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+      return isStudent && isApproved;
+    });
 
     // Calculate real attendance stats for logged in student
     let attendancePercentage = 0;

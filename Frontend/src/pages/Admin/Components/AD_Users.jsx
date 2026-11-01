@@ -27,6 +27,35 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [dailyTopicsList, setDailyTopicsList] = useState([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoadingTrainers(true);
+    apiFetch("/admin/users?role=trainer")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list)) {
+          const onlyTrainers = list.filter(u => {
+            const isTrainer = String(u.role || "").toLowerCase() === "trainer";
+            const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+            return isTrainer && isApproved;
+          });
+          setTrainers(onlyTrainers);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Fetch Trainers Error]", err);
+        const fallback = (users || []).filter(u => {
+          const isTrainer = String(u.role || "").toLowerCase() === "trainer";
+          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+          return isTrainer && isApproved;
+        });
+        setTrainers(fallback);
+      })
+      .finally(() => setLoadingTrainers(false));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -160,10 +189,17 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     if (tItem.trainer) setCurrentTrainer(tItem.trainer);
   };
 
-  const trainersList = users.filter(u => {
-    const r = (u.role || "").toLowerCase();
-    return r.includes("mentor") || r.includes("faculty") || r.includes("trainer") || r.includes("admin");
-  });
+  const trainerOptions = trainers.map((t) => ({
+    value: t.name,
+    label: `${t.name} (Trainer)`,
+  }));
+
+  if (currentTrainer && !trainerOptions.some(o => o.value === currentTrainer)) {
+    trainerOptions.unshift({
+      value: currentTrainer,
+      label: `${currentTrainer} (Assigned)`,
+    });
+  }
 
   const handleUpdateTopicSubmit = async (e) => {
     e.preventDefault();
@@ -336,19 +372,20 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                 </div>
 
                 {isEditingTrainer ? (
-                  <AdminUserSelect
-                    value={currentTrainer}
-                    options={[
-                      ...trainersList.map(t => ({ value: t.name, label: `${t.name} (${t.role || 'Faculty'})` })),
-                      { value: "Rahul Verma", label: "Rahul Verma (DSA Specialist)" },
-                      { value: "Dr. Priya Sharma", label: "Dr. Priya Sharma (React Architect)" },
-                      { value: "Prof. Anish Deshmukh", label: "Prof. Anish Deshmukh (Faculty)" },
-                      { value: "Er. Amit Kulkarni", label: "Er. Amit Kulkarni (ML Engineer)" }
-                    ]}
-                    onChange={val => setCurrentTrainer(val)}
-                    placeholder="Select trainer..."
-                    icon={UserCheck}
-                  />
+                  <>
+                    <AdminUserSelect
+                      value={currentTrainer}
+                      options={trainerOptions}
+                      onChange={val => setCurrentTrainer(val)}
+                      placeholder={loadingTrainers ? "Loading trainers..." : (trainerOptions.length === 0 ? "No trainers available" : "Select trainer...")}
+                      icon={UserCheck}
+                    />
+                    {!loadingTrainers && trainers.length === 0 && (
+                      <small style={{ color: "#64748b", marginTop: "4px", display: "block", fontSize: "11px" }}>
+                        No trainers registered yet. Create a user with role "Trainer" in User Management.
+                      </small>
+                    )}
+                  </>
                 ) : (
                   <div className="fs-portal-preassigned-box">
                     <span className="fs-portal-flex-center-gap"><User size={15} className="fs-portal-icon-indigo" /> {currentTrainer}</span>
@@ -495,16 +532,18 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
 
   if (!isOpen) return null;
 
-  // Real DB mentors
+  // Real DB mentors (only approved)
   const mentors = users.filter(u => {
     const r = (u.role || "").toLowerCase();
-    return r.includes("mentor") || r.includes("faculty") || r.includes("prof");
+    const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+    return (r.includes("mentor") || r.includes("faculty") || r.includes("prof")) && isApproved;
   });
 
-  // Real DB students
+  // Real DB students (only approved)
   const allStudents = users.filter(u => {
     const r = (u.role || "").toLowerCase();
-    return r.includes("student") || r === "user" || (!r && u.name);
+    const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+    return (r.includes("student") || r === "user" || (!r && u.name)) && isApproved;
   });
 
   // Filter students based on Department, Year, Division, and Search input
@@ -1296,7 +1335,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState(() => searchParams.get("role") || "all");
   const [departmentFilter, setDepartmentFilter] = useState(() => searchParams.get("department") || searchParams.get("dept") || "");
-  const [stats, setStats] = useState({ totalUsers: 0, students: 0, mentors: 0, coordinators: 0 });
+  const [stats, setStats] = useState({ totalUsers: 0, students: 0, trainers: 0, mentors: 0, coordinators: 0 });
   const [departments, setDepartments] = useState([]);
 
   // Sync state when URL search parameters change
@@ -1340,9 +1379,10 @@ export default function AdminUsers() {
     setCopiedCode(false);
     let roleParam = 'mentor';
     if (targetRole === 'coordinator') roleParam = 'coordinator';
+    if (targetRole === 'trainer') roleParam = 'trainer';
     if (targetRole === 'college_admin') roleParam = 'college_admin';
 
-    const prefix = roleParam === 'coordinator' ? 'CO' : (roleParam === 'college_admin' ? 'ADM' : 'FAC');
+    const prefix = roleParam === 'coordinator' ? 'CO' : (roleParam === 'college_admin' ? 'ADM' : (roleParam === 'trainer' ? 'TRN' : 'FAC'));
     const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
     const generatedFallback = `${prefix}-${randomHex}`;
 
@@ -1381,10 +1421,11 @@ export default function AdminUsers() {
 
       const res = await apiFetch(`/admin/users?${queryParams.toString()}`);
       if (res && res.data) {
-        // Filter out admin accounts from College Admin user list
+        // Filter out admin accounts and ensure only approved users are listed in User Management
         let nonAdmins = (res.data || []).filter(u => {
           const r = String(u.role || '').toLowerCase();
-          return !r.includes('admin');
+          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+          return !r.includes('admin') && isApproved;
         });
 
         // Strict department filter on client as well
@@ -1411,7 +1452,7 @@ export default function AdminUsers() {
       if (res && res.data) {
         const s = { ...res.data };
         // Total registered users for College Admin includes Students + Mentors + Coordinators
-        s.totalUsers = (s.students || 0) + (s.mentors || 0) + (s.coordinators || 0);
+        s.totalUsers = (s.students || 0) + (s.trainers || 0) + (s.mentors || 0) + (s.coordinators || 0);
         setStats(s);
       }
     } catch (err) {
@@ -1584,6 +1625,7 @@ export default function AdminUsers() {
   const getRoleBadgeClass = (role) => {
     const r = (role || "").toLowerCase();
     if (r.includes("student")) return "role-badge--student";
+    if (r.includes("trainer")) return "role-badge--trainer";
     if (r.includes("mentor") || r.includes("faculty")) return "role-badge--mentor";
     if (r.includes("coordinator")) return "role-badge--coordinator";
     return "role-badge--admin";
@@ -1646,6 +1688,16 @@ export default function AdminUsers() {
         </div>
 
         <div className="admin-user-stat-card">
+          <div className="admin-user-stat-icon stat-icon--cyan">
+            <GraduationCap size={22} />
+          </div>
+          <div className="admin-user-stat-info">
+            <span className="admin-user-stat-num">{stats.trainers || 0}</span>
+            <span className="admin-user-stat-lbl">Trainers</span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
           <div className="admin-user-stat-icon stat-icon--purple">
             <Briefcase size={22} />
           </div>
@@ -1701,6 +1753,12 @@ export default function AdminUsers() {
             onClick={() => setRoleFilter("student")}
           >
             Students ({stats.students})
+          </button>
+          <button
+            className={`admin-filter-pill ${roleFilter === "trainer" ? "admin-filter-pill--active" : ""}`}
+            onClick={() => setRoleFilter("trainer")}
+          >
+            Trainers ({stats.trainers || 0})
           </button>
           <button
             className={`admin-filter-pill ${roleFilter === "mentor" ? "admin-filter-pill--active" : ""}`}
@@ -1893,6 +1951,7 @@ export default function AdminUsers() {
                       }}
                       options={[
                         { value: "student", label: "Student" },
+                        { value: "trainer", label: "Trainer" },
                         { value: "mentor", label: "Mentor" },
                         { value: "coordinator", label: "Coordinator" },
                       ]}
@@ -1913,12 +1972,12 @@ export default function AdminUsers() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>College Email *</label>
+                    <label>Email *</label>
                     <input
                       type="email"
                       required
                       className="form-input-admin"
-                      placeholder="user@pvppcoe.ac.in"
+                      placeholder="user@example.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
@@ -2179,6 +2238,7 @@ export default function AdminUsers() {
                       onChange={(val) => setFormData({ ...formData, role: val })}
                       options={[
                         { value: "student", label: "Student" },
+                        { value: "trainer", label: "Trainer" },
                         { value: "mentor", label: "Mentor / Faculty" },
                         { value: "coordinator", label: "Coordinator" },
                         { value: "college_admin", label: "College Admin" }

@@ -108,6 +108,14 @@ const CoordinatorHelp = lazy(() => import('./pages/Coordinator/Components/CO_Hel
 const CoordinatorBroadcast = lazy(() => import('./pages/Coordinator/Components/CO_Broadcast'));
 const CoordinatorLeaderboard = lazy(() => import('./pages/Coordinator/Components/CO_Leaderboard'));
 
+// ── Trainer Workspace Pages (Lazy Loaded) ──
+const TrainerLayout = lazy(() => import('./pages/Trainer/Components/TR_Layout'));
+const TrainerOverview = lazy(() => import('./pages/Trainer/Components/TR_Overview'));
+const TrainerBatches = lazy(() => import('./pages/Trainer/Components/TR_Batches'));
+const TrainerTasks = lazy(() => import('./pages/Trainer/Components/TR_Tasks'));
+const TrainerLeaderboard = lazy(() => import('./pages/Trainer/Components/TR_Leaderboard'));
+const TrainerProfile = lazy(() => import('./pages/Trainer/Components/TR_Profile'));
+
 function App() {
   return (
     <SystemMaintenanceProvider>
@@ -246,6 +254,23 @@ function App() {
               <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="mentorWeeklyReports"><AdminWeeklyReports /></MaintenanceGuard>} />
               <Route path="profile" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
               <Route path="settings" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
+            </Route>
+
+            {/* Trainer Workspace Routes */}
+            <Route
+              path="/trainer"
+              element={
+                <ProtectedRoute allowedRoles={["trainer"]}>
+                  <TrainerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<TrainerOverview />} />
+              <Route path="batches" element={<TrainerBatches />} />
+              <Route path="tasks" element={<TrainerTasks />} />
+              <Route path="submissions" element={<TrainerTasks />} />
+              <Route path="leaderboard" element={<TrainerLeaderboard />} />
+              <Route path="profile" element={<TrainerProfile />} />
             </Route>
 
             {/* Super Admin Workspace Routes */}

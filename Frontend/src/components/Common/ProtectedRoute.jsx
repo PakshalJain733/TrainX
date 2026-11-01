@@ -41,7 +41,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  const { userRole, isSuperAdmin, isAdmin, isCoordinator, isMentor, isStudent } = getRoleFlags(user.role);
+  const { userRole, isSuperAdmin, isAdmin, isCoordinator, isTrainer, isMentor, isStudent } = getRoleFlags(user.role);
 
   // Check if role is authorized
   let isAllowed = false;
@@ -53,6 +53,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
       if ((canonical === "superadmin" || canonical === "super_admin") && isSuperAdmin) isAllowed = true;
       if ((canonical === "admin" || canonical === "college_admin" || canonical === "hod") && (isAdmin || isSuperAdmin)) isAllowed = true;
       if (canonical === "coordinator" && (isCoordinator || isSuperAdmin)) isAllowed = true;
+      if ((canonical === "trainer" || canonical === "instructor") && (isTrainer || isSuperAdmin)) isAllowed = true;
       if ((canonical === "mentor" || canonical === "faculty") && (isMentor || isSuperAdmin)) isAllowed = true;
       if (canonical === "student" && (isStudent || isSuperAdmin)) isAllowed = true;
       if (userRole === canonical) isAllowed = true;
@@ -64,6 +65,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     if (isSuperAdmin) return <Navigate to="/super-admin" replace />;
     if (isAdmin) return <Navigate to="/admin" replace />;
     if (isCoordinator) return <Navigate to="/coordinator" replace />;
+    if (isTrainer) return <Navigate to="/trainer" replace />;
     if (isMentor) return <Navigate to="/mentor" replace />;
     return <Navigate to="/student" replace />;
   }

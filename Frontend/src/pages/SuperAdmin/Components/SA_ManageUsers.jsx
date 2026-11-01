@@ -105,6 +105,27 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [dailyTopicsList, setDailyTopicsList] = useState([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoadingTrainers(true);
+    apiFetch("/admin/users?role=trainer")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list)) {
+          const onlyTrainers = list.filter(u => String(u.role || "").toLowerCase() === "trainer");
+          setTrainers(onlyTrainers);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Fetch Trainers Error]", err);
+        const fallback = (users || []).filter(u => String(u.role || "").toLowerCase() === "trainer");
+        setTrainers(fallback);
+      })
+      .finally(() => setLoadingTrainers(false));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -187,10 +208,17 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
   if (!isOpen) return null;
 
-  const trainersList = users.filter(u => {
-    const r = (u.role || "").toLowerCase();
-    return r.includes("mentor") || r.includes("faculty") || r.includes("trainer") || r.includes("admin");
-  });
+  const trainerOptions = trainers.map((t) => ({
+    value: t.name,
+    label: `${t.name} (Trainer)`,
+  }));
+
+  if (currentTrainer && !trainerOptions.some(o => o.value === currentTrainer)) {
+    trainerOptions.unshift({
+      value: currentTrainer,
+      label: `${currentTrainer} (Assigned)`,
+    });
+  }
 
   const computeAutoStatus = (dateStr, fallbackStatus) => {
     if (!dateStr) return fallbackStatus || "Scheduled";
@@ -406,19 +434,20 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                 </div>
 
                 {isEditingTrainer ? (
-                  <MuSelect
-                    value={currentTrainer}
-                    options={[
-                      ...trainersList.map(t => ({ value: t.name, label: `${t.name} (${t.role || 'Faculty'})` })),
-                      { value: "Rahul Verma", label: "Rahul Verma (DSA Specialist)" },
-                      { value: "Dr. Priya Sharma", label: "Dr. Priya Sharma (React Architect)" },
-                      { value: "Prof. Anish Deshmukh", label: "Prof. Anish Deshmukh (Faculty)" },
-                      { value: "Er. Amit Kulkarni", label: "Er. Amit Kulkarni (ML Engineer)" }
-                    ]}
-                    onChange={val => setCurrentTrainer(val)}
-                    placeholder="Select trainer..."
-                    icon={UserCheck}
-                  />
+                  <>
+                    <MuSelect
+                      value={currentTrainer}
+                      options={trainerOptions}
+                      onChange={val => setCurrentTrainer(val)}
+                      placeholder={loadingTrainers ? "Loading trainers..." : (trainerOptions.length === 0 ? "No trainers available" : "Select trainer...")}
+                      icon={UserCheck}
+                    />
+                    {!loadingTrainers && trainers.length === 0 && (
+                      <small style={{ color: "#64748b", marginTop: "4px", display: "block", fontSize: "11px" }}>
+                        No trainers registered yet. Create a user with role "Trainer" in User Management.
+                      </small>
+                    )}
+                  </>
                 ) : (
                   <div className="fs-portal-preassigned-box">
                     <span className="fs-portal-flex-center-gap"><User size={15} className="fs-portal-icon-indigo" /> {currentTrainer}</span>

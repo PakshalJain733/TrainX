@@ -695,9 +695,21 @@ export const getMentorBatches = async (req, res, next) => {
 
     if (mentorUser) {
       try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS batch_trainers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            batch_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `);
+
         const extraBatches = (await query(
-          `SELECT id FROM batches WHERE (mentor = ? OR trainer = ? OR mentor = ?)`,
-          [mentorUser.name, mentorUser.name, mentorUser.email]
+          `SELECT id FROM batches WHERE (mentor = ? OR trainer = ? OR mentor = ?)
+           UNION
+           SELECT batch_id AS id FROM batch_trainers WHERE user_id = ?`,
+          [mentorUser.name, mentorUser.name, mentorUser.email, mentorId]
         )) || [];
         extraBatches.forEach((r) => {
           const bid = toInt(r.id);
@@ -738,7 +750,7 @@ export const getMentorBatches = async (req, res, next) => {
         year: row.year || null,
         division: row.division || null,
         academicYear: row.academic_year || null,
-        enrolledStudents: roster.length,
+        enrolledStudents: Number(row.students) > 0 ? Number(row.students) : roster.length,
         studentsWithRecords: withRecords.length,
         averageAttendance: average(withRecords.map((s) => s.attendance)),
         averageScore: average(withRecords.map((s) => s.overallScore)),
@@ -2343,7 +2355,7 @@ export const getMentorBatchDetails = async (req, res, next) => {
       try {
         batchTasks = (await query(
           `SELECT bt.id, bt.batch_id, bt.title, bt.topic, bt.difficulty, bt.points, bt.deadline, bt.task_date, bt.description,
-                  COALESCE(bt.language, 'Java') AS language, bt.created_at
+                  COALESCE(bt.language, 'Java') AS language, bt.created_at, bt.test_cases
              FROM batch_tasks bt
             WHERE bt.batch_id = ?
             ORDER BY bt.id DESC`,
@@ -2379,9 +2391,9 @@ export const getMentorBatchDetails = async (req, res, next) => {
              JOIN users u ON ts.user_id = u.id
              LEFT JOIN students s ON s.user_id = u.id
              LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
-            WHERE ts.user_id IN (${inPlaceholders(studentUserIds)}) AND ts.batch_id = ?
+            WHERE ts.batch_id = ?
             ORDER BY ts.submitted_at DESC`,
-          [...studentUserIds, numericBatchId]
+          [numericBatchId]
         );
         taskSubmissionsList = subRows || [];
       } catch (e) {
@@ -2545,3 +2557,140 @@ export const saveMentorSubmissionFeedback = async (req, res, next) => {
 };
 
 
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/mentor/batches/available
+// Returns active batches from this college that this trainer has not joined yet
+// ---------------------------------------------------------------------------
+export const getAvailableBatchesForMentor = async (req, res, next) => {
+  try {
+    const mentorId = requireMentor(req, res);
+    if (!mentorId) return;
+
+    const [mUser] = (await query(`SELECT id, name, college_id FROM users WHERE id = ?`, [mentorId])) || [];
+    const collegeId = mUser?.college_id;
+
+    // Get batch IDs already joined
+    let joinedIds = [];
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS batch_trainers (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          batch_id INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+
+      const jRows = await query(
+        `SELECT id FROM batches WHERE mentor = ? OR trainer = ?
+         UNION
+         SELECT batch_id AS id FROM batch_trainers WHERE user_id = ?`,
+        [mUser?.name || '', mUser?.name || '', mentorId]
+      );
+      joinedIds = (jRows || []).map((r) => toInt(r.id)).filter(Boolean);
+    } catch (_) {}
+
+    let whereClause = `b.status != 'deleted' AND LOWER(COALESCE(b.status, 'active')) = 'active'`;
+    let params = [];
+    if (collegeId) {
+      whereClause += ` AND (b.college_id = ? OR b.college_id IS NULL)`;
+      params.push(collegeId);
+    }
+    if (joinedIds.length > 0) {
+      whereClause += ` AND b.id NOT IN (${inPlaceholders(joinedIds)})`;
+      params.push(...joinedIds);
+    }
+
+    const available = await query(
+      `SELECT b.id, b.name, b.code, b.join_code, b.schedule, b.students, b.status,
+              c.name AS college_name, d.name AS department_name, b.trainer
+         FROM batches b
+         LEFT JOIN colleges c ON c.id = b.college_id
+         LEFT JOIN departments d ON d.id = b.department_id
+        WHERE ${whereClause}
+        ORDER BY b.id DESC
+        LIMIT 30`,
+      params
+    );
+
+    return sendSuccess(res, 'Available batches retrieved successfully', available || []);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/mentor/batches/join
+// Trainer joins an existing batch by ID or Join Code
+// ---------------------------------------------------------------------------
+export const joinBatchAsMentor = async (req, res, next) => {
+  try {
+    const mentorId = requireMentor(req, res);
+    if (!mentorId) return;
+
+    const { batchId, joinCode, code } = req.body || {};
+    const inputCode = String(joinCode || code || batchId || '').trim();
+    if (!inputCode) {
+      return sendError(res, 'Batch ID or Join Code is required', 400);
+    }
+
+    const cleanInput = inputCode.toUpperCase();
+
+    // Match batch by ID, join_code, code, or name
+    let rows = await query(
+      `SELECT * FROM batches 
+        WHERE id = ? 
+           OR UPPER(TRIM(COALESCE(code, ''))) = ? 
+           OR UPPER(TRIM(COALESCE(join_code, ''))) = ?
+           OR UPPER(TRIM(name)) = ?
+        LIMIT 1`,
+      [inputCode, cleanInput, cleanInput, cleanInput]
+    );
+
+    if (!rows || rows.length === 0) {
+      return sendError(res, `Invalid batch code '${inputCode}'. No matching batch found.`, 404);
+    }
+
+    const targetBatch = rows[0];
+
+    // Ensure batch_trainers table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // Link trainer to batch
+    await query(
+      `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+      [mentorId, targetBatch.id]
+    );
+
+    // Update trainer name in batches table if unassigned
+    const [uRow] = await query(`SELECT name FROM users WHERE id = ?`, [mentorId]);
+    const trainerName = uRow?.name || 'Trainer';
+    await query(
+      `UPDATE batches 
+          SET trainer = CASE WHEN trainer IS NULL OR trainer = '' OR trainer = 'Faculty Instructor' THEN ? ELSE trainer END,
+              mentor = CASE WHEN mentor IS NULL OR mentor = '' OR mentor = 'Faculty Mentor' THEN ? ELSE mentor END
+        WHERE id = ?`,
+      [trainerName, trainerName, targetBatch.id]
+    );
+
+    return sendSuccess(res, `Successfully joined batch '${targetBatch.name}' as Trainer!`, {
+      batch: targetBatch,
+      batch_id: targetBatch.id,
+      batch_name: targetBatch.name,
+      join_code: targetBatch.code || targetBatch.join_code,
+      role: 'trainer'
+    });
+  } catch (err) {
+    next(err);
+  }
+};

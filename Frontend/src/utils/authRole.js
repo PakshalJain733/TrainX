@@ -23,14 +23,16 @@ export function getRoleFlags(roleRaw) {
     (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) &&
     !isSuperAdmin;
   const isCoordinator = userRole.includes("coordinator");
-  const isMentor = userRole.includes("mentor") || userRole.includes("faculty");
+  const isTrainer = userRole.includes("trainer") || userRole === "trainer" || userRole.includes("instructor");
+  const isMentor = (userRole.includes("mentor") || userRole.includes("faculty")) && !isTrainer;
   const isStudent = userRole.includes("student") || userRole === "user";
-  return { userRole, isSuperAdmin, isAdmin, isCoordinator, isMentor, isStudent };
+  return { userRole, isSuperAdmin, isAdmin, isCoordinator, isTrainer, isMentor, isStudent };
 }
 
 /** Dashboard path after login — keep in sync with ProtectedRoute role checks. */
 export function dashboardPathForRole(roleRaw) {
-  const { isSuperAdmin, isAdmin, isCoordinator, isMentor } = getRoleFlags(roleRaw);
+  const { isSuperAdmin, isAdmin, isCoordinator, isTrainer, isMentor } = getRoleFlags(roleRaw);
+  if (isTrainer) return "/trainer";
   if (isSuperAdmin) return "/super-admin";
   if (isCoordinator) return "/coordinator";
   if (isAdmin) return "/admin";

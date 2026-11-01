@@ -888,6 +888,7 @@ function Register() {
                   { value: "Coordinator", label: "Coordinator" },
                   { value: "Admin", label: "Admin" },
                   { value: "Mentor", label: "Mentor" },
+                  { value: "Trainer", label: "Trainer" },
                 ]}
                 onChange={(val) => setRole(val)}
                 placeholder="Select your role"
