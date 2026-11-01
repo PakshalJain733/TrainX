@@ -456,8 +456,7 @@ export const sendWelcomeEmail = async ({
         <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.6;">
           <li>Click the <strong>Complete Your Registration</strong> button below.</li>
           <li>Enter your new account password and confirm it.</li>
-          <li>Link your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) by scanning the QR code.</li>
-          <li>Once 2FA is verified, your status will change from <strong>Unverified</strong> to <strong>Verified</strong>.</li>
+          <li>Once submitted, your account will be reviewed and approved by your Administrator.</li>
           <li>Your Administrator will then perform a final review and <strong>manually approve</strong> your account.</li>
         </ol>
       </div>
@@ -479,7 +478,7 @@ export const sendWelcomeEmail = async ({
     const subject = secure_code 
       ? `Action Required: Complete Your ${roleUpper} Registration (Secure Code: ${secure_code})`
       : `Welcome ${name}! Complete your registration`;
-    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration and Authenticator 2FA are paired, your status changes to Verified and will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration is submitted, your account will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
 
     return await sendEmail({
       to,
@@ -512,7 +511,7 @@ export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
           ✅ Account Status: Active & Approved
         </div>
         <div style="color: #047857; font-size: 13.5px; line-height: 1.5;">
-          You can now log in using your registered email, password, and 6-digit Authenticator app code.
+          You can now log in using your registered email and password.
         </div>
       </div>
 
@@ -716,7 +715,6 @@ export const sendAdminRegistrationCodeEmail = async ({
           <li>Click the <strong>Complete Your Registration</strong> button below.</li>
           <li>Your registered email and secure code will be pre-filled automatically.</li>
           <li>Create and confirm your secure password.</li>
-          <li>Pair your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) for 2FA.</li>
           <li>Once submitted, your account will be active on the portal.</li>
         </ol>
       </div>

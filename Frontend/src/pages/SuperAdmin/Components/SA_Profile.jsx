@@ -14,18 +14,6 @@ export default function SuperAdminProfile() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
-  // 2FA Google Authenticator State
-  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
-  const [loading2FASetup, setLoading2FASetup] = useState(false);
-  const [totpData, setTotpData] = useState(null); // { secret, qrCode, email }
-  const [totpCodeInput, setTotpCodeInput] = useState(["", "", "", "", "", ""]);
-  const [verifying2FA, setVerifying2FA] = useState(false);
-  const [totpError, setTotpError] = useState("");
-  const [totpSuccess, setTotpSuccess] = useState("");
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const totpInputRefs = useRef([]);
-
   const [form, setForm] = useState(() => {
     try {
       const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -67,7 +55,6 @@ export default function SuperAdminProfile() {
             phone: u.mobile_number || u.phone || prev.phone,
             role: u.role ? (u.role.toLowerCase().includes("super") ? "Super Administrator" : u.role.toUpperCase()) : prev.role,
           }));
-          setIs2FAEnabled(Boolean(u.two_factor_enabled || u.two_factor_secret));
         }
       })
       .catch(() => { });
@@ -80,101 +67,7 @@ export default function SuperAdminProfile() {
       setAvatarUrl(url);
     }
   };
-
-  const handleOpen2FASetup = async () => {
-    setTotpError("");
-    setTotpSuccess("");
-    setTotpCodeInput(["", "", "", "", "", ""]);
-    setLoading2FASetup(true);
-    setIs2FASetupOpen(true);
-
-    try {
-      const res = await apiFetch("/auth/setup-2fa", { method: "POST" });
-      if (res && (res.data || res.qrCode)) {
-        setTotpData(res.data || res);
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to generate Google Authenticator QR Code");
-    } finally {
-      setLoading2FASetup(false);
-    }
-  };
-
-  const handleCopySecret = () => {
-    if (totpData?.secret) {
-      navigator.clipboard.writeText(totpData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    }
-  };
-
-  const handleTotpDigitChange = (index, value) => {
-    const cleanVal = value.replace(/\D/g, "").slice(-1);
-    const newCode = [...totpCodeInput];
-    newCode[index] = cleanVal;
-    setTotpCodeInput(newCode);
-
-    if (cleanVal && index < 5) {
-      totpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleTotpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !totpCodeInput[index] && index > 0) {
-      totpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleTotpPaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasteData) {
-      const digits = pasteData.split("");
-      const newCode = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        newCode[i] = d;
-      });
-      setTotpCodeInput(newCode);
-      const nextIdx = Math.min(digits.length, 5);
-      totpInputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  const handleVerify2FASubmit = async (e) => {
-    e.preventDefault();
-    const code = totpCodeInput.join("");
-    if (code.length < 6) {
-      setTotpError("Please enter complete 6-digit Authenticator code.");
-      return;
-    }
-    setVerifying2FA(true);
-    setTotpError("");
-    setTotpSuccess("");
-
-    try {
-      const res = await apiFetch("/auth/verify-2fa", {
-        method: "POST",
-        body: JSON.stringify({
-          secret: totpData?.secret,
-          code: code,
-        }),
-      });
-
-      if (res && (res.success || res.data)) {
-        setTotpSuccess("Google Authenticator 2FA paired and activated successfully!");
-        setIs2FAEnabled(true);
-        setTimeout(() => {
-          setIs2FASetupOpen(false);
-        }, 1500);
-      } else {
-        setTotpError(res?.message || "Invalid Authenticator Code. Please check Google Authenticator.");
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to verify 2FA code. Please try again.");
-    } finally {
-      setVerifying2FA(false);
-    }
-  };
+
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -501,141 +394,7 @@ export default function SuperAdminProfile() {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       />
-
-      {/* Google Authenticator 2FA Modal */}
-      {is2FASetupOpen && createPortal(
-        <div className="modal-overlay profile-2fa-modal-overlay">
-          <div className="modal-dialog profile-2fa-modal-dialog">
-            <div className="profile-2fa-modal-header">
-              <div className="profile-2fa-modal-title-wrap">
-                <div className="profile-2fa-modal-icon">
-                  <QrCode size={20} />
-                </div>
-                <div>
-                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
-                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIs2FASetupOpen(false)}
-                className="profile-2fa-modal-close-btn"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {loading2FASetup ? (
-              <div className="profile-2fa-modal-loading">
-                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
-                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleVerify2FASubmit}>
-                {totpError && (
-                  <div className="profile-2fa-alert-error">
-                    {totpError}
-                  </div>
-                )}
-
-                {totpSuccess && (
-                  <div className="profile-2fa-alert-success">
-                    <CheckCircle2 size={16} />
-                    <span>{totpSuccess}</span>
-                  </div>
-                )}
-
-                {/* QR Code Container */}
-                <div className="profile-2fa-qr-box">
-                  {totpData?.qrCode ? (
-                    <img
-                      src={totpData.qrCode}
-                      alt="Google Authenticator QR Code"
-                      className="profile-2fa-qr-img"
-                    />
-                  ) : (
-                    <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="profile-2fa-qr-icon" />
-                    </div>
-                  )}
-                  <p className="profile-2fa-qr-text">
-                    Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
-                  </p>
-                </div>
-
-                {/* Secret Key Copy Bar */}
-                {totpData?.secret && (
-                  <div className="profile-2fa-secret-box">
-                    <label className="profile-2fa-secret-label">
-                      Or enter Secret Key manually:
-                    </label>
-                    <div className="profile-2fa-secret-row">
-                      <code className="profile-2fa-secret-code">
-                        {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={handleCopySecret}
-                        className="profile-2fa-copy-btn"
-                      >
-                        {copiedSecret ? <Check size={12} className="profile-copy-check-icon" /> : <Copy size={12} />}
-                        {copiedSecret ? "Copied" : "Copy"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6-Digit Code Input */}
-                <div className="profile-2fa-code-input-section">
-                  <label className="profile-2fa-code-label">
-                    Enter 6-Digit Authenticator Verification Code:
-                  </label>
-                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
-                    {totpCodeInput.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (totpInputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleTotpKeyDown(idx, e)}
-                        className="profile-2fa-digit-input"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="profile-2fa-modal-actions">
-                  <button
-                    type="button"
-                    onClick={() => setIs2FASetupOpen(false)}
-                    className="profile-2fa-modal-cancel-btn"
-                    disabled={verifying2FA}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="profile-2fa-modal-submit-btn"
-                    disabled={verifying2FA}
-                  >
-                    {verifying2FA ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Verifying...
-                      </>
-                    ) : (
-                      "Verify & Enable 2FA"
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+      
     </div>
   );
 }

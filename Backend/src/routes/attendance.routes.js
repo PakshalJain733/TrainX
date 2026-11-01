@@ -14,6 +14,8 @@ import {
   createLeaveRequest,
   updateLeaveRequestStatus,
   deleteLeaveRequest,
+  getBatchAttendanceHistory,
+  getSessionRoster,
 } from '../controllers/attendance.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -27,6 +29,8 @@ router.use(authenticateToken);
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
 router.get('/scans', getMyAttendanceScans);
+router.get('/history-records', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR), getBatchAttendanceHistory);
+router.get('/session-roster', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getSessionRoster);
 
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);

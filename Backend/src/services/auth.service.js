@@ -1,8 +1,6 @@
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import speakeasy from 'speakeasy';
-import QRCode from 'qrcode';
 import { getJwtSecret } from '../config/jwt.js';
 import {
   findUserByEmailOrMobile,
@@ -19,13 +17,9 @@ import {
   consumeRegistrationOtp,
   verifyRegistrationOtpOnly,
   invalidateRegistrationOtps,
-  updateUserTwoFactorSecret,
-  resetUserTwoFactorSecret,
-  triggerUserTwoFactorReset,
   updateUserRememberMe,
   findCollegeByAdminEmail,
   findCollegeByEmailDomain,
-  enableTwoFactorForUser,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
@@ -35,10 +29,6 @@ import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
 import { findCollegeById } from '../models/college.model.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
-const PREAUTH_TOKEN_TTL = '10m';
-const PREAUTH_TOKEN_TYPE = 'preauth';
-const PREAUTH_PURPOSE = 'totp';
-const consumedPreauthTokens = new Map();
 
 const createAuthError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -47,15 +37,6 @@ const createAuthError = (message, statusCode = 400) => {
 };
 
 const isBlank = (value) => value === undefined || value === null || String(value).trim() === '';
-
-const isTwoFactorEnabled = (value) => {
-  if (value === true || value === 1) return true;
-  if (typeof value === 'number' && value > 0) return true;
-  if (Buffer.isBuffer(value) && value.length > 0 && value[0] === 1) return true;
-  if (value && typeof value === 'object' && value.data && Array.isArray(value.data) && value.data[0] === 1) return true;
-  const str = String(value || '').toLowerCase().trim();
-  return str === 'true' || str === '1' || str === '\x01';
-};
 
 const isInactiveUser = (user) => {
   if (!user || user.is_active === undefined) return false;
@@ -69,20 +50,15 @@ const assertUserCanAuthenticate = (user) => {
   }
   if (user.role === 'super_admin') return;
 
-  const isVerified = user.is_verified === 1 || user.is_verified === true || user.is_verified === '1' || Boolean(user.two_factor_enabled && user.password_hash);
+  const isVerified = user.is_verified === 1 || user.is_verified === true || user.is_verified === '1';
   if (!isVerified) {
-    throw createAuthError('Your registration is incomplete. Please complete your registration and link your Authenticator app using your secure access code.', 403);
+    throw createAuthError('Your registration is incomplete. Please complete your registration and verify your account.', 403);
   }
 
   const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
   if (!isApproved) {
     throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
   }
-};
-
-const hasTwoFactorAuthentication = (user) => {
-  if (!user || isBlank(user?.two_factor_secret)) return false;
-  return isTwoFactorEnabled(user?.two_factor_enabled);
 };
 
 const verifyStoredPassword = async (user, password) => {
@@ -120,7 +96,7 @@ const buildUserResponse = async (user) => {
     role: user.role,
     department: user.department || studentProfile?.department || '',
     department_id: user.department_id || studentProfile?.department_id || null,
-    is_verified: Boolean(user.is_verified || (user.two_factor_enabled && user.password_hash)),
+    is_verified: Boolean(user.is_verified),
     is_approved: Boolean(user.is_approved || user.is_active),
     is_active: user.is_active,
     year: studentProfile?.year || '',
@@ -142,161 +118,13 @@ const generateFinalToken = (user) => generateToken({
   tokenType: 'access',
 });
 
-const generatePreauthToken = (user) => jwt.sign({
-  userId: user.id,
-  tokenType: PREAUTH_TOKEN_TYPE,
-  purpose: PREAUTH_PURPOSE,
-  jti: randomUUID(),
-}, getJwtSecret(), {
-  expiresIn: PREAUTH_TOKEN_TTL,
-});
-
 const finalizePrimaryAuthentication = async (user) => {
   assertUserCanAuthenticate(user);
 
-  const isAdminRole = user && (
-    user.role === 'super_admin' ||
-    user.role === 'college_admin' ||
-    user.role === 'admin' ||
-    String(user.role).toLowerCase().includes('admin')
-  );
-
-  if (hasTwoFactorAuthentication(user)) {
-    return {
-      requiresTwoFactor: true,
-      preAuthToken: generatePreauthToken(user),
-    };
-  }
-
-  if (isAdminRole) {
-    let secret = user?.two_factor_secret;
-
-    if (isBlank(secret)) {
-      secret = speakeasy.generateSecret({ length: 20, name: `TrainingPortal (${user.email || user.name})` }).base32;
-      try {
-        await triggerUserTwoFactorReset(user.id, secret);
-      } catch (err) {
-        console.warn('[Auth Service] 2FA auto-setup init error:', err.message);
-      }
-      user.two_factor_secret = secret;
-      user.two_factor_reset = 1;
-      user.two_factor_enabled = 0;
-    }
-
-    let qrCode = null;
-    try {
-      const otpauthUrl = speakeasy.otpauthURL({
-        secret: user.two_factor_secret,
-        label: `TrainingPortal (${user.email || user.name})`,
-        issuer: 'TrainingPortal',
-        encoding: 'base32',
-      });
-      qrCode = await QRCode.toDataURL(otpauthUrl);
-    } catch (_) {}
-
-    return {
-      requiresTwoFactorSetup: true,
-      email: user.email,
-      qrCode,
-      secret: user.two_factor_secret,
-    };
-  }
-
   return {
-    requiresTwoFactor: false,
     token: generateFinalToken(user),
     user: await buildUserResponse(user),
   };
-};
-
-const pruneConsumedPreauthTokens = () => {
-  const now = Date.now();
-  for (const [jti, expiresAt] of consumedPreauthTokens.entries()) {
-    if (expiresAt <= now) consumedPreauthTokens.delete(jti);
-  }
-};
-
-const decodePreauthToken = (token) => {
-  if (isBlank(token)) {
-    throw createAuthError('A temporary authentication token is required.', 401);
-  }
-
-  const normalizedToken = String(token)
-    .trim()
-    .replace(/^Bearer\s+/i, '')
-    .replace(/^["']|["']$/g, '')
-    .trim();
-
-  let decoded;
-  try {
-    decoded = jwt.verify(normalizedToken, getJwtSecret());
-  } catch {
-    throw createAuthError('Invalid or expired temporary authentication token.', 401);
-  }
-
-  if (
-    decoded?.tokenType !== PREAUTH_TOKEN_TYPE
-    || decoded?.purpose !== PREAUTH_PURPOSE
-    || !decoded?.userId
-    || !decoded?.jti
-  ) {
-    throw createAuthError('Invalid temporary authentication token.', 401);
-  }
-
-  pruneConsumedPreauthTokens();
-  if (consumedPreauthTokens.has(decoded.jti)) {
-    throw createAuthError('Temporary authentication token has already been used.', 401);
-  }
-
-  return decoded;
-};
-
-const consumePreauthToken = (decoded) => {
-  const expiresAt = Number(decoded.exp) * 1000 || Date.now() + 10 * 60 * 1000;
-  consumedPreauthTokens.set(decoded.jti, expiresAt);
-  pruneConsumedPreauthTokens();
-};
-
-const PREAUTH_TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
-
-const looksLikePreauthToken = (value) => !isBlank(value) && PREAUTH_TOKEN_SHAPE.test(String(value).trim());
-
-export const generateTotpSetup = async (accountLabel) => {
-  const secret = speakeasy.generateSecret({
-    length: 20,
-    name: `TrainingPortal (${accountLabel})`,
-    issuer: 'TrainingPortal',
-  });
-
-  const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url);
-
-  return {
-    secret: secret.base32,
-    qrCode: qrCodeUrl,
-    otpauth_url: secret.otpauth_url,
-  };
-};
-
-export const verifyTotpToken = (secret, token) => {
-  if (isBlank(secret) || isBlank(token)) return false;
-  const cleanToken = String(token).replace(/\D/g, '').trim();
-  if (cleanToken.length !== 6) return false;
-
-  const cleanSecret = String(secret).replace(/[\s\=]+/g, '').toUpperCase();
-  if (!cleanSecret) return false;
-
-  try {
-    const verified = speakeasy.totp.verify({
-      secret: cleanSecret,
-      encoding: 'base32',
-      token: cleanToken,
-      window: 8,
-    });
-    return Boolean(verified);
-  } catch (err) {
-    console.warn(`[TOTP] Verification exception: ${err.message}`);
-    return false;
-  }
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -439,7 +267,7 @@ export const registerUser = async (data) => {
 
   if (existingUser) {
     // If the user already completed registration or was provisioned with a password:
-    const isCompleted = (existingUser.is_profile_updated === 1 || existingUser.is_profile_updated === true) && !isBlank(existingUser.two_factor_secret);
+    const isCompleted = Boolean(existingUser.is_profile_updated);
     const hasPassword = Boolean(existingUser.password_hash && existingUser.password_hash.trim().length > 0);
     const isAdmin = existingUser.role === ROLES.SUPER_ADMIN || existingUser.role === ROLES.COLLEGE_ADMIN || String(existingUser.role || '').toLowerCase().includes('admin');
 
@@ -541,9 +369,6 @@ export const registerUser = async (data) => {
       });
     }
 
-    const totpSetup = await generateTotpSetup(updatedUser.email || name);
-    await resetUserTwoFactorSecret(updatedUser.id, totpSetup.secret);
-
     const token = canonicalRole === ROLES.SUPER_ADMIN
       ? generateToken({
           userId: updatedUser.id,
@@ -556,15 +381,12 @@ export const registerUser = async (data) => {
 
     return {
       token,
-      qrCode: totpSetup.qrCode,
-      secret: totpSetup.secret,
       user: {
         id: updatedUser.id,
         name: updatedUser.name,
         email: updatedUser.email,
         mobile_number: updatedUser.mobile_number,
         role: updatedUser.role,
-        two_factor_secret: totpSetup.secret,
         department: studentProfile?.department || department || '',
         year: studentProfile?.year || year || '',
         division: studentProfile?.division || division || '',
@@ -708,20 +530,14 @@ export const registerUser = async (data) => {
     });
   }
 
-  const totpSetup = await generateTotpSetup(user.email || user.mobile_number || name);
-  await resetUserTwoFactorSecret(user.id, totpSetup.secret);
-
   return {
     token: canonicalRole === ROLES.SUPER_ADMIN ? generateFinalToken(user) : null,
-    qrCode: totpSetup.qrCode,
-    secret: totpSetup.secret,
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
-      two_factor_secret: totpSetup.secret,
       department: studentProfile?.department || department || '',
       year: studentProfile?.year || year || '',
       division: studentProfile?.division || division || '',
@@ -732,106 +548,7 @@ export const registerUser = async (data) => {
   };
 };
 
-export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = false) => {
-  const preauthPayload = looksLikePreauthToken(identifier) ? decodePreauthToken(identifier) : null;
-  const user = preauthPayload
-    ? await findUserById(preauthPayload.userId)
-    : await findUserByEmailOrMobile(identifier);
-  if (!user) {
-    const error = new Error('User not found');
-    error.statusCode = 404;
-    throw error;
-  }
 
-  if (isBlank(user.two_factor_secret) || !verifyTotpToken(user.two_factor_secret, totpCode)) {
-    throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
-  }
-
-  await enableTwoFactorForUser(user.id);
-
-  if (preauthPayload) {
-    consumePreauthToken(preauthPayload);
-  }
-
-  await updateUserRememberMe(user.id, rememberMe);
-
-  if (user.role !== 'super_admin' && isInactiveUser(user)) {
-    return {
-      requiresTwoFactor: false,
-      pendingApproval: true,
-      message: '2FA verification completed. Your account is pending Admin approval.',
-    };
-  }
-
-  const studentProfile = await getStudentByUserId(user.id);
-  const token = generateFinalToken(user);
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      remember_me: Boolean(rememberMe),
-      department: user.department || studentProfile?.department || '',
-      department_id: user.department_id || studentProfile?.department_id || null,
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      is_profile_updated: Boolean(
-        (user.is_profile_updated || studentProfile?.is_profile_updated) &&
-        ((studentProfile?.gender && studentProfile?.city) || (user.gender && user.city) || (studentProfile?.skills && String(studentProfile.skills).trim().length > 0) || (studentProfile?.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) || (studentProfile?.target_track && String(studentProfile.target_track).trim().length > 0))
-      ),
-      studentProfile,
-    },
-  };
-};
-
-export const verifyTotpPairing = async (identifier, totpCode) => {
-  if (isBlank(identifier) || isBlank(totpCode)) {
-    throw createAuthError('Identifier and Authenticator code are required.', 400);
-  }
-
-  const user = await findUserByEmailOrMobile(identifier);
-  if (!user) {
-    throw createAuthError('No account found matching this email or mobile number.', 400);
-  }
-
-  if (isBlank(user.two_factor_secret)) {
-    throw createAuthError('No Authenticator 2FA setup found for this account. Please log in with password.', 400);
-  }
-
-  if (!verifyTotpToken(user.two_factor_secret, totpCode)) {
-    throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
-  }
-
-  await enableTwoFactorForUser(user.id);
-  try {
-    await pool.query('UPDATE users SET is_verified = 1 WHERE id = ?', [user.id]);
-    user.is_verified = 1;
-  } catch (_) {}
-
-  const isSuperAdminRole = user.role === 'super_admin';
-  const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
-
-  if (!isSuperAdminRole && !isApproved) {
-    return {
-      requiresTwoFactor: false,
-      pendingApproval: true,
-      is_verified: true,
-      message: 'Authenticator paired successfully! Your account status is now Verified. It is pending manual Administrator approval before you can log in.',
-    };
-  }
-
-  return {
-    requiresTwoFactor: false,
-    token: generateFinalToken(user),
-    user: await buildUserResponse(user),
-  };
-};
 
 export const sendUserOtp = async (identifier) => {
   if (isBlank(identifier)) {
@@ -1081,12 +798,8 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   };
 
   const primaryAuth = await finalizePrimaryAuthentication(user);
-  if (primaryAuth.requiresTwoFactor || primaryAuth.requiresTwoFactorSetup) {
-    return primaryAuth;
-  }
 
   return {
-    requiresTwoFactor: false,
     token: primaryAuth.token,
     user: safeUser,
   };
@@ -1130,35 +843,3 @@ export const resetUserPasswordWithOtp = async (identifier, otp, newPassword) => 
   return { message: 'Password reset successfully' };
 };
 
-export const setupUser2FA = async (userId) => {
-  const user = await findUserById(userId);
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
-  return {
-    secret: totpSetup.secret,
-    qrCode: totpSetup.qrCode,
-    email: user.email,
-  };
-};
-
-export const verifyAndEnableUser2FA = async (userId, secret, code) => {
-  const user = await findUserById(userId);
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  if (!secret || !code) {
-    throw new Error('Secret and 6-digit verification code are required');
-  }
-
-  const isValid = verifyTotpToken(secret, code);
-  if (!isValid) {
-    throw new Error('Invalid 6-digit Authenticator code. Please check your Google Authenticator app.');
-  }
-
-  await updateUserTwoFactorSecret(userId, secret);
-  return { message: 'Google Authenticator 2FA paired and enabled successfully!' };
-};

@@ -33,7 +33,7 @@ const exportRosterToExcel = (record) => {
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   worksheet["!cols"] = [
-    { wch: 6 },  { wch: 14 }, { wch: 24 },
+    { wch: 6 }, { wch: 14 }, { wch: 24 },
     { wch: 18 }, { wch: 18 }, { wch: 14 },
     { wch: 14 }, { wch: 30 }
   ];
@@ -61,7 +61,7 @@ const exportAllHistoryToExcel = (records) => {
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   worksheet["!cols"] = [
-    { wch: 6 },  { wch: 14 }, { wch: 14 },
+    { wch: 6 }, { wch: 14 }, { wch: 14 },
     { wch: 30 }, { wch: 16 }, { wch: 16 },
     { wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 24 }
   ];
@@ -92,6 +92,43 @@ export default function AdminAttendance() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [selectedHistoryDetail, setSelectedHistoryDetail] = useState(null);
+
+  const loadHistoryRecords = useCallback(async () => {
+    try {
+      const res = await apiFetch("/attendance/history-records");
+      if (res && res.data && Array.isArray(res.data)) {
+        setHistoryRecords(res.data);
+      }
+    } catch (err) {
+      console.warn("Failed to load history records from DB:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistoryRecords();
+  }, [loadHistoryRecords]);
+
+  const handleViewHistoryRoster = async (rec) => {
+    if (rec.roster && rec.roster.length > 0) {
+      setSelectedHistoryDetail(rec);
+      return;
+    }
+    try {
+      const res = await apiFetch(`/attendance/session-roster?batch_id=${rec.batchId}&date=${rec.date}`);
+      const rosterData = (res && res.data && Array.isArray(res.data)) ? res.data : [];
+      setSelectedHistoryDetail({
+        ...rec,
+        roster: rosterData.map(r => ({
+          rollNo: r.rollNo,
+          name: r.name,
+          status: (r.status || '').toLowerCase() === 'present' ? 'Present' : 'Absent',
+          mode: r.mode || 'Manual'
+        }))
+      });
+    } catch (e) {
+      setSelectedHistoryDetail({ ...rec, roster: [] });
+    }
+  };
 
   // QR Modal state
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -165,6 +202,10 @@ export default function AdminAttendance() {
     const currentBatch = batches.find(b => b.code === selectedBatchCode);
     const batchId = currentBatch ? currentBatch.id : null;
 
+    // Reset current attendance and scan state immediately on date or batch change to prevent cross-date leakage
+    setAttendance({});
+    setQrScannedMap({});
+
     const fetchStudentsAndAttendance = async (isPolling = false) => {
       if (isPolling && isDirtyRef.current) {
         return; // User has unsaved manual edits, skip overwriting local attendance state during background sync
@@ -184,7 +225,7 @@ export default function AdminAttendance() {
               status: false
             }));
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       setStudents(fetchedStudents);
@@ -194,7 +235,7 @@ export default function AdminAttendance() {
         const queryDate = sessionDate || new Date().toISOString().split('T')[0];
         const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}`);
         const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
-        
+
         const attendanceMap = {};
         const scannedMap = {};
 
@@ -205,7 +246,7 @@ export default function AdminAttendance() {
             const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
             const matchesRoll = d.roll_number && s.rollNo && String(d.roll_number).trim().toLowerCase() === String(s.rollNo).trim().toLowerCase();
             const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
-                                (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
+              (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
             return matchesId || matchesRoll || matchesName;
           });
           const isPresentInDb = record ? (
@@ -214,24 +255,12 @@ export default function AdminAttendance() {
             String(record.status || '').toLowerCase() === 'present'
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
-          if (isPresentInDb || (record && record.is_scanned)) scannedMap[s.id] = true;
+          if (record && record.is_scanned) scannedMap[s.id] = true;
         });
 
-        // Merge previous active scans so a freshly scanned student is never wiped out by background polling
-        setAttendance((prev) => {
-          const merged = { ...attendanceMap };
-          Object.keys(prev || {}).forEach((k) => {
-            if (prev[k]) merged[k] = true;
-          });
-          return merged;
-        });
-        setQrScannedMap((prev) => {
-          const merged = { ...scannedMap };
-          Object.keys(prev || {}).forEach((k) => {
-            if (prev[k]) merged[k] = true;
-          });
-          return merged;
-        });
+        // Set attendance strictly for THIS sessionDate (no bleed-through from other dates!)
+        setAttendance(attendanceMap);
+        setQrScannedMap(scannedMap);
       } catch (_) {
         const initialMap = {};
         fetchedStudents.forEach(s => { initialMap[s.id] = false; });
@@ -278,7 +307,7 @@ export default function AdminAttendance() {
           if (scans && scans[0]) {
             handleQrScanCheckIn(scans[0].studentName, scans[0].studentId || scans[0].userId);
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     };
 
@@ -392,6 +421,7 @@ export default function AdminAttendance() {
   });
 
   const handleSave = async () => {
+    isDirtyRef.current = false;
     try {
       const payloadAttendance = {};
       students.forEach(s => {
@@ -400,7 +430,7 @@ export default function AdminAttendance() {
         payloadAttendance[targetKey] = isPresent;
       });
 
-      await apiFetch("/attendance/mark", {
+      const res = await apiFetch("/attendance/mark", {
         method: "POST",
         body: JSON.stringify({
           batch_id: currentBatchObj ? currentBatchObj.id : 1,
@@ -408,35 +438,18 @@ export default function AdminAttendance() {
           attendance: payloadAttendance
         })
       });
-    } catch (e) {}
 
-    isDirtyRef.current = false;
-
-    // Save to Previous Attendance History list
-    const newHistoryEntry = {
-      id: `HIST-${Date.now()}`,
-      date: sessionDate,
-      batchCode: selectedBatchCode,
-      batchName: currentBatchObj ? currentBatchObj.name : selectedBatchCode,
-      total: totalCount,
-      present: presentCount,
-      absent: totalCount - presentCount,
-      rate: ratePct,
-      savedBy: "System Admin",
-      savedAt: new Date().toLocaleString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-      roster: students.map(s => ({
-        rollNo: s.rollNo,
-        name: s.name,
-        status: attendance[s.id] ? "Present" : "Absent",
-        mode: qrScannedMap[s.id] ? "QR Scan" : "Manual"
-      }))
-    };
-
-    const updatedHistory = [newHistoryEntry, ...historyRecords];
-    setHistoryRecords(updatedHistory);
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+      if (res && res.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 4000);
+        loadHistoryRecords();
+      } else {
+        alert(res?.message || "Failed to save attendance");
+      }
+    } catch (e) {
+      console.error("Save attendance error:", e);
+      alert("Error saving attendance to database: " + (e.message || "Unknown error"));
+    }
   };
 
   const formatTimer = (seconds) => {
@@ -565,8 +578,8 @@ export default function AdminAttendance() {
                       <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Batch Code: {selectedHistoryDetail.batchCode} · Saved by {selectedHistoryDetail.savedBy}</p>
                     </div>
                     <div style={{ display: "flex", gap: "16px" }}>
-                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Present</span><br/><strong style={{ color: "#16a34a" }}>{selectedHistoryDetail.present} / {selectedHistoryDetail.total}</strong></div>
-                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Attendance Rate</span><br/><strong style={{ color: "#2563eb" }}>{selectedHistoryDetail.rate}%</strong></div>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Present</span><br /><strong style={{ color: "#16a34a" }}>{selectedHistoryDetail.present} / {selectedHistoryDetail.total}</strong></div>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Attendance Rate</span><br /><strong style={{ color: "#2563eb" }}>{selectedHistoryDetail.rate}%</strong></div>
                     </div>
                   </div>
 
@@ -646,7 +659,7 @@ export default function AdminAttendance() {
                             </td>
                             <td>
                               <button
-                                onClick={() => setSelectedHistoryDetail(rec)}
+                                onClick={() => handleViewHistoryRoster(rec)}
                                 style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", cursor: "pointer" }}
                               >
                                 <Eye size={14} /> View Roster

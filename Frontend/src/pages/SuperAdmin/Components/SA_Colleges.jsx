@@ -296,40 +296,7 @@ export default function Colleges() {
   const [deptErrors, setDeptErrors] = useState({});
   const [isSavingDept, setIsSavingDept] = useState(false);
 
-  const handleTrigger2FAForCollegeAdmin = async (college) => {
-    const rawEmail = college.adminEmail || college.contact_email || college.email;
-    const adminEmail = (rawEmail && rawEmail !== '-' && rawEmail.trim()) ? rawEmail.trim() : null;
-
-    try {
-      const usersRes = await apiFetch('/admin/users');
-      let adminUser = null;
-      const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
-      if (userList.length > 0) {
-        if (adminEmail) {
-          adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
-        }
-        if (!adminUser) {
-          adminUser = userList.find(u => String(u.college_id) === String(college.id) && String(u.role).toLowerCase().includes('admin'));
-        }
-      }
-      if (!adminUser) {
-        alert(`No active College Admin account found for ${college.name}. Please edit this college record to set an Administrator Email first.`);
-        return;
-      }
-      const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
-        method: 'POST',
-      });
-      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
-        alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminUser.email} (${college.name}). 2FA setup is now required on their next sign-in.`);
-      } else {
-        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
-      }
-    } catch (err) {
-      console.error('Trigger 2FA error:', err);
-      alert(err?.message || 'Failed to trigger two-step verification.');
-    }
-  };
-
+  
   const handleDeleteCollege = async (id) => {
     try {
       await collegeAPI.deleteCollege(id);
@@ -810,11 +777,6 @@ export default function Colleges() {
                             label: 'Explore Departments',
                             icon: GraduationCap,
                             onClick: () => navigate(`/super-admin/colleges/${college.id}`),
-                          },
-                          {
-                            label: 'Re-trigger 2FA Setup',
-                            icon: ShieldCheck,
-                            onClick: () => handleTrigger2FAForCollegeAdmin(college),
                           }
                         ]}
                       />

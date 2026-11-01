@@ -97,7 +97,7 @@ function storeAuthToken(token, remember) {
 function Login() {
   const navigate = useNavigate();
   const [authMode, setAuthMode] = useState("password"); // "password" | "otp" | "forgot"
-  const [step, setStep] = useState("email"); // "email" | "otp" | "new_password" | "authenticator"
+  const [step, setStep] = useState("email"); // "email" | "otp" | "new_password"
   const [email, setEmail] = useState(() => {
     if (sessionStorage.getItem("tx_remember_me") !== "true") return "";
     return sessionStorage.getItem("tx_remembered_identifier") || sessionStorage.getItem("tx_remembered_email") || "";
@@ -107,7 +107,7 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(
     () => sessionStorage.getItem("tx_remember_me") === "true"
   );
-  // Preserve rememberMe across the 2FA / authenticator step
+  // Preserve rememberMe across authentication
   const rememberMeRef = useRef(rememberMe);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
@@ -115,8 +115,6 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [preAuthToken, setPreAuthToken] = useState(null);
-  const [totpSetupData, setTotpSetupData] = useState(null);
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
@@ -130,7 +128,7 @@ function Login() {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("registered") === "true") {
-      setSuccessMsg("Registration and 2FA verified successfully! Please sign in with your email and password.");
+      setSuccessMsg("Registration verified successfully! Please sign in with your email and password.");
     }
 
     try {
@@ -215,8 +213,7 @@ function Login() {
     setOtp(["", "", "", "", "", ""]);
     setNewPassword("");
     setConfirmPassword("");
-    setPreAuthToken(null);
-  };
+      };
 
   // Forgot-password OTP verify: do NOT call /verify-otp (login endpoint).
   // Simply move to new_password step; the final reset step re-validates OTP.
@@ -367,22 +364,7 @@ function Login() {
     navigate(dashboardPathForRole(mergedUser.role));
   };
 
-  const beginAuthenticatorStep = (data) => {
-    const temporaryToken = data?.preAuthToken || data?.temporaryToken || data?.preauthToken;
-    if (!temporaryToken) return false;
-
-    // Snapshot rememberMe into a ref so it survives the step change
-    rememberMeRef.current = rememberMe;
-    setPreAuthToken(temporaryToken);
-    setStep("authenticator");
-    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Authenticator App.");
-    setOtp(["", "", "", "", "", ""]);
-    setTimeout(() => {
-      inputRefs.current[0]?.focus();
-    }, 100);
-    return true;
-  };
-
+  
   // ── Password Login Handler ─────────────────────────
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
@@ -422,20 +404,8 @@ function Login() {
         return;
       }
 
-      if (data.success && data.data?.requiresTwoFactorSetup) {
-        setTotpSetupData(data.data);
-        setPreAuthToken(null);
-        setStep("authenticator_setup");
-        setOtp(["", "", "", "", "", ""]);
-      } else if (data.success && data.data?.requiresTwoFactor) {
-        // 2FA required — store pre-auth token only, NOT the final JWT
-        if (!beginAuthenticatorStep(data.data)) {
-          setPreAuthToken(null);
-          setErrorMsg("Two-factor verification could not be started. Please try again.");
-        }
-      } else if (data.success && data.data?.token) {
-        setPreAuthToken(null);
-        storeAuthToken(data.data.token, rememberMeRef.current);
+      if (data.success && data.data?.token) {
+        storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(data.data.user || {});
       } else {
         setErrorMsg(data.message || "Invalid credentials. Please check your email and password.");
@@ -458,8 +428,7 @@ function Login() {
     if (!email) return;
     persistRememberedIdentifier();
     rememberMeRef.current = rememberMe;
-    setPreAuthToken(null);
-    setLoading(true);
+        setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
 
@@ -516,8 +485,7 @@ function Login() {
 
   const handleEditEmail = () => {
     setStep("email");
-    setPreAuthToken(null);
-    setOtp(["", "", "", "", "", ""]);
+        setOtp(["", "", "", "", "", ""]);
     setErrorMsg("");
     setSuccessMsg("");
   };
@@ -561,63 +529,12 @@ function Login() {
     }
   };
 
-  const handleVerifyTotpSetupPairing = async (e) => {
-    e.preventDefault();
-    const enteredCode = otp.join("");
-    if (enteredCode.length < 6) {
-      setSuccessMsg("");
-      setErrorMsg("Please enter the complete 6-digit Authenticator code.");
-      return;
-    }
-    setLoading(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const emailToVerify = (email || totpSetupData?.email || totpSetupData?.user?.email || "").trim();
-      const response = await fetch(`${API_BASE_URL}/verify-totp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailToVerify,
-          code: enteredCode,
-          rememberMe,
-        }),
-      });
-      const data = await response.json();
-      if (data.success && data.data?.token) {
-        storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
-        handlePostLoginRedirect(data.data.user || {});
-      } else if (data.success && data.data?.pendingApproval) {
-        setSuccessMsg(data.message || "2FA Setup completed! Your account is pending Admin approval.");
-        setTimeout(() => {
-          setStep("email");
-        }, 2000);
-      } else if (data.success) {
-        setSuccessMsg("2FA Setup completed successfully! Redirecting...");
-        setTimeout(() => {
-          if (data.data?.token) {
-            storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
-          }
-          handlePostLoginRedirect(data.data?.user || {});
-        }, 1200);
-      } else {
-        setErrorMsg(data.message || "Invalid Authenticator Code. Please check Google/Microsoft Authenticator app.");
-      }
-    } catch (err) {
-      console.error("2FA setup verification error:", err);
-      setErrorMsg("Unable to verify Authenticator code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleVerifyAndLogin = async (e) => {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
       setSuccessMsg("");
-      setErrorMsg("Please enter the complete 6-digit code.");
+      setErrorMsg("Please enter the complete 6-digit verification code.");
       return;
     }
     setLoading(true);
@@ -625,43 +542,19 @@ function Login() {
     setSuccessMsg("");
 
     try {
-      const isAuthenticatorStep = step === "authenticator";
-      if (isAuthenticatorStep && !preAuthToken && !email) {
-        setErrorMsg("Your temporary authentication session expired. Please sign in again.");
-        setLoading(false);
-        return;
-      }
-
-      // Authenticator step → TOTP verify (final JWT issued here)
-      // OTP login step   → verify-otp (may return requiresTwoFactor instead of token)
-      const endpoint = isAuthenticatorStep
-        ? `${API_BASE_URL}/verify-totp`
-        : `${API_BASE_URL}/verify-otp`;
-      const requestBody = isAuthenticatorStep
-        ? { preAuthToken, email, code: enteredOtp }
-        : { identifier: email, otp: enteredOtp };
-
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...requestBody, rememberMe }),
+        body: JSON.stringify({ identifier: email, otp: enteredOtp, rememberMe }),
       });
       const data = await response.json();
-      if (data.success && data.data?.requiresTwoFactor && !isAuthenticatorStep) {
-        if (!beginAuthenticatorStep(data.data)) {
-          setPreAuthToken(null);
-          setErrorMsg("Two-factor verification could not be started. Please try again.");
-        }
-      } else if (data.success && data.data?.token) {
+      if (data.success && data.data?.token) {
         const finalToken = data.data.token;
         const finalUser = data.data.user || {};
-        setPreAuthToken(null);
         storeAuthToken(finalToken, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(finalUser);
       } else {
-        setErrorMsg(data.message || (isAuthenticatorStep
-          ? "Invalid code from Google Authenticator. Please try again."
-          : "Invalid or expired OTP code."));
+        setErrorMsg(data.message || "Invalid or expired OTP code.");
       }
     } catch (err) {
       console.error("Login verification error:", err);
@@ -852,129 +745,7 @@ function Login() {
               </>
             )}
 
-            {step === "authenticator_setup" && (
-              <form onSubmit={handleVerifyTotpSetupPairing}>
-                <div style={{ textAlign: "center", marginBottom: "14px" }}>
-                  <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", margin: "0 0 6px 0" }}>
-                    Authenticator 2FA Setup
-                  </h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                    Scan the QR Code below using Microsoft or Google Authenticator app.
-                  </p>
-                </div>
-
-                {totpSetupData?.qrCode && (
-                  <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
-                    <img
-                      src={totpSetupData.qrCode}
-                      alt="2FA QR Code"
-                      style={{ width: "150px", height: "150px", borderRadius: "12px", border: "2px solid #e2e8f0", padding: "6px", background: "#fff" }}
-                    />
-                  </div>
-                )}
-
-                {totpSetupData?.secret && (
-                  <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", textAlign: "center" }}>
-                    <div style={{ fontSize: "11px", fontWeight: "600", color: "#64748b", marginBottom: "2px" }}>Secret Setup Key (Manual Entry):</div>
-                    <code style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", letterSpacing: "1px" }}>{totpSetupData.secret}</code>
-                  </div>
-                )}
-
-                <div className="login-input-group">
-                  <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-                  <div className="login-otp-input-row">
-                    {otp.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (inputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                        onChange={(e) => handleOtpChange(e, idx)}
-                        onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
-                  {Icons.shield} {loading ? "Verifying Setup..." : "Verify & Complete 2FA Setup"}
-                </button>
-
-                <div className="login-links">
-                  <p>
-                    <button
-                      type="button"
-                      onClick={handleEditEmail}
-                      className="login-registeration-link"
-                      style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                    >
-                      Back to Login
-                    </button>
-                  </p>
-                </div>
-              </form>
-            )}
-
-            {step === "authenticator" && (
-              <form onSubmit={handleVerifyAndLogin}>
-                <div className="login-input-group">
-                  <div className="login-email-header-row">
-                    <FieldLabel icon={Icons.shield}>Email Address</FieldLabel>
-                    <button
-                      type="button"
-                      onClick={handleEditEmail}
-                      className="login-edit-email-btn"
-                    >
-                      {Icons.edit} Edit
-                    </button>
-                  </div>
-
-                  <div className="login-email-display-card">
-                    <span className="login-email-display-text">{email || "your account"}</span>
-                  </div>
-                </div>
-
-                <div className="login-input-group">
-                  <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-                  <div className="login-otp-input-row">
-                    {otp.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (inputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                        onChange={(e) => handleOtpChange(e, idx)}
-                        onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
-                  {Icons.shield} {loading ? "Verifying..." : "Verify Authenticator & Login"}
-                </button>
-
-                <div className="login-links">
-                  <p>
-                    Wrong account?{" "}
-                    <button
-                      type="button"
-                      onClick={handleEditEmail}
-                      className="login-registeration-link"
-                      style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                    >
-                      Back to Login
-                    </button>
-                  </p>
-                </div>
-              </form>
-            )}
+            
 
             {/* ═════════════════════════════════════════════════ */}
             {/* MODE 2: OTP LOGIN                                 */}

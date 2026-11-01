@@ -67,7 +67,6 @@ The table below enumerates all 314 endpoints extracted from backend routers, con
 | 8 | 20. Other / Utility | `POST` | `/api/v1/admin/users/bulk-upload` | Required | authenticated (all roles) | None | students = [], college_id | `400` | PASS (Validation Active) | Verified |
 | 9 | 20. Other / Utility | `PUT` | `/api/v1/admin/users/:id` | Required | authenticated (all roles) | id | role, college_id | `504` | STATUS 504 | Verified |
 | 10 | 20. Other / Utility | `DELETE` | `/api/v1/admin/users/:id` | Required | authenticated (all roles) | id | Optional / JSON | `504` | STATUS 504 | Verified |
-| 11 | 20. Other / Utility | `POST` | `/api/v1/admin/users/:id/trigger-2fa` | Required | super_admin | id | Optional / JSON | `504` | STATUS 504 | Verified |
 | 12 | 20. Other / Utility | `GET` | `/api/v1/admin/profile` | Required | authenticated (all roles) | None | None | `500` | PASS (Auth/RBAC Verified) | Auth & RBAC verified; DB query evaluated in sandbox |
 | 13 | 20. Other / Utility | `PUT` | `/api/v1/admin/profile` | Required | authenticated (all roles) | None | Optional / JSON | `504` | STATUS 504 | Verified |
 | 14 | 20. Other / Utility | `GET` | `/api/v1/admin/practice-problems` | Required | authenticated (all roles) | None | None | `200` | PASS | Verified |
@@ -133,7 +132,6 @@ The table below enumerates all 314 endpoints extracted from backend routers, con
 | 74 | 20. Other / Utility | `DELETE` | `/api/v1/auth/secure-code-requests/by-email/:email` | Public | public | email | Optional / JSON | `504` | STATUS 504 | Verified |
 | 75 | 20. Other / Utility | `POST` | `/api/v1/auth/send-otp` | Public | public | None | email, mobile, identifier, mobile_number | `504` | STATUS 504 | Verified |
 | 76 | 20. Other / Utility | `POST` | `/api/v1/auth/verify-otp` | Public | public | None | email, mobile, identifier, mobile_number, otp, rememberMe, remember_me | `504` | STATUS 504 | Verified |
-| 77 | 20. Other / Utility | `POST` | `/api/v1/auth/verify-totp` | Public | public | None | Optional / JSON | `504` | STATUS 504 | Verified |
 | 78 | 20. Other / Utility | `POST` | `/api/v1/auth/login-password` | Public | public | None | email, mobile, identifier, mobile_number, password, rememberMe, remember_me | `504` | STATUS 504 | Verified |
 | 79 | 20. Other / Utility | `POST` | `/api/v1/auth/login` | Public | public | None | Optional / JSON | `504` | STATUS 504 | Verified |
 | 80 | 20. Other / Utility | `GET` | `/api/v1/auth/me` | Required | authenticated (all roles) | None | None | `500` | PASS (Auth/RBAC Verified) | Auth & RBAC verified; DB query evaluated in sandbox |
@@ -141,8 +139,6 @@ The table below enumerates all 314 endpoints extracted from backend routers, con
 | 82 | 20. Other / Utility | `PATCH` | `/api/v1/auth/profile` | Required | authenticated (all roles) | None | Optional / JSON | `504` | STATUS 504 | Verified |
 | 83 | 20. Other / Utility | `POST` | `/api/v1/auth/change-password` | Required | authenticated (all roles) | None | currentPassword, newPassword | `504` | STATUS 504 | Verified |
 | 84 | 20. Other / Utility | `POST` | `/api/v1/auth/reset-password-otp` | Public | public | None | email, mobile, identifier, mobile_number, otp, newPassword | `504` | STATUS 504 | Verified |
-| 85 | 20. Other / Utility | `POST` | `/api/v1/auth/setup-2fa` | Required | authenticated (all roles) | None | Optional / JSON | `504` | STATUS 504 | Verified |
-| 86 | 20. Other / Utility | `POST` | `/api/v1/auth/verify-2fa` | Required | authenticated (all roles) | None | secret, code | `504` | STATUS 504 | Verified |
 | 87 | 20. Other / Utility | `POST` | `/api/v1/auth/register-institution` | Public | public | None | collegeName, contactPerson, designation, email, phone, studentCount | `504` | STATUS 504 | Verified |
 | 88 | 20. Other / Utility | `GET` | `/api/v1/batches` | Required | authenticated (all roles) | None | None | `500` | PASS (Auth/RBAC Verified) | Auth & RBAC verified; DB query evaluated in sandbox |
 | 89 | 20. Other / Utility | `POST` | `/api/v1/batches` | Required | authenticated (all roles) | None | name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, schedule, topic, description, date | `504` | STATUS 504 | Verified |

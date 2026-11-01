@@ -1,4 +1,4 @@
-import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
+import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
@@ -79,49 +79,6 @@ export const verifyOtpAndLogin = async (req, res, next) => {
     const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
     const result = await verifyUserOtpAndLogin(identifier, formattedOtp, isRemember);
     return sendSuccess(res, 'Login successful', result);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const verifyTotp = async (req, res, next) => {
-  try {
-    const body = req.body || {};
-    const identifier = body.email || body.mobile || body.identifier || body.mobile_number;
-    const { code, otp, totp, rememberMe, remember_me } = body;
-    const inputCode = code || otp || totp;
-    const authorization = req.headers.authorization || req.headers.Authorization || '';
-    const headerToken = typeof authorization === 'string'
-      ? authorization.replace(/^Bearer\s+/i, '').trim()
-      : '';
-    const preAuthToken = body.preAuthToken || body.temporaryToken || body.preauthToken || body.token || headerToken;
-
-    if (!inputCode) {
-      return sendError(res, 'Authenticator code is required', 400);
-    }
-
-    const formattedCode = Array.isArray(inputCode) ? inputCode.join('') : inputCode;
-    const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
-
-    if (preAuthToken) {
-      try {
-        const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
-        return sendSuccess(res, 'Authenticator verification successful', result);
-      } catch (err) {
-        if (!identifier) throw err;
-        console.warn(`[TOTP] preAuthToken verification failed (${err.message}). Falling back to identifier verification.`);
-      }
-    }
-
-    if (!identifier) {
-      return sendError(res, 'Email, mobile, or token, and Authenticator code are required', 400);
-    }
-
-    const result = (typeof verifyTotpPairing === 'function')
-      ? await verifyTotpPairing(identifier, formattedCode)
-      : await verifyTotpAndLogin(identifier, formattedCode, isRemember);
-
-    return sendSuccess(res, 'Authenticator verification successful', result);
   } catch (error) {
     next(error);
   }
@@ -247,27 +204,6 @@ export const updateProfile = async (req, res, next) => {
   }
 };
 
-export const setup2FA = async (req, res, next) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    const result = await setupUser2FA(userId);
-    return sendSuccess(res, '2FA setup QR Code generated successfully', result);
-  } catch (error) {
-    return sendError(res, error.message || 'Failed to generate 2FA setup QR Code', 400);
-  }
-};
-
-export const verify2FA = async (req, res, next) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    const { secret, code } = req.body;
-    const result = await verifyAndEnableUser2FA(userId, secret, code);
-    return sendSuccess(res, 'Google Authenticator 2FA paired successfully', result);
-  } catch (error) {
-    return sendError(res, error.message || 'Failed to verify 2FA code', 400);
-  }
-};
-
 export const registerInstitution = async (req, res) => {
   try {
     const { collegeName, contactPerson, designation, email, phone, studentCount } = req.body;
@@ -357,7 +293,7 @@ export const getSecureCodeRequests = async (req, res, next) => {
         UPDATE secure_code_requests scr
         JOIN users u ON LOWER(scr.email) = LOWER(u.email)
         SET scr.status = 'Approved'
-        WHERE scr.status = 'Pending' AND (u.is_active = 1 OR u.role = 'college_admin' OR u.two_factor_enabled = 1)
+        WHERE scr.status = 'Pending' AND (u.is_active = 1 OR u.role = 'college_admin')
       `);
 
       const [rows] = await pool.query(

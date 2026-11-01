@@ -24,7 +24,6 @@ import {
   assignMentorToStudents,
   getMentorAssignments,
   getAdminC2CEnrollments,
-  triggerUser2FAAdmin,
   getAdminSupportTickets,
   updateAdminSupportTicket,
   escalateSupportTicketToSuperAdmin,
@@ -51,7 +50,6 @@ router.post('/users', createUserAdmin);
 router.post('/users/bulk-upload', bulkCreateUsersAdmin);
 router.put('/users/:id', updateUserAdmin);
 router.delete('/users/:id', deleteUserAdmin);
-router.post('/users/:id/trigger-2fa', authorizeRoles(ROLES.SUPER_ADMIN), triggerUser2FAAdmin);
 
 // Admin Profile
 router.get('/profile', getAdminProfile);

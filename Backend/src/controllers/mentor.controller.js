@@ -1352,6 +1352,40 @@ export const deleteMentorAssignment = async (req, res, next) => {
 };
 
 // ---------------------------------------------------------------------------
+
+export const isBatchAttendanceMarkedByAdmin = async (batchId, sessionDate) => {
+  if (!batchId || !sessionDate) return false;
+  try {
+    const adminRows = await query(
+      `SELECT a.id, a.marked_by, a.remarks, u.role
+       FROM attendance a
+       LEFT JOIN users u ON a.marked_by = u.id
+       WHERE a.batch_id = ? AND DATE(a.session_date) = DATE(?)
+         AND (
+           u.role IN ('super_admin', 'college_admin')
+           OR a.remarks LIKE '%Admin%'
+           OR a.remarks LIKE '%QR Code%'
+           OR a.remarks LIKE '%Scanned QR%'
+         )
+       LIMIT 1`,
+      [batchId, sessionDate]
+    );
+    if (adminRows && adminRows.length > 0) return true;
+
+    const scanRows = await query(
+      `SELECT id FROM attendance_scans
+       WHERE batch_id = ? AND DATE(session_date) = DATE(?)
+       LIMIT 1`,
+      [batchId, sessionDate]
+    );
+    if (scanRows && scanRows.length > 0) return true;
+
+    return false;
+  } catch (err) {
+    console.error('[isBatchAttendanceMarkedByAdmin error]', err);
+    return false;
+  }
+};
 // GET /api/v1/mentor/attendance/batches
 // ---------------------------------------------------------------------------
 export const getMentorAttendanceBatches = async (req, res, next) => {
@@ -1384,19 +1418,28 @@ export const getMentorAttendanceBatches = async (req, res, next) => {
       markedByStudent = new Map((markedRows || []).map((r) => [toInt(r.user_id), r.status]));
     }
 
-    const batches = batchIds.map((batchId) => ({
-      id: `b-${batchId}`,
-      batchId,
-      name: batchNameById.get(batchId) || `Batch ${batchId}`,
-      students: students
-        .filter((s) => s.batch_id != null && toInt(s.batch_id) === batchId)
-        .map((s) => ({
-          id: toInt(s.user_id),
-          userId: toInt(s.user_id),
-          name: s.name,
-          roll: s.roll_number || '',
-          status: markedByStudent.get(toInt(s.user_id)) || null,
-        })),
+    const batches = await Promise.all(batchIds.map(async (batchId) => {
+      const adminMarked = await isBatchAttendanceMarkedByAdmin(batchId, sessionDate);
+      return {
+        id: `b-${batchId}`,
+        batchId,
+        name: batchNameById.get(batchId) || `Batch ${batchId}`,
+        adminMarked: Boolean(adminMarked),
+        adminMarkedReason: adminMarked ? "Attendance marked by Admin (via QR / Admin session)" : null,
+        students: students
+          .filter((s) => s.batch_id != null && toInt(s.batch_id) === batchId)
+          .map((s) => {
+            const raw = markedByStudent.get(toInt(s.user_id));
+            const stat = raw ? (raw.toLowerCase() === 'present' ? 'Present' : 'Absent') : null;
+            return {
+              id: toInt(s.user_id),
+              userId: toInt(s.user_id),
+              name: s.name,
+              roll: s.roll_number || '',
+              status: stat,
+            };
+          }),
+      };
     }));
 
     return sendSuccess(res, 'Batches retrieved', { batches, date: sessionDate });
@@ -1424,6 +1467,17 @@ export const saveMentorAttendance = async (req, res, next) => {
     }
 
     const sessionDate = date || new Date().toISOString().slice(0, 10);
+
+    // Check if attendance for this date and batch was already marked by Admin
+    const adminMarked = await isBatchAttendanceMarkedByAdmin(batchId, sessionDate);
+    if (adminMarked) {
+      return sendError(
+        res,
+        'Attendance for this date has already been marked by Admin (via QR/Admin session). Mentors cannot modify attendance for this day.',
+        403
+      );
+    }
+
     const students = await loadMentorStudents(mentorId);
     const assignedIds = new Set(
       students.filter((s) => s.batch_id != null && toInt(s.batch_id) === batchId).map((s) => Number(s.user_id))
@@ -1479,8 +1533,9 @@ export const saveMentorAttendance = async (req, res, next) => {
     );
     for (const record of records) {
       await connection.execute(
-        `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by, remarks)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'Mentor Manual Attendance')
+         ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks), updated_at = CURRENT_TIMESTAMP`,
         [toInt(batchRow.college_id) || getCollegeId(req) || 1, batchId, record.userId, sessionId, sessionDate, record.status, mentorId]
       );
     }

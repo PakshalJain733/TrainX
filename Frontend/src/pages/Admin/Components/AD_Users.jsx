@@ -1810,12 +1810,12 @@ export default function AdminUsers() {
                             fontWeight: 650,
                             padding: "2px 7px",
                             borderRadius: "10px",
-                            background: (u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#ecfdf5" : "#fffbeb",
-                            color: (u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#059669" : "#b45309",
-                            border: `1px solid ${(u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#a7f3d0" : "#fde68a"}`
+                            background: u.is_verified ? "#ecfdf5" : "#fffbeb",
+                            color: u.is_verified ? "#059669" : "#b45309",
+                            border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`
                           }}
                         >
-                          {(u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "✓ Verified (2FA)" : "⚠ Unverified"}
+                          {u.is_verified ? "✓ Verified" : "⚠ Unverified"}
                         </span>
                       </div>
                     </td>

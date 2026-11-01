@@ -562,14 +562,14 @@ export default function AD_ApproveUsers() {
                             fontWeight: "650",
                             padding: "3px 8px",
                             borderRadius: "6px",
-                            background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
-                            color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
-                            border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
+                            background: u.is_verified ? "#ecfdf5" : "#fffbeb",
+                            color: u.is_verified ? "#059669" : "#b45309",
+                            border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`,
                           }}
                         >
-                          {u.is_verified || u.two_factor_enabled ? (
+                          {u.is_verified ? (
                             <>
-                              <ShieldCheck size={12} /> Verified (2FA)
+                              <ShieldCheck size={12} /> Verified
                             </>
                           ) : (
                             <>
@@ -802,14 +802,14 @@ export default function AD_ApproveUsers() {
                               fontWeight: "650",
                               padding: "2px 8px",
                               borderRadius: "6px",
-                              background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
-                              color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
-                              border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
+                              background: u.is_verified ? "#ecfdf5" : "#fffbeb",
+                              color: u.is_verified ? "#059669" : "#b45309",
+                              border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`,
                             }}
                           >
-                            {u.is_verified || u.two_factor_enabled ? (
+                            {u.is_verified ? (
                               <>
-                                <ShieldCheck size={12} /> Verified (2FA)
+                                <ShieldCheck size={12} /> Verified
                               </>
                             ) : (
                               <>

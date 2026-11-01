@@ -78,8 +78,6 @@ const SAFE_USER_FIELDS = [
   'city',
   'emergency_contact',
   'target_track',
-  'two_factor_enabled',
-  'two_factor_reset',
   'is_active',
   'is_verified',
   'is_approved',
@@ -309,7 +307,6 @@ export const createUser = async ({
   department_id = null,
   password = '',
   password_hash = '',
-  two_factor_secret = null,
   is_active = true,
   is_verified = 0,
   is_approved = 0,
@@ -318,7 +315,6 @@ export const createUser = async ({
   const normalizedMobile = typeof mobile_number === 'string' && mobile_number.trim() ? mobile_number.trim() : null;
   const normalizedDept = typeof department === 'string' && department.trim() ? department.trim() : null;
   const normalizedDeptId = department_id ? parseInt(department_id, 10) : null;
-  const normalizedSecret = typeof two_factor_secret === 'string' && two_factor_secret.trim() ? two_factor_secret.trim() : null;
   const passwordValue = password || password_hash || '';
   const hashedPassword = passwordValue ? await hashPasswordValue(passwordValue) : '';
   const validCollegeId = await getValidCollegeId(college_id);
@@ -326,8 +322,8 @@ export const createUser = async ({
   const verifiedValue = is_verified === true || is_verified === 1 || String(is_verified) === '1' ? 1 : 0;
   const approvedValue = is_approved === true || is_approved === 1 || String(is_approved) === '1' ? 1 : 0;
   const res = await query(
-    'INSERT INTO users (name, email, mobile_number, role, college_id, department, department_id, password_hash, two_factor_secret, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [name, normalizedEmail, normalizedMobile, role, validCollegeId, normalizedDept, normalizedDeptId, hashedPassword, normalizedSecret, activeValue, verifiedValue, approvedValue]
+    'INSERT INTO users (name, email, mobile_number, role, college_id, department, department_id, password_hash, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, normalizedEmail, normalizedMobile, role, validCollegeId, normalizedDept, normalizedDeptId, hashedPassword, activeValue, verifiedValue, approvedValue]
   );
   if (res && res.insertId) {
     if ((role === 'coordinator' || String(role).toLowerCase().includes('coordinator')) && normalizedDeptId) {
@@ -350,7 +346,6 @@ export const createUser = async ({
       is_active: activeValue,
       is_verified: verifiedValue,
       is_approved: approvedValue,
-      two_factor_secret: normalizedSecret,
     };
   }
   throw new Error('Failed to create user in MySQL database');
@@ -374,46 +369,6 @@ export const updateUser = async (userId, updateData) => {
   if (fields.length > 0) {
     values.push(numId);
     await query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
-};
-
-export const updateUserTwoFactorSecret = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 1 WHERE id = ?', [secret, numId]);
-};
-
-export const resetUserTwoFactorSecret = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 0 WHERE id = ?', [secret, numId]);
-  } catch (_) {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
-  }
-};
-
-export const triggerUserTwoFactorReset = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
-  } catch (err) {
-    if (err.message && err.message.includes("Unknown column 'two_factor_reset'")) {
-      try {
-        await query('ALTER TABLE users ADD COLUMN two_factor_reset BOOLEAN DEFAULT FALSE');
-        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
-      } catch (alterErr) {
-        console.warn(`[User Model] Failed to add two_factor_reset column: ${alterErr.message}`);
-        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
-      }
-    }
-  }
-};
-
-export const enableTwoFactorForUser = async (userId) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_enabled = 1, two_factor_reset = 0 WHERE id = ?', [numId]);
-  } catch (_) {
-    await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);
   }
 };
 
@@ -702,7 +657,6 @@ export const invalidateRegistrationOtps = async (identifier) => {
 export const getAllUsersModel = async (collegeId = null, department = null) => {
   let sql = `
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.created_at,
-           u.two_factor_enabled, u.two_factor_secret, u.two_factor_reset,
            c.name as college_name,
            s.roll_number,
            COALESCE(s.department_id, u.department_id, d.id) as department_id,
@@ -741,7 +695,7 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
  */
 export const getPendingUsersModel = async (collegeId = null) => {
   let sql = `
-    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.two_factor_enabled, u.created_at,
+    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.created_at,
            c.name as college_name,
            s.roll_number,
            COALESCE(s.department_id, u.department_id, d.id) as department_id,
@@ -805,9 +759,6 @@ export const updateUserModel = async (id, data) => {
     is_profile_updated,
     is_verified,
     is_approved,
-    two_factor_secret,
-    two_factor_enabled,
-    two_factor_reset,
     current_year,
     currentYear,
     area_of_expertise,
@@ -933,21 +884,7 @@ export const updateUserModel = async (id, data) => {
     } catch (_) { }
   }
 
-  if (two_factor_secret !== undefined) {
-    try {
-      await query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [two_factor_secret, numId]);
-    } catch (_) { }
-  }
-  if (two_factor_enabled !== undefined) {
-    try {
-      await query('UPDATE users SET two_factor_enabled = ? WHERE id = ?', [two_factor_enabled ? 1 : 0, numId]);
-    } catch (_) { }
-  }
-  if (two_factor_reset !== undefined) {
-    try {
-      await query('UPDATE users SET two_factor_reset = ? WHERE id = ?', [two_factor_reset ? 1 : 0, numId]);
-    } catch (_) { }
-  }
+  
 
   // Only manage students table if this user is actually a student!
   if (effectiveRole === 'student') {

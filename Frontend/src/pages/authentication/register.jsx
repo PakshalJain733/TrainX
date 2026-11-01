@@ -330,23 +330,11 @@ function Register() {
     }
   }, [searchParams]);
 
-  // TOTP Authenticator Setup State
-  const [totpSetupData, setTotpSetupData] = useState(null);
-  const [showTotpSetup, setShowTotpSetup] = useState(false);
-  const [showPendingApproval, setShowPendingApproval] = useState(false);
-  const [isApproved, setIsApproved] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [redirectCountdown, setRedirectCountdown] = useState(5);
-  const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
-  const totpInputRefs = useRef([]);
-
   // Live polling for Admin approval while on the pending approval screen
   useEffect(() => {
     if (!showPendingApproval || isApproved) return undefined;
 
-    const emailToCheck = registeredEmail || formData.email?.trim() || totpSetupData?.user?.email;
+    const emailToCheck = registeredEmail || formData.email?.trim();
     if (!emailToCheck) return undefined;
 
     const pollApproval = async () => {
@@ -364,7 +352,7 @@ function Register() {
     pollApproval();
     const interval = setInterval(pollApproval, 3000);
     return () => clearInterval(interval);
-  }, [showPendingApproval, isApproved, registeredEmail, formData.email, totpSetupData]);
+  }, [showPendingApproval, isApproved, registeredEmail, formData.email]);
 
   // Auto-redirect countdown when approval is confirmed
   useEffect(() => {
@@ -478,91 +466,6 @@ function Register() {
         studentCount: "",
       });
     }, 2200);
-  };
-
-  const handleCopySecret = () => {
-    if (totpSetupData?.secret) {
-      navigator.clipboard.writeText(totpSetupData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    }
-  };
-
-  const handleTotpCodeChange = (e, index) => {
-    const val = e.target.value;
-    if (!/^\d*$/.test(val)) return;
-    const newCode = [...totpCode];
-    newCode[index] = val.substring(val.length - 1);
-    setTotpCode(newCode);
-
-    if (val && index < 5) {
-      totpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleTotpKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !totpCode[index] && index > 0) {
-      totpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleTotpPaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasteData) {
-      const digits = pasteData.split("");
-      const newCode = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        newCode[i] = d;
-      });
-      setTotpCode(newCode);
-      const nextIdx = Math.min(digits.length, 5);
-      totpInputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  const formatSecretKey = (secret) => {
-    if (!secret) return "";
-    return secret.match(/.{1,4}/g)?.join(" ") || secret;
-  };
-
-  const handleVerifyTotpSetup = async (e) => {
-    e.preventDefault();
-    const enteredCode = totpCode.join("");
-    if (enteredCode.length < 6) {
-      setErrorMsg("Please enter complete 6-digit Authenticator code.");
-      return;
-    }
-    setLoading(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const emailToVerify = formData.email || totpSetupData?.user?.email || "";
-      const response = await fetch(`${getApiBaseUrl()}/auth/verify-totp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailToVerify,
-          code: enteredCode,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setRegisteredEmail(emailToVerify);
-        setShowTotpSetup(false);
-        setShowPendingApproval(true);
-        setErrorMsg("");
-        setSuccessMsg("");
-      } else {
-        setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
-      }
-    } catch (err) {
-      console.error("TOTP verify error:", err);
-      setErrorMsg("Unable to verify Authenticator code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleChange = (e) => {
@@ -827,11 +730,7 @@ function Register() {
         }),
       });
       const data = await response.json();
-      if (data.success && data.data?.qrCode) {
-        setTotpSetupData(data.data);
-        setShowTotpSetup(true);
-        setSuccessMsg("");
-      } else if (data.success) {
+      if (data.success) {
         setRegisteredEmail(formData.email.trim());
         setShowPendingApproval(true);
         setErrorMsg("");
@@ -875,20 +774,7 @@ function Register() {
           </div>
         </div>
 
-        {showTotpSetup && (
-          <div className="totp-stepper-bar">
-            <div className="stepper-step completed">
-              <span className="stepper-badge">{Icons.check}</span>
-              <span className="stepper-label">Details</span>
-            </div>
-            <div className="stepper-line active"></div>
-            <div className="stepper-step active">
-              <span className="stepper-badge">{Icons.shield}</span>
-              <span className="stepper-label">Authenticator</span>
-            </div>
-          </div>
-        )}
-
+        
         {errorMsg && (
           <div className="auth-error-msg" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
             <span>{errorMsg}</span>
@@ -913,7 +799,7 @@ function Register() {
             )}
           </div>
         )}
-        {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
+        {!showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
           <div className={`pending-approval-card ${isApproved ? "approved" : ""}`}>
@@ -932,7 +818,7 @@ function Register() {
             </div>
 
             <h3 className={`pending-approval-title ${isApproved ? "approved" : ""}`}>
-              {isApproved ? "Registration Approved! 🎉" : "Registration & 2FA Setup Complete!"}
+              {isApproved ? "Registration Approved! 🎉" : "Registration Submitted Successfully!"}
             </h3>
 
             <p className="pending-approval-subtitle">
@@ -940,7 +826,7 @@ function Register() {
                 ? (role === "Admin"
                     ? "Your account has been officially approved by the Super Administrator. You can now log in!"
                     : "Your account has been officially approved by the College Administrator. You can now log in!")
-                : "Your registration details and Authenticator app (2FA) pairing have been successfully verified."}
+                : "Your registration details have been successfully submitted."}
             </p>
 
             <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
@@ -983,114 +869,6 @@ function Register() {
               )}
             </button>
           </div>
-        ) : showTotpSetup ? (
-          <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
-            <div className="totp-header">
-              <h3 className="totp-title">Pair Authenticator App</h3>
-              <p className="totp-subtitle">
-                Scan QR Code using Authenticator App.
-              </p>
-            </div>
-
-            {/* Method Tab Selector */}
-            <div className="totp-tab-nav">
-              <button
-                type="button"
-                className={`totp-tab-btn ${totpTab === "qr" ? "active" : ""}`}
-                onClick={() => setTotpTab("qr")}
-              >
-                {Icons.qrCode} Scan QR Code
-              </button>
-              <button
-                type="button"
-                className={`totp-tab-btn ${totpTab === "manual" ? "active" : ""}`}
-                onClick={() => setTotpTab("manual")}
-              >
-                {Icons.key} Manual Key
-              </button>
-            </div>
-
-            {/* Tab 1: QR Code View */}
-            {totpTab === "qr" && (
-              <div className="totp-qr-wrapper">
-                <div className="totp-qr-frame">
-                  <span className="qr-corner top-left"></span>
-                  <span className="qr-corner top-right"></span>
-                  <span className="qr-corner bottom-left"></span>
-                  <span className="qr-corner bottom-right"></span>
-                  {totpSetupData?.qrCode && (
-                    <img src={totpSetupData.qrCode} alt="2FA QR Code" className="totp-qr-img" />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab 2: Secret Key Card (Only shown when Manual Key tab is active) */}
-            {totpTab === "manual" && (
-              <div className="totp-secret-card">
-                <div className="secret-card-header">
-                  <span className="secret-card-label">{Icons.key} Secret Setup Key</span>
-                  <button
-                    type="button"
-                    onClick={handleCopySecret}
-                    className={`totp-copy-btn ${copiedSecret ? "copied" : ""}`}
-                    title="Copy secret key"
-                  >
-                    {copiedSecret ? (
-                      <>
-                        {Icons.check} <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        {Icons.copy} <span>Copy Key</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <div className="secret-code-display">
-                  <code>{formatSecretKey(totpSetupData?.secret)}</code>
-                </div>
-              </div>
-            )}
-
-            {/* 6-Digit Verification Code Section */}
-            <div className="totp-otp-section">
-              <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-              <div className="login-otp-input-row" onPaste={handleTotpPaste}>
-                {totpCode.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (totpInputRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                    onChange={(e) => handleTotpCodeChange(e, idx)}
-                    onKeyDown={(e) => handleTotpKeyDown(e, idx)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <button type="submit" className="login-send-otp-btn totp-submit-btn" disabled={loading}>
-              {loading ? "Verifying..." : "Verify & Complete Registration"}
-            </button>
-
-            <div className="totp-footer-actions">
-              <button
-                type="button"
-                className="totp-back-link"
-                onClick={() => {
-                  setShowTotpSetup(false);
-                  setErrorMsg("");
-                  setSuccessMsg("");
-                }}
-              >
-                {Icons.arrowLeft} Back to registration
-              </button>
-            </div>
-          </form>
         ) : (
           <form onSubmit={handleSubmit}>
             {/* ── Select Role ── */}

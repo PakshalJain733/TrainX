@@ -125,7 +125,7 @@ export const getAllStudentsAttendance = async (req, res, next) => {
           const isScanned = scanSet.has(uId);
           st.today_status = dayStat || (isScanned ? 'present' : null);
           st.todayStatus = st.today_status;
-          st.is_scanned = isScanned || dayStat === 'present';
+          st.is_scanned = Boolean(isScanned);
           st.isScanned = st.is_scanned;
           st.id = uId;
           st.userId = uId;
@@ -193,7 +193,9 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
   try {
     const userId = req.user.id || req.user.userId;
     let collegeId = req.user?.college_id || req.user?.collegeId || null;
-    const { code, batch_id } = req.body || {};
+    const { code, batch_id, date, session_date } = req.body || {};
+    const todayStr = new Date().toISOString().split('T')[0];
+    const targetDate = date || session_date || todayStr;
 
     // Validate collegeId against colleges table to prevent MySQL foreign key failure
     let validCollegeId = null;
@@ -209,8 +211,6 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         if (firstCol && firstCol.length > 0) validCollegeId = firstCol[0].id;
       } catch (e) {}
     }
-
-    const todayStr = new Date().toISOString().split('T')[0];
 
     // Check if payload is a batch roster save ({ batch_id, date, attendance })
     if (req.body && req.body.attendance && typeof req.body.attendance === 'object' && Object.keys(req.body.attendance).length > 0) {
@@ -273,10 +273,10 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         if (targetUserId) {
           const statusVal = isPresent ? 'present' : 'absent';
           await query(
-            `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
-             VALUES (?, ?, ?, ?, ?, ?, 'Batch Roster Save')
-             ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), updated_at = CURRENT_TIMESTAMP`,
-            [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal]
+            `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by, remarks)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'Admin Roster Save')
+             ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks), updated_at = CURRENT_TIMESTAMP`,
+            [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal, userId]
           );
           await getStudentAttendanceSummaryService(targetUserId);
           markedResults.push({ userId: targetUserId, status: statusVal });
@@ -464,7 +464,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         await query(
           `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
            VALUES (?, ?, ?, ?, ?, 'present', ?)
-           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), batch_id = VALUES(batch_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), batch_id = VALUES(batch_id), status = 'present', remarks = VALUES(remarks), updated_at = CURRENT_TIMESTAMP`,
           [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
         );
       } catch (attErr) {
@@ -678,3 +678,97 @@ export const deleteLeaveRequest = async (req, res, next) => {
   }
 };
 
+
+/**
+ * GET /api/v1/attendance/history-records
+ * Fetch previous attendance history sessions for Admin & Coordinator.
+ */
+export const getBatchAttendanceHistory = async (req, res, next) => {
+  try {
+    const collegeId = req.user?.college_id || req.user?.collegeId || null;
+    const { batch_id, limit = 50 } = req.query;
+
+    let queryStr = `
+      SELECT 
+        a.batch_id as batchId,
+        DATE_FORMAT(a.session_date, '%Y-%m-%d') as date,
+        COALESCE(b.name, 'Training Batch') as batchName,
+        COALESCE(b.join_code, b.code, CONCAT('BATCH-', a.batch_id)) as batchCode,
+        COUNT(a.id) as total,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent,
+        ROUND((SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / COUNT(a.id)) * 100) as rate,
+        COALESCE(u.name, 'System Admin') as savedBy,
+        DATE_FORMAT(MAX(a.updated_at), '%b %d, %Y, %h:%i %p') as savedAt
+      FROM attendance a
+      LEFT JOIN batches b ON a.batch_id = b.id
+      LEFT JOIN users u ON a.marked_by = u.id
+      WHERE (a.college_id = ? OR ? IS NULL)
+    `;
+    const params = [collegeId, collegeId];
+
+    if (batch_id) {
+      queryStr += ` AND a.batch_id = ?`;
+      params.push(batch_id);
+    }
+
+    queryStr += `
+      GROUP BY a.batch_id, DATE(a.session_date), a.marked_by
+      ORDER BY a.session_date DESC, a.batch_id ASC
+      LIMIT ?
+    `;
+    params.push(Number(limit) || 50);
+
+    const history = await query(queryStr, params);
+
+    const formattedHistory = (history || []).map((row, idx) => ({
+      id: `HIST-${row.batchId}-${row.date}-${idx}`,
+      batchId: row.batchId,
+      date: row.date,
+      batchCode: row.batchCode,
+      batchName: row.batchName,
+      total: Number(row.total) || 0,
+      present: Number(row.present) || 0,
+      absent: Number(row.absent) || 0,
+      rate: Number(row.rate) || 0,
+      savedBy: row.savedBy || 'System Admin',
+      savedAt: row.savedAt || new Date().toLocaleString()
+    }));
+
+    return sendSuccess(res, 'Batch attendance history retrieved successfully', formattedHistory);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/session-roster
+ * Fetch individual student attendance records for a historical batch session.
+ */
+export const getSessionRoster = async (req, res, next) => {
+  try {
+    const { batch_id, date } = req.query;
+    if (!batch_id || !date) {
+      return sendError(res, 'batch_id and date are required', 400);
+    }
+    const rows = await query(
+      `SELECT 
+         a.user_id as userId,
+         u.name,
+         COALESCE(s.roll_number, CONCAT('STU-', u.id)) as rollNo,
+         a.status,
+         a.remarks,
+         (CASE WHEN a.remarks LIKE '%QR%' THEN 'QR Scan' ELSE 'Manual' END) as mode
+       FROM attendance a
+       JOIN users u ON a.user_id = u.id
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE a.batch_id = ? AND DATE(a.session_date) = DATE(?)
+       ORDER BY u.name ASC`,
+      [batch_id, date]
+    );
+
+    return sendSuccess(res, 'Session roster retrieved successfully', rows || []);
+  } catch (error) {
+    next(error);
+  }
+};

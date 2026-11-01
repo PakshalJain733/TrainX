@@ -691,8 +691,7 @@ select option,
 .help-modal-footer,
 .assessment-form-footer,
 .coord-modal-actions-row,
-.coord-requests-form-actions,
-.profile-2fa-modal-actions {
+.coord-requests-form-actions {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-end !important;
@@ -715,7 +714,6 @@ select option,
 .btn-modal-cancel,
 .cp-btn-cancel,
 .mc-modal-cancel-btn,
-.profile-2fa-modal-cancel-btn,
 .sa-modal-btn-cancel,
 .quiz-cancel-btn,
 .help-cancel-btn,
@@ -1081,7 +1079,6 @@ select option,
 .mentor-meet-modal-close,
 .mn-ai-modal-close,
 .mc-modal-close-btn,
-.profile-2fa-modal-close-btn,
 .join-modal-close,
 .sa-modal-close {
   width: 32px !important;
@@ -1111,7 +1108,6 @@ select option,
 .mentor-meet-modal-close:hover,
 .mn-ai-modal-close:hover,
 .mc-modal-close-btn:hover,
-.profile-2fa-modal-close-btn:hover,
 .join-modal-close:hover,
 .sa-modal-close:hover {
   background-color: #e2e8f0 !important;

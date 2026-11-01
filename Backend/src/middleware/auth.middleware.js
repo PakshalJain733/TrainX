@@ -29,11 +29,6 @@ export const authenticateToken = (req, res, next) => {
     if (err) {
       return sendError(res, 'Invalid or expired authentication token. Please log in again.', 401);
     }
-
-    if (decodedUser?.tokenType === 'preauth' || decodedUser?.purpose === 'totp') {
-      return sendError(res, 'Incomplete authentication. Please complete two-factor verification.', 401);
-    }
-
     // Normalize user properties — do NOT provide dangerous defaults
     const userId = decodedUser.userId || decodedUser.id;
     const collegeId = decodedUser.collegeId || decodedUser.college_id;
@@ -80,7 +75,7 @@ export const optionalAuthenticateToken = (req, res, next) => {
   const jwtSecret = getJwtSecret();
 
   jwt.verify(token, jwtSecret, (err, decodedUser) => {
-    if (err || !decodedUser || decodedUser.tokenType === 'preauth' || decodedUser.purpose === 'totp') {
+    if (err || !decodedUser) {
       req.user = null;
       return next();
     }

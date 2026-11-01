@@ -10,16 +10,12 @@ import {
   getUserStatsModel,
   findUserByEmailOrMobile,
   findUserById,
-  updateUserTwoFactorSecret,
-  resetUserTwoFactorSecret,
-  triggerUserTwoFactorReset,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
 import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail } from '../services/email.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
-import { generateTotpSetup } from '../services/auth.service.js';
 
 /**
  * Helper to determine college isolation filter based on caller role
@@ -1437,37 +1433,6 @@ export const getAdminC2CEnrollments = async (req, res, next) => {
     }));
 
     return sendSuccess(res, 'C2C Training enrollments retrieved successfully', enrollments);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Super Admin controller to re-trigger / enforce Two-Step Verification (2FA) for an Admin
- */
-export const triggerUser2FAAdmin = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const user = await findUserById(id);
-    if (!user) {
-      return sendError(res, 'User not found', 404);
-    }
-
-    // Generate fresh 2FA setup secret and set two_factor_enabled = 0 and two_factor_reset = 1 (flagged for setup pairing)
-    const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
-    await triggerUserTwoFactorReset(user.id, totpSetup.secret);
-
-    return sendSuccess(
-      res,
-      `Two-step verification setup has been re-triggered for ${user.name || 'Admin'}. The Admin will be prompted to scan the QR code and complete pairing on their next login.`,
-      {
-        userId: user.id,
-        two_factor_enabled: 0,
-        two_factor_reset: 1,
-        secret: totpSetup.secret,
-        qrCode: totpSetup.qrCode,
-      }
-    );
   } catch (error) {
     next(error);
   }
