@@ -664,7 +664,10 @@ export default function AD_ApproveUsers() {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedUserModal(u)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedUserModal(u);
+                    }}
                     className="btn-card-details"
                     title="View Full Profile Details"
                   >
@@ -867,7 +870,10 @@ export default function AD_ApproveUsers() {
 
                           <button
                             type="button"
-                            onClick={() => setSelectedUserModal(u)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUserModal(u);
+                            }}
                             style={{
                               padding: "7px 10px",
                               borderRadius: "8px",

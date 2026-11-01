@@ -773,3 +773,106 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
     throw error;
   }
 };
+
+/**
+ * Send email to User confirming their registration is pending admin approval
+ */
+export const sendRegistrationPendingEmail = async ({ to, name, role = 'student', collegeName = '' }) => {
+  try {
+    const roleUpper = String(role).toUpperCase();
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Registration Submitted! ⏳
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>, thank you for registering for the role of <strong>${roleUpper}</strong>${collegeName ? ` at <strong>${collegeName}</strong>` : ''}.
+      </p>
+
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <div style="font-weight: 700; color: #92400e; font-size: 14px; margin-bottom: 4px;">
+          ⏳ Account Status: Pending Administrator Approval
+        </div>
+        <div style="color: #78350f; font-size: 13.5px; line-height: 1.5;">
+          Your registration has been forwarded to the College Administrator for verification. You will receive an official approval confirmation email once your account has been reviewed and activated.
+        </div>
+      </div>
+
+      <p style="margin: 16px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.5;">
+        No further action is required from you at this time. Once approved, you will be able to log in with your registered email and password.
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Campus Training Portal',
+      subtitle: 'Registration Under Review',
+      contentHtml,
+      footerNote: 'Need urgent access? Reach out directly to your campus administrator.',
+    });
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject: `⏳ Registration Received: Pending Administrator Approval`,
+      htmlContent,
+      textContent: `Hello ${name},\n\nYour registration as ${roleUpper} has been received and is pending approval from your College Administrator.\n\nYou will receive an email as soon as your account is approved and activated.\n\nBest regards,\nCampus Training Portal Team`,
+    });
+  } catch (error) {
+    console.error(`[Email Error] sendRegistrationPendingEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Send email to Admin notifying that a new user registration requires approval
+ */
+export const sendAdminNewPendingUserEmail = async ({ adminEmail, adminName = 'Administrator', userName, userEmail, userRole, collegeName = '' }) => {
+  try {
+    const roleUpper = String(userRole).toUpperCase();
+    const reviewUrl = `${getPrimaryFrontendUrl()}/admin/approve-users`;
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        New Registration Awaiting Your Approval 👤
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${adminName}</strong>, a new applicant has registered and is waiting for your review on the portal.
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin: 20px 0;">
+        <div style="font-size: 14px; color: #334155; margin-bottom: 8px;">
+          <strong>Applicant Name:</strong> ${userName}
+        </div>
+        <div style="font-size: 14px; color: #334155; margin-bottom: 8px;">
+          <strong>Email:</strong> <span style="color:#2563eb; font-weight:600;">${userEmail}</span>
+        </div>
+        <div style="font-size: 14px; color: #334155;">
+          <strong>Requested Role:</strong> <span style="background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:6px; font-weight:700; font-size:12px;">${roleUpper}</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 28px;">
+        <a href="${reviewUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
+          Review in Approve Users &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Campus Training Portal',
+      subtitle: 'New User Registration Alert',
+      contentHtml,
+      footerNote: 'You received this notification because you are a registered administrator.',
+    });
+
+    return await sendEmail({
+      to: adminEmail,
+      toName: adminName,
+      subject: `🔔 Action Required: New ${roleUpper} Registration (${userName}) Pending Approval`,
+      htmlContent,
+      textContent: `Hello ${adminName},\n\nA new user (${userName}, ${userEmail}) has registered as ${roleUpper} and is awaiting your approval.\n\nReview them at: ${reviewUrl}\n\nBest regards,\nCampus Training Portal`,
+    });
+  } catch (error) {
+    console.error(`[Email Error] sendAdminNewPendingUserEmail failed for ${adminEmail}:`, error.message);
+    return null;
+  }
+};

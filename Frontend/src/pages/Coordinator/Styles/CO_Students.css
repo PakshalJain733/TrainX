@@ -619,15 +619,18 @@
   justify-content: flex-start;
   align-items: center;
   gap: 8px;
-  border-bottom: 1.5px solid #e2e8f0;
-  margin-bottom: 8px;
-  padding-bottom: 4px;
+  border-bottom: none !important;
+  border: none !important;
+  margin-bottom: 12px;
+  padding-bottom: 0;
   width: 100%;
 }
 
 .coord-tab-btn {
   background: none;
-  border: none;
+  border: none !important;
+  outline: none;
+  box-shadow: none;
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 600;
@@ -649,6 +652,8 @@
   background: #eff6ff !important;
   color: #2563eb !important;
   font-weight: 700;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Base Coordinator Button System */

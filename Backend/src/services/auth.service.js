@@ -24,7 +24,7 @@ import {
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
-import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
+import { sendOtpEmail, sendWelcomeEmail, sendRegistrationPendingEmail, sendAdminNewPendingUserEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
 import { findCollegeById } from '../models/college.model.js';
 
@@ -526,9 +526,48 @@ export const registerUser = async (data) => {
   }
 
   if (user.email && user.email.includes('@')) {
-    sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((error) => {
-      console.warn(`[AUTH] Welcome email notification skipped: ${error.message}`);
-    });
+    if (canonicalRole === ROLES.SUPER_ADMIN) {
+      sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((error) => {
+        console.warn(`[AUTH] Welcome email notification skipped: ${error.message}`);
+      });
+    } else {
+      // 1. Send confirmation email to applicant that registration is under admin review
+      sendRegistrationPendingEmail({ to: user.email, name: user.name, role: user.role }).catch((error) => {
+        console.warn(`[AUTH] Pending registration email notification skipped: ${error.message}`);
+      });
+
+      // 2. Insert In-App Notification in broadcast_notifications for College Admin
+      try {
+        pool.query(
+          `INSERT INTO broadcast_notifications (college_id, title, desc_text, type, unread)
+           VALUES (?, ?, ?, 'alert', 1)`,
+          [
+            user.college_id || 1,
+            `👤 New ${String(user.role).toUpperCase()} Registration: ${user.name}`,
+            `${user.name} (${user.email || user.mobile_number || 'N/A'}) has registered as ${String(user.role).toUpperCase()} and is awaiting administrator approval in Approve Users.`,
+          ]
+        ).catch(() => {});
+      } catch (_) {}
+
+      // 3. Notify College Administrator via email
+      try {
+        pool.query(
+          `SELECT email, name FROM users WHERE college_id = ? AND role = 'college_admin' AND is_approved = 1 LIMIT 1`,
+          [user.college_id || 1]
+        ).then(([adminRows]) => {
+          const adminEmail = (adminRows && adminRows[0] && adminRows[0].email) || process.env.SUPER_ADMIN_EMAIL;
+          if (adminEmail && adminEmail.includes('@')) {
+            sendAdminNewPendingUserEmail({
+              adminEmail,
+              adminName: adminRows?.[0]?.name || 'Administrator',
+              userName: user.name,
+              userEmail: user.email,
+              userRole: user.role,
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      } catch (_) {}
+    }
   }
 
   return {

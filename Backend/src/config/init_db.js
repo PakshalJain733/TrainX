@@ -462,6 +462,25 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN student_name VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN notes TEXT NULL`); } catch (_) { }
 
+    // 11b. Ensure User OAuth Tokens (Google Meet / Calendar)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_oauth_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        provider VARCHAR(50) NOT NULL DEFAULT 'google',
+        email VARCHAR(255) NULL,
+        refresh_token TEXT NULL,
+        access_token TEXT NULL,
+        expiry_date BIGINT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_provider (user_id, provider),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    try { await conn.query(`ALTER TABLE users ADD COLUMN google_calendar_email VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN google_refresh_token TEXT NULL`); } catch (_) { }
+
     // 12. Ensure Study Materials Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS study_materials (

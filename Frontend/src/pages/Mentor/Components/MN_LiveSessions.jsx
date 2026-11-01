@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { apiFetch } from '../../../utils/api';
-import { Video, Plus, Clock, ExternalLink, X } from "lucide-react";
+import { apiFetch, getApiBaseUrl } from '../../../utils/api';
+import { Video, Plus, Clock, ExternalLink, X, CheckCircle2, AlertCircle } from "lucide-react";
 import "../Styles/MN_LiveSessions.css";
-
-const generateGoogleMeetLink = () => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz';
-  const part = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `https://meet.google.com/${part(3)}-${part(4)}-${part(3)}`;
-};
 
 export default function LiveSessions() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState({ connected: false, email: '' });
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
   const [formData, setFormData] = useState({
     title: '',
     subject: 'General',
@@ -21,7 +19,7 @@ export default function LiveSessions() {
     date: new Date().toISOString().split('T')[0],
     time: '04:00 PM - 05:00 PM',
     duration: '60 mins',
-    meetingLink: generateGoogleMeetLink(),
+    meetingLink: '',
   });
 
   const loadSessions = () => {
@@ -38,9 +36,61 @@ export default function LiveSessions() {
       .finally(() => setLoading(false));
   };
 
+  const checkGoogleStatus = () => {
+    apiFetch("/google/auth/user-status")
+      .then((res) => {
+        if (res && res.success) {
+          setGoogleStatus({
+            connected: Boolean(res.connected),
+            email: res.email || '',
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     loadSessions();
+    checkGoogleStatus();
+
+    // Check if returning from Google OAuth redirect
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("google_connected") === "true") {
+        const email = urlParams.get("email");
+        setToastMsg(`Google Meet connected successfully${email ? ` (${decodeURIComponent(email)})` : ''}!`);
+        // Clean URL query params without reloading
+        window.history.replaceState({}, document.title, window.location.pathname);
+        checkGoogleStatus();
+      }
+    }
   }, []);
+
+  const handleConnectGoogle = () => {
+    let localUser = {};
+    try {
+      localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {};
+    } catch {}
+
+    const userId = localUser.id || localUser.userId || '';
+    const apiBase = getApiBaseUrl().replace(/\/v1$/, '');
+    const returnUrl = encodeURIComponent(window.location.pathname);
+    window.location.href = `${apiBase}/google/auth/login?userId=${userId}&returnTo=${returnUrl}`;
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!window.confirm("Are you sure you want to disconnect your Google account?")) return;
+    try {
+      setGoogleLoading(true);
+      await apiFetch("/google/auth/disconnect", { method: "POST" });
+      setGoogleStatus({ connected: false, email: '' });
+      setToastMsg("Google account disconnected successfully.");
+    } catch (err) {
+      console.error("Failed to disconnect Google:", err);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
@@ -69,6 +119,22 @@ export default function LiveSessions() {
 
   return (
     <div className="mentor-livesessions-container">
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="mentor-toast-alert">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={16} />
+            <span>{toastMsg}</span>
+          </div>
+          <button
+            onClick={() => setToastMsg('')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mentor-page-header">
         <div>
@@ -83,6 +149,49 @@ export default function LiveSessions() {
           <Plus size={16} />
           <span>Schedule Live Class</span>
         </button>
+      </div>
+
+      {/* Google Meet Connection Status Banner */}
+      <div className={`mentor-google-banner ${googleStatus.connected ? 'mentor-google-banner--connected' : ''}`}>
+        <div className="mentor-google-banner-left">
+          <div className="mentor-google-icon-wrap">
+            <Video size={18} color={googleStatus.connected ? "#16a34a" : "#4f46e5"} />
+          </div>
+          <div>
+            <div className="mentor-google-banner-title">
+              {googleStatus.connected ? (
+                <span>Google Meet Connected · <strong style={{ fontWeight: 600 }}>{googleStatus.email}</strong></span>
+              ) : (
+                <span>Connect Your Google Account for Live Sessions</span>
+              )}
+            </div>
+            <div className="mentor-google-banner-sub">
+              {googleStatus.connected
+                ? "Live sessions you schedule will automatically generate real Google Meet rooms on your personal Google Calendar."
+                : "Connect your Google Calendar once so real Google Meet rooms are automatically created whenever you schedule a class."}
+            </div>
+          </div>
+        </div>
+        <div className="mentor-google-banner-right">
+          {googleStatus.connected ? (
+            <button
+              type="button"
+              onClick={handleDisconnectGoogle}
+              disabled={googleLoading}
+              className="mentor-google-btn-disconnect"
+            >
+              {googleLoading ? "Disconnecting..." : "Disconnect"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectGoogle}
+              className="mentor-google-btn-connect"
+            >
+              Connect Google Meet
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mentor-livesessions-grid">
@@ -204,10 +313,17 @@ export default function LiveSessions() {
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Meeting Link (Google Meet / Zoom)</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>
+                  Meeting Link
+                  {googleStatus.connected && (
+                    <span style={{ color: '#16a34a', fontWeight: 400, marginLeft: '6px', fontSize: '12px' }}>
+                      (Leave blank to auto-create Google Meet)
+                    </span>
+                  )}
+                </label>
                 <input
                   type="url"
-                  placeholder="https://meet.google.com/xyz-abc"
+                  placeholder={googleStatus.connected ? "Auto-generates Google Meet link if empty" : "https://meet.google.com/xyz-abc"}
                   value={formData.meetingLink}
                   onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
@@ -215,7 +331,7 @@ export default function LiveSessions() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#4f46e5', color: '#ffffff', fontWeight: 600, cursor: 'pointer' }}>Save to Database</button>
+                <button type="submit" style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#4f46e5', color: '#ffffff', fontWeight: 600, cursor: 'pointer' }}>Schedule Class</button>
               </div>
             </form>
           </div>

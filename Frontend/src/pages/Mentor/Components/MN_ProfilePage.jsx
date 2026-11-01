@@ -24,11 +24,12 @@ import {
   AlertCircle,
   Calendar,
   Star,
+  Video,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
 // ── Year Options for Mentors ──
@@ -63,6 +64,48 @@ function MN_ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState({ connected: false, email: '' });
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleToast, setGoogleToast] = useState('');
+
+  const checkGoogleStatus = () => {
+    apiFetch("/google/auth/user-status")
+      .then((res) => {
+        if (res && res.success) {
+          setGoogleStatus({
+            connected: Boolean(res.connected),
+            email: res.email || '',
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleConnectGoogle = () => {
+    let localUser = {};
+    try {
+      localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {};
+    } catch {}
+
+    const userId = localUser.id || localUser.userId || '';
+    const apiBase = getApiBaseUrl().replace(/\/v1$/, '');
+    const returnUrl = encodeURIComponent(window.location.pathname);
+    window.location.href = `${apiBase}/google/auth/login?userId=${userId}&returnTo=${returnUrl}`;
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!window.confirm("Are you sure you want to disconnect your Google account?")) return;
+    try {
+      setGoogleLoading(true);
+      await apiFetch("/google/auth/disconnect", { method: "POST" });
+      setGoogleStatus({ connected: false, email: '' });
+      setGoogleToast("Google account disconnected successfully.");
+    } catch (err) {
+      console.error("Failed to disconnect Google:", err);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const resolveUser = () => {
     let localUser = {};
@@ -89,6 +132,18 @@ function MN_ProfilePage() {
   });
 
   useEffect(() => {
+    // 1. Fetch live mentor profile directly from database
+    checkGoogleStatus();
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("google_connected") === "true") {
+        const email = urlParams.get("email");
+        setGoogleToast(`Google Meet connected successfully${email ? ` (${decodeURIComponent(email)})` : ''}!`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        checkGoogleStatus();
+      }
+    }
+
     // 1. Fetch live mentor profile directly from database
     apiFetch("/mentor/profile")
       .then((res) => {
@@ -258,6 +313,18 @@ function MN_ProfilePage() {
         </div>
       </div>
 
+      {googleToast && (
+        <div className="profile-alert-success" style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={18} />
+            <span>{googleToast}</span>
+          </div>
+          <button onClick={() => setGoogleToast('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       {saved && (
         <div className="profile-alert-success" style={{ marginBottom: '18px' }}>
           <CheckCircle2 size={18} />
@@ -389,6 +456,21 @@ function MN_ProfilePage() {
               <div>
                 <span className="profile-detail-label">Area of Expertise</span>
                 <p className="profile-detail-value">{form.area_of_expertise || "Full Stack Development"}</p>
+              </div>
+            </div>
+
+            {/* 7. Google Meet Status */}
+            <div className="profile-detail-row">
+              <Video size={16} className={`profile-detail-icon ${googleStatus.connected ? 'text-green-500' : 'profile-icon-slate'}`} />
+              <div>
+                <span className="profile-detail-label">Google Meet</span>
+                <p className="profile-detail-value" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {googleStatus.connected ? (
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>Connected</span>
+                  ) : (
+                    <span style={{ color: '#64748b' }}>Not Connected</span>
+                  )}
+                </p>
               </div>
             </div>
 
@@ -608,6 +690,68 @@ function MN_ProfilePage() {
               )}
             </div>
           </form>
+
+          {/* Integrations Section */}
+          <div className="profile-google-section">
+            <div className="profile-section-heading">
+              <div className="profile-heading-group">
+                <Video size={18} className="profile-heading-icon profile-icon-indigo" />
+                <div>
+                  <h3 className="profile-heading-title">Live Classes & Meeting Integration</h3>
+                  <p className="profile-heading-desc">
+                    Connect your Google account to automatically schedule and launch real Google Meet rooms for your students.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`profile-google-card ${googleStatus.connected ? 'profile-google-card--connected' : ''}`}>
+              <div className="profile-google-card-left">
+                <div className="profile-google-icon-box">
+                  <Video size={20} color={googleStatus.connected ? "#16a34a" : "#4f46e5"} />
+                </div>
+                <div>
+                  <div className="profile-google-title">
+                    {googleStatus.connected ? (
+                      <>
+                        <CheckCircle2 size={16} color="#16a34a" />
+                        <span>Google Meet Connected · <strong>{googleStatus.email}</strong></span>
+                      </>
+                    ) : (
+                      <span>Google Meet & Calendar</span>
+                    )}
+                  </div>
+                  <div className="profile-google-desc">
+                    {googleStatus.connected
+                      ? "Your Google account is active. When you schedule classes, live Google Meet rooms are created directly on your calendar."
+                      : "Authorize once to automatically generate real Google Meet rooms for all your live classes and doubt sessions."}
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-google-actions">
+                {googleStatus.connected ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    disabled={googleLoading}
+                    className="profile-google-btn-disconnect"
+                  >
+                    {googleLoading ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogle}
+                    className="profile-google-btn-connect"
+                  >
+                    <Video size={15} />
+                    <span>Connect Google Meet</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

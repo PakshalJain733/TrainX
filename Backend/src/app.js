@@ -31,6 +31,7 @@ import superadminRoutes from './routes/superadmin.routes.js';
 import c2cRoutes from './routes/c2c.routes.js';
 import featureSwitchRoutes from './routes/featureSwitch.routes.js';
 import systemHealthRoutes from './routes/systemHealth.routes.js';
+import googleAuthRoutes from './routes/googleAuth.routes.js';
 import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
@@ -243,6 +244,8 @@ app.use('/api/v1/c2c', c2cRoutes);
 app.use('/api/v1/admin/c2c', c2cRoutes);
 app.use('/api/v1/feature-switches', featureSwitchRoutes);
 app.use('/api/v1/maintenance', featureSwitchRoutes);
+app.use('/api/google/auth', googleAuthRoutes);
+app.use('/api/v1/google/auth', googleAuthRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

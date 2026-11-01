@@ -231,11 +231,37 @@ export const approveUserAdmin = async (req, res, next) => {
       } catch (_) {}
     }
 
+    // Dispatch approval notification email to the user
+    let emailSent = false;
     if (user.email && user.email.includes('@')) {
-      sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});
+      try {
+        const mailRes = await sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role });
+        emailSent = Boolean(mailRes);
+        console.log(`[Approval Email] Successfully dispatched to ${user.email}`);
+      } catch (mailErr) {
+        console.error(`[Approval Email Error] Failed to send to ${user.email}:`, mailErr.message);
+      }
     }
 
-    return sendSuccess(res, 'User registration approved successfully');
+    // Insert in-app notification in broadcast_notifications
+    try {
+      await query(
+        `INSERT INTO broadcast_notifications (college_id, title, desc_text, type, unread)
+         VALUES (?, ?, ?, 'success', 1)`,
+        [
+          user.college_id || callerCollegeId || 1,
+          `✅ Account Approved: ${user.name} (${String(user.role || 'user').toUpperCase()})`,
+          `Account for ${user.name} (${user.email || user.mobile_number || ''}) has been successfully approved and activated.`,
+        ]
+      );
+    } catch (notifErr) {
+      console.warn('[Approval In-App Notification Error]', notifErr.message);
+    }
+
+    return sendSuccess(res, 'User registration approved successfully', {
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, is_approved: 1, is_active: 1 },
+      emailSent,
+    });
   } catch (error) {
     next(error);
   }

@@ -1802,8 +1802,13 @@ export const createLiveSession = async (req, res, next) => {
 
     let finalLink = (meetingLink && String(meetingLink).trim()) || '';
     if (!finalLink || finalLink.includes('/new') || finalLink.endsWith('meet.google.com') || finalLink.endsWith('meet.google.com/')) {
-      const uniqueCode = generateUniqueCode();
-      finalLink = `https://meet.google.com/${uniqueCode}`;
+      try {
+        finalLink = await generateRealGoogleMeetLink(finalTitle, finalDate, 60, mentorId);
+      } catch (gErr) {
+        console.warn('[Google Meet Fallback] Real Google Meet not generated:', gErr.message);
+        const uniqueCode = generateUniqueCode();
+        finalLink = `https://meet.google.com/${uniqueCode}`;
+      }
     }
 
     const codeMatch = finalLink.match(/meet\.google\.com\/([a-z0-9-]+)/i) || finalLink.match(/([a-z]{3}-[a-z]{4}-[a-z]{3})/i);

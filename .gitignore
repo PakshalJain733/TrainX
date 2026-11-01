@@ -6,6 +6,11 @@ node_modules/
 .env
 .env.*
 !.env.example
+token.json
+**/token.json
+credentials.json
+**/credentials.json
+*credentials*.json
 **/.env
 **/.env.*
 !**/.env.example
