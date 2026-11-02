@@ -241,13 +241,11 @@ export const approveUserAdmin = async (req, res, next) => {
     // Dispatch approval notification email to the user
     let emailSent = false;
     if (user.email && user.email.includes('@')) {
-      try {
-        const mailRes = await sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role });
-        emailSent = Boolean(mailRes);
-        console.log(`[Approval Email] Successfully dispatched to ${user.email}`);
-      } catch (mailErr) {
-        console.error(`[Approval Email Error] Failed to send to ${user.email}:`, mailErr.message);
-      }
+      // Dispatch asynchronously in background without delaying HTTP response
+        sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role })
+          .then(() => console.log(`[Approval Email] Successfully dispatched to ${user.email}`))
+          .catch((mailErr) => console.error(`[Approval Email Error] Failed to send to ${user.email}:`, mailErr.message));
+        emailSent = true;
     }
 
     // Insert in-app notification in broadcast_notifications

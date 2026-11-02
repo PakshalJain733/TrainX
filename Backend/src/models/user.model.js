@@ -650,6 +650,54 @@ export const invalidateRegistrationOtps = async (identifier) => {
 };
 
 
+
+/**
+ * Resolves all related college IDs for an institution alias (e.g. PVPPCOE & VPPCOE)
+ * while preserving strict tenant isolation against different institutions.
+ */
+export const getRelatedCollegeIds = async (collegeId) => {
+  if (!collegeId) return [];
+  const targetId = parseInt(collegeId, 10);
+  if (isNaN(targetId)) return [];
+
+  try {
+    const rows = await query('SELECT id, name, code, domain FROM colleges');
+    if (!rows || !Array.isArray(rows) || rows.length === 0) return [targetId];
+
+    const target = rows.find((r) => r.id === targetId);
+    if (!target) return [targetId];
+
+    const tCode = String(target.code || '').trim().toLowerCase();
+    const tName = String(target.name || '').trim().toLowerCase();
+    const tDomain = String(target.domain || '').trim().toLowerCase();
+
+    const isVpp = tCode.includes('vpp') || tName.includes('vasant') || tDomain.includes('pvppcoe') || tDomain.includes('vppcoe');
+
+    const matched = rows.filter((r) => {
+      if (r.id === targetId) return true;
+      const c = String(r.code || '').trim().toLowerCase();
+      const n = String(r.name || '').trim().toLowerCase();
+      const d = String(r.domain || '').trim().toLowerCase();
+      return isVpp && (c.includes('vpp') || n.includes('vasant') || d.includes('pvppcoe') || d.includes('vppcoe'));
+    });
+
+    const ids = matched.map((m) => m.id);
+    return ids.length > 0 ? ids : [targetId];
+  } catch (_) {
+    return [targetId];
+  }
+};
+
+/**
+ * Checks whether two college IDs represent the same institution (including aliases)
+ */
+export const isSameCollegeOrAlias = async (collegeIdA, collegeIdB) => {
+  if (!collegeIdA || !collegeIdB) return false;
+  if (String(collegeIdA) === String(collegeIdB)) return true;
+  const relatedA = await getRelatedCollegeIds(collegeIdA);
+  return relatedA.includes(parseInt(collegeIdB, 10));
+};
+
 /**
  * Get all users from MySQL DB with College Isolation filtering support
  * @param {number|null} collegeId - If provided, restricts to only this college
@@ -687,13 +735,20 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
       SELECT student_id, MAX(mentor_id) as mentor_id, MAX(mentor_name) as mentor_name, MAX(mentor_email) as mentor_email
       FROM mentor_assignments
       GROUP BY student_id
-    ) ma ON (ma.student_id = CAST(u.id AS CHAR) OR ma.student_id = CAST(s.id AS CHAR))
+    ) ma ON (ma.student_id COLLATE utf8mb4_unicode_ci = CAST(u.id AS CHAR) COLLATE utf8mb4_unicode_ci OR ma.student_id COLLATE utf8mb4_unicode_ci = CAST(s.id AS CHAR) COLLATE utf8mb4_unicode_ci)
     WHERE 1=1
   `;
   const params = [];
   if (collegeId) {
-    sql += ' AND u.college_id = ?';
-    params.push(collegeId);
+    const relatedIds = await getRelatedCollegeIds(collegeId);
+    if (relatedIds.length === 1) {
+      sql += ' AND (u.college_id = ? OR (u.college_id IS NULL AND s.college_id = ?))';
+      params.push(relatedIds[0], relatedIds[0]);
+    } else if (relatedIds.length > 1) {
+      const placeholders = relatedIds.map(() => '?').join(',');
+      sql += ` AND (u.college_id IN (${placeholders}) OR (u.college_id IS NULL AND s.college_id IN (${placeholders})))`;
+      params.push(...relatedIds, ...relatedIds);
+    }
   }
   if (department && department !== 'all' && department !== 'All') {
     const cleanDept = String(department).trim().toLowerCase();
@@ -732,8 +787,15 @@ export const getPendingUsersModel = async (collegeId = null) => {
   `;
   const params = [];
   if (collegeId) {
-    sql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
-    params.push(collegeId);
+    const relatedIds = await getRelatedCollegeIds(collegeId);
+    if (relatedIds.length === 1) {
+      sql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
+      params.push(relatedIds[0]);
+    } else if (relatedIds.length > 1) {
+      const placeholders = relatedIds.map(() => '?').join(',');
+      sql += ` AND (u.college_id IN (${placeholders}) OR u.college_id IS NULL)`;
+      params.push(...relatedIds);
+    }
   }
   sql += ' ORDER BY u.id DESC';
 

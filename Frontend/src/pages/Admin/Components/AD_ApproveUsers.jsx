@@ -64,23 +64,29 @@ export default function AD_ApproveUsers() {
   };
 
   const handleApprove = async (user) => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || actionLoadingId === user.id) return;
+    
+    // Instant Optimistic Feedback - zero lag
     setActionLoadingId(user.id);
+    const backupList = [...pendingUsers];
+    setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
+    if (selectedUserModal?.id === user.id) {
+      setSelectedUserModal(null);
+    }
+    showToast(`Account approved for ${user.name}!`);
+
     try {
       const res = await apiFetch(`/admin/users/${user.id}/approve`, {
         method: "PATCH",
       });
-      if (res && (res.success || !res.error)) {
-        showToast(`Account approved for ${user.name}!`);
-        setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
-        if (selectedUserModal?.id === user.id) {
-          setSelectedUserModal(null);
-        }
-      } else {
+      if (!res || (res.error && !res.success)) {
+        // Rollback if server returned failure
+        setPendingUsers(backupList);
         showToast(res?.error || "Failed to approve user", "error");
       }
     } catch (err) {
       console.error("Error approving user:", err);
+      setPendingUsers(backupList);
       showToast("Server error when approving user", "error");
     } finally {
       setActionLoadingId(null);

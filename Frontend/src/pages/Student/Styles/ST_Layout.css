@@ -2513,14 +2513,21 @@ button:active:not(:disabled),
   border-radius: 12px !important;
   border: 1.5px solid #cbd5e1 !important;
   font-size: 15px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.8px !important;
-  text-transform: uppercase !important;
+  font-weight: 500 !important;
+  letter-spacing: normal !important;
+  
   color: #0f172a !important;
   background: #f8fafc !important;
   outline: none !important;
   box-sizing: border-box !important;
   transition: all 0.2s ease !important;
+text-transform: none !important;
+}
+
+.form-input-admin.modal-input-with-icon {
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
 }
 
 .form-input-admin:focus {

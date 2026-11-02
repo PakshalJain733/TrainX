@@ -2071,16 +2071,23 @@ export default function AdminUsers() {
   };
 
   const handleQuickApprove = async (user) => {
+    if (!user || !user.id) return;
+    // Optimistic instant state update
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, is_approved: 1, is_active: 1 } : u))
+    );
     try {
       const res = await apiFetch(`/admin/users/${user.id}/approve`, {
         method: "PATCH",
       });
       if (res && (res.data || res.success)) {
-        fetchUsers();
         fetchStats();
+      } else {
+        fetchUsers();
       }
     } catch (err) {
       console.error("Failed to approve user:", err);
+      fetchUsers();
     }
   };
 

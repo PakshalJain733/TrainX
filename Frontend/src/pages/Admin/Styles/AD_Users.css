@@ -527,6 +527,9 @@
 }
 
 .form-input-admin, .form-select-admin {
+  text-transform: none !important;
+  font-weight: 500 !important;
+  letter-spacing: normal !important;
   height: 40px;
   padding: 0 14px;
   border-radius: 9px;
