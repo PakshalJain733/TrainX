@@ -4,15 +4,19 @@ import 'dotenv/config';
  * Authoritative Centralized CORS Configuration for TrainX Platform
  * 
  * Supports:
- * - Production: https://trainingportal.getflytechnologies.com
- * - API Domain: https://api.trainingportal.getflytechnologies.com
+ * - Production Custom Domains: https://www.trainx-vppcoe.tech, https://trainx-vppcoe.tech
+ * - Production Legacy Domains: https://trainingportal.getflytechnologies.com, https://api.trainingportal.getflytechnologies.com
+ * - Cloud Hosting Platforms: *.onrender.com, *.vercel.app, *.netlify.app
  * - Local Development: localhost/127.0.0.1 on all required ports (5173, 3000, 4173, 5000, etc.)
  * - Configured process.env.FRONTEND_URL
  */
 
 const STATIC_ALLOWED_ORIGINS = new Set([
+  'https://www.trainx-vppcoe.tech',
+  'https://trainx-vppcoe.tech',
   'https://trainingportal.getflytechnologies.com',
   'https://api.trainingportal.getflytechnologies.com',
+  'https://trainx-6w8m.onrender.com',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
@@ -47,12 +51,22 @@ export const isOriginAllowed = (origin) => {
     }
   }
 
-  // 3. Match any getflytechnologies.com trainingportal subdomains
-  if (/^https:\/\/([a-zA-Z0-9-]+\.)?trainingportal\.getflytechnologies\.com$/.test(normalized)) {
+  // 3. Match trainx-vppcoe.tech and any subdomains
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)?trainx-vppcoe\.tech$/i.test(normalized)) {
     return true;
   }
 
-  // 4. In development / testing, allow any localhost or 127.0.0.1 port
+  // 4. Match any getflytechnologies.com trainingportal subdomains
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)?getflytechnologies\.com$/i.test(normalized)) {
+    return true;
+  }
+
+  // 5. Match Render, Vercel, Netlify previews and hosted domains
+  if (/^https:\/\/([a-zA-Z0-9-]+\.)?(onrender\.com|vercel\.app|netlify\.app)$/i.test(normalized)) {
+    return true;
+  }
+
+  // 6. In development / testing, allow any localhost or 127.0.0.1 port
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(normalized)) {
     return true;
   }
@@ -73,6 +87,8 @@ export const ALLOWED_HEADERS = [
   'Range',
   'Cache-Control',
   'Pragma',
+  'x-client-platform',
+  'x-api-key',
 ];
 
 export const EXPOSED_HEADERS = [
@@ -137,4 +153,3 @@ export const socketCorsConfig = {
   credentials: true,
   methods: ['GET', 'POST'],
 };
-
