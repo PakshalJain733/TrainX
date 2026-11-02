@@ -1397,7 +1397,7 @@ export default function ManageUsers() {
               college: u.college_name || u.college || 'Direct / Institutional',
               designation: u.designation || (u.role === 'hod' ? 'Head of Department' : u.role === 'college_admin' ? 'College Admin' : 'Institutional Admin'),
               date: u.created_at ? (typeof u.created_at === 'string' ? u.created_at.split('T')[0] : new Date(u.created_at).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-              status: u.is_active ? 'Approved' : 'Pending'
+              status: (u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1') ? 'Approved' : 'Pending'
             })));
           }
 

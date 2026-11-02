@@ -97,7 +97,7 @@ const buildUserResponse = async (user) => {
     department: user.department || studentProfile?.department || '',
     department_id: user.department_id || studentProfile?.department_id || null,
     is_verified: Boolean(user.is_verified),
-    is_approved: Boolean(user.is_approved || user.is_active),
+    is_approved: Boolean(user.is_approved === 1 || user.is_approved === true || String(user.is_approved) === '1'),
     is_active: user.is_active,
     year: studentProfile?.year || '',
     division: studentProfile?.division || '',

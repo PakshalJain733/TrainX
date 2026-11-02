@@ -112,10 +112,12 @@ export const getAdminUsers = async (req, res, next) => {
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
     let users = await getAllUsersModel(collegeId);
 
-    // Only admin-approved users are considered as registered active users
-    users = users.filter((u) => {
-      return u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
-    });
+    // Optional approval filtering: if caller explicitly specifies approved/pending
+    if (req.query.approved === 'true' || req.query.is_approved === 'true' || req.query.approved_only === 'true') {
+      users = users.filter((u) => u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1');
+    } else if (req.query.approved === 'false' || req.query.is_approved === 'false' || req.query.pending === 'true') {
+      users = users.filter((u) => !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1'));
+    }
 
     // College Admins can only view/manage Students, Mentors, and Coordinators (not other Admins)
     if (req.user?.role !== ROLES.SUPER_ADMIN) {
@@ -432,6 +434,10 @@ export const createUserAdmin = async (req, res, next) => {
     const rawPassword = (password || '').trim();
     const finalPassword = rawPassword || (isSuperAdminAddingAdmin ? `Admin@${Math.random().toString(36).slice(-6)}!` : '');
 
+    const isApprovedVal = req.body.is_approved !== undefined
+      ? (req.body.is_approved === 1 || req.body.is_approved === true || String(req.body.is_approved) === '1' ? 1 : 0)
+      : (isSuperAdminAddingAdmin ? 1 : 0);
+
     const newUser = await createUser({
       name,
       password: finalPassword,
@@ -442,8 +448,8 @@ export const createUserAdmin = async (req, res, next) => {
       department: validatedDeptName,
       department_id: validatedDeptId,
       is_active: 1,
-      is_verified: 1,
-      is_approved: 1,
+      is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+      is_approved: isApprovedVal,
     });
 
     let studentProfile = null;
@@ -513,8 +519,8 @@ export const createUserAdmin = async (req, res, next) => {
       {
         ...newUser,
         secure_code: isSuperAdminAddingAdmin ? null : (targetSecureCode || null),
-        is_verified: 1,
-        is_approved: 1,
+        is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+        is_approved: isApprovedVal,
         studentProfile,
       },
       201

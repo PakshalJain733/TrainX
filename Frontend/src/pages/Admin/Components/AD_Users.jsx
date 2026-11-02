@@ -1421,11 +1421,10 @@ export default function AdminUsers() {
 
       const res = await apiFetch(`/admin/users?${queryParams.toString()}`);
       if (res && res.data) {
-        // Filter out admin accounts and ensure only approved users are listed in User Management
+        // Filter out admin accounts from College Admin user list
         let nonAdmins = (res.data || []).filter(u => {
           const r = String(u.role || '').toLowerCase();
-          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
-          return !r.includes('admin') && isApproved;
+          return !r.includes('admin');
         });
 
         // Strict department filter on client as well
@@ -1504,6 +1503,20 @@ export default function AdminUsers() {
     setCopiedCode(false);
     setFeedback({ type: "", message: "" });
     setIsAddModalOpen(true);
+  };
+
+  const handleQuickApprove = async (user) => {
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/approve`, {
+        method: "PATCH",
+      });
+      if (res && (res.data || res.success)) {
+        fetchUsers();
+        fetchStats();
+      }
+    } catch (err) {
+      console.error("Failed to approve user:", err);
+    }
   };
 
   const handleOpenEdit = (user) => {
@@ -1855,10 +1868,15 @@ export default function AdminUsers() {
                     </td>
                     <td>
                       <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-start" }}>
-                        <span className={`status-badge ${u.is_active || u.is_approved ? "status-badge--active" : "status-badge--inactive"}`}>
-                          <span className="status-dot"></span>
-                          {u.is_active || u.is_approved ? "Approved" : "Pending Approval"}
-                        </span>
+                        {(() => {
+                          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+                          return (
+                            <span className={`status-badge ${isApproved ? "status-badge--active" : "status-badge--inactive"}`}>
+                              <span className="status-dot"></span>
+                              {isApproved ? "Approved" : "Pending Approval"}
+                            </span>
+                          );
+                        })()}
                         <span 
                           style={{
                             display: "inline-flex",
@@ -1879,6 +1897,15 @@ export default function AdminUsers() {
                     </td>
                     <td>
                       <div className="action-btns-row action-btns-right">
+                        {!(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1") && (
+                          <button
+                            className="btn-table-action btn-table-action--approve"
+                            title="Approve User Registration"
+                            onClick={() => handleQuickApprove(u)}
+                          >
+                            <Check size={14} />
+                          </button>
+                        )}
                         <button
                           className="btn-table-action"
                           title="Edit User"
