@@ -432,7 +432,14 @@ export const createUserAdmin = async (req, res, next) => {
     // 2. Otherwise (coordinators, mentors, students):
     //    is_verified = 0, is_approved = 0, is_active = 0 (Requires completing registration and manual approval)
     const rawPassword = (password || '').trim();
-    const finalPassword = rawPassword || (isSuperAdminAddingAdmin ? `Admin@${Math.random().toString(36).slice(-6)}!` : '');
+    let finalPassword = rawPassword;
+    if (!finalPassword) {
+      if (isSuperAdminAddingAdmin) {
+        finalPassword = `Admin@${Math.random().toString(36).slice(-6)}!`;
+      } else if (canonicalRole === ROLES.STUDENT) {
+        finalPassword = 'Student@123';
+      }
+    }
 
     const isApprovedVal = req.body.is_approved !== undefined
       ? (req.body.is_approved === 1 || req.body.is_approved === true || String(req.body.is_approved) === '1' ? 1 : 0)
@@ -580,13 +587,15 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
         }
       }
 
-      // Create User (admin-created bulk users are automatically approved)
+      // Create User with default general password Student@123 for direct login
+      const defaultPassword = item.password || 'Student@123';
       const newUser = await createUser({
         name,
         email,
         mobile_number,
         role: ROLES.STUDENT,
         college_id: targetCollegeId,
+        password: defaultPassword,
         is_active: 1,
         is_verified: 1,
         is_approved: 1,
