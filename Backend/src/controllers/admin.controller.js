@@ -1345,7 +1345,7 @@ export const getAdminPerformance = async (req, res, next) => {
  */
 export const assignMentorToStudents = async (req, res, next) => {
   try {
-    const { mentorId, mentorName, mentorEmail, studentIds } = req.body;
+    const { mentorId, mentorName, mentorEmail, studentIds, isReassignment } = req.body;
     if (!mentorName && !mentorId) {
       return sendError(res, 'Faculty Mentor Name or ID is required', 400);
     }
@@ -1358,6 +1358,12 @@ export const assignMentorToStudents = async (req, res, next) => {
       const n = parseInt(String(val).replace(/^u-/i, '').replace(/^s-/i, ''), 10);
       return Number.isFinite(n) ? n : null;
     };
+
+    // Multi-college isolation: identify caller's college
+    let targetCollegeId = req.user?.collegeId || req.user?.college_id;
+    if (req.user?.role === ROLES.SUPER_ADMIN && req.body.collegeId) {
+      targetCollegeId = parseInt(req.body.collegeId, 10);
+    }
 
     // 1. Resolve Mentor Record
     let resolvedMentorId = parseId(mentorId);
@@ -1380,14 +1386,19 @@ export const assignMentorToStudents = async (req, res, next) => {
     }
 
     if (mentorSearchConditions.length > 0) {
-      const foundMentors = await query(
-        `SELECT u.id, u.name, u.email, u.college_id
-         FROM users u
-         WHERE ${mentorSearchConditions.join(' OR ')}
-         ORDER BY (CASE WHEN u.role = 'mentor' THEN 0 ELSE 1 END), u.id ASC
-         LIMIT 1`,
-        mentorParams
-      );
+      let mentorSql = `
+        SELECT u.id, u.name, u.email, u.college_id
+        FROM users u
+        WHERE (${mentorSearchConditions.join(' OR ')})
+      `;
+      const sqlParams = [...mentorParams];
+      if (targetCollegeId && req.user?.role !== ROLES.SUPER_ADMIN) {
+        mentorSql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
+        sqlParams.push(targetCollegeId);
+      }
+      mentorSql += ` ORDER BY (CASE WHEN u.role = 'mentor' THEN 0 ELSE 1 END), u.id ASC LIMIT 1`;
+
+      const foundMentors = await query(mentorSql, sqlParams);
       if (foundMentors && foundMentors.length > 0) {
         resolvedMentorId = parseId(foundMentors[0].id);
         resolvedMentorName = foundMentors[0].name || resolvedMentorName;
@@ -1431,29 +1442,104 @@ export const assignMentorToStudents = async (req, res, next) => {
     try { await query("ALTER TABLE users ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
     try { await query("ALTER TABLE users ADD COLUMN mentor_id INT NULL"); } catch (e) {}
 
-    // 3. Process Each Assigned Student
-    let savedCount = 0;
+    // 3. Pre-fetch and Validate All Target Students Before Modifying Any State
+    const resolvedStudents = [];
     for (const sid of studentIds) {
       if (sid === null || sid === undefined || sid === '') continue;
 
       const parsedSid = parseId(sid);
-
-      // Resolve student user_id and batch_id
       const sRows = await query(
-        `SELECT u.id AS user_id, s.id AS student_table_id, s.batch_id
+        `SELECT u.id AS user_id, u.name AS student_name, u.email AS student_email, u.college_id,
+                s.id AS student_table_id, s.batch_id,
+                COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name) AS current_mentor_name,
+                COALESCE(m_u.id, msa.mentor_id, s.mentor_id, u.mentor_id, ma.mentor_id) AS current_mentor_id
          FROM users u
          LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN mentor_student_assignments msa ON msa.student_id = u.id
+         LEFT JOIN users m_u ON msa.mentor_id = m_u.id
+         LEFT JOIN (
+           SELECT student_id, MAX(mentor_id) AS mentor_id, MAX(mentor_name) AS mentor_name
+           FROM mentor_assignments
+           GROUP BY student_id
+         ) ma ON (ma.student_id = CAST(u.id AS CHAR) OR ma.student_id = CAST(s.id AS CHAR))
          WHERE u.id = ? OR s.id = ? OR s.user_id = ?
          LIMIT 1`,
         [sid, sid, sid]
       );
 
-      const targetStudentUserId = (sRows && sRows.length > 0 && sRows[0].user_id) ? parseId(sRows[0].user_id) : parsedSid;
-      const studentBatchId = (sRows && sRows.length > 0 && sRows[0].batch_id) ? parseId(sRows[0].batch_id) : null;
+      if (!sRows || sRows.length === 0) continue;
 
-      if (!targetStudentUserId) continue;
+      const row = sRows[0];
+      const targetStudentUserId = parseId(row.user_id) || parsedSid;
+      const studentBatchId = parseId(row.batch_id);
 
-      // 3a. Save to mentor_assignments
+      // Enforce college-level isolation
+      if (targetCollegeId && row.college_id && row.college_id !== targetCollegeId && req.user?.role !== ROLES.SUPER_ADMIN) {
+        return sendError(res, `Access denied: Student "${row.student_name}" belongs to another college`, 403);
+      }
+
+      // Check current assignment status
+      const existingMentorName = (row.current_mentor_name || '').trim();
+      const existingMentorId = row.current_mentor_id;
+      const hasExistingAssignment = Boolean(existingMentorName);
+
+      const isSameMentor = hasExistingAssignment && (
+        (resolvedMentorId && existingMentorId === resolvedMentorId) ||
+        (resolvedMentorName && existingMentorName.toLowerCase() === resolvedMentorName.toLowerCase())
+      );
+
+      // Prevent Duplicate Assignments:
+      // If student is already assigned to a different mentor and this is NOT an explicit reassignment:
+      if (hasExistingAssignment && !isSameMentor && !isReassignment) {
+        return sendError(
+          res,
+          `This student is already assigned to ${existingMentorName}.`,
+          409,
+          {
+            alreadyAssigned: true,
+            studentId: targetStudentUserId,
+            studentName: row.student_name,
+            assignedMentorName: existingMentorName,
+            assignedMentorId: existingMentorId,
+          }
+        );
+      }
+
+      resolvedStudents.push({
+        sid,
+        targetStudentUserId,
+        studentBatchId,
+        studentName: row.student_name,
+        existingMentorName,
+        existingMentorId,
+        wasReassigned: hasExistingAssignment && !isSameMentor && Boolean(isReassignment),
+      });
+    }
+
+    if (resolvedStudents.length === 0) {
+      return sendError(res, 'No valid student accounts found for assignment', 400);
+    }
+
+    // 4. Safely Apply Assignment / Reassignment without Duplicates
+    let savedCount = 0;
+    const reassignedStudents = [];
+
+    for (const student of resolvedStudents) {
+      const { sid, targetStudentUserId, studentBatchId, studentName, existingMentorName, wasReassigned } = student;
+
+      // In case of reassignment, clean previous records from mentor_assignments
+      if (wasReassigned || isReassignment) {
+        try {
+          await query(
+            `DELETE FROM mentor_assignments WHERE student_id = ? OR student_id = ?`,
+            [String(targetStudentUserId), String(sid)]
+          );
+        } catch (delErr) {
+          console.warn('[DB Cleanup Mentor Assignment]', delErr.message);
+        }
+      }
+
+      // 4a. Save to mentor_assignments
       try {
         await query(
           `INSERT INTO mentor_assignments (mentor_id, mentor_name, mentor_email, student_id)
@@ -1468,7 +1554,7 @@ export const assignMentorToStudents = async (req, res, next) => {
         console.warn('[DB mentor_assignments insert notice]', maErr.message);
       }
 
-      // 3b. Save to mentor_student_assignments (PRIMARY TABLE for Mentor workspace)
+      // 4b. Save to mentor_student_assignments (PRIMARY TABLE, enforced unique student_id)
       if (resolvedMentorId) {
         await query(
           `INSERT INTO mentor_student_assignments (mentor_id, student_id, batch_id)
@@ -1480,7 +1566,7 @@ export const assignMentorToStudents = async (req, res, next) => {
         );
       }
 
-      // 3c. Update students and users tables
+      // 4c. Synchronize students & users tables
       try {
         await query(
           `UPDATE students
@@ -1500,13 +1586,26 @@ export const assignMentorToStudents = async (req, res, next) => {
       } catch (e) {}
 
       savedCount++;
+      if (wasReassigned) {
+        reassignedStudents.push({
+          studentName,
+          previousMentor: existingMentorName,
+          newMentor: resolvedMentorName,
+        });
+      }
     }
 
-    return sendSuccess(res, `Successfully mapped ${savedCount} mentees to mentor ${resolvedMentorName} in database`, {
+    const message = isReassignment && reassignedStudents.length > 0
+      ? `Successfully reassigned ${reassignedStudents.map(r => `${r.studentName} from ${r.previousMentor} to ${r.newMentor}`).join(', ')}`
+      : `Successfully mapped ${savedCount} mentees to mentor ${resolvedMentorName} in database`;
+
+    return sendSuccess(res, message, {
       mentorId: resolvedMentorId,
       mentorName: resolvedMentorName,
       mentorEmail: resolvedMentorEmail,
-      assignedCount: savedCount
+      assignedCount: savedCount,
+      isReassignment: Boolean(isReassignment),
+      reassignedStudents,
     });
   } catch (error) {
     next(error);
@@ -1515,11 +1614,23 @@ export const assignMentorToStudents = async (req, res, next) => {
 
 export const getMentorAssignments = async (req, res, next) => {
   try {
+    const collegeId = getCallerCollegeFilter(req);
     let assignments = [];
     try {
       await query(`
+        CREATE TABLE IF NOT EXISTS mentor_student_assignments (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          mentor_id INT NOT NULL,
+          student_id INT NOT NULL,
+          batch_id INT DEFAULT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_mentor_student (student_id)
+        )
+      `);
+      await query(`
         CREATE TABLE IF NOT EXISTS mentor_assignments (
           id INT AUTO_INCREMENT PRIMARY KEY,
+          mentor_id INT NULL,
           mentor_name VARCHAR(100) NOT NULL,
           mentor_email VARCHAR(150) NULL,
           student_id VARCHAR(100) NOT NULL,
@@ -1527,9 +1638,61 @@ export const getMentorAssignments = async (req, res, next) => {
           UNIQUE KEY unique_mentor_student (mentor_name, student_id)
         )
       `);
-      assignments = await query(`SELECT * FROM mentor_assignments ORDER BY id DESC`);
+
+      let sql = `
+        SELECT 
+          msa.id,
+          msa.mentor_id,
+          COALESCE(m.name, ma.mentor_name) AS mentor_name,
+          COALESCE(m.email, ma.mentor_email) AS mentor_email,
+          msa.student_id,
+          u.name AS student_name,
+          u.email AS student_email,
+          s.roll_number,
+          COALESCE(s.department, u.department) AS department,
+          s.year,
+          s.division,
+          msa.created_at,
+          'Already Assigned' AS status
+        FROM mentor_student_assignments msa
+        JOIN users u ON msa.student_id = u.id
+        JOIN users m ON msa.mentor_id = m.id
+        LEFT JOIN students s ON s.user_id = u.id
+        LEFT JOIN (
+          SELECT student_id, MAX(mentor_name) AS mentor_name, MAX(mentor_email) AS mentor_email
+          FROM mentor_assignments
+          GROUP BY student_id
+        ) ma ON (ma.student_id = CAST(u.id AS CHAR) OR ma.student_id = CAST(s.id AS CHAR))
+        WHERE 1=1
+      `;
+      const params = [];
+      if (collegeId) {
+        sql += ' AND u.college_id = ?';
+        params.push(collegeId);
+      }
+      sql += ' ORDER BY msa.id DESC';
+
+      assignments = await query(sql, params);
+
+      if (!assignments || assignments.length === 0) {
+        assignments = await query(
+          `SELECT ma.id, ma.mentor_id, ma.mentor_name, ma.mentor_email, ma.student_id,
+                  u.name AS student_name, u.email AS student_email, s.roll_number,
+                  COALESCE(s.department, u.department) AS department,
+                  'Already Assigned' AS status, ma.created_at
+           FROM mentor_assignments ma
+           LEFT JOIN users u ON ma.student_id = CAST(u.id AS CHAR)
+           LEFT JOIN students s ON s.user_id = u.id
+           ${collegeId ? 'WHERE u.college_id = ?' : ''}
+           ORDER BY ma.id DESC`,
+          collegeId ? [collegeId] : []
+        );
+      }
     } catch (e) {
       console.warn('[DB getMentorAssignments fallback]', e.message);
+      try {
+        assignments = await query(`SELECT * FROM mentor_assignments ORDER BY id DESC`);
+      } catch (_) {}
     }
     return sendSuccess(res, 'Mentor assignments retrieved from database', assignments || []);
   } catch (error) {

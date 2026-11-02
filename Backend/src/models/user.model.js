@@ -667,11 +667,27 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
            COALESCE(s.city, u.city) as city,
            COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
            COALESCE(s.target_track, u.target_track) as target_track,
-           COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated
+           COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated,
+           COALESCE(m_u.id, msa.mentor_id, s.mentor_id, u.mentor_id, ma.mentor_id) as mentor_id,
+           COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name) as mentor_name,
+           COALESCE(m_u.email, ma.mentor_email) as mentor_email,
+           (CASE 
+             WHEN (COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name) IS NOT NULL 
+                   AND TRIM(COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name)) != '')
+             THEN 'Already Assigned'
+             ELSE 'Available'
+           END) as mentor_assignment_status
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
     LEFT JOIN departments d ON (u.department_id = d.id OR s.department_id = d.id)
+    LEFT JOIN mentor_student_assignments msa ON msa.student_id = u.id
+    LEFT JOIN users m_u ON msa.mentor_id = m_u.id
+    LEFT JOIN (
+      SELECT student_id, MAX(mentor_id) as mentor_id, MAX(mentor_name) as mentor_name, MAX(mentor_email) as mentor_email
+      FROM mentor_assignments
+      GROUP BY student_id
+    ) ma ON (ma.student_id = CAST(u.id AS CHAR) OR ma.student_id = CAST(s.id AS CHAR))
     WHERE 1=1
   `;
   const params = [];

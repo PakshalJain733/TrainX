@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2 } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -521,62 +521,100 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 }
 
 /* ── Assign Mentor Modal Component ── */
-function AssignMentorModal({ isOpen, onClose, users = [] }) {
+function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
   const [selectedMentor, setSelectedMentor] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [divFilter, setDivFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "available" | "assigned"
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
+  const [alertMsg, setAlertMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignmentsMap, setAssignmentsMap] = useState({});
+
+  // Reassignment modal state
+  const [reassignStudent, setReassignStudent] = useState(null);
+  const [reassignNewMentor, setReassignNewMentor] = useState("");
+  const [reassignError, setReassignError] = useState("");
+  const [isReassigning, setIsReassigning] = useState(false);
+
+  // Synchronize latest mentor assignments directly from DB when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      apiFetch("/admin/assign-mentor")
+        .then((res) => {
+          const list = res?.data || (Array.isArray(res) ? res : []);
+          const map = {};
+          if (Array.isArray(list)) {
+            list.forEach((item) => {
+              if (item.student_id) {
+                map[String(item.student_id)] = item.mentor_name;
+              }
+            });
+          }
+          setAssignmentsMap(map);
+        })
+        .catch((err) => console.warn("Failed to load mentor assignments:", err));
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   // Real DB mentors (only approved)
-  const mentors = users.filter(u => {
+  const mentors = users.filter((u) => {
     const r = (u.role || "").toLowerCase();
     const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
     return (r.includes("mentor") || r.includes("faculty") || r.includes("prof")) && isApproved;
   });
 
   // Real DB students (only approved)
-  const allStudents = users.filter(u => {
+  const allStudents = users.filter((u) => {
     const r = (u.role || "").toLowerCase();
     const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
     return (r.includes("student") || r === "user" || (!r && u.name)) && isApproved;
   });
 
-  // Filter students based on Department, Year, Division, and Search input
-  const filteredStudents = allStudents.filter(s => {
+  // Filter students based on Department, Year, Division, Status, and Search input
+  const filteredStudents = allStudents.filter((s) => {
     const q = studentSearch.toLowerCase().trim();
     const deptStr = (s.department || s.dept || "").toLowerCase();
-    
-    // 1. Department filter
+    const assignedMentor = s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)] || "";
+    const isAssigned = Boolean(assignedMentor && assignedMentor.trim());
+
+    // 1. Assignment Status Filter
+    if (statusFilter === "available" && isAssigned) return false;
+    if (statusFilter === "assigned" && !isAssigned) return false;
+
+    // 2. Department filter
     let matchesDept = true;
     if (deptFilter !== "all") {
       const filterLower = deptFilter.toLowerCase();
-      matchesDept = deptStr.includes(filterLower) ||
-                    (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
-                    (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
-                    (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
-                    (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec") || deptStr.includes("ecs")));
+      matchesDept =
+        deptStr.includes(filterLower) ||
+        (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
+        (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
+        (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
+        (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec") || deptStr.includes("ecs")));
     }
     if (!matchesDept) return false;
 
-    // 2. Year filter (FE, SE, TE, BE)
+    // 3. Year filter (FE, SE, TE, BE)
     let matchesYear = true;
     if (yearFilter !== "all") {
       const sYear = (s.year || "").toLowerCase().trim();
       const targetYear = yearFilter.toLowerCase().trim();
-      matchesYear = sYear === targetYear ||
-                    (targetYear === "fe" && (sYear.includes("fe") || sYear.includes("first") || sYear === "1")) ||
-                    (targetYear === "se" && (sYear.includes("se") || sYear.includes("second") || sYear === "2")) ||
-                    (targetYear === "te" && (sYear.includes("te") || sYear.includes("third") || sYear === "3")) ||
-                    (targetYear === "be" && (sYear.includes("be") || sYear.includes("fourth") || sYear.includes("final") || sYear === "4"));
+      matchesYear =
+        sYear === targetYear ||
+        (targetYear === "fe" && (sYear.includes("fe") || sYear.includes("first") || sYear === "1")) ||
+        (targetYear === "se" && (sYear.includes("se") || sYear.includes("second") || sYear === "2")) ||
+        (targetYear === "te" && (sYear.includes("te") || sYear.includes("third") || sYear === "3")) ||
+        (targetYear === "be" && (sYear.includes("be") || sYear.includes("fourth") || sYear.includes("final") || sYear === "4"));
     }
     if (!matchesYear) return false;
 
-    // 3. Division filter (A, B, C, D)
+    // 4. Division filter (A, B, C, D)
     let matchesDiv = true;
     if (divFilter !== "all") {
       const sDiv = (s.division || s.div || s.section || "").toLowerCase().trim();
@@ -585,13 +623,14 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
     }
     if (!matchesDiv) return false;
 
-    // 4. Search Query
+    // 5. Search Query
     if (!q) return true;
     return (
       (s.name || "").toLowerCase().includes(q) ||
       (s.email || "").toLowerCase().includes(q) ||
       (s.roll_number || s.rollNo || s.roll || "").toLowerCase().includes(q) ||
       deptStr.includes(q) ||
+      assignedMentor.toLowerCase().includes(q) ||
       (s.year || "").toLowerCase().includes(q) ||
       (s.division || s.div || "").toLowerCase().includes(q)
     );
@@ -601,96 +640,188 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   const sortedStudents = [...filteredStudents].sort((a, b) => {
     const idA = (a.roll_number || a.rollNo || a.roll || a.id || "").toString().toLowerCase().trim();
     const idB = (b.roll_number || b.rollNo || b.roll || b.id || "").toString().toLowerCase().trim();
-    return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+    return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: "base" });
   });
 
-  const getDeptCount = (filterKey) => {
-    if (filterKey === "all") return allStudents.length;
-    return allStudents.filter(s => {
-      const deptStr = (s.department || s.dept || "").toLowerCase();
-      const filterLower = filterKey.toLowerCase();
-      return deptStr.includes(filterLower) ||
-             (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
-             (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
-             (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
-             (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
-    }).length;
-  };
+  // Calculate Available vs Already Assigned Counts
+  const availableCount = allStudents.filter((s) => {
+    const m = s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)];
+    return !m || !m.trim();
+  }).length;
+  const assignedCount = allStudents.length - availableCount;
 
-  const toggleStudentSelect = (id) => {
-    setSelectedStudentIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+  // Toggle selection for available students only
+  const toggleStudentSelect = (student) => {
+    const assigned = student.mentor_name || assignmentsMap[String(student.id)] || assignmentsMap[String(student.user_id)] || "";
+    if (assigned && assigned.trim()) {
+      setAlertMsg("This student is already assigned to " + assigned.trim() + ".");
+      return;
+    }
+    setAlertMsg("");
+    setSelectedStudentIds((prev) =>
+      prev.includes(student.id) ? prev.filter((item) => item !== student.id) : [...prev, student.id]
     );
   };
 
+  // Select all visible AVAILABLE students (never already assigned)
   const handleSelectAll = () => {
-    const allFilteredIds = sortedStudents.map(s => s.id);
-    setSelectedStudentIds(Array.from(new Set([...selectedStudentIds, ...allFilteredIds])));
+    const availableFilteredIds = sortedStudents
+      .filter((s) => {
+        const m = s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)];
+        return !m || !m.trim();
+      })
+      .map((s) => s.id);
+    setSelectedStudentIds(Array.from(new Set([...selectedStudentIds, ...availableFilteredIds])));
   };
 
   const handleDeselectAll = () => {
     setSelectedStudentIds([]);
   };
 
+  // Submit normal assignment
   const handleAssignMentorSubmit = async (e) => {
     e.preventDefault();
+    setAlertMsg("");
+
     if (!selectedMentor) {
-      alert("Please select a mentor first.");
+      setAlertMsg("Please select a faculty mentor first.");
       return;
     }
     if (selectedStudentIds.length === 0) {
-      alert("Please select at least one student.");
+      setAlertMsg("Please select at least one available student.");
       return;
     }
 
-    const activeMentor = mentors.find(m => m.name === selectedMentor);
+    // Client-side guard against assigning already assigned students
+    for (const sid of selectedStudentIds) {
+      const st = allStudents.find((s) => s.id === sid);
+      const existingMentor = st?.mentor_name || assignmentsMap[String(sid)] || assignmentsMap[String(st?.user_id)];
+      if (existingMentor && existingMentor.trim() && existingMentor.trim().toLowerCase() !== selectedMentor.trim().toLowerCase()) {
+        setAlertMsg("This student is already assigned to " + existingMentor.trim() + ".");
+        return;
+      }
+    }
+
+    const activeMentor = mentors.find((m) => m.name === selectedMentor);
+    setIsSubmitting(true);
 
     try {
-      const res = await apiFetch('/admin/assign-mentor', {
-        method: 'POST',
+      const res = await apiFetch("/admin/assign-mentor", {
+        method: "POST",
         body: JSON.stringify({
           mentorId: activeMentor?.id || null,
           mentorName: selectedMentor,
           mentorEmail: activeMentor?.email || null,
-          studentIds: selectedStudentIds
-        })
+          studentIds: selectedStudentIds,
+          isReassignment: false,
+        }),
       });
+
       if (res && res.error) {
-        alert(res.message || res.error || "Failed to assign mentor. Please try again.");
+        setAlertMsg(res.message || res.error || "Failed to assign mentor. Please try again.");
+        setIsSubmitting(false);
         return;
       }
+
+      // Update local assignmentsMap
+      const updatedMap = { ...assignmentsMap };
+      selectedStudentIds.forEach((id) => {
+        updatedMap[String(id)] = selectedMentor;
+      });
+      setAssignmentsMap(updatedMap);
+
+      const count = selectedStudentIds.length;
+      const menteeText = count === 1 ? "mentee" : "mentees";
+      setSuccessMsg("Successfully assigned " + count + " " + menteeText + " to " + selectedMentor + ".");
+      setSelectedStudentIds([]);
+      onSuccess?.();
+
+      setTimeout(() => {
+        setSuccessMsg("");
+        onClose();
+      }, 1800);
     } catch (err) {
-      console.warn('[DB Save Mentor Assignment Error]', err);
-      alert("Failed to save mentor assignment. Please try again.");
+      console.warn("[DB Save Mentor Assignment Error]", err);
+      setAlertMsg(err.message || "Failed to save mentor assignment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Explicit Reassign Mentor action handler
+  const handleConfirmReassign = async () => {
+    if (!reassignStudent || !reassignNewMentor) {
+      setReassignError("Please select a new mentor.");
       return;
     }
 
-    const count = selectedStudentIds.length;
-    const menteeText = count === 1 ? 'mentee' : 'mentees';
-    setSuccessMsg(`Successfully assigned ${count} ${menteeText} to ${selectedMentor}.`);
-    setTimeout(() => {
-      setSuccessMsg("");
-      onClose();
-    }, 1800);
+    const activeMentor = mentors.find((m) => m.name === reassignNewMentor);
+    const prevMentor =
+      reassignStudent.mentor_name ||
+      assignmentsMap[String(reassignStudent.id)] ||
+      assignmentsMap[String(reassignStudent.user_id)] ||
+      "Previous Mentor";
+
+    setIsReassigning(true);
+    setReassignError("");
+
+    try {
+      const res = await apiFetch("/admin/assign-mentor", {
+        method: "POST",
+        body: JSON.stringify({
+          mentorId: activeMentor?.id || null,
+          mentorName: reassignNewMentor,
+          mentorEmail: activeMentor?.email || null,
+          studentIds: [reassignStudent.id],
+          isReassignment: true,
+        }),
+      });
+
+      if (res && res.error) {
+        setReassignError(res.message || res.error || "Failed to reassign mentor.");
+        setIsReassigning(false);
+        return;
+      }
+
+      // Update local state and assignmentsMap
+      setAssignmentsMap((prev) => ({
+        ...prev,
+        [String(reassignStudent.id)]: reassignNewMentor,
+        ...(reassignStudent.user_id ? { [String(reassignStudent.user_id)]: reassignNewMentor } : {}),
+      }));
+      reassignStudent.mentor_name = reassignNewMentor;
+
+      setSuccessMsg("Successfully reassigned " + reassignStudent.name + " from " + prevMentor + " to " + reassignNewMentor + ".");
+      setReassignStudent(null);
+      setReassignNewMentor("");
+      onSuccess?.();
+
+      setTimeout(() => {
+        setSuccessMsg("");
+      }, 3500);
+    } catch (err) {
+      console.warn("[Reassign Mentor Error]", err);
+      setReassignError(err.message || "Failed to reassign mentor.");
+    } finally {
+      setIsReassigning(false);
+    }
   };
 
-  const selectedStudentsList = allStudents.filter(s => selectedStudentIds.includes(s.id));
-  const activeMentorObj = mentors.find(m => m.name === selectedMentor) || mentors[0];
+  const selectedStudentsList = allStudents.filter((s) => selectedStudentIds.includes(s.id));
 
   return createPortal(
     <div className="fs-portal-overlay" onClick={onClose}>
-      <div className="fs-portal-dialog" onClick={e => e.stopPropagation()}>
-        
+      <div className="fs-portal-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Top Header Bar */}
         <div className="fs-portal-header">
           <div className="fs-portal-header-left">
-            <div className="fs-portal-header-icon">
+            <div className="fs-portal-header-icon mentor-theme">
               <UserCheck size={24} />
             </div>
             <div className="fs-portal-header-title-wrap">
               <h2 className="fs-portal-header-title">Assign Faculty Mentor to Students</h2>
               <p className="fs-portal-header-subtitle">
-                Multi-select student profiles via real-time roll number search and allocate to a faculty mentor
+                Allocate students to faculty mentors with live assignment verification and re-assignment controls
               </p>
             </div>
           </div>
@@ -702,9 +833,30 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
           </div>
         </div>
 
+        {/* Global Feedback Banners */}
+        {alertMsg && (
+          <div className="modal-feedback-alert modal-feedback--warning" style={{ margin: "14px 24px 0 24px" }}>
+            <AlertCircle size={18} className="shrink-0" />
+            <span style={{ fontWeight: 650 }}>{alertMsg}</span>
+            <button
+              type="button"
+              onClick={() => setAlertMsg("")}
+              style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "inherit" }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="modal-feedback-alert modal-feedback--success" style={{ margin: "14px 24px 0 24px" }}>
+            <CheckCircle2 size={18} className="shrink-0" />
+            <span style={{ fontWeight: 650 }}>{successMsg}</span>
+          </div>
+        )}
+
         {/* Modal Form Grid Body */}
         <form onSubmit={handleAssignMentorSubmit} className="fs-portal-body">
-          
           {/* Left Column: Mentor Selection & Live Summary */}
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
@@ -712,38 +864,32 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               1. Select Faculty Mentor
             </h3>
 
-            {successMsg && (
-              <div className="modal-feedback-alert modal-feedback--success">
-                <CheckCircle2 size={18} className="shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
             <div className="form-group-admin fs-portal-field">
               <label className="fs-portal-label">Faculty Mentor / Leader</label>
               <AdminUserSelect
                 value={selectedMentor}
-                options={mentors.map(m => {
+                options={mentors.map((m) => {
                   const dept = (m.department || m.dept || "").trim();
                   return {
                     value: m.name,
-                    label: dept ? `${m.name} (${dept})` : m.name
+                    label: dept ? (m.name + " (" + dept + ")") : m.name,
                   };
                 })}
-                onChange={val => setSelectedMentor(val)}
+                onChange={(val) => {
+                  setSelectedMentor(val);
+                  setAlertMsg("");
+                }}
                 placeholder="-- Choose Faculty Mentor --"
                 icon={UserCheck}
               />
             </div>
-
-
 
             {/* Selected Students Chips Banner or Empty Helper */}
             {selectedStudentsList.length > 0 ? (
               <div className="fs-portal-mentees-wrapper">
                 <div className="fs-portal-mentees-header">
                   <label className="fs-portal-mentees-title">
-                    Selected Mentees ({selectedStudentsList.length})
+                    Selected Available Mentees ({selectedStudentsList.length})
                   </label>
                   <button type="button" onClick={handleDeselectAll} className="fs-portal-btn-clear">
                     Clear All
@@ -751,16 +897,13 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                 </div>
 
                 <div className="fs-portal-chips-container">
-                  {selectedStudentsList.map(s => (
-                    <span
-                      key={s.id}
-                      className="fs-portal-mentee-chip"
-                    >
+                  {selectedStudentsList.map((s) => (
+                    <span key={s.id} className="fs-portal-mentee-chip">
                       <span>{s.name}</span>
                       <X
                         size={13}
                         className="fs-portal-chip-remove"
-                        onClick={() => toggleStudentSelect(s.id)}
+                        onClick={() => toggleStudentSelect(s)}
                       />
                     </span>
                   ))}
@@ -771,19 +914,23 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                 <Users size={30} className="fs-portal-no-mentees-icon" />
                 <p className="fs-portal-no-mentees-text">No Mentees Selected</p>
                 <span className="fs-portal-no-mentees-hint">
-                  Select student checkboxes from the right roster to assign them to this mentor.
+                  Select available students from the checklist to assign them to this mentor. Already assigned students can be reassigned individually.
                 </span>
               </div>
             )}
 
-            <button type="submit" className="btn-portal-submit fs-portal-submit-mt">
-              <UserCheck size={18} /> Confirm & Assign Mentor
+            <button
+              type="submit"
+              className="btn-portal-submit fs-portal-submit-mt"
+              disabled={isSubmitting || selectedStudentIds.length === 0 || !selectedMentor}
+            >
+              <UserCheck size={18} />
+              {isSubmitting ? "Assigning Mentees..." : "Confirm & Assign Mentor"}
             </button>
           </div>
 
           {/* Right Column: Multi-Select Student Selection Dashboard */}
           <div className="fs-portal-panel-main">
-            
             {/* Action Bar Header */}
             <div className="fs-portal-main-bar">
               <div>
@@ -794,17 +941,20 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                   </span>
                 </label>
                 <div className="fs-portal-checklist-meta">
-                  Showing <strong>{filteredStudents.length}</strong> of <strong>{allStudents.length}</strong> students · <strong>{selectedStudentIds.length}</strong> mapped
+                  Showing <strong>{filteredStudents.length}</strong> of <strong>{allStudents.length}</strong> students ·{" "}
+                  <span style={{ color: "#059669", fontWeight: 700 }}>{availableCount} Available</span> ·{" "}
+                  <span style={{ color: "#2563eb", fontWeight: 700 }}>{assignedCount} Already Assigned</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <button
                   type="button"
                   onClick={handleSelectAll}
                   className="fs-portal-btn-select-all"
+                  title="Select all currently visible available students"
                 >
-                  Select All Filtered ({filteredStudents.length})
+                  Select Available ({sortedStudents.filter((s) => !(s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)])).length})
                 </button>
                 <button
                   type="button"
@@ -816,16 +966,16 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               </div>
             </div>
 
-            {/* Search Input & Department Pills Filter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Search Input & Multi-tier Filters */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <div className="fs-portal-search-wrap">
                 <Search size={18} className="fs-portal-search-icon" />
                 <input
                   type="text"
                   className="fs-portal-search-input"
-                  placeholder="Search student by roll no, name, dept, email, year..."
+                  placeholder="Search student by roll no, name, dept, email, mentor name..."
                   value={studentSearch}
-                  onChange={e => setStudentSearch(e.target.value)}
+                  onChange={(e) => setStudentSearch(e.target.value)}
                 />
                 {studentSearch && (
                   <button
@@ -838,8 +988,21 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                 )}
               </div>
 
-              {/* Dropdown Filters: Department, Year, Division */}
+              {/* Dropdown Filters: Assignment Status, Department, Year, Division */}
               <div className="fs-portal-filter-bar">
+                <div className="fs-portal-filter-item">
+                  <AdminUserSelect
+                    value={statusFilter}
+                    options={[
+                      { value: "all", label: "All Statuses" },
+                      { value: "available", label: "Available Only" },
+                      { value: "assigned", label: "Already Assigned Only" },
+                    ]}
+                    onChange={(val) => setStatusFilter(val)}
+                    placeholder="All Statuses"
+                  />
+                </div>
+
                 <div className="fs-portal-filter-item">
                   <AdminUserSelect
                     value={deptFilter}
@@ -850,7 +1013,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                       { value: "ai & data science", label: "AI & Data Science" },
                       { value: "electronics", label: "Electronics & CS" },
                     ]}
-                    onChange={val => setDeptFilter(val)}
+                    onChange={(val) => setDeptFilter(val)}
                     placeholder="All Departments"
                   />
                 </div>
@@ -865,7 +1028,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                       { value: "TE", label: "TE (Third Year)" },
                       { value: "BE", label: "BE (Fourth Year)" },
                     ]}
-                    onChange={val => setYearFilter(val)}
+                    onChange={(val) => setYearFilter(val)}
                     placeholder="All Years"
                   />
                 </div>
@@ -880,19 +1043,21 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                       { value: "C", label: "Division C" },
                       { value: "D", label: "Division D" },
                     ]}
-                    onChange={val => setDivFilter(val)}
+                    onChange={(val) => setDivFilter(val)}
                     placeholder="All Divisions"
                   />
                 </div>
 
-                {(deptFilter !== "all" || yearFilter !== "all" || divFilter !== "all" || studentSearch) && (
+                {(statusFilter !== "all" || deptFilter !== "all" || yearFilter !== "all" || divFilter !== "all" || studentSearch) && (
                   <button
                     type="button"
                     onClick={() => {
+                      setStatusFilter("all");
                       setDeptFilter("all");
                       setYearFilter("all");
                       setDivFilter("all");
                       setStudentSearch("");
+                      setAlertMsg("");
                     }}
                     className="fs-portal-btn-reset-filters"
                     title="Reset all filters"
@@ -903,27 +1068,43 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               </div>
             </div>
 
-            {/* Multi-Select Student Checklist Table (Sorted by College ID) */}
+            {/* Multi-Select Student Checklist Table */}
             <div className="fs-portal-table-container">
               {sortedStudents.length === 0 ? (
-                <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '14px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    padding: "48px 24px",
+                    textAlign: "center",
+                    background: "#f8fafc",
+                    borderRadius: "14px",
+                    border: "2px dashed #cbd5e1",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "12px",
+                  }}
+                >
                   <Search size={32} color="#94a3b8" />
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#334155' }}>No student profiles match your search</h4>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-                      Try adjusting query "{studentSearch}" or changing department filter.
+                    <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#334155" }}>
+                      No student profiles match your search
+                    </h4>
+                    <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748b" }}>
+                      Try adjusting your filter or search query.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       setStudentSearch("");
+                      setStatusFilter("all");
                       setDeptFilter("all");
                       setYearFilter("all");
                       setDivFilter("all");
                     }}
                     className="btn-portal-submit"
-                    style={{ width: 'auto', padding: '8px 18px', fontSize: '12.5px' }}
+                    style={{ width: "auto", padding: "8px 18px", fontSize: "12.5px" }}
                   >
                     Reset Filters & Roster
                   </button>
@@ -932,11 +1113,20 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                 <table className="fs-portal-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '44px', textAlign: 'center' }}>
+                      <th style={{ width: "44px", textAlign: "center" }}>
                         <input
                           type="checkbox"
                           className="fs-portal-checkbox"
-                          checked={sortedStudents.length > 0 && sortedStudents.every(s => selectedStudentIds.includes(s.id))}
+                          checked={
+                            sortedStudents.filter(
+                              (s) => !(s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)])
+                            ).length > 0 &&
+                            sortedStudents
+                              .filter(
+                                (s) => !(s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)])
+                              )
+                              .every((s) => selectedStudentIds.includes(s.id))
+                          }
                           onChange={(e) => {
                             if (e.target.checked) {
                               handleSelectAll();
@@ -944,32 +1134,47 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                               handleDeselectAll();
                             }
                           }}
-                          title="Select / Deselect All Visible"
+                          title="Select / Deselect Available Visible Students"
                         />
                       </th>
-                      <th style={{ width: '150px' }}>College ID / Roll No</th>
-                      <th>Student Name</th>
-                      <th style={{ width: '160px' }}>Department</th>
-                      <th style={{ width: '105px', textAlign: 'center' }}>Year / Div</th>
-                      <th style={{ width: '110px', textAlign: 'center' }}>Selection</th>
+                      <th style={{ width: "140px" }}>College ID / Roll No</th>
+                      <th>Student Details</th>
+                      <th style={{ width: "130px" }}>Department</th>
+                      <th style={{ width: "95px", textAlign: "center" }}>Year/Div</th>
+                      <th style={{ width: "140px", textAlign: "center" }}>Mentor Status</th>
+                      <th style={{ width: "120px", textAlign: "center" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedStudents.map(student => {
+                    {sortedStudents.map((student) => {
                       const isChecked = selectedStudentIds.includes(student.id);
-                      const roll = student.roll_number || student.rollNo || student.roll || `ID-${student.id}`;
+                      const roll = student.roll_number || student.rollNo || student.roll || ("ID-" + student.id);
+                      const assignedMentor =
+                        student.mentor_name ||
+                        assignmentsMap[String(student.id)] ||
+                        assignmentsMap[String(student.user_id)] ||
+                        "";
+                      const isAlreadyAssigned = Boolean(assignedMentor && assignedMentor.trim());
+
                       return (
                         <tr
                           key={student.id}
-                          className={`fs-portal-row ${isChecked ? 'fs-portal-row--checked' : ''}`}
-                          onClick={() => toggleStudentSelect(student.id)}
+                          className={"fs-portal-row " + (isChecked ? "fs-portal-row--checked " : "") + (isAlreadyAssigned ? "fs-portal-row--assigned" : "")}
+                          onClick={() => toggleStudentSelect(student)}
+                          style={{ cursor: isAlreadyAssigned ? "default" : "pointer" }}
                         >
-                          <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               className="fs-portal-checkbox"
+                              disabled={isAlreadyAssigned}
                               checked={isChecked}
-                              onChange={() => toggleStudentSelect(student.id)}
+                              onChange={() => toggleStudentSelect(student)}
+                              title={
+                                isAlreadyAssigned
+                                  ? ("This student is already assigned to " + assignedMentor + ".")
+                                  : "Select student"
+                              }
                             />
                           </td>
                           <td>
@@ -977,42 +1182,78 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                           </td>
                           <td>
                             <div className="fs-portal-student-cell">
-                              <div className="fs-portal-student-avatar-sm">
-                                {(student.name || 'S').charAt(0).toUpperCase()}
+                              <div
+                                className="fs-portal-student-avatar-sm"
+                                style={isAlreadyAssigned ? { background: "#4338ca", color: "#ffffff" } : {}}
+                              >
+                                {(student.name || "S").charAt(0).toUpperCase()}
                               </div>
                               <div className="fs-portal-student-info">
                                 <span className="fs-portal-student-name">{student.name}</span>
                                 {student.email && (
                                   <span className="fs-portal-student-email">{student.email}</span>
                                 )}
+                                {isAlreadyAssigned && (
+                                  <div className="fs-portal-assigned-mentor-tag">
+                                    <UserCheck size={11} /> Assigned Mentor: <strong>{assignedMentor}</strong>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
                           <td>
-                            <span className="fs-portal-dept-text">{student.department || student.dept || '—'}</span>
+                            <span className="fs-portal-dept-text">{student.department || student.dept || "—"}</span>
                           </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                          <td style={{ textAlign: "center" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "5px" }}>
                               {student.year ? (
                                 <span className="fs-portal-year-badge">{student.year}</span>
                               ) : (
-                                <span style={{ color: '#94a3b8' }}>—</span>
+                                <span style={{ color: "#94a3b8" }}>—</span>
                               )}
                               {(student.division || student.div) && (
                                 <span
                                   className="fs-portal-div-badge"
-                                  title={`Division ${student.division || student.div}`}
+                                  title={"Division " + (student.division || student.div)}
                                 >
-                                  {String(student.division || student.div).replace(/^div\s*/i, '').trim()}
+                                  {String(student.division || student.div).replace(/^div\s*/i, "").trim()}
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td style={{ textAlign: 'center' }}>
-                            {isChecked ? (
+                          <td style={{ textAlign: "center" }}>
+                            {isAlreadyAssigned ? (
+                              <span
+                                className="fs-portal-status-pill fs-portal-status-pill--assigned"
+                                title={"Assigned to " + assignedMentor}
+                              >
+                                <ShieldAlert size={11} /> Already Assigned
+                              </span>
+                            ) : (
+                              <span className="fs-portal-status-pill fs-portal-status-pill--available">
+                                <CheckCircle2 size={11} /> Available
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                            {isAlreadyAssigned ? (
+                              <button
+                                type="button"
+                                className="btn-portal-reassign"
+                                onClick={() => {
+                                  setAlertMsg("");
+                                  setReassignStudent(student);
+                                  setReassignNewMentor("");
+                                  setReassignError("");
+                                }}
+                                title={"Reassign " + student.name + " from " + assignedMentor + " to another mentor"}
+                              >
+                                <Repeat size={12} /> Reassign
+                              </button>
+                            ) : isChecked ? (
                               <span className="fs-portal-status-pill fs-portal-status-pill--selected">Selected</span>
                             ) : (
-                              <span className="fs-portal-status-pill fs-portal-status-pill--idle">Unselected</span>
+                              <span className="fs-portal-status-pill fs-portal-status-pill--idle">Available</span>
                             )}
                           </td>
                         </tr>
@@ -1025,7 +1266,130 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
           </div>
         </form>
 
+        {/* ── Separate Reassign Mentor Confirmation Modal ── */}
+        {reassignStudent && (
+          <div className="reassign-modal-backdrop" onClick={() => setReassignStudent(null)}>
+            <div className="reassign-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="reassign-modal-header">
+                <div className="reassign-modal-title-box">
+                  <Repeat size={20} className="reassign-modal-icon" />
+                  <div>
+                    <h3 className="reassign-modal-title">Reassign Faculty Mentor</h3>
+                    <p className="reassign-modal-subtitle">Update mentee allocation to a new faculty mentor</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="fs-portal-close-btn"
+                  onClick={() => setReassignStudent(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
+              <div className="reassign-modal-body">
+                {reassignError && (
+                  <div className="modal-feedback-alert modal-feedback--warning">
+                    <AlertCircle size={16} />
+                    <span>{reassignError}</span>
+                  </div>
+                )}
+
+                <div className="reassign-student-profile-box">
+                  <div className="reassign-student-avatar">
+                    {(reassignStudent.name || "S").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="reassign-student-name">{reassignStudent.name}</div>
+                    <div className="reassign-student-meta">
+                      ID: {reassignStudent.roll_number || reassignStudent.rollNo || ("ID-" + reassignStudent.id)} ·{" "}
+                      {reassignStudent.department || "General"} · {reassignStudent.year || "FE"} ({reassignStudent.division || "A"})
+                    </div>
+                  </div>
+                </div>
+
+                <div className="reassign-mentor-compare-grid">
+                  <div className="reassign-compare-col prev-mentor">
+                    <span className="reassign-col-label">Current Assigned Mentor</span>
+                    <div className="reassign-mentor-pill-prev">
+                      <UserX size={14} />
+                      <span>
+                        {reassignStudent.mentor_name ||
+                          assignmentsMap[String(reassignStudent.id)] ||
+                          assignmentsMap[String(reassignStudent.user_id)] ||
+                          "Assigned Mentor"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="reassign-compare-arrow">
+                    <Repeat size={18} />
+                  </div>
+
+                  <div className="reassign-compare-col next-mentor">
+                    <span className="reassign-col-label">Select New Mentor</span>
+                    <AdminUserSelect
+                      value={reassignNewMentor}
+                      options={mentors
+                        .filter(
+                          (m) =>
+                            m.name !==
+                            (reassignStudent.mentor_name ||
+                              assignmentsMap[String(reassignStudent.id)] ||
+                              assignmentsMap[String(reassignStudent.user_id)])
+                        )
+                        .map((m) => {
+                          const dept = (m.department || m.dept || "").trim();
+                          return {
+                            value: m.name,
+                            label: dept ? (m.name + " (" + dept + ")") : m.name,
+                          };
+                        })}
+                      onChange={(val) => {
+                        setReassignNewMentor(val);
+                        setReassignError("");
+                      }}
+                      placeholder="-- Choose New Mentor --"
+                      icon={UserCheck}
+                    />
+                  </div>
+                </div>
+
+                <div className="reassign-note-box">
+                  <ShieldAlert size={16} className="shrink-0" />
+                  <span>
+                    This explicit reassignment will update {reassignStudent.name}'s active record from{" "}
+                    <strong>
+                      {reassignStudent.mentor_name ||
+                        assignmentsMap[String(reassignStudent.id)] ||
+                        assignmentsMap[String(reassignStudent.user_id)]}
+                    </strong>{" "}
+                    to the newly selected mentor without creating duplicate assignments.
+                  </span>
+                </div>
+              </div>
+
+              <div className="reassign-modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setReassignStudent(null)}
+                  disabled={isReassigning}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-modal-submit reassign-confirm-btn"
+                  onClick={handleConfirmReassign}
+                  disabled={isReassigning || !reassignNewMentor}
+                >
+                  {isReassigning ? "Updating Assignment..." : "Confirm Reassignment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body
@@ -2057,6 +2421,11 @@ export default function AdminUsers() {
                           <div className="user-dept-roll">
                             ID: {u.roll_number || "N/A"} · Sem {u.semester || "N/A"}
                           </div>
+                          {u.mentor_name && (
+                            <div className="fs-portal-assigned-mentor-tag" style={{ marginTop: "4px" }}>
+                              <UserCheck size={11} /> Mentor: <strong>{u.mentor_name}</strong>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <span className="user-dept-staff">{u.department || "Institutional Staff"}</span>
@@ -2631,6 +3000,10 @@ export default function AdminUsers() {
       <AssignMentorModal
         isOpen={isAssignMentorOpen}
         onClose={() => setIsAssignMentorOpen(false)}
+        onSuccess={() => {
+          fetchUsers();
+          fetchStats();
+        }}
         users={users}
       />
 
