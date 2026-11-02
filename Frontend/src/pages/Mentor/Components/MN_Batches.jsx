@@ -88,6 +88,8 @@ export default function Batches() {
   // Selected batch detail view state
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [batchDetails, setBatchDetails] = useState(null);
+  const [batchSearchTerm, setBatchSearchTerm] = useState("");
+  const [batchStatusTab, setBatchStatusTab] = useState("all");
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailTab, setDetailTab] = useState("students"); // 'students' | 'submissions' | 'tasks'
 
@@ -263,6 +265,26 @@ export default function Batches() {
   }, [batchDetails, searchTerm]);
 
   const safeBatches = Array.isArray(batches) ? batches : [];
+
+  const displayBatches = useMemo(() => {
+    return safeBatches.filter((b) => {
+      const q = batchSearchTerm.trim().toLowerCase();
+      const name = (textValue(firstValue(b, ["name", "batchName", "batch_name"])) || "").toLowerCase();
+      const code = (textValue(firstValue(b, ["code", "batchCode", "batch_code", "programCode"])) || "").toLowerCase();
+      const dept = (textValue(firstValue(b, ["department", "dept", "branch"])) || "").toLowerCase();
+      const matchesSearch = !q || name.includes(q) || code.includes(q) || dept.includes(q);
+
+      const status = (textValue(firstValue(b, ["status", "state"])) || "Active").toLowerCase();
+      let matchesStatus = true;
+      if (batchStatusTab === "active") {
+        matchesStatus = status !== "inactive";
+      } else if (batchStatusTab === "inactive") {
+        matchesStatus = status === "inactive";
+      }
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [safeBatches, batchSearchTerm, batchStatusTab]);
 
   return (
     <div className="mentor-batches-container">
@@ -832,10 +854,71 @@ export default function Batches() {
                 <span>My Allocated Batches</span>
               </h2>
               <p className="mentor-page-subtitle">
-                Assigned course records, schedules, allocated students, and code submission tracking
+                Assigned course records, schedules, allocated students, and code submission tracking ({safeBatches.length} Total Assigned)
               </p>
             </div>
           </div>
+
+          {safeBatches.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+              <div style={{ position: "relative", minWidth: "260px", maxWidth: "380px", flex: 1 }}>
+                <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                <input
+                  type="text"
+                  placeholder="Search assigned batches by name or code..."
+                  value={batchSearchTerm}
+                  onChange={(e) => setBatchSearchTerm(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 36px 9px 36px",
+                    borderRadius: "10px",
+                    border: "1px solid #e2e8f0",
+                    background: "#ffffff",
+                    fontSize: "13px",
+                    color: "#1e293b",
+                    outline: "none"
+                  }}
+                />
+                {batchSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setBatchSearchTerm("")}
+                    style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {[
+                  { id: "all", label: `All (${safeBatches.length})` },
+                  { id: "active", label: `Active (${safeBatches.filter(b => (b.status || "").toLowerCase() !== "inactive").length})` },
+                  { id: "inactive", label: `Inactive (${safeBatches.filter(b => (b.status || "").toLowerCase() === "inactive").length})` }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setBatchStatusTab(tab.id)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      fontSize: "12.5px",
+                      fontWeight: 650,
+                      border: "1px solid",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      background: batchStatusTab === tab.id ? "#eef2ff" : "#ffffff",
+                      color: batchStatusTab === tab.id ? "#4f46e5" : "#64748b",
+                      borderColor: batchStatusTab === tab.id ? "#c7d2fe" : "#e2e8f0"
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="mentor-batch-empty">
@@ -850,7 +933,7 @@ export default function Batches() {
             </div>
           ) : (
             <div className="mentor-batches-grid">
-              {safeBatches.map((batch, index) => {
+              {displayBatches.map((batch, index) => {
                 const code =
                   textValue(firstValue(batch, ["code", "batchCode", "batch_code", "programCode"])) || "N/A";
                 const name = textValue(firstValue(batch, ["name", "batchName", "batch_name"])) || "N/A";

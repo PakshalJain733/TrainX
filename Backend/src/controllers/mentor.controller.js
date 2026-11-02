@@ -581,6 +581,79 @@ const requireMentor = (req, res) => {
 };
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Resolves all batches assigned strictly to this mentor account.
+ * Enforces college data isolation, excludes unassigned batches and batches of other mentors.
+ */
+export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
+  const [mentor] = (await query('SELECT id, name, email, college_id FROM users WHERE id = ?', [mentorId])) || [];
+  if (!mentor) return [];
+  const targetCollegeId = collegeId || mentor.college_id;
+  const mentorName = mentor.name ? String(mentor.name).trim() : '';
+  const mentorEmail = mentor.email ? String(mentor.email).trim() : '';
+
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  } catch (_) {}
+
+  const conditions = [
+    'bt.user_id IS NOT NULL',
+    'ma.mentor_id IS NOT NULL',
+    'msa.mentor_id IS NOT NULL',
+    'b.trainer_id = ?'
+  ];
+  const queryParams = [
+    mentorId,
+    mentorId,
+    mentorId,
+    targetCollegeId, targetCollegeId,
+    mentorId
+  ];
+
+  if (mentorName && !['mentor', 'faculty mentor', 'faculty instructor', 'trainer', 'instructor'].includes(mentorName.toLowerCase())) {
+    conditions.push(
+      "(b.mentor IS NOT NULL AND TRIM(b.mentor) != '' AND b.mentor NOT IN ('Faculty Mentor', 'Faculty Instructor', 'Mentor', 'Instructor') AND (b.mentor = ? OR LOWER(b.mentor) = LOWER(?)))"
+    );
+    conditions.push(
+      "(b.trainer IS NOT NULL AND TRIM(b.trainer) != '' AND b.trainer NOT IN ('Faculty Mentor', 'Faculty Instructor', 'Mentor', 'Instructor') AND (b.trainer = ? OR LOWER(b.trainer) = LOWER(?)))"
+    );
+    queryParams.push(mentorName, mentorName.toLowerCase(), mentorName, mentorName.toLowerCase());
+  }
+
+  if (mentorEmail) {
+    conditions.push(
+      "(b.mentor IS NOT NULL AND (b.mentor = ? OR LOWER(b.mentor) = LOWER(?)))"
+    );
+    conditions.push(
+      "(b.trainer IS NOT NULL AND (b.trainer = ? OR LOWER(b.trainer) = LOWER(?)))"
+    );
+    queryParams.push(mentorEmail, mentorEmail.toLowerCase(), mentorEmail, mentorEmail.toLowerCase());
+  }
+
+  const sql = `
+    SELECT DISTINCT b.id
+    FROM batches b
+    LEFT JOIN batch_trainers bt ON bt.batch_id = b.id AND bt.user_id = ?
+    LEFT JOIN mentor_assignments ma ON ma.batch_id = b.id AND ma.mentor_id = ?
+    LEFT JOIN mentor_student_assignments msa ON msa.batch_id = b.id AND msa.mentor_id = ?
+    WHERE (b.college_id = ? OR ? IS NULL)
+      AND b.status != 'deleted'
+      AND (${conditions.join(' OR ')})
+  `;
+
+  const rows = await query(sql, queryParams);
+  return (rows || []).map(r => toInt(r.id)).filter(Boolean);
+};
+
 // GET /api/v1/mentor/overview
 // ---------------------------------------------------------------------------
 export const getMentorOverview = async (req, res, next) => {
@@ -589,7 +662,7 @@ export const getMentorOverview = async (req, res, next) => {
     if (!mentorId) return;
 
     const collegeId = getCollegeId(req);
-    const [mentorRows, students] = await Promise.all([
+    const [mentorRows, students, batchIds] = await Promise.all([
       query(
         `SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.target_track, u.created_at,
                 c.id AS college_id, c.name AS college_name
@@ -599,10 +672,10 @@ export const getMentorOverview = async (req, res, next) => {
         [mentorId]
       ),
       loadMentorStudentsWithMetrics(mentorId),
+      getMentorAssignedBatchIds(mentorId, collegeId),
     ]);
 
     const mentor = (mentorRows || [])[0] || null;
-    const batchIds = [...new Set(students.map((s) => s.batchId).filter((v) => v != null))];
     const withRecords = students.filter((s) => s.hasRecords);
     const defaulters = students.filter((s) => s.status === 'High Risk' || s.status === 'Moderate Risk');
 
@@ -687,85 +760,117 @@ export const getMentorBatches = async (req, res, next) => {
     const mentorId = requireMentor(req, res);
     if (!mentorId) return;
 
-    const students = await loadMentorStudentsWithMetrics(mentorId);
-    const batchIds = [...new Set(students.map((s) => s.batchId).filter((v) => v != null))];
+    const collegeId = getCollegeId(req);
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : null;
 
-    const mentorRows = (await query(`SELECT id, name, email FROM users WHERE id = ?`, [mentorId])) || [];
-    const mentorUser = mentorRows[0] || null;
+    // Fetch batches assigned strictly to this authenticated mentor
+    const batchIds = await getMentorAssignedBatchIds(mentorId, collegeId);
 
-    if (mentorUser) {
-      try {
-        await query(`
-          CREATE TABLE IF NOT EXISTS batch_trainers (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            batch_id INT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_trainer_batch (user_id, batch_id)
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        `);
-
-        const extraBatches = (await query(
-          `SELECT id FROM batches WHERE (mentor = ? OR trainer = ? OR mentor = ?)
-           UNION
-           SELECT batch_id AS id FROM batch_trainers WHERE user_id = ?`,
-          [mentorUser.name, mentorUser.name, mentorUser.email, mentorId]
-        )) || [];
-        extraBatches.forEach((r) => {
-          const bid = toInt(r.id);
-          if (bid && !batchIds.includes(bid)) {
-            batchIds.push(bid);
-          }
-        });
-      } catch (e) {}
+    if (batchIds.length === 0) {
+      return sendSuccess(res, 'Mentor batches retrieved successfully', {
+        batches: [],
+        total: 0,
+      });
     }
 
-    const batchRows = batchIds.length
-      ? await query(
-          `SELECT b.id, b.name, b.schedule, b.year, b.division, b.status, b.academic_year,
-                  COALESCE(d.name, '—') AS department,
-                  c.name AS college
-             FROM batches b
-             LEFT JOIN departments d ON d.id = b.department_id
-             LEFT JOIN colleges c ON c.id = b.college_id
-            WHERE b.id IN (${inPlaceholders(batchIds)})`,
-          batchIds
-        )
-      : [];
+    // Sort descending by assignment/creation date so the latest batch appears first
+    let batchQuery = `
+      SELECT b.id, b.name, b.code, b.join_code, b.schedule, b.students, b.year, b.division,
+             b.status, b.academic_year, b.progress, b.created_at, b.updated_at,
+             COALESCE(d.name, '—') AS department,
+             c.name AS college
+        FROM batches b
+        LEFT JOIN departments d ON d.id = b.department_id
+        LEFT JOIN colleges c ON c.id = b.college_id
+       WHERE b.id IN (${inPlaceholders(batchIds)})
+       ORDER BY COALESCE(b.created_at, b.updated_at) DESC, b.id DESC
+    `;
+    const queryParams = [...batchIds];
 
-    const byId = new Map((batchRows || []).map((b) => [toInt(b.id), b]));
+    if (limit && Number.isFinite(limit) && limit > 0) {
+      batchQuery += ` LIMIT ?`;
+      queryParams.push(limit);
+    }
 
-    const batches = batchIds.map((batchId) => {
-      const row = byId.get(batchId) || {};
-      const roster = students.filter((s) => s.batchId === batchId);
+    const batchRows = await query(batchQuery, queryParams);
+
+    // Calculate real student counts strictly for this mentor's batches
+    const studentCountRows = await query(
+      `SELECT s.batch_id, COUNT(DISTINCT s.user_id) AS student_count
+       FROM students s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.batch_id IN (${inPlaceholders(batchIds)})
+         AND (u.is_approved = 1 OR u.is_approved IS NULL)
+         AND (u.is_active = 1 OR u.is_active IS NULL)
+       GROUP BY s.batch_id`,
+      batchIds
+    );
+    const countMap = new Map((studentCountRows || []).map((r) => [toInt(r.batch_id), toInt(r.student_count)]));
+
+    try {
+      const sbCountRows = await query(
+        `SELECT sb.batch_id, COUNT(DISTINCT sb.user_id) AS student_count
+         FROM student_batches sb
+         JOIN users u ON u.id = sb.user_id
+         WHERE sb.batch_id IN (${inPlaceholders(batchIds)})
+           AND (u.is_approved = 1 OR u.is_approved IS NULL)
+           AND (u.is_active = 1 OR u.is_active IS NULL)
+         GROUP BY sb.batch_id`,
+        batchIds
+      );
+      (sbCountRows || []).forEach((r) => {
+        const bid = toInt(r.batch_id);
+        const prev = countMap.get(bid) || 0;
+        countMap.set(bid, Math.max(prev, toInt(r.student_count)));
+      });
+    } catch (_) {}
+
+    const students = await loadMentorStudentsWithMetrics(mentorId);
+
+    const batches = (batchRows || []).map((row) => {
+      const bid = toInt(row.id);
+      const roster = students.filter((s) => s.batchId === bid);
       const withRecords = roster.filter((s) => s.hasRecords);
       const status = row.status === 'inactive' ? 'Inactive' : 'Active';
+      const realEnrolled = countMap.get(bid) || (Number(row.students) > 0 ? Number(row.students) : roster.length);
+      const batchCode = row.code || row.join_code || `B-${bid}`;
+      const progress = row.progress !== null && row.progress !== undefined ? Number(row.progress) : 0;
+
       return {
-        id: `b-${batchId}`,
-        batchId,
-        name: row.name || `Batch ${batchId}`,
+        id: `b-${bid}`,
+        batchId: bid,
+        name: row.name || `Batch ${bid}`,
+        code: batchCode,
+        batchCode,
         college: row.college || roster.find((s) => s.college)?.college || null,
         department: row.department && row.department !== '—' ? row.department : roster.find((s) => s.department)?.department || null,
         schedule: row.schedule || null,
         year: row.year || null,
         division: row.division || null,
         academicYear: row.academic_year || null,
-        enrolledStudents: Number(row.students) > 0 ? Number(row.students) : roster.length,
+        enrolledStudents: realEnrolled,
+        studentCount: realEnrolled,
+        studentsCount: realEnrolled,
+        progress,
+        progressPct: progress,
         studentsWithRecords: withRecords.length,
         averageAttendance: average(withRecords.map((s) => s.attendance)),
         averageScore: average(withRecords.map((s) => s.overallScore)),
         defaulters: roster.filter((s) => s.status === 'High Risk' || s.status === 'Moderate Risk').length,
         status,
+        createdAt: row.created_at,
       };
     });
 
-    return sendSuccess(res, 'Mentor batches retrieved successfully', { batches });
+    return sendSuccess(res, 'Mentor batches retrieved successfully', {
+      batches,
+      total: batchIds.length,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-// ---------------------------------------------------------------------------
 // GET /api/v1/mentor/leaderboard
 // ---------------------------------------------------------------------------
 export const getMentorLeaderboard = async (req, res, next) => {
@@ -2275,6 +2380,17 @@ export const getMentorBatchDetails = async (req, res, next) => {
 
     const { batchId } = req.params;
     const numericBatchId = parseBatchId(batchId);
+    if (!numericBatchId) {
+      return sendError(res, 'Valid batch ID is required', 400);
+    }
+
+    const collegeId = getCollegeId(req);
+    const assignedBatchIds = await getMentorAssignedBatchIds(mentorId, collegeId);
+
+    // API-level authorization check: Prevent accessing other mentors' batches
+    if (!assignedBatchIds.includes(numericBatchId)) {
+      return sendError(res, 'Access denied. You are not assigned to this batch.', 403);
+    }
 
     // 1. Fetch batch row info
     let batchRow = null;

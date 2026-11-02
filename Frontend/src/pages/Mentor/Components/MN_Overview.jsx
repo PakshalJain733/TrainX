@@ -89,25 +89,15 @@ export default function Overview() {
           setOverview(inner && typeof inner === "object" ? { ...payload, ...inner } : payload);
         }
       }),
-      apiFetch("/mentor/batches").then((res) => {
-        if (!mounted) return;
-        const list = res?.data?.batches || res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(list) && list.length > 0) {
-          setBatches(list.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
-        } else {
-          return apiFetch("/batches").then((bRes) => {
-            if (mounted && bRes?.data && Array.isArray(bRes.data)) {
-              setBatches(bRes.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
-            }
-          });
-        }
-      }).catch(() => {
-        apiFetch("/batches").then((bRes) => {
-          if (mounted && bRes?.data && Array.isArray(bRes.data)) {
-            setBatches(bRes.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
-          }
-        });
-      }),
+      apiFetch("/mentor/batches?limit=5")
+        .then((res) => {
+          if (!mounted) return;
+          const list = res?.data?.batches || res?.data || (Array.isArray(res) ? res : []);
+          setBatches(Array.isArray(list) ? list.slice(0, 5) : []);
+        })
+        .catch(() => {
+          if (mounted) setBatches([]);
+        }),
       apiFetch("/mentor/students/performance").then((res) => {
         if (!mounted) return;
         const list = res?.data?.students || (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.students) ? res.students : (Array.isArray(res) ? res : [])));
@@ -242,12 +232,12 @@ export default function Overview() {
                 <Layers size={18} className="overview-header-icon" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Allocated Training Batches</CardTitle>
-                <CardDescription className="overview-card-desc">Assigned batch records returned by the mentor service</CardDescription>
+                <CardTitle className="overview-card-title">Assigned Training Batches</CardTitle>
+                <CardDescription className="overview-card-desc">Your 5 most recently assigned active batches</CardDescription>
               </div>
             </div>
             <Link to="/mentor/batches" className="mn-view-all-link">
-              View All <ChevronRight size={14} />
+              View All Batches <ChevronRight size={14} />
             </Link>
           </CardHeader>
           <CardContent style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -257,7 +247,7 @@ export default function Overview() {
                 <p className="mn-empty-batches-text">No records yet</p>
               </div>
             ) : (
-              batches.map((batch, index) => {
+              batches.slice(0, 5).map((batch, index) => {
                 const batchName = asText(firstValue(batch, ["name", "batchName", "batch_name"])) || "N/A";
                 const batchCode = asText(firstValue(batch, ["code", "batchCode", "batch_code", "programCode"])) || "BE-CS-2026";
                 const studentCount = getNumber(batch, ["enrolledStudents", "studentCount", "studentsCount", "totalStudents", "assignedStudents"])
@@ -344,6 +334,30 @@ export default function Overview() {
                   </div>
                 );
               })
+            )}
+            {batches.length > 0 && (
+              <Link
+                to="/mentor/batches"
+                className="mn-view-all-batches-btn"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px",
+                  borderRadius: "10px",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  color: "#4f46e5",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  marginTop: "6px"
+                }}
+              >
+                <span>View All Batches</span>
+                <ChevronRight size={15} />
+              </Link>
             )}
           </CardContent>
         </Card>

@@ -73,9 +73,10 @@ export default function MentorBroadcast() {
 
   const fetchBatches = async () => {
     try {
-      const res = await apiFetch("/batches");
-      if (res && res.data && Array.isArray(res.data)) {
-        setBatches(res.data);
+      const res = await apiFetch("/mentor/batches");
+      const list = res?.data?.batches || res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(list)) {
+        setBatches(list);
       }
     } catch (err) {
       console.error("Failed to fetch batches:", err);
