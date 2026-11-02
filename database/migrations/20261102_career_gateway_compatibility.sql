@@ -3,34 +3,70 @@
 -- Database: training_portal_db (TrainX)
 -- Date: 2026-11-02
 -- Description:
---   Extends TrainX schema with placement readiness fields, profile assets,
---   batch trainer associations, and sync audit logging to ensure complete
---   compatibility with Career Gateway.
+--   Idempotent MySQL 8.0+ migration that extends TrainX schema with placement
+--   readiness fields, profile assets, batch associations, and sync audit logging.
 -- ============================================================================
 
+DROP PROCEDURE IF EXISTS _tx_add_column;
+DELIMITER $$
+CREATE PROCEDURE _tx_add_column(
+  IN p_table VARCHAR(64),
+  IN p_col   VARCHAR(64),
+  IN p_def   TEXT,
+  IN p_after VARCHAR(64)
+)
+BEGIN
+  DECLARE v_tbl   INT DEFAULT 0;
+  DECLARE v_col   INT DEFAULT 0;
+  DECLARE v_after INT DEFAULT 0;
+
+  SELECT COUNT(*) INTO v_tbl FROM information_schema.tables
+   WHERE table_schema = DATABASE() AND table_name = p_table;
+
+  SELECT COUNT(*) INTO v_col FROM information_schema.columns
+   WHERE table_schema = DATABASE() AND table_name = p_table AND column_name = p_col;
+
+  IF v_tbl > 0 AND v_col = 0 THEN
+    SET @sql = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN `', p_col, '` ', p_def);
+
+    IF p_after IS NOT NULL AND p_after <> '' THEN
+      SELECT COUNT(*) INTO v_after FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = p_table AND column_name = p_after;
+      IF v_after > 0 THEN
+        SET @sql = CONCAT(@sql, ' AFTER `', p_after, '`');
+      END IF;
+    END IF;
+
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END IF;
+END$$
+DELIMITER ;
+
 -- 1. Extend `users` table
-ALTER TABLE `users`
-  ADD COLUMN IF NOT EXISTS `profile_pic` VARCHAR(255) NULL AFTER `emergency_contact`,
-  ADD COLUMN IF NOT EXISTS `cg_synced_at` TIMESTAMP NULL DEFAULT NULL AFTER `updated_at`;
+CALL _tx_add_column('users', 'profile_pic', 'VARCHAR(255) NULL', 'emergency_contact');
+CALL _tx_add_column('users', 'cg_synced_at', 'TIMESTAMP NULL DEFAULT NULL', 'updated_at');
 
 -- 2. Extend `students` table with Academic & Placement attributes from Career Gateway
-ALTER TABLE `students`
-  ADD COLUMN IF NOT EXISTS `cgpa` DECIMAL(4, 2) DEFAULT 8.50 AFTER `semester`,
-  ADD COLUMN IF NOT EXISTS `live_kt` INT DEFAULT 0 AFTER `cgpa`,
-  ADD COLUMN IF NOT EXISTS `dead_kt` INT DEFAULT 0 AFTER `live_kt`,
-  ADD COLUMN IF NOT EXISTS `placement_status` VARCHAR(50) DEFAULT 'Unplaced' AFTER `dead_kt`,
-  ADD COLUMN IF NOT EXISTS `placed_company` VARCHAR(255) NULL AFTER `placement_status`,
-  ADD COLUMN IF NOT EXISTS `placement_opt_in` BOOLEAN DEFAULT TRUE AFTER `placed_company`,
-  ADD COLUMN IF NOT EXISTS `linkedin_url` VARCHAR(255) NULL AFTER `placement_opt_in`,
-  ADD COLUMN IF NOT EXISTS `portfolio_link` VARCHAR(255) NULL AFTER `linkedin_url`,
-  ADD COLUMN IF NOT EXISTS `resume_url` VARCHAR(255) NULL AFTER `portfolio_link`,
-  ADD COLUMN IF NOT EXISTS `cg_synced_at` TIMESTAMP NULL DEFAULT NULL AFTER `created_at`;
+CALL _tx_add_column('students', 'cgpa', 'DECIMAL(4, 2) DEFAULT 8.50', 'semester');
+CALL _tx_add_column('students', 'live_kt', 'INT DEFAULT 0', 'cgpa');
+CALL _tx_add_column('students', 'dead_kt', 'INT DEFAULT 0', 'live_kt');
+CALL _tx_add_column('students', 'placement_status', 'VARCHAR(50) DEFAULT \'Unplaced\'', 'dead_kt');
+CALL _tx_add_column('students', 'placed_company', 'VARCHAR(255) NULL', 'placement_status');
+CALL _tx_add_column('students', 'placement_opt_in', 'BOOLEAN DEFAULT TRUE', 'placed_company');
+CALL _tx_add_column('students', 'linkedin_url', 'VARCHAR(255) NULL', 'placement_opt_in');
+CALL _tx_add_column('students', 'portfolio_link', 'VARCHAR(255) NULL', 'linkedin_url');
+CALL _tx_add_column('students', 'resume_url', 'VARCHAR(255) NULL', 'portfolio_link');
+CALL _tx_add_column('students', 'cg_synced_at', 'TIMESTAMP NULL DEFAULT NULL', 'created_at');
 
 -- 3. Extend `batches` table with mentor and trainer associations
-ALTER TABLE `batches`
-  ADD COLUMN IF NOT EXISTS `mentor` VARCHAR(255) NULL AFTER `name`,
-  ADD COLUMN IF NOT EXISTS `mentor_id` INT NULL AFTER `mentor`,
-  ADD COLUMN IF NOT EXISTS `trainer_id` INT NULL AFTER `mentor_id`;
+CALL _tx_add_column('batches', 'mentor', 'VARCHAR(255) NULL', 'name');
+CALL _tx_add_column('batches', 'mentor_id', 'INT NULL', 'mentor');
+CALL _tx_add_column('batches', 'trainer_id', 'INT NULL', 'mentor_id');
+
+-- Clean up helper procedure
+DROP PROCEDURE IF EXISTS _tx_add_column;
 
 -- 4. Ensure `batch_trainers` join table exists
 CREATE TABLE IF NOT EXISTS `batch_trainers` (
