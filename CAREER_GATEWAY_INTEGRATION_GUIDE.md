@@ -258,3 +258,4 @@ Trigger the authenticated API endpoints via scheduled curl script:
 - [x] Verify Auto-Migrator execution on server startup (`[AutoMigrator] ✨ Database schema is up to date`).
 - [x] Test inbound student sync via `POST /api/v1/admin/career-gateway/sync-inbound`.
 - [x] Test outbound readiness metric push via `POST /api/v1/admin/career-gateway/sync-outbound`.
+
