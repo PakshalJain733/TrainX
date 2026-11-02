@@ -5,6 +5,7 @@ dns.setDefaultResultOrder('ipv4first');
 import app from './src/app.js';
 import { checkDatabaseConnection } from './src/config/db.js';
 import { initializeDatabase } from './src/config/init_db.js';
+import { migrateOnBoot } from './src/config/migrator.js';
 import { initInterviewSocket } from './src/socket/interview.socket.js';
 import http from 'node:http';
 
@@ -14,6 +15,7 @@ const startServer = async () => {
     try {
       await checkDatabaseConnection();
       await initializeDatabase();
+      await migrateOnBoot();
     } catch (dbErr) {
       console.error('Initial database connection warning:', dbErr.message);
       console.log('Server will continue starting to serve CORS and health check endpoints. Retrying DB in background...');
@@ -21,6 +23,7 @@ const startServer = async () => {
         try {
           await checkDatabaseConnection();
           await initializeDatabase();
+      await migrateOnBoot();
           console.log('Background database initialization succeeded.');
         } catch (retryErr) {
           console.error('Background DB retry error:', retryErr.message);
