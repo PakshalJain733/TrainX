@@ -1,3 +1,8 @@
+import {
+  syncStudentsFromCareerGateway,
+  pushReadinessMetricsToCareerGateway,
+  getCareerGatewaySyncStatus
+} from '../services/careerGatewayBridge.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import {
@@ -1954,3 +1959,39 @@ export const createAdminSupportTicket = async (req, res, next) => {
   }
 };
 
+
+// ---------------------------------------------------------------------------
+// Career Gateway Data Bridge Controllers
+// ---------------------------------------------------------------------------
+export const handleCareerGatewayInboundSync = async (req, res, next) => {
+  try {
+    const targetCollegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const result = await syncStudentsFromCareerGateway({
+      targetCollegeId,
+      triggerSource: req.user?.email || 'admin_manual'
+    });
+    return sendSuccess(res, 'Career Gateway inbound student sync completed successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleCareerGatewayOutboundSync = async (req, res, next) => {
+  try {
+    const result = await pushReadinessMetricsToCareerGateway({
+      triggerSource: req.user?.email || 'admin_manual'
+    });
+    return sendSuccess(res, 'Career Gateway outbound readiness metrics pushed successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const handleCareerGatewaySyncStatus = async (req, res, next) => {
+  try {
+    const status = await getCareerGatewaySyncStatus();
+    return sendSuccess(res, 'Career Gateway sync status and audit logs retrieved', status);
+  } catch (error) {
+    next(error);
+  }
+};

@@ -28,6 +28,9 @@ import {
   updateAdminSupportTicket,
   escalateSupportTicketToSuperAdmin,
   createAdminSupportTicket,
+  handleCareerGatewayInboundSync,
+  handleCareerGatewayOutboundSync,
+  handleCareerGatewaySyncStatus,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -85,5 +88,11 @@ router.get('/support/tickets', getAdminSupportTickets);
 router.post('/support/tickets', createAdminSupportTicket);
 router.put('/support/tickets/:id', updateAdminSupportTicket);
 router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
+
+
+// Career Gateway Data Bridge Routes
+router.post('/career-gateway/sync-inbound', handleCareerGatewayInboundSync);
+router.post('/career-gateway/sync-outbound', handleCareerGatewayOutboundSync);
+router.get('/career-gateway/sync-status', handleCareerGatewaySyncStatus);
 
 export default router;

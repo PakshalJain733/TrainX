@@ -1,0 +1,17 @@
+-- Degree Year table
+CREATE TABLE IF NOT EXISTS degree_year (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  degree_years INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_degree_years (degree_years)
+);
+
+-- Degree Type table
+CREATE TABLE IF NOT EXISTS degree_type (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  degree_type VARCHAR(30) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_degree_type (degree_type)
+);

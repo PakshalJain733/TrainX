@@ -146,6 +146,8 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN department_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_approved BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN profile_pic VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
 
     // 4.05 Ensure Coordinator Departments Mapping Table
     await conn.query(`
@@ -216,6 +218,16 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE students DROP COLUMN linkedin_url`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN cgpa DECIMAL(4, 2) DEFAULT 8.50`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN live_kt INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN dead_kt INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placement_status VARCHAR(50) DEFAULT 'Unplaced'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placed_company VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placement_opt_in BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN portfolio_link VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN resume_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
 
     // 6. Ensure Assessments Table
     await conn.query(`
@@ -909,6 +921,39 @@ export async function initializeDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    
+    // 30b. Ensure Batch Trainers and Career Gateway Sync Log Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_sync_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sync_direction ENUM('inbound_from_cg', 'outbound_to_cg') NOT NULL,
+        entity_type VARCHAR(50) NOT NULL DEFAULT 'students',
+        total_records INT NOT NULL DEFAULT 0,
+        success_count INT NOT NULL DEFAULT 0,
+        failure_count INT NOT NULL DEFAULT 0,
+        status ENUM('success', 'partial', 'failed') NOT NULL DEFAULT 'success',
+        details JSON NULL,
+        triggered_by VARCHAR(100) DEFAULT 'scheduled_job',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_cg_sync_direction (sync_direction),
+        INDEX idx_cg_sync_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    try { await conn.query("ALTER TABLE batches ADD COLUMN mentor VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE batches ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE batches ADD COLUMN trainer_id INT NULL"); } catch (e) {}
 
     // 31. Ensure Mentor Assignments Table
     await conn.query(`
