@@ -548,14 +548,43 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
       return sendError(res, 'No student data provided in request body', 400);
     }
 
-    let targetCollegeId = req.user.collegeId;
+    // 1. Identify target college ID with strict college isolation
+    let targetCollegeId = req.user.collegeId || req.user.college_id;
     if (req.user.role === ROLES.SUPER_ADMIN) {
-      targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : 1;
+      targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : (targetCollegeId || 1);
+    }
+    if (!targetCollegeId) {
+      const [uRow] = await query('SELECT college_id FROM users WHERE id = ?', [req.user.id || req.user.userId]);
+      targetCollegeId = uRow?.college_id || 1;
     }
 
+    // 2. Fetch existing active departments strictly for this college from the database
+    const collegeDepts = await query(
+      `SELECT id, name, code, status, college_id 
+       FROM departments 
+       WHERE college_id = ? AND (status IS NULL OR LOWER(status) = 'active')`,
+      [targetCollegeId]
+    );
+
+    // Build case-insensitive lookup map for fast O(1) department validation
+    const deptMap = new Map();
+    (collegeDepts || []).forEach((d) => {
+      if (d.code && String(d.code).trim()) {
+        deptMap.set(String(d.code).trim().toLowerCase(), d);
+      }
+      if (d.name && String(d.name).trim()) {
+        deptMap.set(String(d.name).trim().toLowerCase(), d);
+      }
+    });
+
     const createdList = [];
-    const skippedList = [];
-    const errorList = [];
+    const rejectedList = [];
+    const results = [];
+
+    // In-memory sets to catch duplicate records within the uploaded spreadsheet
+    const seenEmailsInBatch = new Set();
+    const seenMobilesInBatch = new Set();
+    const seenRollsInBatch = new Set();
 
     for (let i = 0; i < students.length; i++) {
       const item = students[i] || {};
@@ -563,93 +592,192 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
       const email = String(item.email || item.collegeEmail || item['College Email'] || item['Email'] || '').trim();
       const mobile_number = String(item.mobile_number || item.phone || item.mobile || item['Mobile Number'] || item['Mobile'] || '').trim();
       const roll_number = String(item.roll_number || item.rollNo || item.collegeId || item['College ID'] || item['Roll ID'] || item['Roll No'] || '').trim();
-      const department = String(item.department || item.dept || item['Department'] || item['Dept'] || 'COMPS').trim();
+      const rawDept = String(item.department || item.dept || item['Department'] || item['Dept'] || '').trim();
       const year = String(item.year || item['Academic Year'] || item['Year'] || 'FE').trim();
       const division = String(item.division || item.div || item['Division'] || 'A').trim();
 
+      // Validation 1: Required Name & Email
       if (!name || !email) {
-        errorList.push(`Row #${i + 1}: Name and Email are required.`);
+        const reason = 'Rejected – Name and Email are required';
+        rejectedList.push({ name: name || '—', email: email || '—', roll_number: roll_number || '—', department: rawDept || '—', status: 'Rejected', reason });
+        results.push({ student: name || '—', email: email || '—', roll_number: roll_number || '—', department: rawDept || '—', status: 'Rejected', reason });
         continue;
       }
 
-      // Check existing user by email or mobile
+      if (!email.includes('@')) {
+        const reason = 'Rejected – Invalid email address format';
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept || '—', status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept || '—', status: 'Rejected', reason });
+        continue;
+      }
+
+      // Validation 2: STRICT DEPARTMENT VALIDATION
+      // Must exist in this college's departments table; case-insensitive & trimmed
+      if (!rawDept) {
+        const reason = 'Rejected – Department is required';
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: '—', status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: '—', status: 'Rejected', reason });
+        continue;
+      }
+
+      const matchedDept = deptMap.get(rawDept.toLowerCase());
+      if (!matchedDept) {
+        const reason = `Rejected – Department not created`;
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        continue;
+      }
+
+      // Validation 3: Duplicate Email Check (both within batch and across database)
+      const emailLower = email.toLowerCase();
+      if (seenEmailsInBatch.has(emailLower)) {
+        const reason = 'Rejected – Duplicate email in upload file';
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        continue;
+      }
+      seenEmailsInBatch.add(emailLower);
+
       const existingEmail = await findUserByEmailOrMobile(email);
       if (existingEmail) {
-        skippedList.push({ name, email, reason: 'Email already registered' });
+        const reason = 'Rejected – Email already registered in system';
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
         continue;
       }
 
+      // Validation 4: Duplicate Mobile Number Check
       if (mobile_number) {
+        if (seenMobilesInBatch.has(mobile_number)) {
+          const reason = 'Rejected – Duplicate mobile number in upload file';
+          rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+          results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+          continue;
+        }
+        seenMobilesInBatch.add(mobile_number);
+
         const existingMobile = await findUserByEmailOrMobile(mobile_number);
         if (existingMobile) {
-          skippedList.push({ name, email, reason: 'Mobile number already registered' });
+          const reason = 'Rejected – Mobile number already registered in system';
+          rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+          results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
           continue;
         }
       }
 
-      // Create User with default general password Student@123 for direct login
-      const defaultPassword = item.password || 'Student@123';
-      const newUser = await createUser({
-        name,
-        email,
-        mobile_number,
-        role: ROLES.STUDENT,
-        college_id: targetCollegeId,
-        password: defaultPassword,
-        is_active: 1,
-        is_verified: 1,
-        is_approved: 1,
-      });
+      // Validation 5: Duplicate Roll ID Check
+      if (roll_number) {
+        const rollLower = roll_number.toLowerCase();
+        if (seenRollsInBatch.has(rollLower)) {
+          const reason = 'Rejected – Duplicate roll ID in upload file';
+          rejectedList.push({ name, email, roll_number, department: rawDept, status: 'Rejected', reason });
+          results.push({ student: name, email, roll_number, department: rawDept, status: 'Rejected', reason });
+          continue;
+        }
+        seenRollsInBatch.add(rollLower);
 
-      // Create Student Profile
-      const studentProfile = await saveStudentDetails({
-        user_id: newUser.id,
-        college_id: targetCollegeId,
-        roll_number: roll_number || `AUTO_${newUser.id}`,
-        department,
-        year,
-        division,
-        semester: 'Semester 1',
-        cgpa: '8.0',
-        skills: '',
-      });
-
-      // Send Welcome & Pre-Filled Registration Email
-      if (newUser.email && newUser.email.includes('@')) {
-        sendWelcomeEmail({
-          to: newUser.email,
-          name: newUser.name,
-          role: ROLES.STUDENT,
-          mobile_number,
-          roll_number: roll_number || studentProfile.roll_number,
-          department,
-          year,
-          division,
-        }).catch((err) => {
-          console.warn(`[Bulk Welcome Email Notice] ${err.message}`);
-        });
+        const [existingRoll] = await query(
+          'SELECT id FROM students WHERE college_id = ? AND LOWER(roll_number) = ? LIMIT 1',
+          [targetCollegeId, rollLower]
+        );
+        if (existingRoll) {
+          const reason = `Rejected – Roll ID '${roll_number}' already exists in this college`;
+          rejectedList.push({ name, email, roll_number, department: rawDept, status: 'Rejected', reason });
+          results.push({ student: name, email, roll_number, department: rawDept, status: 'Rejected', reason });
+          continue;
+        }
       }
 
-      createdList.push({
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        roll_number: studentProfile.roll_number,
-        department,
-        year,
-        division,
-      });
+      // All validations passed: Safely insert User and Student Profile linked to validated department
+      const defaultPassword = item.password || 'Student@123';
+      const resolvedDeptName = matchedDept.name || rawDept;
+      const resolvedDeptId = matchedDept.id;
+
+      try {
+        const newUser = await createUser({
+          name,
+          email,
+          mobile_number: mobile_number || null,
+          role: ROLES.STUDENT,
+          college_id: targetCollegeId,
+          department: resolvedDeptName,
+          department_id: resolvedDeptId,
+          password: defaultPassword,
+          is_active: 1,
+          is_verified: 1,
+          is_approved: 1,
+        });
+
+        const studentProfile = await saveStudentDetails({
+          user_id: newUser.id,
+          college_id: targetCollegeId,
+          department_id: resolvedDeptId,
+          roll_number: roll_number || `AUTO_${newUser.id}`,
+          department: resolvedDeptName,
+          year: year || 'FE',
+          division: division || 'A',
+          semester: 'Semester 1',
+          cgpa: '8.0',
+          skills: '',
+          mobile_number: mobile_number || null,
+        });
+
+        // Send Welcome & Pre-Filled Registration Email
+        if (newUser.email && newUser.email.includes('@')) {
+          sendWelcomeEmail({
+            to: newUser.email,
+            name: newUser.name,
+            role: ROLES.STUDENT,
+            mobile_number,
+            roll_number: roll_number || studentProfile.roll_number,
+            department: resolvedDeptName,
+            year,
+            division,
+          }).catch((err) => {
+            console.warn(`[Bulk Welcome Email Notice] ${err.message}`);
+          });
+        }
+
+        createdList.push({
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          roll_number: studentProfile.roll_number,
+          department: resolvedDeptName,
+          department_id: resolvedDeptId,
+          year,
+          division,
+          status: 'Added',
+        });
+
+        results.push({
+          student: newUser.name,
+          email: newUser.email,
+          roll_number: studentProfile.roll_number,
+          department: resolvedDeptName,
+          status: 'Added',
+          reason: 'Successfully added',
+        });
+      } catch (insertErr) {
+        console.error('[Bulk Upload Insert Error]', insertErr);
+        const reason = `Rejected – Database error: ${insertErr.message}`;
+        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+      }
     }
 
     return sendSuccess(
       res,
-      `Bulk processing complete. Created ${createdList.length} students, skipped ${skippedList.length}.`,
+      `Bulk processing complete. Total: ${students.length}, Added: ${createdList.length}, Rejected: ${rejectedList.length}.`,
       {
+        totalUploaded: students.length,
         createdCount: createdList.length,
-        skippedCount: skippedList.length,
+        skippedCount: rejectedList.length,
+        rejectedCount: rejectedList.length,
         createdList,
-        skippedList,
-        errorList,
+        rejectedList,
+        skippedList: rejectedList,
+        results,
       },
       201
     );

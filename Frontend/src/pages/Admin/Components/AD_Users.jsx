@@ -1033,23 +1033,47 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
 }
 
 /* ── Bulk Excel / CSV Upload Modal Component ── */
-function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
+function BulkExcelUploadModal({ isOpen, onClose, onSuccess, departments = [] }) {
   const [file, setFile] = useState(null);
   const [parsedRows, setParsedRows] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [collegeDepts, setCollegeDepts] = useState(departments || []);
+
+  useEffect(() => {
+    if (isOpen) {
+      apiFetch("/departments")
+        .then((res) => {
+          const list = res?.data || (Array.isArray(res) ? res : []);
+          if (Array.isArray(list) && list.length > 0) {
+            setCollegeDepts(list);
+          }
+        })
+        .catch((err) => console.warn("Failed to load departments for bulk validation:", err));
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (Array.isArray(departments) && departments.length > 0) {
+      setCollegeDepts(departments);
+    }
+  }, [departments]);
 
   if (!isOpen) return null;
 
   const handleDownloadTemplate = () => {
+    const sampleDept1 = collegeDepts[0]?.code || collegeDepts[0]?.name || "COMPS";
+    const sampleDept2 = collegeDepts[1]?.code || collegeDepts[1]?.name || sampleDept1;
+
     const templateData = [
       {
         "Full Name": "Priya Sharma",
         "College Email": "priya.sharma@pvppcoe.ac.in",
         "Mobile Number": "9876543210",
         "Roll ID": "VU21CS042",
-        "Department": "COMPS",
+        "Department": sampleDept1,
         "Academic Year": "TE",
         "Division": "A",
       },
@@ -1058,7 +1082,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
         "College Email": "rahul.verma@pvppcoe.ac.in",
         "Mobile Number": "9876543211",
         "Roll ID": "VU21IT088",
-        "Department": "IT",
+        "Department": sampleDept2,
         "Academic Year": "SE",
         "Division": "B",
       },
@@ -1070,10 +1094,32 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     XLSX.writeFile(workbook, "Student_Creation_Bulk_Template.xlsx");
   };
 
+  const handleDownloadRejected = () => {
+    if (!uploadResult || !uploadResult.rejectedList || uploadResult.rejectedList.length === 0) return;
+
+    const exportData = uploadResult.rejectedList.map((item, idx) => ({
+      "#": idx + 1,
+      "Student Name": item.name || item.student || "—",
+      "College Email": item.email || "—",
+      "Mobile Number": item.mobile_number || "—",
+      "Roll ID": item.roll_number || "—",
+      "Department": item.department || "—",
+      "Status": "Rejected",
+      "Rejection Reason": item.reason || "Rejected – Department not created for this college",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Rejected_Students");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    XLSX.writeFile(workbook, `Rejected_Students_${timestamp}.xlsx`);
+  };
+
   const processFile = (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
     setUploadStatus(null);
+    setUploadResult(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -1084,24 +1130,51 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
+        const seenEmails = new Set();
+        const seenRolls = new Set();
+
         const formatted = jsonRows.map((row, idx) => {
           const name = String(row["Full Name"] || row["name"] || row["Name"] || row["fullName"] || "").trim();
           const email = String(row["College Email"] || row["email"] || row["Email"] || row["collegeEmail"] || "").trim();
           const mobile = String(row["Mobile Number"] || row["mobile_number"] || row["phone"] || row["Mobile"] || "").trim();
           const rollNo = String(row["Roll ID"] || row["roll_number"] || row["rollNo"] || row["College ID"] || "").trim();
-          const dept = String(row["Department"] || row["department"] || row["dept"] || "COMPS").trim();
+          const dept = String(row["Department"] || row["department"] || row["dept"] || "").trim();
           const year = String(row["Academic Year"] || row["year"] || row["Year"] || "FE").trim();
           const div = String(row["Division"] || row["division"] || row["div"] || "A").trim();
 
           let isValid = true;
           let issue = "";
+
+          // Strict Department Validation (case-insensitive & trimmed)
+          const deptClean = dept.toLowerCase();
+          const matchedDept = collegeDepts.find((d) => {
+            const codeMatch = d.code && String(d.code).trim().toLowerCase() === deptClean;
+            const nameMatch = d.name && String(d.name).trim().toLowerCase() === deptClean;
+            return codeMatch || nameMatch;
+          });
+
           if (!name) {
             isValid = false;
             issue = "Missing Name";
           } else if (!email || !email.includes("@")) {
             isValid = false;
             issue = "Invalid Email";
+          } else if (!dept) {
+            isValid = false;
+            issue = "Rejected – Department is required";
+          } else if (!matchedDept) {
+            isValid = false;
+            issue = "Rejected – Department not created";
+          } else if (seenEmails.has(email.toLowerCase())) {
+            isValid = false;
+            issue = "Rejected – Duplicate Email in sheet";
+          } else if (rollNo && seenRolls.has(rollNo.toLowerCase())) {
+            isValid = false;
+            issue = "Rejected – Duplicate Roll ID in sheet";
           }
+
+          if (email) seenEmails.add(email.toLowerCase());
+          if (rollNo) seenRolls.add(rollNo.toLowerCase());
 
           return {
             id: idx + 1,
@@ -1109,18 +1182,19 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
             email,
             mobile_number: mobile,
             roll_number: rollNo,
-            department: dept,
+            department: dept || "—",
+            resolvedDept: matchedDept?.name || dept,
             year,
             division: div,
             isValid,
-            issue,
+            issue: issue || "Ready",
           };
         });
 
         setParsedRows(formatted);
       } catch (err) {
         console.error("Failed to parse Excel file:", err);
-        setUploadStatus({ type: "error", message: "Failed to read Excel file format. Please use .xlsx or .csv." });
+        setUploadStatus({ type: "error", message: "Failed to read Excel file format. Please use .xlsx, .xls or .csv." });
       }
     };
     reader.readAsArrayBuffer(selectedFile);
@@ -1149,9 +1223,8 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
   };
 
   const handleBulkSubmit = async () => {
-    const validRows = parsedRows.filter((r) => r.isValid);
-    if (validRows.length === 0) {
-      setUploadStatus({ type: "error", message: "No valid student rows found in the uploaded file." });
+    if (parsedRows.length === 0) {
+      setUploadStatus({ type: "error", message: "No student records found in the uploaded file." });
       return;
     }
 
@@ -1159,23 +1232,18 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     setUploadStatus(null);
 
     try {
+      // Send rows to backend for authoritative database-level validation & insertion
       const res = await apiFetch("/admin/users/bulk-upload", {
         method: "POST",
-        body: JSON.stringify({ students: validRows }),
+        body: JSON.stringify({ students: parsedRows }),
       });
 
       if (res && (res.data || res.success)) {
         const info = res.data || res;
-        setUploadStatus({
-          type: "success",
-          message: `🎉 Success! Created ${info.createdCount || validRows.length} student accounts and dispatched registration emails. ${info.skippedCount ? `(${info.skippedCount} skipped as already existing)` : ""}`,
-        });
-        setTimeout(() => {
-          if (onSuccess) onSuccess();
-          onClose();
-        }, 2200);
+        setUploadResult(info);
+        if (onSuccess) onSuccess();
       } else {
-        setUploadStatus({ type: "error", message: res.error || "Bulk upload failed" });
+        setUploadStatus({ type: "error", message: res?.error || res?.message || "Bulk upload failed" });
       }
     } catch (err) {
       setUploadStatus({ type: "error", message: err.message || "Bulk upload encountered an error" });
@@ -1184,7 +1252,15 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
+  const handleResetUpload = () => {
+    setFile(null);
+    setParsedRows([]);
+    setUploadResult(null);
+    setUploadStatus(null);
+  };
+
   const validCount = parsedRows.filter((r) => r.isValid).length;
+  const invalidCount = parsedRows.filter((r) => !r.isValid).length;
 
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
@@ -1195,8 +1271,14 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
               <FileSpreadsheet size={20} />
             </div>
             <div>
-              <h2 className="modal-title">Bulk Student Creation via Excel / CSV</h2>
-              <p className="modal-subtitle">Upload student roster spreadsheet to create accounts & auto-send email registration invitations.</p>
+              <h2 className="modal-title">
+                {uploadResult ? "Bulk Upload Summary Report" : "Bulk Student Creation via Excel / CSV"}
+              </h2>
+              <p className="modal-subtitle">
+                {uploadResult
+                  ? "Verification and processing breakdown for uploaded student records."
+                  : "Upload student roster spreadsheet. Students will only be added if their department exists for your college."}
+              </p>
             </div>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
@@ -1211,116 +1293,235 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
             </div>
           )}
 
-          <div className="bulk-template-card">
-            <div>
-              <span className="bulk-template-title">📥 Don't have the format template?</span>
-              <p className="bulk-template-desc">Download the official Excel template with column headers and sample data.</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleDownloadTemplate}
-              className="admin-btn-secondary bulk-template-btn"
-            >
-              <Download size={14} /> Download Sample Template
-            </button>
-          </div>
-
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={`bulk-dropzone ${dragActive ? "bulk-dropzone--drag" : file ? "bulk-dropzone--hasfile" : ""}`}
-            onClick={() => document.getElementById("excel-file-input").click()}
-          >
-            <input
-              id="excel-file-input"
-              type="file"
-              accept=".xlsx, .xls, .csv"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <div className="bulk-dropzone-icon">
-              <UploadCloud size={24} />
-            </div>
-            <h4 className="bulk-dropzone-title">
-              {file ? file.name : "Click or drag & drop Excel / CSV spreadsheet here"}
-            </h4>
-            <p className="bulk-dropzone-desc">
-              Supports .xlsx, .xls, or .csv (Headers: Full Name, College Email, Mobile Number, Roll ID, Department, Academic Year, Division)
-            </p>
-          </div>
-
-          {parsedRows.length > 0 && (
-            <div className="bulk-preview-wrap">
-              <div className="bulk-preview-header">
-                <span className="bulk-preview-title">
-                  Spreadsheet Preview ({validCount} valid rows ready for import)
-                </span>
-                <span className="bulk-preview-subtitle">
-                  Total detected: {parsedRows.length} rows
-                </span>
+          {uploadResult ? (
+            <div className="bulk-result-summary-wrap">
+              {/* Summary KPI Cards */}
+              <div className="bulk-summary-cards-grid">
+                <div className="bulk-summary-card bulk-summary-card--total">
+                  <div className="bulk-summary-num">{uploadResult.totalUploaded || parsedRows.length}</div>
+                  <div className="bulk-summary-lbl">Total Uploaded</div>
+                </div>
+                <div className="bulk-summary-card bulk-summary-card--success">
+                  <div className="bulk-summary-num">{uploadResult.createdCount || 0}</div>
+                  <div className="bulk-summary-lbl">Successfully Added</div>
+                </div>
+                <div className="bulk-summary-card bulk-summary-card--rejected">
+                  <div className="bulk-summary-num">{uploadResult.rejectedCount || 0}</div>
+                  <div className="bulk-summary-lbl">Rejected Records</div>
+                </div>
               </div>
 
-              <div className="bulk-preview-table-container">
-                <table className="bulk-preview-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Full Name</th>
-                      <th>College Email</th>
-                      <th>Roll ID</th>
-                      <th>Dept</th>
-                      <th>Year/Div</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedRows.map((r) => (
-                      <tr key={r.id} className={r.isValid ? "bulk-row-valid" : "bulk-row-invalid"}>
-                        <td>{r.id}</td>
-                        <td style={{ fontWeight: "600" }}>{r.name || "—"}</td>
-                        <td style={{ color: "#3b82f6" }}>{r.email || "—"}</td>
-                        <td>{r.roll_number || "—"}</td>
-                        <td>{r.department}</td>
-                        <td>{r.year} ({r.division})</td>
-                        <td>
-                          {r.isValid ? (
-                            <span className="bulk-badge-ready">
-                              <CheckCircle2 size={12} /> Ready
-                            </span>
-                          ) : (
-                            <span className="bulk-badge-error">
-                              <AlertCircle size={12} /> {r.issue}
-                            </span>
-                          )}
-                        </td>
+              {/* Download Rejected Records Button if any rejected */}
+              {(uploadResult.rejectedCount > 0 || (uploadResult.rejectedList && uploadResult.rejectedList.length > 0)) && (
+                <div className="bulk-rejected-banner">
+                  <div>
+                    <span className="bulk-rejected-banner-title">⚠️ {uploadResult.rejectedCount} Student Record(s) Rejected</span>
+                    <p className="bulk-rejected-banner-sub">
+                      Students with departments not registered in your college or duplicate records were safely rejected.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadRejected}
+                    className="bulk-download-rejected-btn"
+                  >
+                    <Download size={14} /> Download Rejected Records (Excel)
+                  </button>
+                </div>
+              )}
+
+              {/* Result Table */}
+              <div className="bulk-result-table-wrap">
+                <div className="bulk-preview-header">
+                  <span className="bulk-preview-title">Student Processing Breakdown</span>
+                  <span className="bulk-preview-subtitle">
+                    {uploadResult.createdCount} Added · {uploadResult.rejectedCount} Rejected
+                  </span>
+                </div>
+                <div className="bulk-preview-table-container">
+                  <table className="bulk-preview-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Details / Rejection Reason</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {(uploadResult.results || []).map((row, idx) => {
+                        const isAdded = row.status === "Added";
+                        return (
+                          <tr key={idx} className={isAdded ? "bulk-row-valid" : "bulk-row-invalid"}>
+                            <td>{idx + 1}</td>
+                            <td>
+                              <div style={{ fontWeight: "600" }}>{row.student || row.name || "—"}</div>
+                              <div style={{ fontSize: "11px", color: "#64748b" }}>{row.email || "—"}</div>
+                            </td>
+                            <td>
+                              <span className="bulk-dept-pill">{row.department || "—"}</span>
+                            </td>
+                            <td>
+                              {isAdded ? (
+                                <span className="bulk-badge-ready">
+                                  <CheckCircle2 size={12} /> Added
+                                </span>
+                              ) : (
+                                <span className="bulk-badge-error">
+                                  <XCircle size={12} /> Rejected
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ color: isAdded ? "#059669" : "#dc2626", fontSize: "12px", fontWeight: isAdded ? "500" : "600" }}>
+                              {row.reason}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
+          ) : (
+            <>
+              <div className="bulk-template-card">
+                <div>
+                  <span className="bulk-template-title">📥 Don't have the format template?</span>
+                  <p className="bulk-template-desc">Download the official Excel template with column headers and sample data matching your college departments.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="admin-btn-secondary bulk-template-btn"
+                >
+                  <Download size={14} /> Download Sample Template
+                </button>
+              </div>
+
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`bulk-dropzone ${dragActive ? "bulk-dropzone--drag" : file ? "bulk-dropzone--hasfile" : ""}`}
+                onClick={() => document.getElementById("excel-file-input").click()}
+              >
+                <input
+                  id="excel-file-input"
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  style={{ display: "none" }}
+                  onChange={handleFileChange}
+                />
+                <div className="bulk-dropzone-icon">
+                  <UploadCloud size={24} />
+                </div>
+                <h4 className="bulk-dropzone-title">
+                  {file ? file.name : "Click or drag & drop Excel / CSV spreadsheet here"}
+                </h4>
+                <p className="bulk-dropzone-desc">
+                  Supports .xlsx, .xls, or .csv (Headers: Full Name, College Email, Mobile Number, Roll ID, Department, Academic Year, Division)
+                </p>
+              </div>
+
+              {parsedRows.length > 0 && (
+                <div className="bulk-preview-wrap">
+                  <div className="bulk-preview-header">
+                    <span className="bulk-preview-title">
+                      Spreadsheet Preview ({validCount} valid department rows, {invalidCount} invalid)
+                    </span>
+                    <span className="bulk-preview-subtitle">
+                      Total detected: {parsedRows.length} rows
+                    </span>
+                  </div>
+
+                  <div className="bulk-preview-table-container">
+                    <table className="bulk-preview-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Full Name</th>
+                          <th>College Email</th>
+                          <th>Roll ID</th>
+                          <th>Dept</th>
+                          <th>Year/Div</th>
+                          <th>Validation</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedRows.map((r) => (
+                          <tr key={r.id} className={r.isValid ? "bulk-row-valid" : "bulk-row-invalid"}>
+                            <td>{r.id}</td>
+                            <td style={{ fontWeight: "600" }}>{r.name || "—"}</td>
+                            <td style={{ color: "#3b82f6" }}>{r.email || "—"}</td>
+                            <td>{r.roll_number || "—"}</td>
+                            <td>
+                              <span className="bulk-dept-pill">{r.department}</span>
+                            </td>
+                            <td>{r.year} ({r.division})</td>
+                            <td>
+                              {r.isValid ? (
+                                <span className="bulk-badge-ready">
+                                  <CheckCircle2 size={12} /> Ready
+                                </span>
+                              ) : (
+                                <span className="bulk-badge-error">
+                                  <AlertCircle size={12} /> {r.issue}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <div className="modal-footer modal-footer-users">
-          <button
-            type="button"
-            className="btn-modal-cancel"
-            onClick={onClose}
-            disabled={isProcessing}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn-modal-submit bulk-submit-btn"
-            onClick={handleBulkSubmit}
-            disabled={isProcessing || validCount === 0}
-          >
-            {isProcessing ? "Processing & Dispatching Emails..." : `Import ${validCount} Students & Send Registration Emails`}
-          </button>
+          {uploadResult ? (
+            <>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={handleResetUpload}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <UploadCloud size={14} /> Upload Another File
+              </button>
+              <button
+                type="button"
+                className="btn-modal-submit bulk-submit-btn"
+                onClick={onClose}
+              >
+                <Check size={14} /> Done
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={onClose}
+                disabled={isProcessing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-modal-submit bulk-submit-btn"
+                onClick={handleBulkSubmit}
+                disabled={isProcessing || parsedRows.length === 0}
+              >
+                {isProcessing ? "Validating & Creating Accounts..." : `Process ${parsedRows.length} Students`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,
@@ -2436,6 +2637,7 @@ export default function AdminUsers() {
       {/* Bulk Excel Upload Modal */}
       <BulkExcelUploadModal
         isOpen={isBulkExcelOpen}
+        departments={departments}
         onClose={() => setIsBulkExcelOpen(false)}
         onSuccess={() => {
           fetchUsers();
