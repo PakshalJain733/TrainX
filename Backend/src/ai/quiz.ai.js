@@ -14,7 +14,7 @@ import { generateJSON, describeProvider } from './aiClient.js';
  * @param {string} topic    - Quiz topic for context
  * @returns {Array}         - Questions annotated with verified, confidence, verificationNote
  */
-export const verifyQuizQuestions = async (questions, topic) => {
+export const verifyQuizQuestions = async (questions, topic, description = '') => {
   if (!Array.isArray(questions) || questions.length === 0) {
     return questions;
   }
@@ -29,13 +29,13 @@ export const verifyQuizQuestions = async (questions, topic) => {
 
   const prompt = `You are a strict, expert Technical Quiz Auditor for a student training platform.
 
-You are given ${questions.length} multiple-choice questions on the topic: "${topic}".
+You are given ${questions.length} multiple-choice questions on the topic: "${topic}"${description ? ` (Specific focus topics: "${description}")` : ''}.
 
 Your task is to verify EACH question for the following criteria:
 1. FACTUAL CORRECTNESS: Is the marked correct option actually the right answer? 
 2. UNAMBIGUOUS: Is there exactly ONE clearly correct answer? No trick wording.
 3. DISTINCT OPTIONS: Are all 4 options meaningfully different (not nearly identical)?
-4. APPROPRIATE: Is the question relevant and clear for the topic?
+4. APPROPRIATE: Is the question relevant and clear for the topic${description ? ' and specified focus areas' : ''}?
 
 For each question, output a JSON array with this exact structure:
 [
@@ -127,14 +127,15 @@ ${JSON.stringify(questionsPayload, null, 2)}`;
   }
 };
 
-export const generateQuizQuestionsAI = async (topic, count = 10) => {
+export const generateQuizQuestionsAI = async (topic, count = 10, description = '') => {
   const numQuestions = Math.min(Math.max(parseInt(count, 10) || 5, 1), 30);
 
+  const cleanDesc = (typeof description === 'string' ? description.trim() : '');
   const prompt = `You are an expert Technical Assessment & Exam Designer.
-Generate exactly ${numQuestions} high-quality, practical multiple-choice questions for a technical quiz on the topic: "${topic}".
+Generate exactly ${numQuestions} high-quality, practical multiple-choice questions for a technical quiz on the topic: "${topic}".${cleanDesc ? `\n\nSPECIFIC FOCUS TOPICS & DESCRIPTION:\n"${cleanDesc}"\nCRITICAL INSTRUCTION: All generated questions MUST directly test and cover the specific subtopics, concepts, libraries, syntax, or subject matter outlined in the description above.` : ''}
 
 RULES:
-1. Generate clear, realistic, non-repetitive technical questions covering core concepts, syntax, best practices, and edge cases.
+1. Generate clear, realistic, non-repetitive technical questions covering core concepts, syntax, best practices, and edge cases${cleanDesc ? ' relevant to the specified focus topics' : ''}.
 2. Provide exactly 4 distinct, plausible options (a, b, c, d) per question. Do NOT make options nearly identical.
 3. Choose exactly ONE correct answer ('a', 'b', 'c', or 'd').
 4. Provide a concise "explanation" (15-25 words) explaining factually why the correct option is right.
@@ -198,10 +199,10 @@ RULES:
   }
 
   // Graceful fallback questions
-  return buildFallbackQuestions(topic, numQuestions);
+  return buildFallbackQuestions(topic, numQuestions, cleanDesc);
 };
 
-function buildFallbackQuestions(topic, count) {
+function buildFallbackQuestions(topic, count, description = '') {
   const templates = [
     {
       q: `What is the primary architectural advantage of utilizing ${topic}?`,

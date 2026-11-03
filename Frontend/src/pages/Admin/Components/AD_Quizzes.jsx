@@ -101,6 +101,7 @@ export default function AdminQuizzes() {
 
   // Quiz Form Fields
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [batch, setBatch] = useState("All Batches");
   const [numQuestions, setNumQuestions] = useState("10");
   const [timeLimit, setTimeLimit] = useState("15");
@@ -396,7 +397,7 @@ export default function AdminQuizzes() {
         batch_id: batchId,
         batch_name: batch,
         category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz",
-        description: `${quizType} quiz for ${batch}`,
+        description: description && description.trim() ? description.trim() : `${quizType} quiz for ${batch}`,
         status: "published",
         is_published: true,
         total_marks: questionsList.length * 10,
@@ -450,7 +451,7 @@ export default function AdminQuizzes() {
   };
 
   // Live Google Gemini AI Question Generator via Backend API
-  const fetchLiveAIQuestions = async (quizTitle, count) => {
+  const fetchLiveAIQuestions = async (quizTitle, count, quizDescription = "") => {
     const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, {
       method: "POST",
       headers: getAuthHeaders(),
@@ -467,12 +468,12 @@ export default function AdminQuizzes() {
   };
 
   // Run auto-verification on generated questions
-  const verifyQuestionsWithAI = async (questions, topic) => {
+  const verifyQuestionsWithAI = async (questions, topic, quizDescription = "") => {
     try {
       const res = await fetch(`${API_BASE}/assessments/verify-ai-questions`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ questions, topic }),
+        body: JSON.stringify({ questions, topic, description: quizDescription || "" }),
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) return data.data;
@@ -614,12 +615,12 @@ export default function AdminQuizzes() {
       setIsGenerating(true);
       setGeneratingPhase("generating");
       try {
-        const aiQs = await fetchLiveAIQuestions(title, numQuestions);
+        const aiQs = await fetchLiveAIQuestions(title, numQuestions, description);
         const alreadyVerified = Array.isArray(aiQs) && aiQs.length > 0 && aiQs[0].verified !== undefined;
         let verified = aiQs;
         if (!alreadyVerified) {
           setGeneratingPhase("verifying");
-          verified = await verifyQuestionsWithAI(aiQs, title);
+          verified = await verifyQuestionsWithAI(aiQs, title, description);
         }
         setVerifiedQuestions(verified);
         setShowVerifyModal(true);
@@ -662,7 +663,7 @@ export default function AdminQuizzes() {
   };
 
   const resetForm = () => {
-    setTitle(""); setBatch("All Batches"); setNumQuestions("10");
+    setTitle(""); setDescription(""); setBatch("All Batches"); setNumQuestions("10");
     setManualQuestions([]); setShowForm(false); setShowManualModal(false);
     setShowVerifyModal(false); setVerifiedQuestions([]);
     setParsedBulkQuestions([]); setShowBulkPreview(false); setBulkFileName("");
@@ -860,6 +861,63 @@ export default function AdminQuizzes() {
                     />
                   </div>
                 </div>
+
+                {/* AI Generation Topics & Description Section */}
+                {mode === "ai" && (
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                      <label style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>
+                        Description & Target Topics <span style={{ color: '#4f46e5', fontWeight: 500, fontSize: '12px' }}>(AI generates questions specifically on these topics)</span>
+                      </label>
+                      <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px', fontWeight: 500 }}>
+                        Recommended
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Focus on OOP Concepts: Class & Object, Polymorphism, Method Overriding vs Overloading, Abstract Classes, Interfaces, and Exception Handling."
+                      style={{
+                        width: '100%',
+                        minHeight: '74px',
+                        resize: 'vertical',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                        lineHeight: 1.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                      Specify the syllabus modules, subtopics, or key concepts you want the AI to emphasize.
+                    </p>
+                  </div>
+                )}
+                {mode !== "ai" && (
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label style={{ marginBottom: '2px' }}>Quiz Description (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Comprehensive technical assessment for evaluation."
+                      style={{
+                        width: '100%',
+                        minHeight: '56px',
+                        resize: 'vertical',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* DEDICATED COMPACT EXCEL BULK UPLOAD SECTION */}
                 {mode === "bulk" && (

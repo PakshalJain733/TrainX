@@ -196,7 +196,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const registeredTrainers = trainers.filter(t => String(t.role || "").toLowerCase() === "trainer");
   const trainerOptions = registeredTrainers.map((t) => ({
     value: t.name,
-    label: `${t.name}${t.email ? ` (${t.email})` : ' (Trainer)'}`,
+    label: t.name,
   }));
   const isCurrentTrainerRegistered = registeredTrainers.some(t => t.name === currentTrainer);
 

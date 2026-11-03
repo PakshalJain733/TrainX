@@ -1677,7 +1677,7 @@ export default function AdminBatches() {
                       value={mentor}
                       options={trainers.map((t) => ({
                         value: t.name,
-                        label: `${t.name}${t.email ? ` (${t.email})` : ''}`,
+                        label: t.name,
                       }))}
                       onChange={(val) => setMentor(val)}
                       placeholder={loadingTrainers ? "Loading registered trainers..." : (trainers.length === 0 ? "No registered trainers found" : "Select Trainer...")}

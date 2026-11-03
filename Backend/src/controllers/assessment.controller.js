@@ -281,14 +281,15 @@ export const deleteAssessment = async (req, res, next) => {
 
 export const generateAIQuestions = async (req, res, next) => {
   try {
-    const { title, topic, count = 10 } = req.body;
+    const { title, topic, count = 10, description, topics } = req.body;
+    const topicDescription = description || topics || "";
     const topicName = title || topic || "General Computer Science";
     const num = Math.min(Math.max(parseInt(count, 10) || 5, 1), 30);
 
     let rawQuestions = [];
     try {
       console.log(`[generateAIQuestions] Calling Gemini AI for topic "${topicName}" (${num} questions)...`);
-      rawQuestions = await generateQuizQuestionsAI(topicName, num);
+      rawQuestions = await generateQuizQuestionsAI(topicName, num, topicDescription);
     } catch (aiErr) {
       console.warn('[Gemini AI Question Generation Error]', aiErr.message);
     }
@@ -419,7 +420,7 @@ export const generateAIQuestions = async (req, res, next) => {
     if (!isAlreadyVerified) {
       try {
         console.log(`[generateAIQuestions] Auto-verifying ${formatted.length} questions for topic "${topicName}"...`);
-        verified = await verifyQuizQuestions(formatted, topicName);
+        verified = await verifyQuizQuestions(formatted, topicName, topicDescription);
       } catch (vErr) {
         console.warn('[generateAIQuestions Auto-verify warning]', vErr.message);
       }
@@ -437,11 +438,12 @@ export const generateAIQuestions = async (req, res, next) => {
  */
 export const verifyAIQuestions = async (req, res, next) => {
   try {
-    const { questions, topic } = req.body;
+    const { questions, topic, description, topics } = req.body;
+    const topicDesc = description || topics || "";
     if (!Array.isArray(questions) || questions.length === 0) {
       return sendError(res, 'questions array is required', 400);
     }
-    const verified = await verifyQuizQuestions(questions, topic || 'General');
+    const verified = await verifyQuizQuestions(questions, topic || 'General', topicDesc);
     return sendSuccess(res, 'Questions verified successfully', verified);
   } catch (error) {
     next(error);

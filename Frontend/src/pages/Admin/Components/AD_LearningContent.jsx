@@ -387,7 +387,7 @@ export default function AdminLearningContent() {
             className="sa-modal-dialog" 
             style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
           >
-            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
+            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
               <div className="sa-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div className="sa-modal-icon-wrap" style={{ background: '#e0e7ff', color: '#4f46e5', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <BookOpen size={20} />
