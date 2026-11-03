@@ -70,9 +70,32 @@ export const getOverallLeaderboardController = async (req, res, next) => {
 export const getDepartmentLeaderboardController = async (req, res, next) => {
   try {
     const user = req.user || {};
+    const role = String(user.role || '').toLowerCase();
+    let departmentId = req.query.department_id || req.query.department;
+    let departmentName = null;
+
+    if (role === 'student' && !departmentId) {
+      try {
+        const { query } = await import('../config/db.js');
+        const [stRows] = await query(
+          `SELECT s.department_id, s.department, d.name AS dept_name
+           FROM students s
+           LEFT JOIN departments d ON s.department_id = d.id
+           WHERE s.user_id = ? OR s.id = ?
+           LIMIT 1`,
+          [user.userId || user.id, user.userId || user.id]
+        );
+        if (stRows && stRows.length > 0) {
+          departmentId = stRows[0].department_id;
+          departmentName = stRows[0].dept_name || stRows[0].department;
+        }
+      } catch (_) {}
+    }
+
     const filters = {
       college_id: req.query.college_id || (user.role !== 'SUPER_ADMIN' ? user.college_id : null),
-      department_id: req.query.department_id || req.query.department,
+      department_id: departmentId,
+      department_name: departmentName,
       batch_id: req.query.batch_id,
     };
     const data = await getDepartmentLeaderboard(filters);

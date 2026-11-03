@@ -448,20 +448,32 @@ export const getOverallLeaderboard = async (filters = {}) => {
  * 2. DEPARTMENT LEADERBOARD (Department Isolation & College Isolation)
  */
 export const getDepartmentLeaderboard = async (filters = {}) => {
-  const { department_id } = filters;
+  const { department_id, department_name, department } = filters;
+  const targetDept = department_name || department;
 
   const students = await getStudentsRawPerformance(filters);
 
   if (!students || students.length === 0) return [];
 
-  // Filter specifically if department_id was passed
+  // Filter specifically if department_id or department name was passed
   let filtered = students;
-  if (department_id) {
-    filtered = students.filter(
-      (s) =>
-        s.department_id === parseInt(department_id, 10) ||
-        s.department_name.toLowerCase() === String(department_id).toLowerCase()
-    );
+  if (department_id || targetDept) {
+    filtered = students.filter((s) => {
+      if (department_id && s.department_id && Number(s.department_id) === Number(department_id)) {
+        return true;
+      }
+      if (targetDept && s.department_name) {
+        const a = String(s.department_name).trim().toLowerCase();
+        const b = String(targetDept).trim().toLowerCase();
+        if (a === b || a.includes(b) || b.includes(a)) return true;
+      }
+      if (department_id && s.department_name) {
+        const a = String(s.department_name).trim().toLowerCase();
+        const b = String(department_id).trim().toLowerCase();
+        if (a === b || a.includes(b) || b.includes(a)) return true;
+      }
+      return false;
+    });
   }
 
   const mapped = filtered.map((s) => ({
@@ -603,6 +615,9 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     batch_id: queryParams.batch_id,
   };
 
+  let studentDeptId = queryParams.department_id || null;
+  let studentDeptName = queryParams.department || null;
+
   // Role Isolation Enforcement
   if (role === ROLES.COLLEGE_ADMIN || role === ROLES.COORDINATOR) {
     if (userCollegeId) {
@@ -618,16 +633,50 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     filters.mentor_id = user.userId || user.id;
     filters.mentor_name = user.name || '';
     filters.mentor_email = user.email || '';
-  } else if (role === ROLES.STUDENT) {
+  } else if (role === 'student' || role === ROLES.STUDENT) {
     if (userCollegeId) {
       filters.college_id = userCollegeId;
     }
+    // Automatically resolve the student's department from students table
+    try {
+      const stRows = await query(
+        `SELECT s.department_id, s.department, d.name AS dept_name
+         FROM students s
+         LEFT JOIN departments d ON s.department_id = d.id
+         WHERE s.user_id = ? OR s.id = ?
+         LIMIT 1`,
+        [currentUserId, currentUserId]
+      );
+      if (stRows && stRows.length > 0) {
+        studentDeptId = stRows[0].department_id;
+        studentDeptName = stRows[0].dept_name || stRows[0].department;
+      }
+    } catch (e) {
+      console.warn('[Leaderboard] Student dept lookup error:', e.message);
+    }
   }
 
-  // Fetch all leaderboards concurrently
-  const [overall, department, milestone, topBatches] = await Promise.all([
-    getOverallLeaderboard(filters),
-    getDepartmentLeaderboard(filters),
+  // Fetch overall leaderboard first
+  const overall = await getOverallLeaderboard(filters);
+
+  // If studentDeptName/studentDeptId is still not known, find it from the student in overall list
+  if ((role === 'student' || role === ROLES.STUDENT) && (!studentDeptId && !studentDeptName)) {
+    const me = overall.find(s => s.id === currentUserId || s.student_id === currentUserId || s.user_id === currentUserId);
+    if (me) {
+      studentDeptId = me.department_id;
+      studentDeptName = me.department || me.sub;
+    }
+  }
+
+  const deptFilters = {
+    ...filters,
+    department_id: studentDeptId || filters.department_id,
+    department_name: studentDeptName || filters.department_name,
+  };
+
+  // Fetch department (scoped to student's department), milestone, and topBatches concurrently
+  const [department, milestone, topBatches] = await Promise.all([
+    getDepartmentLeaderboard(deptFilters),
     getMilestoneLeaderboard(filters),
     getTopBatchesLeaderboard(filters),
   ]);
@@ -665,13 +714,18 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
       nearby = markedOverall.slice(0, Math.min(5, totalStudents));
     }
 
+    const currentStudentInDept = markedDept.find((s) => s.isCurrentUser);
+    const resolvedDeptName = studentDeptName || currentStudentInOverall?.department || currentStudentInDept?.department || '';
+
     studentContext = {
       myRank: {
         overallRank: myRank,
-        departmentRank: (markedDept.find((s) => s.isCurrentUser) || {}).rank || 1,
+        departmentRank: currentStudentInDept ? currentStudentInDept.rank : 1,
         milestoneRank: (markedMilestone.find((s) => s.isCurrentUser) || {}).rank || 1,
         score: myScore,
         totalStudents,
+        totalDeptStudents: markedDept.length,
+        myDepartment: resolvedDeptName,
       },
       nearby,
     };
