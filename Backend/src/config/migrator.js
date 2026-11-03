@@ -54,7 +54,8 @@ async function ensureMigrationsTable(conn) {
 }
 
 /**
- * Truncate / delete data from all tables while keeping only Super Admin
+ * Truncate / delete data from all tables (including colleges, departments, batches, etc.)
+ * while keeping ONLY the Super Admin credentials in the users table.
  */
 export async function truncateAllExceptSuperAdmin(connection) {
   let conn = connection;
@@ -65,11 +66,24 @@ export async function truncateAllExceptSuperAdmin(connection) {
   }
 
   try {
-    console.log('[AutoMigrator] 🧹 Truncating tables (preserving Super Admin)...');
+    console.log('[AutoMigrator] 🧹 Wiping all tables (colleges, departments, etc.) while preserving ONLY Super Admin credentials...');
     await conn.query('SET FOREIGN_KEY_CHECKS = 0;');
 
-    // All relational & activity tables to truncate
-    const tablesToTruncate = [
+    // 1. Query all tables present in current database dynamically
+    let tablesToWipe = [];
+    try {
+      const [rows] = await conn.query(
+        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'"
+      );
+      tablesToWipe = (rows || []).map(r => r.TABLE_NAME || r.table_name);
+    } catch (tblErr) {
+      console.warn('[AutoMigrator] Could not read INFORMATION_SCHEMA, using fallback list:', tblErr.message);
+    }
+
+    // Comprehensive fallback if INFORMATION_SCHEMA not fully accessible
+    const fallbackTables = [
+      'colleges',
+      'departments',
       'students',
       'otps',
       'assessment_attempts',
@@ -118,7 +132,11 @@ export async function truncateAllExceptSuperAdmin(connection) {
       'career_gateway_sync_log',
     ];
 
-    for (const table of tablesToTruncate) {
+    const allTablesSet = new Set([...tablesToWipe, ...fallbackTables]);
+
+    // Truncate every table except 'users' and 'schema_migrations'
+    for (const table of allTablesSet) {
+      if (table === 'users' || table === 'schema_migrations') continue;
       try {
         await conn.query(`TRUNCATE TABLE \`${table}\`;`);
         console.log(`[AutoMigrator] Truncated table: ${table}`);
@@ -129,16 +147,18 @@ export async function truncateAllExceptSuperAdmin(connection) {
       }
     }
 
-    // Preserve ONLY Super Admin in users table
+    // 2. Clean users table: Delete ALL users EXCEPT Super Admin
     try {
       await conn.query("DELETE FROM users WHERE LOWER(TRIM(role)) NOT IN ('super_admin', 'superadmin');");
-      console.log('[AutoMigrator] Cleared non-super-admin users. Preserved Super Admin.');
+      // Set college_id to NULL on Super Admin so no foreign key references a deleted college
+      await conn.query("UPDATE users SET college_id = NULL WHERE LOWER(TRIM(role)) IN ('super_admin', 'superadmin');");
+      console.log('[AutoMigrator] Cleared all users except Super Admin (college_id set to NULL).');
     } catch (uErr) {
       console.warn('[AutoMigrator] Warning filtering users table:', uErr.message);
     }
 
     await conn.query('SET FOREIGN_KEY_CHECKS = 1;');
-    console.log('[AutoMigrator] ✅ All tables truncated successfully (Super Admin preserved).');
+    console.log('[AutoMigrator] ✅ All tables cleared completely! ONLY Super Admin credentials preserved.');
   } catch (err) {
     console.error('[AutoMigrator] ❌ Error truncating tables:', err.message);
     try { await conn.query('SET FOREIGN_KEY_CHECKS = 1;'); } catch (_) {}

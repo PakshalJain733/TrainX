@@ -20,6 +20,8 @@ async function clearDatabase() {
     await conn.query('SET FOREIGN_KEY_CHECKS = 0');
 
     const tablesToClear = [
+      'colleges',
+      'departments',
       'students',
       'otps',
       'assessment_attempts',
@@ -49,6 +51,7 @@ async function clearDatabase() {
     // Keep ONLY Super Admin in users table
     try {
       const [uRes] = await conn.query("DELETE FROM users WHERE LOWER(TRIM(role)) NOT IN ('super_admin', 'superadmin')");
+      await conn.query("UPDATE users SET college_id = NULL WHERE LOWER(TRIM(role)) IN ('super_admin', 'superadmin')");
       console.log('[DB Clear] Non-super-admin users deleted. Preserved Super Admin accounts.');
     } catch (uErr) {
       console.warn('[DB Clear] Warning filtering users:', uErr.message);
