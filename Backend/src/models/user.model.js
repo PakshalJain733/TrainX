@@ -669,16 +669,15 @@ export const getRelatedCollegeIds = async (collegeId) => {
 
     const tCode = String(target.code || '').trim().toLowerCase();
     const tName = String(target.name || '').trim().toLowerCase();
-    const tDomain = String(target.domain || '').trim().toLowerCase();
 
-    const isVpp = tCode.includes('vpp') || tName.includes('vasant') || tDomain.includes('pvppcoe') || tDomain.includes('vppcoe');
-
+    // Strictly match the target college or duplicate records with exact matching name/code (never across different colleges)
     const matched = rows.filter((r) => {
       if (r.id === targetId) return true;
       const c = String(r.code || '').trim().toLowerCase();
       const n = String(r.name || '').trim().toLowerCase();
-      const d = String(r.domain || '').trim().toLowerCase();
-      return isVpp && (c.includes('vpp') || n.includes('vasant') || d.includes('pvppcoe') || d.includes('vppcoe'));
+      if (tCode && c && tCode === c) return true;
+      if (tName && n && tName === n) return true;
+      return false;
     });
 
     const ids = matched.map((m) => m.id);

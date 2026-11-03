@@ -54,6 +54,7 @@ router.use(authenticateToken);
 const mentorOnly = authorizeRoles(ROLES.MENTOR, ROLES.SUPER_ADMIN);
 
 router.get('/overview', mentorOnly, getMentorOverview);
+router.get('/stats', mentorOnly, getMentorOverview);
 router.get('/batches', mentorOnly, getMentorBatches);
 router.get('/batches/:batchId/details', mentorOnly, getMentorBatchDetails);
 router.post('/submissions/:submissionId/feedback', mentorOnly, saveMentorSubmissionFeedback);

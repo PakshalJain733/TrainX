@@ -1921,6 +1921,32 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const [isSyncingCG, setIsSyncingCG] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncSummary, setSyncSummary] = useState(null);
+
+  const handleSyncCareerGateway = async () => {
+    setIsSyncingCG(true);
+    try {
+      const inRes = await apiFetch("/admin/career-gateway/sync-inbound", { method: "POST" });
+      const outRes = await apiFetch("/admin/career-gateway/sync-outbound", { method: "POST" });
+
+      const inData = inRes?.data || inRes || {};
+      const outData = outRes?.data || outRes || {};
+
+      setSyncSummary({
+        inbound: inData,
+        outbound: outData,
+      });
+      setSyncModalOpen(true);
+      fetchUsers();
+      fetchStats();
+    } catch (err) {
+      setFeedback({ type: "error", message: err.message || "Failed to sync with Career Gateway" });
+    } finally {
+      setIsSyncingCG(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -3066,6 +3092,51 @@ export default function AdminUsers() {
         }}
         users={users}
       />
+
+      {/* Career Gateway Sync Modal */}
+      {syncModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setSyncModalOpen(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: "560px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <CheckCircle2 size={20} className="text-emerald-500" />
+                </div>
+                <div>
+                  <h2 className="modal-title">Career Gateway Synchronization</h2>
+                  <p className="modal-subtitle">Bi-directional Data Bridge sync report</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setSyncModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: "20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", textTransform: "uppercase" }}>Inbound Sync</div>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginTop: "4px" }}>{syncSummary?.inbound?.successCount ?? 0} Students</div>
+                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>Pulled from Career Gateway</div>
+                </div>
+                <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", textTransform: "uppercase" }}>Outbound Sync</div>
+                  <div style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginTop: "4px" }}>{syncSummary?.outbound?.successCount ?? 0} Metrics</div>
+                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>Pushed to Career Gateway</div>
+                </div>
+              </div>
+              <p style={{ fontSize: "13px", color: "#475569", lineHeight: "1.5", margin: 0 }}>
+                Student records, institutional email mappings, CGPA, and TrainX readiness metrics (attendance, problem solving, mock interview ratings) are now synchronized.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ padding: "12px 24px", display: "flex", justifyContent: "flex-end" }}>
+              <button className="btn-modal-submit" onClick={() => setSyncModalOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Bulk Excel Upload Modal */}
       <BulkExcelUploadModal
