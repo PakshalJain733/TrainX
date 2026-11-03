@@ -1,5 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { getMentorAssignedBatchIds } from './mentor.controller.js';
 
 // Auto-initialize DB tables if not present
 let tablesInitialized = false;
@@ -196,6 +197,17 @@ export const getBatches = async (req, res, next) => {
     if (filterStatus && filterStatus !== 'all') {
       sql += ' AND (LOWER(COALESCE(b.status, "Active")) = ?)';
       params.push(filterStatus.toLowerCase().trim());
+    }
+
+    if (req.user?.role === 'mentor') {
+      const mentorId = req.user?.userId || req.user?.id;
+      const mentorCollegeId = req.user?.collegeId || req.user?.college_id;
+      const assignedIds = await getMentorAssignedBatchIds(mentorId, mentorCollegeId);
+      if (!assignedIds || assignedIds.length === 0) {
+        return sendSuccess(res, 'Batches retrieved successfully', []);
+      }
+      sql += ` AND b.id IN (${assignedIds.map(() => '?').join(', ')})`;
+      params.push(...assignedIds);
     }
 
     sql += ' ORDER BY b.id DESC';

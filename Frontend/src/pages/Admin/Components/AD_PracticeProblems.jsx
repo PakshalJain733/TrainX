@@ -315,12 +315,33 @@ export default function AdminPracticeProblems({ role = "admin" }) {
   const fetchBatches = async () => {
     try {
       const endpoint = isMentor ? "/mentor/batches" : "/batches";
-      const res = await apiFetch(endpoint).catch(() => apiFetch("/batches"));
-      const rawList = (res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : (Array.isArray(res?.batches) ? res.batches : []));
+      const res = await apiFetch(endpoint);
+      const rawList = Array.isArray(res?.data?.batches)
+        ? res.data.batches
+        : (Array.isArray(res?.data)
+            ? res.data
+            : (Array.isArray(res?.batches)
+                ? res.batches
+                : (Array.isArray(res) ? res : [])));
       if (Array.isArray(rawList)) {
         setBatches(rawList);
+        if (isMentor) {
+          const firstBatch = rawList[0];
+          const defaultBatchName = firstBatch ? firstBatch.name : "";
+          const defaultBatchId = firstBatch ? (firstBatch.batchId || parseInt(String(firstBatch.id).replace(/^b-/i, ''), 10) || firstBatch.id) : null;
+          setNewProb(prev => {
+            if (!prev.batch || prev.batch === "All Batches") {
+              return { ...prev, batch: defaultBatchName, batchId: defaultBatchId };
+            }
+            return prev;
+          });
+          setAiBatch(prev => (!prev || prev === "All Batches" ? defaultBatchName : prev));
+        }
       }
-    } catch (err) { }
+    } catch (err) {
+      console.error("Failed to load batches:", err);
+      setBatches([]);
+    }
   };
 
   const fetchSubmissions = async () => {
@@ -421,9 +442,16 @@ export default function AdminPracticeProblems({ role = "admin" }) {
     e.preventDefault();
     if (!newProb.title.trim()) return;
 
-    const chosenBatchName = newProb.batch || "All Batches";
+    if (isMentor && batches.length === 0) {
+      alert("Cannot create problem: No batches assigned to you.");
+      return;
+    }
+
+    const chosenBatchName = isMentor && batches.length > 0 && (!newProb.batch || newProb.batch === "All Batches")
+      ? batches[0].name
+      : (newProb.batch || (isMentor ? "" : "All Batches"));
     const matchedBatch = batches.find(b => b.name === chosenBatchName);
-    const chosenBatchId = newProb.batchId || (matchedBatch ? matchedBatch.id : null);
+    const chosenBatchId = newProb.batchId || (matchedBatch ? (matchedBatch.batchId || parseInt(String(matchedBatch.id).replace(/^b-/i, ''), 10) || matchedBatch.id) : null);
 
     const payload = {
       title: newProb.title.trim(),
@@ -594,7 +622,13 @@ export default function AdminPracticeProblems({ role = "admin" }) {
               className="admin-btn-add"
               onClick={() => {
                 setEditingProblemId(null);
-                setNewProb(emptyProbState);
+                const defaultBatchName = isMentor && batches.length > 0 ? batches[0].name : (isMentor ? "" : "All Batches");
+                const defaultBatchId = isMentor && batches.length > 0 ? (batches[0].batchId || parseInt(String(batches[0].id).replace(/^b-/i, ''), 10) || batches[0].id) : null;
+                setNewProb({
+                  ...emptyProbState,
+                  batch: defaultBatchName,
+                  batchId: defaultBatchId
+                });
                 setFormTestCase({ input: "", output: "", isHidden: false });
                 setShowAddModal(true);
               }}
@@ -1760,17 +1794,33 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                     </div>
                     <div className="form-group-admin">
                       <label>Target Batch *</label>
-                      <AdminPpSelect
-                        value={newProb.batch || "All Batches"}
-                        onChange={(val) => {
-                          const bObj = batches.find(b => b.name === val);
-                          setNewProb({ ...newProb, batch: val, batchId: bObj ? bObj.id : null });
-                        }}
-                        options={[
-                          { value: "All Batches", label: "All Batches (Universal)" },
-                          ...batches.map(b => ({ value: b.name, label: b.name }))
-                        ]}
-                      />
+                      {isMentor && batches.length === 0 ? (
+                        <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "13px", fontWeight: "500" }}>
+                          No batches assigned to you.
+                        </div>
+                      ) : (
+                        <AdminPpSelect
+                          value={newProb.batch || (isMentor && batches.length > 0 ? batches[0].name : "All Batches")}
+                          onChange={(val) => {
+                            const bObj = batches.find(b => b.name === val);
+                            const bId = bObj ? (bObj.batchId || parseInt(String(bObj.id).replace(/^b-/i, ''), 10) || bObj.id) : null;
+                            setNewProb({ ...newProb, batch: val, batchId: bId });
+                          }}
+                          options={
+                            isMentor
+                              ? batches.map(b => ({ value: b.name, label: b.code ? `${b.name} (${b.code})` : b.name }))
+                              : [
+                                  { value: "All Batches", label: "All Batches (Universal)" },
+                                  ...batches.map(b => ({ value: b.name, label: b.name }))
+                                ]
+                          }
+                        />
+                      )}
+                      {isMentor && batches.length === 0 && (
+                        <small style={{ color: "#ef4444", display: "block", marginTop: "4px" }}>
+                          Please contact your administrator to assign a batch to your mentor profile.
+                        </small>
+                      )}
                     </div>
                   </div>
 
@@ -2040,14 +2090,24 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                 <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
                   Target Batch / Cohort
                 </label>
-                <AdminPpSelect
-                  value={aiBatch}
-                  onChange={(val) => setAiBatch(val)}
-                  options={[
-                    { value: "All Batches", label: "All Batches (Universal)" },
-                    ...batches.map((b) => ({ value: b.name, label: b.name }))
-                  ]}
-                />
+                {isMentor && batches.length === 0 ? (
+                  <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "13px", fontWeight: "500" }}>
+                    No batches assigned to you.
+                  </div>
+                ) : (
+                  <AdminPpSelect
+                    value={aiBatch || (isMentor && batches.length > 0 ? batches[0].name : "All Batches")}
+                    onChange={(val) => setAiBatch(val)}
+                    options={
+                      isMentor
+                        ? batches.map((b) => ({ value: b.name, label: b.code ? `${b.name} (${b.code})` : b.name }))
+                        : [
+                            { value: "All Batches", label: "All Batches (Universal)" },
+                            ...batches.map((b) => ({ value: b.name, label: b.name }))
+                          ]
+                    }
+                  />
+                )}
               </div>
 
               <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 16px", fontSize: "12px", color: "#64748b" }}>

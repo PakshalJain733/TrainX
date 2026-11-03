@@ -605,17 +605,40 @@ export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
     `);
   } catch (_) {}
 
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS mentor_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_mentor_batch (mentor_id, batch_id),
+        INDEX idx_mentor_assignments_mentor (mentor_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+  } catch (_) {}
+
   const conditions = [
-    'bt.user_id IS NOT NULL',
-    'ma.mentor_id IS NOT NULL',
-    'msa.mentor_id IS NOT NULL',
-    'b.trainer_id = ?'
+    'b.mentor_id = ?',
+    'b.trainer_id = ?',
+    'EXISTS (SELECT 1 FROM batch_trainers bt WHERE bt.batch_id = b.id AND bt.user_id = ?)',
+    'EXISTS (SELECT 1 FROM mentor_assignments ma WHERE ma.batch_id = b.id AND ma.mentor_id = ?)',
+    'EXISTS (SELECT 1 FROM mentor_student_assignments msa WHERE msa.batch_id = b.id AND msa.mentor_id = ?)',
+    'EXISTS (SELECT 1 FROM mentor_student_assignments msa JOIN students s ON s.user_id = msa.student_id WHERE msa.mentor_id = ? AND s.batch_id = b.id)',
+    'EXISTS (SELECT 1 FROM mentor_student_assignments msa JOIN student_batches sb ON sb.user_id = msa.student_id WHERE msa.mentor_id = ? AND sb.batch_id = b.id)',
+    'EXISTS (SELECT 1 FROM students s WHERE s.mentor_id = ? AND s.batch_id = b.id)'
   ];
+
   const queryParams = [
+    targetCollegeId,
+    targetCollegeId,
     mentorId,
     mentorId,
     mentorId,
-    targetCollegeId, targetCollegeId,
+    mentorId,
+    mentorId,
+    mentorId,
+    mentorId,
     mentorId
   ];
 
@@ -642,11 +665,8 @@ export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
   const sql = `
     SELECT DISTINCT b.id
     FROM batches b
-    LEFT JOIN batch_trainers bt ON bt.batch_id = b.id AND bt.user_id = ?
-    LEFT JOIN mentor_assignments ma ON ma.batch_id = b.id AND ma.mentor_id = ?
-    LEFT JOIN mentor_student_assignments msa ON msa.batch_id = b.id AND msa.mentor_id = ?
     WHERE (b.college_id = ? OR ? IS NULL)
-      AND b.status != 'deleted'
+      AND LOWER(COALESCE(b.status, 'active')) != 'deleted'
       AND (${conditions.join(' OR ')})
   `;
 
@@ -654,6 +674,7 @@ export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
   return (rows || []).map(r => toInt(r.id)).filter(Boolean);
 };
 
+// ---------------------------------------------------------------------------
 // GET /api/v1/mentor/overview
 // ---------------------------------------------------------------------------
 export const getMentorOverview = async (req, res, next) => {
