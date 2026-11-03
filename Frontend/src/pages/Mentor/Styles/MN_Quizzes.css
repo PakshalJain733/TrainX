@@ -1,3 +1,52 @@
+
+/* ════════════════════════════════════════════════════════════════════
+   MENTOR QUIZ MANAGEMENT: TOP HEADER ROW (ALIGNED BESIDE TITLE)
+   ════════════════════════════════════════════════════════════════════ */
+.mentor-quiz-header,
+.ui-section-header-MN {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  margin-bottom: 20px !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+}
+
+.mentor-quiz-header-left {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.mentor-quiz-header-title,
+.ui-section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.25 !important;
+}
+
+.mentor-quiz-header-subtitle,
+.ui-section-desc {
+  font-size: 13.5px !important;
+  color: #64748b !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.mentor-quiz-header-action,
+.ui-section-action {
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
 /* ── Custom Dropdown for Mentor Quizzes ── */
 .mentor-mq-select-wrap {
   position: relative;

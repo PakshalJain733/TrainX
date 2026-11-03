@@ -54,6 +54,104 @@ async function ensureMigrationsTable(conn) {
 }
 
 /**
+ * Truncate / delete data from all tables while keeping only Super Admin
+ */
+export async function truncateAllExceptSuperAdmin(connection) {
+  let conn = connection;
+  let shouldClose = false;
+  if (!conn) {
+    conn = await createMigrationConnection();
+    shouldClose = true;
+  }
+
+  try {
+    console.log('[AutoMigrator] 🧹 Truncating tables (preserving Super Admin)...');
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0;');
+
+    // All relational & activity tables to truncate
+    const tablesToTruncate = [
+      'students',
+      'otps',
+      'assessment_attempts',
+      'assessment_questions',
+      'assessment_answers',
+      'assessments',
+      'student_quiz_completions',
+      'attendance',
+      'attendance_sessions',
+      'attendance_summary',
+      'attendance_scans',
+      'mentor_assignments',
+      'mentor_student_assignments',
+      'broadcast_notifications',
+      'broadcasts',
+      'live_sessions',
+      'user_oauth_tokens',
+      'study_materials',
+      'support_tickets',
+      'skill_gap_analysis',
+      'leave_requests',
+      'shared_content',
+      'secure_codes',
+      'roadmaps',
+      'roadmap_items',
+      'defaulters',
+      'weekly_reports',
+      'interview_sessions',
+      'interview_submissions',
+      'interviews',
+      'practice_problems',
+      'practice_problem_submissions',
+      'mock_drives',
+      'drive_participations',
+      'batches',
+      'student_batches',
+      'batch_trainers',
+      'batch_tasks',
+      'task_submissions',
+      'coordinator_departments',
+      'c2c_enrollments',
+      'training_programs',
+      'trainings',
+      'milestones',
+      'interventions',
+      'career_gateway_sync_log',
+    ];
+
+    for (const table of tablesToTruncate) {
+      try {
+        await conn.query(`TRUNCATE TABLE \`${table}\`;`);
+        console.log(`[AutoMigrator] Truncated table: ${table}`);
+      } catch (_) {
+        try {
+          await conn.query(`DELETE FROM \`${table}\`;`);
+        } catch (__) {}
+      }
+    }
+
+    // Preserve ONLY Super Admin in users table
+    try {
+      await conn.query("DELETE FROM users WHERE LOWER(TRIM(role)) NOT IN ('super_admin', 'superadmin');");
+      console.log('[AutoMigrator] Cleared non-super-admin users. Preserved Super Admin.');
+    } catch (uErr) {
+      console.warn('[AutoMigrator] Warning filtering users table:', uErr.message);
+    }
+
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1;');
+    console.log('[AutoMigrator] ✅ All tables truncated successfully (Super Admin preserved).');
+  } catch (err) {
+    console.error('[AutoMigrator] ❌ Error truncating tables:', err.message);
+    try { await conn.query('SET FOREIGN_KEY_CHECKS = 1;'); } catch (_) {}
+    throw err;
+  } finally {
+    if (shouldClose && conn) {
+      await conn.end();
+    }
+  }
+}
+
+
+/**
  * Discovers migration files from database/migrations and Backend/src/migrations
  */
 function discoverMigrationFiles() {
@@ -101,6 +199,13 @@ export async function runMigrations() {
   try {
     conn = await createMigrationConnection();
     await ensureMigrationsTable(conn);
+
+    // If TRUNCATE_DB=true or CLI flag --truncate is passed, wipe tables keeping Super Admin
+    // (You can also uncomment the line below to run truncate on every migration execution)
+    // await truncateAllExceptSuperAdmin(conn);
+    if (process.env.TRUNCATE_DB === 'true' || process.argv.includes('--truncate')) {
+      await truncateAllExceptSuperAdmin(conn);
+    }
 
     // Get current batch index
     const [batchRows] = await conn.query('SELECT COALESCE(MAX(batch), 0) + 1 AS next_batch FROM schema_migrations');
@@ -189,4 +294,20 @@ export async function migrateOnBoot() {
     console.warn('[AutoMigrator Warning] Boot migration check encountered an issue:', err.message);
     return null;
   }
+}
+
+// Direct execution support: node src/config/migrator.js [--truncate]
+if (process.argv[1] && (process.argv[1].endsWith('migrator.js') || process.argv[1].endsWith('migrator.mjs'))) {
+  (async () => {
+    try {
+      if (process.argv.includes('--truncate') || process.argv.includes('--reset') || process.env.TRUNCATE_DB === 'true') {
+        await truncateAllExceptSuperAdmin();
+      }
+      await runMigrations();
+      process.exit(0);
+    } catch (err) {
+      console.error(err);
+      process.exit(1);
+    }
+  })();
 }

@@ -670,20 +670,21 @@ export default function MentorQuizzes() {
 
   return (
     <div className="admin-quizzes-container">
-      <div className="ui-section-header-MN">
-        <div className="ui-section-main">
-          <div>
-            <h2 className="ui-section-title">
-              <GraduationCap size={22} className="ui-section-title-icon" />
-              <span>Quiz Management</span>
-            </h2>
-            <p className="ui-section-desc">
-              Create, manage, and track quiz assessments. View real-time student results.
-            </p>
-          </div>
-          <div className="ui-section-action">
-            <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn"><Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}</button>
-          </div>
+      {/* Page Header */}
+      <div className="mentor-quiz-header">
+        <div className="mentor-quiz-header-left">
+          <h2 className="mentor-quiz-header-title">
+            <GraduationCap size={22} color="#4f46e5" className="ui-section-title-icon" />
+            <span>Quiz Management</span>
+          </h2>
+          <p className="mentor-quiz-header-subtitle">
+            Create, manage, and track quiz assessments. View real-time student results.
+          </p>
+        </div>
+        <div className="mentor-quiz-header-action">
+          <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
+            <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
+          </button>
         </div>
       </div>
 
