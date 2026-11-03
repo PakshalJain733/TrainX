@@ -94,6 +94,12 @@ export const getCodingSubmissionById = async (req, res, next) => {
 export const getStudentCodingSubmissions = async (req, res, next) => {
   try {
     const { studentId } = req.params;
+    // BOLA / IDOR Defense: Students can only view their own submissions
+    const role = (req.user?.role || '').toLowerCase();
+    const callerId = req.user?.userId || req.user?.id;
+    if (role === 'student' && String(callerId) !== String(studentId)) {
+      return sendError(res, 'Access denied: You can only view your own submissions', 403);
+    }
     const result = await getStudentSubmissionsService(studentId);
     return sendSuccess(res, 'Student coding submissions retrieved successfully', result, 200);
   } catch (error) {

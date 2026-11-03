@@ -197,7 +197,16 @@ export const resetPasswordWithOtp = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const updated = await updateUserModel(userId, req.body);
+    // Security Allowlist: strip protected privilege fields
+    const allowed = [
+      'name', 'mobile_number', 'phone', 'gender', 'city', 'emergency_contact',
+      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester'
+    ];
+    const safeData = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) safeData[key] = req.body[key];
+    }
+    const updated = await updateUserModel(userId, safeData);
     return sendSuccess(res, 'Profile updated successfully in database', updated);
   } catch (error) {
     next(error);

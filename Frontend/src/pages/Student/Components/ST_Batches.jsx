@@ -536,17 +536,7 @@ export default function Batches() {
             View your active C2C batches, faculty-led sessions, curriculum completion rates, and learning resources.
           </p>
         </div>
-        <button
-          type="button"
-          className="join-batch-header-btn"
-          onClick={() => {
-            setModalError("");
-            setModalSuccess("");
-            setShowJoinModal(true);
-          }}
-        >
-          <Plus size={16} /> Join Batch
-        </button>
+
       </div>
 
       {/* Summary KPI Bar */}

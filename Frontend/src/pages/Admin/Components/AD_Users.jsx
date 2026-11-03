@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -33,29 +33,30 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   useEffect(() => {
     if (!isOpen) return;
     setLoadingTrainers(true);
+
+    const propTrainers = (users || []).filter(u => String(u.role || "").toLowerCase() === "trainer");
+    if (propTrainers.length > 0) {
+      setTrainers(propTrainers);
+    }
+
     apiFetch("/admin/users?role=trainer")
       .then((res) => {
         const list = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(list)) {
-          const onlyTrainers = list.filter(u => {
-            const isTrainer = String(u.role || "").toLowerCase() === "trainer";
-            const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
-            return isTrainer && isApproved;
-          });
-          setTrainers(onlyTrainers);
+          const onlyTrainers = list.filter(u => String(u.role || "").toLowerCase() === "trainer");
+          const map = new Map();
+          propTrainers.forEach(t => map.set(t.id || t.email || t.name, t));
+          onlyTrainers.forEach(t => map.set(t.id || t.email || t.name, t));
+          setTrainers(Array.from(map.values()));
         }
       })
       .catch((err) => {
         console.warn("[Fetch Trainers Error]", err);
-        const fallback = (users || []).filter(u => {
-          const isTrainer = String(u.role || "").toLowerCase() === "trainer";
-          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
-          return isTrainer && isApproved;
-        });
+        const fallback = (users || []).filter(u => String(u.role || "").toLowerCase() === "trainer");
         setTrainers(fallback);
       })
       .finally(() => setLoadingTrainers(false));
-  }, [isOpen]);
+  }, [isOpen, users]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -64,18 +65,21 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
         const list = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(list) && list.length > 0) {
           const activeOnly = list.filter((b) => {
-            const st = String(b.status || "").toLowerCase().trim();
-            return st === "active";
+            const st = String(b.batchStatus || b.status || "").toLowerCase().trim();
+            return st !== "inactive" && st !== "archived" && st !== "deleted";
           });
           const formatted = activeOnly.map((b) => ({
             id: b.id || b.batch_id,
             name: b.name || b.batch_name || b.code,
             label: `${b.name || b.batch_name || b.code}`,
-            trainer: b.trainer || b.mentor_name || "Unassigned",
-            topic: b.topic || "Daily Training Session",
-            description: b.description || "Curriculum topic",
+            trainer: b.registeredTrainerName || (b.trainer && b.trainer !== "Faculty Instructor" && b.trainer !== "Unassigned" ? b.trainer : "No Trainer Assigned"),
+            trainerEmail: b.registeredTrainerEmail || null,
+            isTrainerRegistered: Boolean(b.isTrainerRegistered || b.registeredTrainerName),
+            topic: b.dailyTopic || b.topic || "Daily Training Session",
+            description: b.dailyDescription || b.description || "Curriculum topic",
             date: b.date || new Date().toISOString().split("T")[0],
-            status: b.status || "Active",
+            status: b.dailyStatus || b.topicStatus || "Scheduled",
+            batchStatus: b.batchStatus || b.status || "Active",
           }));
           setBatches(formatted);
           if (formatted.length > 0) {
@@ -189,17 +193,12 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     if (tItem.trainer) setCurrentTrainer(tItem.trainer);
   };
 
-  const trainerOptions = trainers.map((t) => ({
+  const registeredTrainers = trainers.filter(t => String(t.role || "").toLowerCase() === "trainer");
+  const trainerOptions = registeredTrainers.map((t) => ({
     value: t.name,
-    label: `${t.name} (Trainer)`,
+    label: `${t.name}${t.email ? ` (${t.email})` : ' (Trainer)'}`,
   }));
-
-  if (currentTrainer && !trainerOptions.some(o => o.value === currentTrainer)) {
-    trainerOptions.unshift({
-      value: currentTrainer,
-      label: `${currentTrainer} (Assigned)`,
-    });
-  }
+  const isCurrentTrainerRegistered = registeredTrainers.some(t => t.name === currentTrainer);
 
   const handleUpdateTopicSubmit = async (e) => {
     e.preventDefault();
@@ -216,12 +215,15 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
     setTopicStatus(updatedStatus);
 
+    const selectedTrainerObj = registeredTrainers.find(t => t.name === currentTrainer);
+    const trainerNameToSave = selectedTrainerObj ? selectedTrainerObj.name : (currentTrainer && currentTrainer !== 'No Trainer Assigned' && currentTrainer !== 'Faculty Instructor' ? currentTrainer : null);
+
     const payload = {
       topic_date: topicDate,
       topic: topicTitle,
       description: topicDesc || "Daily curriculum topic",
       status: updatedStatus,
-      trainer: currentTrainer,
+      trainer: trainerNameToSave || currentTrainer,
     };
 
     try {
@@ -246,7 +248,8 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       await apiFetch(`/batches/${selectedBatchId}`, {
         method: "PUT",
         body: JSON.stringify({
-          trainer: currentTrainer,
+          trainer: trainerNameToSave,
+          trainer_id: selectedTrainerObj?.id || null,
           topic: topicTitle,
           description: topicDesc || "Daily curriculum topic",
           date: topicDate,
@@ -293,7 +296,10 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     setBatches(prev =>
       prev
         .map(b => b.id === batchId ? { ...b, status: newStatus } : b)
-        .filter(b => String(b.status || "").toLowerCase().trim() === "active")
+        .filter(b => {
+          const st = String(b.batchStatus || b.status || "").toLowerCase().trim();
+          return st !== "inactive" && st !== "archived" && st !== "deleted";
+        })
     );
     try {
       await apiFetch(`/batches/${batchId}`, {
@@ -374,22 +380,34 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                 {isEditingTrainer ? (
                   <>
                     <AdminUserSelect
-                      value={currentTrainer}
+                      value={isCurrentTrainerRegistered ? currentTrainer : ""}
                       options={trainerOptions}
                       onChange={val => setCurrentTrainer(val)}
-                      placeholder={loadingTrainers ? "Loading trainers..." : (trainerOptions.length === 0 ? "No trainers available" : "Select trainer...")}
+                      placeholder={loadingTrainers ? "Loading registered trainers..." : (trainerOptions.length === 0 ? "No registered trainers available" : "Select registered trainer...")}
                       icon={UserCheck}
                     />
-                    {!loadingTrainers && trainers.length === 0 && (
-                      <small style={{ color: "#64748b", marginTop: "4px", display: "block", fontSize: "11px" }}>
-                        No trainers registered yet. Create a user with role "Trainer" in User Management.
+                    {!loadingTrainers && registeredTrainers.length === 0 && (
+                      <small style={{ color: "#ef4444", marginTop: "6px", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px" }}>
+                        <AlertCircle size={13} /> No registered trainers found in this college. Add a user with role "Trainer" in User Management.
                       </small>
                     )}
                   </>
                 ) : (
                   <div className="fs-portal-preassigned-box">
-                    <span className="fs-portal-flex-center-gap"><User size={15} className="fs-portal-icon-indigo" /> {currentTrainer}</span>
-                    <span className="fs-portal-preassigned-tag">Pre-Assigned</span>
+                    {isCurrentTrainerRegistered ? (
+                      <>
+                        <span className="fs-portal-flex-center-gap"><UserCheck size={15} className="fs-portal-icon-indigo" /> {currentTrainer}</span>
+                        <span className="fs-portal-preassigned-tag" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0' }}>Registered</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="fs-portal-flex-center-gap" style={{ color: currentTrainer && currentTrainer !== 'Faculty Instructor' && currentTrainer !== 'Unassigned' && currentTrainer !== 'No Trainer Assigned' ? '#334155' : '#94a3b8' }}>
+                          <User size={15} className="fs-portal-icon-indigo" />
+                          {currentTrainer && currentTrainer !== 'Faculty Instructor' && currentTrainer !== 'Unassigned' && currentTrainer !== 'No Trainer Assigned' ? currentTrainer : 'No Trainer Assigned'}
+                        </span>
+                        <span className="fs-portal-preassigned-tag" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}>Unassigned</span>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -499,9 +517,14 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                     <div className="fs-portal-batch-footer">
                       <div className="fs-portal-trainer-info">
                         <div className="fs-portal-trainer-avatar">
-                          {(displayTrainer || "T").charAt(0)}
+                          {(displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "T").charAt(0)}
                         </div>
-                        <span className="fs-portal-trainer-name">{displayTrainer}</span>
+                        <span className="fs-portal-trainer-name">
+                          {displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "No Trainer Assigned"}
+                        </span>
+                        {(registeredTrainers.some(t => t.name === displayTrainer) || item.isTrainerRegistered) && (
+                          <span className="fs-portal-preassigned-tag" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0', fontSize: '10px', padding: '1px 5px' }}>Registered</span>
+                        )}
                       </div>
                       <span className={isSelected ? "fs-portal-batch-status-active" : "fs-portal-batch-status-idle"}>
                         {isSelected ? "Active Batch ✓" : "Click to Edit"}
@@ -527,7 +550,7 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
   const [deptFilter, setDeptFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [divFilter, setDivFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "available" | "assigned"
+  const [statusFilter, setStatusFilter] = useState("available"); // Default to non-allotted students only
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
   const [alertMsg, setAlertMsg] = useState("");
@@ -576,6 +599,73 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
     return (r.includes("student") || r === "user" || (!r && u.name)) && isApproved;
   });
 
+  // Students currently assigned to the selected mentor
+  const mentorCurrentMentees = useMemo(() => {
+    if (!selectedMentor) return [];
+    const selLower = selectedMentor.toLowerCase().trim();
+    return allStudents.filter((s) => {
+      const m = (s.mentor_name || assignmentsMap[String(s.id)] || assignmentsMap[String(s.user_id)] || "").toLowerCase().trim();
+      return m === selLower;
+    });
+  }, [selectedMentor, allStudents, assignmentsMap]);
+
+  // Remove/Unassign student from mentor group
+  const handleRemoveStudentFromMentor = async (student) => {
+    if (!student) return;
+    const currentMentor =
+      student.mentor_name ||
+      assignmentsMap[String(student.id)] ||
+      assignmentsMap[String(student.user_id)] ||
+      selectedMentor ||
+      "mentor";
+
+    if (!window.confirm(`Are you sure you want to remove ${student.name} from ${currentMentor}'s mentor group?`)) {
+      return;
+    }
+
+    setAlertMsg("");
+    try {
+      const res = await apiFetch("/admin/unassign-mentor", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: student.id,
+        }),
+      });
+
+      if (res && res.error) {
+        setAlertMsg(res.message || res.error || "Failed to remove student from mentor group.");
+        return;
+      }
+
+      // Update local assignmentsMap
+      setAssignmentsMap((prev) => {
+        const next = { ...prev };
+        delete next[String(student.id)];
+        if (student.user_id) delete next[String(student.user_id)];
+        return next;
+      });
+
+      // Update student in memory
+      student.mentor_name = null;
+      student.mentor_id = null;
+
+      const stUser = allStudents.find((s) => s.id === student.id);
+      if (stUser) {
+        stUser.mentor_name = null;
+        stUser.mentor_id = null;
+      }
+
+      setSelectedStudentIds((prev) => prev.filter((id) => id !== student.id));
+      setSuccessMsg(`Successfully removed ${student.name} from ${currentMentor}.`);
+      onSuccess?.();
+
+      setTimeout(() => setSuccessMsg(""), 3500);
+    } catch (err) {
+      console.warn("[Remove Mentor Error]", err);
+      setAlertMsg(err.message || "Failed to remove student from mentor group.");
+    }
+  };
+
   // Filter students based on Department, Year, Division, Status, and Search input
   const filteredStudents = allStudents.filter((s) => {
     const q = studentSearch.toLowerCase().trim();
@@ -584,8 +674,17 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
     const isAssigned = Boolean(assignedMentor && assignedMentor.trim());
 
     // 1. Assignment Status Filter
+    // Non-allotted only
     if (statusFilter === "available" && isAssigned) return false;
-    if (statusFilter === "assigned" && !isAssigned) return false;
+    // Assigned only (if mentor chosen, strictly this mentor's mentees)
+    if (statusFilter === "assigned") {
+      if (!isAssigned) return false;
+      if (selectedMentor && assignedMentor.toLowerCase() !== selectedMentor.toLowerCase()) return false;
+    }
+    // If "all" and a mentor is selected, never show students already assigned to OTHER mentors
+    if (statusFilter === "all" && selectedMentor && isAssigned && assignedMentor.toLowerCase() !== selectedMentor.toLowerCase()) {
+      return false;
+    }
 
     // 2. Department filter
     let matchesDept = true;
@@ -884,6 +983,65 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
               />
             </div>
 
+            {/* Mentees currently assigned to the selected mentor with remove control */}
+            {selectedMentor && (
+              <div style={{ margin: "14px 0", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: 750, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Assigned to {selectedMentor} ({mentorCurrentMentees.length})
+                  </label>
+                </div>
+                {mentorCurrentMentees.length === 0 ? (
+                  <div style={{ fontSize: "11.5px", color: "#94a3b8", fontStyle: "italic" }}>
+                    No students assigned yet.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "140px", overflowY: "auto" }}>
+                    {mentorCurrentMentees.map((mStudent) => (
+                      <div
+                        key={mStudent.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          padding: "6px 10px",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        <span style={{ fontWeight: 650, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                          {mStudent.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveStudentFromMentor(mStudent)}
+                          style={{
+                            background: "#fee2e2",
+                            border: "1px solid #fecaca",
+                            color: "#dc2626",
+                            borderRadius: "6px",
+                            padding: "2px 7px",
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            flexShrink: 0,
+                          }}
+                          title={`Remove ${mStudent.name} from ${selectedMentor}`}
+                        >
+                          <UserMinus size={11} /> Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Selected Students Chips Banner or Empty Helper */}
             {selectedStudentsList.length > 0 ? (
               <div className="fs-portal-mentees-wrapper">
@@ -994,12 +1152,12 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                   <AdminUserSelect
                     value={statusFilter}
                     options={[
+                      { value: "available", label: "Non-Allotted (Available Only)" },
+                      ...(selectedMentor ? [{ value: "assigned", label: `Assigned to ${selectedMentor}` }] : [{ value: "assigned", label: "Already Assigned" }]),
                       { value: "all", label: "All Statuses" },
-                      { value: "available", label: "Available Only" },
-                      { value: "assigned", label: "Already Assigned Only" },
                     ]}
                     onChange={(val) => setStatusFilter(val)}
-                    placeholder="All Statuses"
+                    placeholder="Non-Allotted Only"
                   />
                 </div>
 
@@ -1237,19 +1395,41 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                           </td>
                           <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
                             {isAlreadyAssigned ? (
-                              <button
-                                type="button"
-                                className="btn-portal-reassign"
-                                onClick={() => {
-                                  setAlertMsg("");
-                                  setReassignStudent(student);
-                                  setReassignNewMentor("");
-                                  setReassignError("");
-                                }}
-                                title={"Reassign " + student.name + " from " + assignedMentor + " to another mentor"}
-                              >
-                                <Repeat size={12} /> Reassign
-                              </button>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", justifyContent: "center" }}>
+                                <button
+                                  type="button"
+                                  className="btn-portal-reassign"
+                                  onClick={() => {
+                                    setAlertMsg("");
+                                    setReassignStudent(student);
+                                    setReassignNewMentor("");
+                                    setReassignError("");
+                                  }}
+                                  title={"Reassign " + student.name + " from " + assignedMentor + " to another mentor"}
+                                >
+                                  <Repeat size={12} /> Reassign
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveStudentFromMentor(student)}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                    padding: "5px 8px",
+                                    borderRadius: "8px",
+                                    background: "#fee2e2",
+                                    border: "1px solid #fecaca",
+                                    color: "#dc2626",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                  }}
+                                  title={`Remove ${student.name} from ${assignedMentor}'s group`}
+                                >
+                                  <UserMinus size={11} /> Remove
+                                </button>
+                              </div>
                             ) : isChecked ? (
                               <span className="fs-portal-status-pill fs-portal-status-pill--selected">Selected</span>
                             ) : (
@@ -2028,6 +2208,20 @@ export default function AdminUsers() {
         }
 
         setUsers(nonAdmins);
+
+        if (roleFilter === "all" && !search.trim() && (!departmentFilter.trim() || departmentFilter === "all")) {
+          const sCount = nonAdmins.filter(u => String(u.role || '').toLowerCase() === "student").length;
+          const tCount = nonAdmins.filter(u => String(u.role || '').toLowerCase() === "trainer").length;
+          const mCount = nonAdmins.filter(u => String(u.role || '').toLowerCase() === "mentor").length;
+          const cCount = nonAdmins.filter(u => String(u.role || '').toLowerCase() === "coordinator").length;
+          setStats({
+            totalUsers: sCount + tCount + mCount + cCount,
+            students: sCount,
+            trainers: tCount,
+            mentors: mCount,
+            coordinators: cCount,
+          });
+        }
       }
     } catch (err) {
       console.error("Failed to fetch users:", err);
@@ -2118,7 +2312,7 @@ export default function AdminUsers() {
     if (!user || !user.id) return;
     // Optimistic instant state update
     setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, is_approved: 1, is_active: 1 } : u))
+      prev.map((u) => (u.id === user.id ? { ...u, is_approved: 0, is_active: 1 } : u))
     );
     try {
       const res = await apiFetch(`/admin/users/${user.id}/approve`, {
@@ -2176,11 +2370,16 @@ export default function AdminUsers() {
         (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
       );
 
+      const isStudentRole = formData.role === "student";
       const payload = {
         ...formData,
+        year: isStudentRole ? formData.year : "",
+        division: isStudentRole ? formData.division : "",
+        semester: isStudentRole ? (finalSem || "1") : null,
         department_id: selectedDeptObj?.id || formData.department_id || null,
-        semester: finalSem || "1",
         secure_code: generatedCode || formData.secure_code || "",
+        is_approved: 0,
+        is_active: 1,
       };
       const res = await apiFetch("/admin/users", {
         method: "POST",
@@ -2502,33 +2701,15 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-start" }}>
-                        {(() => {
-                          const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
-                          return (
-                            <span className={`status-badge ${isApproved ? "status-badge--active" : "status-badge--inactive"}`}>
-                              <span className="status-dot"></span>
-                              {isApproved ? "Approved" : "Pending Approval"}
-                            </span>
-                          );
-                        })()}
-                        <span 
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            fontSize: "10.5px",
-                            fontWeight: 650,
-                            padding: "2px 7px",
-                            borderRadius: "10px",
-                            background: u.is_verified ? "#ecfdf5" : "#fffbeb",
-                            color: u.is_verified ? "#059669" : "#b45309",
-                            border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`
-                          }}
-                        >
-                          {u.is_verified ? "✓ Verified" : "⚠ Unverified"}
-                        </span>
-                      </div>
+                      {(() => {
+                        const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+                        return (
+                          <span className={`status-badge ${isApproved ? "status-badge--active" : "status-badge--inactive"}`}>
+                            <span className="status-dot"></span>
+                            {isApproved ? "Approved" : "Unapproved"}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td>
                       <div className="action-btns-row action-btns-right">

@@ -135,7 +135,8 @@ function getPreviewDocument(lang, code) {
         document.getElementById('root').innerHTML = '<div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; font-size: 13px;">⚠️ Define a React component named <code>function App() { ... }</code> to render preview.</div>';
       }
     } catch(err) {
-      document.getElementById('root').innerHTML = '<div style="padding: 14px; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; color: #fecaca; font-family: monospace; font-size: 12.5px;"><strong>🔴 React Render Error:</strong><br/>' + err.message + '</div>';
+      const safeMsg = String(err?.message || 'Unknown render error').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.getElementById('root').innerHTML = '<div style="padding: 14px; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; color: #fecaca; font-family: monospace; font-size: 12.5px;"><strong>🔴 React Render Error:</strong><br/>' + safeMsg + '</div>';
     }
   </script>
 </body>

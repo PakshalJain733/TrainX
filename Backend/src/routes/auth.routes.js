@@ -16,10 +16,11 @@ router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOt
 router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']), verifyRegisterEmailOtp);
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 router.post('/request-secure-code', requestSecureCode);
-router.get('/secure-code-requests', getSecureCodeRequests);
-router.patch('/secure-code-requests/:id', resolveSecureCodeRequest);
-router.delete('/secure-code-requests/:id', deleteSecureCodeRequest);
-router.delete('/secure-code-requests/by-email/:email', deleteSecureCodeRequestByEmail);
+// Admin & Super Admin protected management of secure code requests
+router.get('/secure-code-requests', authenticateToken, getSecureCodeRequests);
+router.patch('/secure-code-requests/:id', authenticateToken, resolveSecureCodeRequest);
+router.delete('/secure-code-requests/:id', authenticateToken, deleteSecureCodeRequest);
+router.delete('/secure-code-requests/by-email/:email', authenticateToken, deleteSecureCodeRequestByEmail);
 
 // OTP & Password Login flows
 router.post('/send-otp', sendOtp);

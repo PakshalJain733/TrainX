@@ -35,8 +35,8 @@ router.get('/session-roster', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_AD
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);
 router.post('/leave-requests', createLeaveRequest);
-router.put('/leave-requests/:id/status', updateLeaveRequestStatus);
-router.patch('/leave-requests/:id/status', updateLeaveRequestStatus);
+router.put('/leave-requests/:id/status', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), updateLeaveRequestStatus);
+router.patch('/leave-requests/:id/status', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), updateLeaveRequestStatus);
 router.delete('/leave-requests/:id', deleteLeaveRequest);
 
 // 1. Logged in student personal summary & history

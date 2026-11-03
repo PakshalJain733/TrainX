@@ -1,3 +1,10 @@
+import dns from 'dns';
+
+// Ensure IPv4 address resolution takes precedence over IPv6 across all Node.js outbound connections
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 import express from 'express';
 import cors from 'cors';
 import { corsMiddleware } from './config/cors.js';
@@ -67,8 +74,8 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
-    frameguard: false, // Allows same-site document previews in portal modals
-    xContentTypeOptions: false,
+    frameguard: { action: 'sameorigin' }, // Clickjacking protection (same-site previews permitted)
+    xContentTypeOptions: true, // MIME-sniffing protection enabled
   })
 );
 

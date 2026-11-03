@@ -10,11 +10,16 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
+
+const staffOrAdmin = authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.TRAINER, ROLES.MENTOR, ROLES.COORDINATOR);
+
 /**
- * Route: Get all coding submissions (Admin / Mentors)
+ * Route: Get all coding submissions (Admin / Mentors / Instructors Only)
  * GET /api/v1/coding-submissions
  */
-router.get('/', authenticateToken, getAllCodingSubmissionsAdmin);
+router.get('/', authenticateToken, staffOrAdmin, getAllCodingSubmissionsAdmin);
 
 /**
  * Route: Save a student's coding attempt and marks
@@ -23,12 +28,12 @@ router.get('/', authenticateToken, getAllCodingSubmissionsAdmin);
 router.post('/', authenticateToken, createCodingSubmission);
 
 /**
- * Route: Save optional feedback on coding submission (Admin / Mentors)
+ * Route: Save optional feedback on coding submission (Admin / Mentors / Instructors Only)
  * PATCH /api/v1/coding-submissions/:id/feedback
  * POST /api/v1/coding-submissions/:id/feedback
  */
-router.patch('/:id/feedback', authenticateToken, updateSubmissionFeedbackController);
-router.post('/:id/feedback', authenticateToken, updateSubmissionFeedbackController);
+router.patch('/:id/feedback', authenticateToken, staffOrAdmin, updateSubmissionFeedbackController);
+router.post('/:id/feedback', authenticateToken, staffOrAdmin, updateSubmissionFeedbackController);
 
 /**
  * Route: Get coding submission by ID

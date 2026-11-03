@@ -19,7 +19,7 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
-import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail } from '../services/email.service.js';
+import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail } from '../services/email.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 
 /**
@@ -327,19 +327,7 @@ export const createUserAdmin = async (req, res, next) => {
       return sendError(res, 'Name and either Email or Mobile Number are required', 400);
     }
 
-    if (email) {
-      const existing = await findUserByEmailOrMobile(email);
-      if (existing) {
-        return sendError(res, 'A user with this email already exists', 409);
-      }
-    }
-
-    if (mobile_number) {
-      const existingMobile = await findUserByEmailOrMobile(mobile_number);
-      if (existingMobile) {
-        return sendError(res, 'A user with this mobile number already exists', 409);
-      }
-    }
+    // Existing check handled below with update support for mismatched names & multi-source registrations
 
     // Role mapping
     const canonicalRole = normalizeRole(role) || ROLES.STUDENT;
@@ -455,9 +443,74 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    const isApprovedVal = req.body.is_approved !== undefined
-      ? (req.body.is_approved === 1 || req.body.is_approved === true || String(req.body.is_approved) === '1' ? 1 : 0)
-      : (isSuperAdminAddingAdmin ? 1 : 0);
+    // Check if user already exists in DB (registered first on portal, or pre-added)
+    let existing = null;
+    if (email) {
+      existing = await findUserByEmailOrMobile(email);
+    } else if (mobile_number) {
+      existing = await findUserByEmailOrMobile(mobile_number);
+    }
+
+    if (existing) {
+      // Requirement: "if admin add one user name ganesh and that users registers first but with different then that name should be updated in db"
+      // "no one should be directly approved"
+      const trimmedName = (name || '').trim();
+      if (trimmedName) {
+        await query(
+          'UPDATE users SET name = ?, role = ?, college_id = ?, department = ?, department_id = ?, is_approved = 0 WHERE id = ?',
+          [trimmedName, canonicalRole, targetCollegeId, validatedDeptName, validatedDeptId, existing.id]
+        );
+      }
+
+      if (canonicalRole === ROLES.STUDENT) {
+        const cleanYear = String(year || 'FE').toUpperCase().trim();
+        let defaultSem = '1';
+        if (cleanYear === 'FE') defaultSem = '1';
+        else if (cleanYear === 'SE') defaultSem = '3';
+        else if (cleanYear === 'TE') defaultSem = '5';
+        else if (cleanYear === 'BE') defaultSem = '7';
+
+        let finalSem = semester ? String(semester).replace(/^[^\d]*/, '').trim() : '';
+        if (!finalSem) finalSem = defaultSem;
+
+        const [stRows] = await query('SELECT id FROM students WHERE user_id = ? LIMIT 1', [existing.id]);
+        if (stRows && stRows.length > 0) {
+          await query(
+            'UPDATE students SET college_id = ?, department_id = ?, batch_id = COALESCE(?, batch_id), roll_number = COALESCE(?, roll_number), department = ?, year = ?, division = ?, semester = ? WHERE user_id = ?',
+            [targetCollegeId, validatedDeptId, batch_id ? parseInt(batch_id, 10) : null, roll_number || null, validatedDeptName, year || 'FE', division || 'A', finalSem, existing.id]
+          );
+        } else {
+          await saveStudentDetails({
+            user_id: existing.id,
+            college_id: targetCollegeId,
+            department_id: validatedDeptId,
+            batch_id: batch_id ? parseInt(batch_id, 10) : null,
+            roll_number: roll_number || `AUTO_${existing.id}`,
+            department: validatedDeptName,
+            year: year || 'FE',
+            division: division || 'A',
+            semester: finalSem,
+            cgpa: cgpa || '8.5',
+            skills: skills || '',
+          });
+        }
+      }
+
+      return sendSuccess(res, {
+        user: {
+          id: existing.id,
+          name: trimmedName || existing.name,
+          email: existing.email,
+          role: canonicalRole,
+          college_id: targetCollegeId,
+          is_approved: 0,
+          is_active: 1,
+        }
+      }, 'User name and details updated in database. Status set to pending approval.');
+    }
+
+    // Requirement: "no one should be directly approved"
+    const isApprovedVal = 0;
 
     const newUser = await createUser({
       name,
@@ -470,7 +523,7 @@ export const createUserAdmin = async (req, res, next) => {
       department_id: validatedDeptId,
       is_active: 1,
       is_verified: isSuperAdminAddingAdmin ? 1 : 0,
-      is_approved: isApprovedVal,
+      is_approved: 0,
     });
 
     let studentProfile = null;
@@ -514,16 +567,17 @@ export const createUserAdmin = async (req, res, next) => {
         });
       } else {
         // Staff/mentors/coordinators -> send registration invitation with secure code
+        const isStudentAccount = canonicalRole === ROLES.STUDENT;
         sendWelcomeEmail({
           to: newUser.email,
           name: newUser.name,
           role: canonicalRole,
           secure_code: targetSecureCode || '',
           mobile_number: mobile_number || newUser.mobile_number || '',
-          roll_number: roll_number || (studentProfile && studentProfile.roll_number) || '',
+          roll_number: isStudentAccount ? (roll_number || (studentProfile && studentProfile.roll_number) || '') : (roll_number || ''),
           department: validatedDeptName || department || '',
-          year: year || (studentProfile && studentProfile.year) || '',
-          division: division || (studentProfile && studentProfile.division) || '',
+          year: isStudentAccount ? (year || (studentProfile && studentProfile.year) || '') : '',
+          division: isStudentAccount ? (division || (studentProfile && studentProfile.division) || '') : '',
         }).catch((err) => {
           console.warn(`[Admin User Creation Email Notice] ${err.message}`);
         });
@@ -571,6 +625,12 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
       const [uRow] = await query('SELECT college_id FROM users WHERE id = ?', [req.user.id || req.user.userId]);
       targetCollegeId = uRow?.college_id || 1;
     }
+
+    let collegeName = '';
+    try {
+      const [cRow] = await query('SELECT name FROM colleges WHERE id = ?', [targetCollegeId]);
+      collegeName = cRow?.name || '';
+    } catch (_) {}
 
     // 2. Fetch existing active departments strictly for this college from the database
     const collegeDepts = await query(
@@ -654,9 +714,34 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
 
       const existingEmail = await findUserByEmailOrMobile(email);
       if (existingEmail) {
-        const reason = 'Rejected – Email already registered in system';
-        rejectedList.push({ name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
-        results.push({ student: name, email, roll_number: roll_number || '—', department: rawDept, status: 'Rejected', reason });
+        // Requirement: "if admin add one user name ganesh and that users registers first but with different then that name should be updated in db"
+        // "no one should be directly approved"
+        const trimmedName = (name || '').trim();
+        if (trimmedName) {
+          await query(
+            'UPDATE users SET name = ?, department = ?, department_id = ?, is_approved = 0 WHERE id = ?',
+            [trimmedName, resolvedDeptName, resolvedDeptId, existingEmail.id]
+          );
+        }
+        await query(
+          'UPDATE students SET college_id = ?, department_id = ?, roll_number = COALESCE(?, roll_number), department = ? WHERE user_id = ?',
+          [targetCollegeId, resolvedDeptId, roll_number || null, resolvedDeptName, existingEmail.id]
+        );
+        createdList.push({
+          id: existingEmail.id,
+          name: trimmedName || existingEmail.name,
+          email: existingEmail.email,
+          roll_number: roll_number || '—',
+          department: resolvedDeptName,
+          status: 'Updated',
+        });
+        results.push({
+          student: trimmedName || existingEmail.name,
+          email: existingEmail.email,
+          roll_number: roll_number || '—',
+          department: resolvedDeptName,
+          status: 'Updated',
+        });
         continue;
       }
 
@@ -703,7 +788,7 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
       }
 
       // All validations passed: Safely insert User and Student Profile linked to validated department
-      const defaultPassword = item.password || 'Student@123';
+      const defaultPassword = item.password || '12345678';
       const resolvedDeptName = matchedDept.name || rawDept;
       const resolvedDeptId = matchedDept.id;
 
@@ -718,8 +803,8 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
           department_id: resolvedDeptId,
           password: defaultPassword,
           is_active: 1,
-          is_verified: 1,
-          is_approved: 1,
+          is_verified: 0,
+          is_approved: 0,
         });
 
         const studentProfile = await saveStudentDetails({
@@ -736,19 +821,17 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
           mobile_number: mobile_number || null,
         });
 
-        // Send Welcome & Pre-Filled Registration Email
+        // Send Welcome & Credentials Email with default password
         if (newUser.email && newUser.email.includes('@')) {
-          sendWelcomeEmail({
+          sendStudentCredentialsEmail({
             to: newUser.email,
             name: newUser.name,
-            role: ROLES.STUDENT,
-            mobile_number,
+            password: defaultPassword,
             roll_number: roll_number || studentProfile.roll_number,
             department: resolvedDeptName,
-            year,
-            division,
+            collegeName: collegeName || '',
           }).catch((err) => {
-            console.warn(`[Bulk Welcome Email Notice] ${err.message}`);
+            console.warn(`[Bulk Credentials Email Notice] ${err.message}`);
           });
         }
 
@@ -1644,6 +1727,78 @@ export const assignMentorToStudents = async (req, res, next) => {
       assignedCount: savedCount,
       isReassignment: Boolean(isReassignment),
       reassignedStudents,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Unassign/Remove Faculty Mentor from Student(s)
+ */
+export const unassignMentorFromStudents = async (req, res, next) => {
+  try {
+    const { studentId, studentIds } = req.body;
+    const targetIds = Array.isArray(studentIds) ? studentIds : (studentId ? [studentId] : []);
+    const validIds = targetIds.filter((id) => id !== null && id !== undefined && id !== '');
+
+    if (validIds.length === 0) {
+      return sendError(res, 'At least one student ID is required to remove mentor assignment', 400);
+    }
+
+    const parseId = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      const n = parseInt(String(val).replace(/^u-/i, '').replace(/^s-/i, ''), 10);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    let removedCount = 0;
+    for (const sid of validIds) {
+      const parsedSid = parseId(sid);
+      const strSid = String(parsedSid || sid);
+
+      // Clean from mentor_student_assignments
+      try {
+        await query(
+          'DELETE FROM mentor_student_assignments WHERE student_id = ? OR student_id = ?',
+          [parsedSid || sid, strSid]
+        );
+      } catch (e) {
+        console.warn('[unassignMentorFromStudents msa]', e.message);
+      }
+
+      // Clean from mentor_assignments
+      try {
+        await query(
+          'DELETE FROM mentor_assignments WHERE student_id = ? OR student_id = ?',
+          [strSid, String(sid)]
+        );
+      } catch (e) {
+        console.warn('[unassignMentorFromStudents ma]', e.message);
+      }
+
+      // Clear from students table
+      try {
+        await query(
+          'UPDATE students SET mentor_name = NULL, mentor_id = NULL WHERE user_id = ? OR id = ?',
+          [parsedSid || sid, sid]
+        );
+      } catch (e) {}
+
+      // Clear from users table
+      try {
+        await query(
+          'UPDATE users SET mentor_name = NULL, mentor_id = NULL WHERE id = ?',
+          [parsedSid || sid]
+        );
+      } catch (e) {}
+
+      removedCount++;
+    }
+
+    return sendSuccess(res, `Successfully removed ${removedCount} student(s) from mentor group`, {
+      removedCount,
+      studentIds: validIds,
     });
   } catch (error) {
     next(error);

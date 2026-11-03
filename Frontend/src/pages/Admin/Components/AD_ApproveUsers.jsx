@@ -557,32 +557,9 @@ export default function AD_ApproveUsers() {
                             borderRadius: "6px",
                           }}
                         >
-                          <Clock size={12} /> Pending Approval
+                          <Clock size={12} /> Unapproved
                         </span>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            fontSize: "11px",
-                            fontWeight: "650",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            background: u.is_verified ? "#ecfdf5" : "#fffbeb",
-                            color: u.is_verified ? "#059669" : "#b45309",
-                            border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`,
-                          }}
-                        >
-                          {u.is_verified ? (
-                            <>
-                              <ShieldCheck size={12} /> Verified
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle size={12} /> Unverified
-                            </>
-                          )}
-                        </span>
+                        
                       </div>
                     </div>
                   </div>
@@ -800,32 +777,9 @@ export default function AD_ApproveUsers() {
                               fontWeight: "700",
                             }}
                           >
-                            <Clock size={13} /> Pending Approval
+                            <Clock size={13} /> Unapproved
                           </span>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "11px",
-                              fontWeight: "650",
-                              padding: "2px 8px",
-                              borderRadius: "6px",
-                              background: u.is_verified ? "#ecfdf5" : "#fffbeb",
-                              color: u.is_verified ? "#059669" : "#b45309",
-                              border: `1px solid ${u.is_verified ? "#a7f3d0" : "#fde68a"}`,
-                            }}
-                          >
-                            {u.is_verified ? (
-                              <>
-                                <ShieldCheck size={12} /> Verified
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle size={12} /> Unverified
-                              </>
-                            )}
-                          </span>
+                          
                         </div>
                       </td>
 
@@ -959,7 +913,7 @@ export default function AD_ApproveUsers() {
                   </div>
                   <div className="approve-modal-hero-status-row">
                     <span className="approve-status-pill">
-                      <Clock size={12} /> Pending Approval
+                      <Clock size={12} /> Unapproved
                     </span>
                     {selectedUserModal.created_at && (
                       <span className="approve-registered-time">
