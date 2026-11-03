@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX } from "lucide-react";
@@ -2032,6 +2032,24 @@ export default function AdminUsers() {
     fetchStats();
   }, []);
 
+  const departmentOptions = useMemo(() => {
+    if (departments && departments.length > 0) {
+      return departments.map((d) => ({
+        value: d.code || d.name,
+        label: d.name && d.code && d.name !== d.code ? `${d.name} (${d.code})` : (d.code || d.name),
+      }));
+    }
+    return [
+      { value: "CE", label: "Computer Engineering (CE)" },
+      { value: "IT", label: "Information Technology (IT)" },
+      { value: "ECS", label: "Electronics & Computer Science (ECS)" },
+      { value: "AIDS", label: "Artificial Intelligence & Data Science (AIDS)" },
+      { value: "EXTC", label: "Electronics & Telecommunication (EXTC)" },
+      { value: "MECH", label: "Mechanical Engineering (MECH)" },
+      { value: "CIVIL", label: "Civil Engineering (CIVIL)" },
+    ];
+  }, [departments]);
+
   // Fetch departments for the dropdown
   useEffect(() => {
     apiFetch("/departments")
@@ -2128,8 +2146,13 @@ export default function AdminUsers() {
         else if (formData.year === "FE") finalSem = "1";
       }
 
+      const selectedDeptObj = (departments || []).find(
+        (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+      );
+
       const payload = {
         ...formData,
+        department_id: selectedDeptObj?.id || formData.department_id || null,
         semester: finalSem || "1",
         secure_code: generatedCode || formData.secure_code || "",
       };
@@ -2159,9 +2182,18 @@ export default function AdminUsers() {
     setFeedback({ type: "", message: "" });
 
     try {
+      const selectedDeptObj = (departments || []).find(
+        (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+      );
+
+      const updatePayload = {
+        ...formData,
+        department_id: selectedDeptObj?.id || formData.department_id || null,
+      };
+
       const res = await apiFetch(`/admin/users/${selectedUser.id}`, {
         method: "PUT",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updatePayload),
       });
 
       if (res && (res.data || res.success)) {
@@ -2598,6 +2630,21 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
+                {/* Department / Branch Selection for Mentors & Non-Students */}
+                {formData.role !== 'student' && (
+                  <div className="form-group-admin" style={{ marginBottom: '14px' }}>
+                    <label>
+                      {formData.role === 'mentor' ? 'Mentor Department / Branch *' : 'Assigned Department / Branch *'}
+                    </label>
+                    <AdminUserSelect
+                      value={formData.department}
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      options={departmentOptions}
+                      placeholder="Select Department / Branch"
+                    />
+                  </div>
+                )}
+
                 {formData.role !== 'student' && (
                   <div className="admin-user-token-section">
                     <div className="admin-user-token-header">
@@ -2701,18 +2748,11 @@ export default function AdminUsers() {
                         />
                       </div>
                       <div className="form-group-admin">
-                        <label>Department</label>
+                        <label>Department *</label>
                         <AdminUserSelect
                           value={formData.department}
                           onChange={(val) => setFormData({ ...formData, department: val })}
-                          options={
-                            departments.length > 0
-                              ? departments.map((d) => ({
-                                  value: d.code || d.name,
-                                  label: d.code || d.name,
-                                }))
-                              : [{ value: formData.department, label: formData.department }]
-                          }
+                          options={departmentOptions}
                           placeholder="Select Department"
                         />
                       </div>
@@ -2862,6 +2902,20 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
+                {(formData.role !== "student" && formData.role !== "Student") && (
+                  <div className="form-group-admin" style={{ marginTop: '14px', marginBottom: '8px' }}>
+                    <label>
+                      {formData.role === "mentor" ? "Mentor Department / Branch" : "Assigned Department / Branch"}
+                    </label>
+                    <AdminUserSelect
+                      value={formData.department}
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      options={departmentOptions}
+                      placeholder="Select Department / Branch"
+                    />
+                  </div>
+                )}
+
                 {(formData.role === "student" || formData.role === "Student") && (
                   <>
                     <div className="form-row-2">
@@ -2877,12 +2931,11 @@ export default function AdminUsers() {
                       </div>
                       <div className="form-group-admin">
                         <label>Department</label>
-                        <input
-                          type="text"
-                          className="form-input-admin"
-                          placeholder="e.g. ECS"
+                        <AdminUserSelect
                           value={formData.department}
-                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          onChange={(val) => setFormData({ ...formData, department: val })}
+                          options={departmentOptions}
+                          placeholder="Select Department"
                         />
                       </div>
                     </div>

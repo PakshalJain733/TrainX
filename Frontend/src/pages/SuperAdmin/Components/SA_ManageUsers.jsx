@@ -2771,10 +2771,10 @@ export default function ManageUsers() {
                   </>
                 )}
 
-                {/* Coordinator Department Selection (Department removed for Mentors) */}
-                {newUserForm.role === 'coordinators' && (
+                {/* Department Selection for Coordinators & Mentors */}
+                {(newUserForm.role === 'coordinators' || newUserForm.role === 'mentors') && (
                   <div className="form-group-admin sa-form-group-full">
-                    <label>Department *</label>
+                    <label>{newUserForm.role === 'mentors' ? 'Mentor Department / Branch *' : 'Department *'}</label>
                     <MuSelect
                       value={newUserForm.departmentId}
                       direction="up"

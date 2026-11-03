@@ -365,9 +365,20 @@ export const createUserAdmin = async (req, res, next) => {
         if (deptRecord.college_id !== targetCollegeId && req.user.role !== ROLES.SUPER_ADMIN) {
           return sendError(res, 'Cannot assign user to a department from another college', 403);
         }
-        validatedDeptName = deptRecord.name;
+        validatedDeptName = deptRecord.code || deptRecord.name;
         validatedDeptId = deptRecord.id;
       }
+    } else if (validatedDeptName) {
+      try {
+        const dRows = await query(
+          'SELECT id, name, code FROM departments WHERE college_id = ? AND (code = ? OR name = ?) LIMIT 1',
+          [targetCollegeId, validatedDeptName, validatedDeptName]
+        );
+        if (dRows && dRows.length > 0) {
+          validatedDeptId = dRows[0].id;
+          validatedDeptName = dRows[0].code || dRows[0].name;
+        }
+      } catch (_) {}
     }
 
     if (batch_id) {
@@ -804,6 +815,29 @@ export const updateUserAdmin = async (req, res, next) => {
 
     // Whitelist editable fields — never trust raw req.body
     const updates = pickUserUpdateFields(req.body);
+
+    if (updates.department && !updates.department_id) {
+      try {
+        const dRows = await query(
+          'SELECT id, name, code FROM departments WHERE college_id = ? AND (code = ? OR name = ?) LIMIT 1',
+          [existingUser.college_id, updates.department, updates.department]
+        );
+        if (dRows && dRows.length > 0) {
+          updates.department_id = dRows[0].id;
+          updates.department = dRows[0].code || dRows[0].name;
+        }
+      } catch (_) {}
+    } else if (updates.department_id && !updates.department) {
+      try {
+        const dRows = await query(
+          'SELECT id, name, code FROM departments WHERE id = ? LIMIT 1',
+          [updates.department_id]
+        );
+        if (dRows && dRows.length > 0) {
+          updates.department = dRows[0].code || dRows[0].name;
+        }
+      } catch (_) {}
+    }
 
     // Role changes require role-assignment privileges
     if (req.body.role !== undefined) {
