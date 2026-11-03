@@ -275,7 +275,7 @@ export const getBatches = async (req, res, next) => {
 export const createBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, schedule, topic, description, date } = req.body;
+    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, trainer_id, schedule, topic, description, date } = req.body;
     if (!name || (!code && !join_code)) {
       return sendError(res, 'Batch Name and Join Code are required', 400);
     }
@@ -285,9 +285,22 @@ export const createBatch = async (req, res, next) => {
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
     const targetCollegeId = collegeId || req.user?.college_id || req.user?.collegeId || 1;
 
+    let trainerId = trainer_id ? parseInt(trainer_id, 10) : null;
+    if (!trainerId && batchTrainer && batchTrainer !== 'Faculty Instructor') {
+      try {
+        const [trainerUser] = await query(
+          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role = 'trainer' LIMIT 1",
+          [batchTrainer, batchTrainer]
+        );
+        if (trainerUser) {
+          trainerId = trainerUser.id;
+        }
+      } catch (_) {}
+    }
+
     const result = await query(
-      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, schedule, topic, description, date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, trainer_id, schedule, topic, description, date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
         name.trim(),
         batchCode,
@@ -296,6 +309,7 @@ export const createBatch = async (req, res, next) => {
         targetCollegeId,
         departmentId || 1,
         batchTrainer,
+        trainerId || null,
         batchSchedule,
         topic || null,
         description || null,
@@ -304,6 +318,15 @@ export const createBatch = async (req, res, next) => {
     );
 
     const insertedId = result.insertId;
+    if (trainerId) {
+      try {
+        await query(
+          `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+          [trainerId, insertedId]
+        );
+      } catch (_) {}
+    }
+
     const [newBatch] = await query(`
       SELECT 
         b.*,
