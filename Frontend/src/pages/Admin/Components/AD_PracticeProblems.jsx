@@ -245,7 +245,9 @@ export default function AdminPracticeProblems({ role = "admin" }) {
           input: formTestCase.input,
           output: formTestCase.output,
           expectedOutput: formTestCase.output,
-          isHidden: formTestCase.isHidden,
+          expected_output: formTestCase.output,
+          isHidden: Boolean(formTestCase.isHidden),
+          is_hidden: Boolean(formTestCase.isHidden),
         },
       ],
     }));
@@ -417,6 +419,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
     setEditingProblemId(p.id);
     const assignedBatch = p.batch || "All Batches";
     const matchedBatch = batches.find(b => b.name === assignedBatch);
+    const rawTestCases = Array.isArray(p.testCases) ? p.testCases : [];
     setNewProb({
       title: p.title || "",
       batch: assignedBatch,
@@ -430,9 +433,17 @@ export default function AdminPracticeProblems({ role = "admin" }) {
       memoryLimit: p.memoryLimit || "128 MB",
       description: p.description || "",
       dueDate: p.dueDate || "",
-      sampleInput: p.sampleInput || "",
-      sampleOutput: p.sampleOutput || "",
-      testCases: p.testCases || [],
+      sampleInput: "",
+      sampleOutput: "",
+      testCases: rawTestCases.map((tc, idx) => ({
+        id: tc.id || `tc-${idx}-${Date.now()}`,
+        input: tc.input || "",
+        output: tc.output || tc.expectedOutput || tc.expected_output || "",
+        expectedOutput: tc.expectedOutput || tc.output || tc.expected_output || "",
+        expected_output: tc.expected_output || tc.output || tc.expectedOutput || "",
+        isHidden: Boolean(tc.isHidden ?? tc.is_hidden),
+        is_hidden: Boolean(tc.isHidden ?? tc.is_hidden),
+      })),
     });
     setFormTestCase({ input: "", output: "", isHidden: false });
     setShowAddModal(true);
@@ -470,9 +481,16 @@ export default function AdminPracticeProblems({ role = "admin" }) {
       memoryLimit: newProb.memoryLimit || "128 MB",
       description: newProb.description || "",
       dueDate: newProb.dueDate || "",
-      sampleInput: newProb.sampleInput || "",
-      sampleOutput: newProb.sampleOutput || "",
-      testCases: newProb.testCases || [],
+      sampleInput: "",
+      sampleOutput: "",
+      testCases: (newProb.testCases || []).map(tc => ({
+        input: tc.input || "",
+        expected_output: tc.expectedOutput || tc.output || tc.expected_output || "",
+        expectedOutput: tc.expectedOutput || tc.output || tc.expected_output || "",
+        output: tc.output || tc.expectedOutput || tc.expected_output || "",
+        isHidden: Boolean(tc.isHidden ?? tc.is_hidden),
+        is_hidden: Boolean(tc.isHidden ?? tc.is_hidden),
+      })),
     };
 
     try {
@@ -1875,36 +1893,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                   </div>
                 </div>
 
-                {/* SECTION 2: SAMPLE I/O */}
-                <div className="add-prob-sample-box">
-                  <h4 className="add-prob-sample-title">
-                    📌 Sample Input & Output (For Display)
-                  </h4>
-                  <div className="add-prob-grid-2">
-                    <div className="form-group-admin">
-                      <label style={{ fontSize: "12px" }}>Sample Input</label>
-                      <textarea
-                        rows={2}
-                        placeholder="[2, 7, 11, 15], target = 9"
-                        value={newProb.sampleInput}
-                        onChange={(e) => setNewProb({ ...newProb, sampleInput: e.target.value })}
-                        className="form-input-admin add-prob-code-textarea"
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label style={{ fontSize: "12px" }}>Sample Output</label>
-                      <textarea
-                        rows={2}
-                        placeholder="[0, 1]"
-                        value={newProb.sampleOutput}
-                        onChange={(e) => setNewProb({ ...newProb, sampleOutput: e.target.value })}
-                        className="form-input-admin add-prob-code-textarea"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION 3: TEST CASES BUILDER */}
+                {/* SECTION 2: TEST CASES BUILDER */}
                 <div className="tc-builder-box">
                   <div className="tc-builder-header">
                     <div>
@@ -1912,7 +1901,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                         <ListChecks size={18} color="#4f46e5" /> Test Cases Builder
                       </h4>
                       <p className="tc-builder-subtitle">
-                        Add test cases below. These will be stored directly in MySQL and evaluated during submissions.
+                        Add public sample and hidden evaluation test cases. Evaluated during student code submissions.
                       </p>
                     </div>
                     <span className="tc-builder-count-badge">
@@ -1973,8 +1962,8 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                       {newProb.testCases.map((tc, idx) => (
                         <div key={tc.id || idx} className="tc-builder-item">
                           <div className="tc-builder-item-info">
-                            <span className={`tc-builder-type-badge ${tc.isHidden ? "tc-builder-type-badge--hidden" : "tc-builder-type-badge--sample"}`}>
-                              {tc.isHidden ? "Hidden" : "Sample"} #{idx + 1}
+                            <span className={`tc-builder-type-badge ${tc.isHidden ? "tc-builder-type-badge--hidden" : "tc-builder-type-badge--public"}`}>
+                              {tc.isHidden ? "Hidden" : "Public"} #{idx + 1}
                             </span>
                             <div className="tc-builder-item-data">
                               <strong>In:</strong> {tc.input || "—"} &nbsp;|&nbsp; <strong>Out:</strong> {tc.output || tc.expectedOutput || "—"}

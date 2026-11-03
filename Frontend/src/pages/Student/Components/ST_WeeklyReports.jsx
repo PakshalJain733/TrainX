@@ -48,7 +48,7 @@ export default function WeeklyReports() {
   };
 
   const hasReports = reports && reports.length > 0;
-  const activeMentor = hasReports ? (reports[0]?.mentor || "Assigned Faculty Mentor") : "Assigned Faculty Mentor";
+  const activeMentor = hasReports ? (reports[0]?.mentor || "Assigned Mentor") : "Assigned Mentor";
   const activeTrend = hasReports ? (reports[0]?.trendStatus || "On Track") : "Pending Review";
 
   return (
@@ -77,7 +77,7 @@ export default function WeeklyReports() {
           {hasReports ? (
             <>Supervised by Mentor: <strong>{activeMentor}</strong> · Academic Oversight: ECS / Training Cell</>
           ) : (
-            <>Weekly evaluation scorecards submitted by your faculty mentor will appear here for each training cycle.</>
+            <>Weekly evaluation scorecards submitted by your mentor will appear here for each training cycle.</>
           )}
         </p>
         <div className="weekly-status-pills">
@@ -104,7 +104,7 @@ export default function WeeklyReports() {
             <FileCheck2 size={38} className="weekly-empty-icon" style={{ margin: '0 auto 12px auto', color: '#94a3b8' }} />
             <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>No Weekly Reports Available Yet</h3>
             <p style={{ color: '#64748b', fontSize: '13px', margin: 0, maxWidth: '460px', marginInline: 'auto' }}>
-              Your weekly performance evaluations will appear here once your assigned faculty mentor completes and submits the weekly mentor evaluation form.
+              Your weekly performance evaluations will appear here once your assigned mentor completes and submits the weekly mentor evaluation form.
             </p>
           </div>
         ) : (

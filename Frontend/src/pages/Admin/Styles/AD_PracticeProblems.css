@@ -575,33 +575,31 @@ input[type="datetime-local"].form-input-admin {
   resize: vertical;
 }
 
-.add-prob-sample-box {
-  margin-bottom: 20px;
-  background: #f8fafc;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.add-prob-sample-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
-  margin-bottom: 10px;
-}
-
 .add-prob-code-textarea {
   height: auto !important;
-  padding: 8px !important;
-  font-family: monospace;
-  font-size: 12px;
+  padding: 8px 10px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.add-prob-code-textarea:focus {
+  background: #ffffff;
+  border-color: #4f46e5;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .tc-builder-box {
-  background: #eef2ff;
+  background: #f8fafc;
   padding: 16px;
   border-radius: 14px;
-  border: 1px solid #c7d2fe;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .tc-builder-header {
@@ -707,9 +705,10 @@ input[type="datetime-local"].form-input-admin {
 .tc-builder-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 160px;
+  gap: 8px;
+  max-height: 240px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .tc-builder-item {
@@ -717,10 +716,17 @@ input[type="datetime-local"].form-input-admin {
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #c7d2fe;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.tc-builder-item:hover {
+  border-color: #cbd5e1;
+  background: #fafafa;
 }
 
 .tc-builder-item-info {
@@ -732,16 +738,19 @@ input[type="datetime-local"].form-input-admin {
 }
 
 .tc-builder-type-badge {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.tc-builder-type-badge--sample {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+.tc-builder-type-badge--sample,
+.tc-builder-type-badge--public {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .tc-builder-type-badge--hidden {

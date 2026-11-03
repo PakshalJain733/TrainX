@@ -262,7 +262,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
     const statsList = [
       { id: 'students', label: 'Enrolled Students', value: String(studentCount?.count || 0), hint: `Active in ${departmentName}` },
       { id: 'batches', label: 'Managed Batches', value: `${batchCount?.count || 0} Batches`, hint: 'Current active batches' },
-      { id: 'mentors', label: 'Faculty & Mentors', value: `${mentorCount} Trainers`, hint: `Assigned to ${departmentName}` },
+      { id: 'mentors', label: 'Mentors', value: `${mentorCount} Trainers`, hint: `Assigned to ${departmentName}` },
       { id: 'attendance', label: 'Attendance Rate', value: `${attData?.avg_attendance || 0}%`, hint: 'Department average' },
     ];
 

@@ -270,13 +270,7 @@ export const findCodingTestCasesByProblemId = async (problemId) => {
     console.warn(`[Coding Model] findCodingTestCasesByProblemId fallback: ${error.message}`);
   }
 
-  return [
-    { id: 1, problem_id: numId, input: 'sample_input_1', expected_output: 'sample_output_1', is_hidden: false, weightage: 20 },
-    { id: 2, problem_id: numId, input: 'sample_input_2', expected_output: 'sample_output_2', is_hidden: false, weightage: 20 },
-    { id: 3, problem_id: numId, input: 'sample_input_3', expected_output: 'sample_output_3', is_hidden: true, weightage: 20 },
-    { id: 4, problem_id: numId, input: 'sample_input_4', expected_output: 'sample_output_4', is_hidden: true, weightage: 20 },
-    { id: 5, problem_id: numId, input: 'sample_input_5', expected_output: 'sample_output_5', is_hidden: true, weightage: 20 },
-  ];
+  return [];
 };
 
 /**

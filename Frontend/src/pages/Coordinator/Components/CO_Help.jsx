@@ -94,6 +94,7 @@ export default function CoordinatorHelp() {
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [successPopup, setSuccessPopup] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
 
@@ -146,7 +147,15 @@ export default function CoordinatorHelp() {
         method: 'POST',
         body: JSON.stringify(newTicket),
       });
-      if (res && res.success) {
+      const createdData = res?.data || res;
+      if (res && (res.success || res.data || res.id)) {
+        const ticketId = createdData?.id || 'TICK-' + (createdData?.dbId || Date.now());
+        setSuccessPopup({
+          id: ticketId,
+          subject: newTicket.subject,
+          category: newTicket.category,
+          priority: newTicket.priority
+        });
         setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
         setIsTicketModalOpen(false);
         setActiveTab("tickets");
@@ -554,6 +563,50 @@ export default function CoordinatorHelp() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TICKET CREATION SUCCESS POPUP */}
+      {successPopup && (
+        <div className="help-modal-overlay" style={{ zIndex: 100000 }} onClick={() => setSuccessPopup(null)}>
+          <div className="help-modal-card" style={{ maxWidth: '440px', textAlign: 'center', padding: '28px 24px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: '#ecfdf5',
+              border: '2px solid #a7f3d0',
+              color: '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <CheckCircle2 size={34} />
+            </div>
+            <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
+              Support Ticket Created!
+            </h3>
+            <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Your ticket <strong style={{ color: '#2563eb' }}>{successPopup.id}</strong> has been logged in MySQL and forwarded to College Admin.
+            </p>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px', textAlign: 'left' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Subject</div>
+              <div style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600, marginTop: '2px' }}>{successPopup.subject}</div>
+            </div>
+            <button
+              type="button"
+              className="help-submit-btn"
+              style={{ width: '100%', padding: '10px 0', fontSize: '14px' }}
+              onClick={() => {
+                setSuccessPopup(null);
+                setActiveTab("tickets");
+                fetchTickets();
+              }}
+            >
+              View My Support Tickets
+            </button>
           </div>
         </div>
       )}

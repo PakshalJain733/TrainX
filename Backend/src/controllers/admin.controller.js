@@ -1050,9 +1050,10 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
           const inp = tc.input || '';
           const out = tc.expectedOutput || tc.expected_output || tc.output || '';
           if (inp || out) {
+            const isHidden = (tc.isHidden === true || tc.is_hidden === true || tc.isHidden === 1 || tc.is_hidden === 1 || String(tc.isHidden).toLowerCase() === 'true' || String(tc.is_hidden).toLowerCase() === 'true') ? 1 : 0;
             await query(
               `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)`,
-              [id, inp, out, (tc.isHidden || tc.is_hidden) ? 1 : 0]
+              [id, inp, out, isHidden]
             );
           }
         }
@@ -1384,7 +1385,7 @@ export const assignMentorToStudents = async (req, res, next) => {
   try {
     const { mentorId, mentorName, mentorEmail, studentIds, isReassignment } = req.body;
     if (!mentorName && !mentorId) {
-      return sendError(res, 'Faculty Mentor Name or ID is required', 400);
+      return sendError(res, 'Mentor Name or ID is required', 400);
     }
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
       return sendError(res, 'At least one student must be selected', 400);

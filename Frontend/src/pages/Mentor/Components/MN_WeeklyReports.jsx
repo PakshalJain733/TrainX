@@ -427,7 +427,7 @@ export default function WeeklyReports() {
               <thead>
                 <tr>
                   <th>Report Title</th>
-                  <th>Faculty Mentor</th>
+                  <th>Mentor</th>
                   <th>Audited Scope / Student</th>
                   <th>Target Batch</th>
                   <th>Submission Date</th>
@@ -608,7 +608,7 @@ export default function WeeklyReports() {
                     <div className="mentor-locked-badge">
                       <div className="mentor-locked-avatar">{getInitials(loggedInMentor.name)}</div>
                       <div className="mentor-locked-info">
-                        <span className="mentor-locked-label">Auditing Faculty Mentor (Logged-In)</span>
+                        <span className="mentor-locked-label">Auditing Mentor (Logged-In)</span>
                         <div className="mentor-locked-name-wrap">
                           <span className="mentor-locked-name">{loggedInMentor.name}</span>
                           <span className="verified-pill">
@@ -951,7 +951,7 @@ export default function WeeklyReports() {
             <div className="mentor-report-modal-body" style={{ background: "#ffffff" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                 <div>
-                  <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>Faculty Mentor</div>
+                  <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>Mentor</div>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
                     {getReportMentor(selectedReport)}
                   </div>

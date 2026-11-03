@@ -108,6 +108,7 @@ export default function Help() {
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [successPopup, setSuccessPopup] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
 
@@ -156,7 +157,15 @@ export default function Help() {
         method: 'POST',
         body: JSON.stringify(newTicket)
       });
+      const createdData = res?.data || res;
       if (res && (res.success || res.data || res.id)) {
+        const ticketId = createdData?.id || 'TICK-' + (createdData?.dbId || Date.now());
+        setSuccessPopup({
+          id: ticketId,
+          subject: newTicket.subject,
+          category: newTicket.category,
+          priority: newTicket.priority
+        });
         setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
         setIsTicketModalOpen(false);
         setActiveTab("tickets");

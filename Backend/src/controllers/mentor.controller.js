@@ -2258,12 +2258,13 @@ export const getMentorSupportTickets = async (req, res, next) => {
   try {
     const mentorId = getMentorId(req);
     const collegeId = getCollegeId(req);
+    const userEmail = req.user?.email || null;
 
     let tickets = [];
     try {
       tickets = await query(
         `SELECT st.*,
-                COALESCE(u.name, 'Student') AS requesterName,
+                COALESCE(u.name, 'Mentor') AS requesterName,
                 u.email AS requesterEmail,
                 u.role AS requesterRole,
                 COALESCE(s.department, 'General') AS requesterBatch,
@@ -2271,14 +2272,16 @@ export const getMentorSupportTickets = async (req, res, next) => {
          FROM support_tickets st
          LEFT JOIN users u ON st.user_id = u.id
          LEFT JOIN students s ON u.id = s.user_id
-         WHERE st.user_id = ? 
+         WHERE (st.user_id = ? AND ? IS NOT NULL)
+            OR (u.email = ? AND ? IS NOT NULL)
             OR (u.role = 'STUDENT' AND (u.college_id = ? OR ? IS NULL))
+            OR (st.user_id IS NULL AND st.target_role = 'admin')
          ORDER BY st.id DESC`,
-        [mentorId, collegeId, collegeId]
+        [mentorId, mentorId, userEmail, userEmail, collegeId, collegeId]
       );
     } catch (e) {
       console.warn('[DB getMentorSupportTickets query failed, selecting user tickets]', e.message);
-      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [mentorId]).catch(() => []);
+      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
     }
 
     const formatted = (tickets || []).map(t => ({
@@ -2290,7 +2293,7 @@ export const getMentorSupportTickets = async (req, res, next) => {
       priority: t.priority || 'Normal',
       status: t.status || 'Open',
       description: t.description || '',
-      requesterName: t.requesterName || 'Student',
+      requesterName: t.requesterName || (t.user_id === mentorId ? 'Me (Mentor)' : 'Student'),
       requesterEmail: t.requesterEmail || '',
       role: t.requesterRole || 'STUDENT',
       batch: t.requesterBatch || 'General',
@@ -2314,14 +2317,24 @@ export const createMentorSupportTicket = async (req, res, next) => {
   try {
     const mentorId = getMentorId(req);
     const { subject, category = 'Academics & Labs', priority = 'Normal', description } = req.body;
-    if (!subject) return sendError(res, 'Ticket subject is required', 400);
+    if (!subject || !subject.trim()) return sendError(res, 'Ticket subject is required', 400);
 
     let insertId = Date.now();
     try {
+      let validUserId = mentorId;
+      if (validUserId) {
+        const u = await query('SELECT id FROM users WHERE id = ?', [validUserId]);
+        if (!u || u.length === 0) validUserId = null;
+      }
+      if (!validUserId && req.user?.email) {
+        const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+        if (u && u.length > 0) validUserId = u[0].id;
+      }
+
       const result = await query(
         `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
          VALUES (?, ?, ?, ?, 'Open', ?, 'admin', NOW())`,
-        [mentorId, subject.trim(), category, priority, description ? description.trim() : '']
+        [validUserId || null, subject.trim(), category, priority || 'Normal', description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {
@@ -2331,7 +2344,7 @@ export const createMentorSupportTicket = async (req, res, next) => {
     return sendSuccess(res, 'Support ticket created and forwarded to College Admin', {
       id: `TICK-${insertId}`,
       dbId: insertId,
-      subject,
+      subject: subject.trim(),
       category,
       priority,
       status: 'Open'

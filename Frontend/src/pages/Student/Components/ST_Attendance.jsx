@@ -398,7 +398,7 @@ export default function Attendance() {
         body: JSON.stringify({ category: leaveCategory, startDate: fromDate, endDate: toDate || fromDate, days: calcDays, reason, attachment: attachedFileName || null })
       });
 
-      const mentorName = res.data?.mentor || "Assigned Faculty Mentor";
+      const mentorName = res.data?.mentor || "Assigned Mentor";
       const newLeave = {
         id: res.data?.id || `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
         title: `${leaveCategory} · ${reason.substring(0, 30)}`,

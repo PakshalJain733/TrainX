@@ -1127,7 +1127,7 @@ export const getStudentWeeklyReports = async (req, res, next) => {
     try {
       reports = await query(
         `SELECT wr.*, 
-                COALESCE(m.name, 'Faculty Mentor') AS mentor_name
+                COALESCE(m.name, 'Mentor') AS mentor_name
          FROM weekly_reports wr
          LEFT JOIN users m ON wr.mentor_id = m.id
          WHERE wr.user_id = ? OR wr.student_id = ?
@@ -1173,7 +1173,7 @@ export const getStudentWeeklyReports = async (req, res, next) => {
         weakAreas: weak,
         nextSteps: nextStepsList,
         suggestions: nextStepsList,
-        mentor: r.mentor_name || 'Assigned Faculty Mentor',
+        mentor: r.mentor_name || 'Assigned Mentor',
         date: r.generated_at ? new Date(r.generated_at).toLocaleDateString() : 'Recent',
         trendStatus: r.trend_status || 'On Track',
       };

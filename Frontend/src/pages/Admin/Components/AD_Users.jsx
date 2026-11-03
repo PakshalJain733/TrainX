@@ -684,7 +684,7 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
     setAlertMsg("");
 
     if (!selectedMentor) {
-      setAlertMsg("Please select a faculty mentor first.");
+      setAlertMsg("Please select a mentor first.");
       return;
     }
     if (selectedStudentIds.length === 0) {
@@ -819,9 +819,9 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
               <UserCheck size={24} />
             </div>
             <div className="fs-portal-header-title-wrap">
-              <h2 className="fs-portal-header-title">Assign Faculty Mentor to Students</h2>
+              <h2 className="fs-portal-header-title">Assign Mentor to Students</h2>
               <p className="fs-portal-header-subtitle">
-                Allocate students to faculty mentors with live assignment verification and re-assignment controls
+                Allocate students to mentors with live assignment verification and re-assignment controls
               </p>
             </div>
           </div>
@@ -861,11 +861,11 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
               <UserCheck size={18} className="fs-portal-icon-blue" />
-              1. Select Faculty Mentor
+              1. Select Mentor
             </h3>
 
             <div className="form-group-admin fs-portal-field">
-              <label className="fs-portal-label">Faculty Mentor / Leader</label>
+              <label className="fs-portal-label">Mentor</label>
               <AdminUserSelect
                 value={selectedMentor}
                 options={mentors.map((m) => {
@@ -879,7 +879,7 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                   setSelectedMentor(val);
                   setAlertMsg("");
                 }}
-                placeholder="-- Choose Faculty Mentor --"
+                placeholder="-- Choose Mentor --"
                 icon={UserCheck}
               />
             </div>
@@ -1274,8 +1274,8 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                 <div className="reassign-modal-title-box">
                   <Repeat size={20} className="reassign-modal-icon" />
                   <div>
-                    <h3 className="reassign-modal-title">Reassign Faculty Mentor</h3>
-                    <p className="reassign-modal-subtitle">Update mentee allocation to a new faculty mentor</p>
+                    <h3 className="reassign-modal-title">Reassign Mentor</h3>
+                    <p className="reassign-modal-subtitle">Update mentee allocation to a new mentor</p>
                   </div>
                 </div>
                 <button
@@ -2883,7 +2883,7 @@ export default function AdminUsers() {
                       options={[
                         { value: "student", label: "Student" },
                         { value: "trainer", label: "Trainer" },
-                        { value: "mentor", label: "Mentor / Faculty" },
+                        { value: "mentor", label: "Mentor" },
                         { value: "coordinator", label: "Coordinator" },
                         { value: "college_admin", label: "College Admin" }
                       ]}

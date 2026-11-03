@@ -1159,7 +1159,7 @@ function Register() {
               </div>
             )}
 
-            {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD / Admin) ── */}
+            {/* ── OTHER ROLE FIELDS (Mentor / HOD / Admin) ── */}
             {role !== "Student" && role !== "" && (
               <div key={role}>
                 <div className="form-grid-2">

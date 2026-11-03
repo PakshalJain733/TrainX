@@ -64,7 +64,7 @@ const SEARCH_REGISTRY = [
   { id: 'mn-defaulters', title: 'Defaulters', path: '/mentor/defaulters', role: 'faculty', category: 'Records', icon: AlertCircle, keywords: ['defaulters', 'at-risk students'] },
   { id: 'mn-mockdrives', title: 'Mock Drives', path: '/mentor/mock-drives', role: 'faculty', category: 'Career', icon: Briefcase, keywords: ['mock drives', 'placement prep'] },
   { id: 'mn-help', title: 'Support Ticket', path: '/mentor/help', role: 'faculty', category: 'Support', icon: HelpCircle, keywords: ['support ticket', 'help', 'queries'] },
-  { id: 'mn-profile', title: 'Faculty Profile', path: '/mentor/profile', role: 'faculty', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
+  { id: 'mn-profile', title: 'Mentor Profile', path: '/mentor/profile', role: 'faculty', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
 
   // ── COORDINATOR DASHBOARD ──
   { id: 'co-overview', title: 'Overview', path: '/coordinator', role: 'coordinator', category: 'Dashboard', icon: LayoutDashboard, keywords: ['overview', 'dashboard', 'home'] },

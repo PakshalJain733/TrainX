@@ -44,7 +44,7 @@ const defaultFaqs = [
 
 const kbGuides = [
   {
-    title: "Faculty & Mentor Platform Manual",
+    title: "Mentor Platform Manual",
     desc: "Complete guide on scheduling live sessions, evaluating submissions, and reviewing AI skill diagnostics.",
     size: "2.8 MB",
     type: "PDF Document"
@@ -65,6 +65,7 @@ export default function Help() {
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [successPopup, setSuccessPopup] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
 
@@ -117,7 +118,15 @@ export default function Help() {
         method: 'POST',
         body: JSON.stringify(newTicket),
       });
-      if (res && res.success) {
+      const createdData = res?.data || res;
+      if (res && (res.success || res.data || res.id)) {
+        const ticketId = createdData?.id || 'TICK-' + (createdData?.dbId || Date.now());
+        setSuccessPopup({
+          id: ticketId,
+          subject: newTicket.subject,
+          category: newTicket.category,
+          priority: newTicket.priority
+        });
         setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
         setIsTicketModalOpen(false);
         setActiveTab("tickets");
@@ -162,7 +171,7 @@ export default function Help() {
         method: 'PUT',
         body: JSON.stringify({
           status: 'Resolved',
-          resolutionNote: 'Resolved by Faculty Mentor.'
+          resolutionNote: 'Resolved by Mentor.'
         })
       });
       fetchTickets();
@@ -210,7 +219,7 @@ export default function Help() {
 
         <div
           className="help-channel-card-modern"
-          onClick={() => { window.location.href = "mailto:support@acadnexus.com"; }}
+          onClick={() => { window.location.href = "mailto:ganeshvshinde2006@gmail.com"; }}
           style={{ cursor: "pointer" }}
         >
           <div className="help-channel-icon-avatar help-icon-emerald">
@@ -219,14 +228,14 @@ export default function Help() {
           <div className="help-channel-info">
             <span className="help-channel-badge help-badge-emerald">EMAIL ASSISTANCE</span>
             <h3 className="help-channel-title">Email Support</h3>
-            <p className="help-channel-sub">Direct response from department coordinator within 24 hours.</p>
-            <span className="help-channel-action-link help-link-emerald">support@acadnexus.com →</span>
+            <p className="help-channel-sub">Direct response from admin within 24 hours.</p>
+            <span className="help-channel-action-link help-link-emerald">ganeshvshinde2006@gmail.com →</span>
           </div>
         </div>
 
         <div
           className="help-channel-card-modern"
-          onClick={() => { window.location.href = "tel:+919876543210"; }}
+          onClick={() => { window.location.href = "tel:+918779351143"; }}
           style={{ cursor: "pointer" }}
         >
           <div className="help-channel-icon-avatar help-icon-purple">
@@ -236,7 +245,7 @@ export default function Help() {
             <span className="help-channel-badge help-badge-purple">HELPLINE</span>
             <h3 className="help-channel-title">Campus Hotline</h3>
             <p className="help-channel-sub">Mon – Fri, 9:00 AM – 6:00 PM</p>
-            <span className="help-channel-action-link help-link-purple">+91 98765 43210 →</span>
+            <span className="help-channel-action-link help-link-purple">+91 87793 51143 →</span>
           </div>
         </div>
       </div>
@@ -527,6 +536,58 @@ export default function Help() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: TICKET CREATION SUCCESS POPUP */}
+      {successPopup && (
+        <div className="help-modal-overlay" style={{ zIndex: 100000 }} onClick={() => setSuccessPopup(null)}>
+          <div className="help-modal-card" style={{ maxWidth: '440px', textAlign: 'center', padding: '28px 24px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: '#ecfdf5',
+              border: '2px solid #a7f3d0',
+              color: '#059669',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <CheckCircle2 size={34} />
+            </div>
+            <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
+              Support Ticket Created!
+            </h3>
+            <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Your ticket <strong style={{ color: '#2563eb' }}>{successPopup.id}</strong> has been logged in MySQL and forwarded to the College Admin desk.
+            </p>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', marginBottom: '20px', textAlign: 'left' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Subject</div>
+              <div style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600, marginTop: '2px' }}>{successPopup.subject}</div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  {successPopup.category}
+                </span>
+                <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                  {successPopup.priority}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="help-submit-btn"
+              style={{ width: '100%', padding: '10px 0', fontSize: '14px' }}
+              onClick={() => {
+                setSuccessPopup(null);
+                setActiveTab("tickets");
+                fetchTickets();
+              }}
+            >
+              View My Support Tickets
+            </button>
           </div>
         </div>
       )}

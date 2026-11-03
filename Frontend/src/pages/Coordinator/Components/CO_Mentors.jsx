@@ -86,7 +86,7 @@ export default function CoordinatorMentors() {
 
         const mapped = list.map((m, idx) => ({
           id: m.id || idx + 1,
-          name: m.name || m.trainer || "Faculty Mentor",
+          name: m.name || m.trainer || "Mentor",
           rating: m.rating || "5.0",
           specialization: m.specialization || m.target_track || m.track || "General Domain",
           assignedBatch: m.assignedBatch || m.batch_name || "Unassigned",

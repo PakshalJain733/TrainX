@@ -405,9 +405,10 @@
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   z-index: 9999;
   padding: 16px;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -416,9 +417,14 @@
   border-radius: 16px;
   width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
   overflow: hidden;
   animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .modal-dialog--sm {
@@ -900,17 +906,18 @@ textarea.form-input-admin:focus,
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(8px);
   z-index: 99999;
-  padding: 16px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  overflow: auto;
+  justify-content: safe center;
+  overflow-y: auto;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 
 .fs-portal-dialog {
-  width: 95vw;
-  height: 90vh;
+  width: min(1360px, calc(100vw - 24px));
+  height: min(860px, calc(100vh - 24px));
   max-width: 1360px;
   max-height: 860px;
   border-radius: 18px;
@@ -923,6 +930,8 @@ textarea.form-input-admin:focus,
   margin: auto;
   min-width: 0;
   min-height: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 /* ── Plain White Header (NO DARK/NAVY BACKGROUND, NO GRADIENTS) ── */
@@ -1009,11 +1018,12 @@ textarea.form-input-admin:focus,
 .fs-portal-body {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: 310px 1fr;
-  gap: 16px;
-  padding: 16px 20px 20px;
+  grid-template-columns: minmax(260px, 310px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 18px 18px;
   overflow: hidden;
   background: #f8fafc;
   box-sizing: border-box;
@@ -1021,23 +1031,24 @@ textarea.form-input-admin:focus,
 
 .fs-portal-panel-sidebar {
   background: #ffffff;
-  padding: 18px;
+  padding: 16px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   overflow-y: auto;
   overflow-x: hidden !important;
   height: 100%;
   min-height: 0;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .fs-portal-panel-main {
   background: #ffffff;
-  padding: 18px 20px;
+  padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -1046,7 +1057,9 @@ textarea.form-input-admin:focus,
   gap: 12px;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .fs-portal-section-title {
@@ -2065,8 +2078,9 @@ textarea.form-input-admin:focus,
 /* ── Multi-Select Students Table System (Horizontal Roster) ── */
 .fs-portal-table-container {
   width: 100%;
+  min-width: 0;
   flex: 1;
-  min-height: 160px;
+  min-height: 140px;
   max-height: none;
   overflow-y: auto;
   overflow-x: auto;
@@ -2074,10 +2088,12 @@ textarea.form-input-admin:focus,
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 
 .fs-portal-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 13px;
   text-align: left;
