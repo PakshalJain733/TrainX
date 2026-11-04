@@ -108,9 +108,10 @@ router.delete('/study-materials/:id', materialsWrite, deleteStudyMaterial);
 router.get('/notifications', mentorOnly, getMentorNotifications);
 
 // Mentor Support Tickets & Escalation to College Admin
-router.get('/support/tickets', mentorOnly, getMentorSupportTickets);
-router.post('/support/tickets', mentorOnly, createMentorSupportTicket);
-router.put('/support/tickets/:id', mentorOnly, updateMentorSupportTicket);
-router.post('/support/tickets/:id/escalate', mentorOnly, escalateMentorSupportTicket);
+const supportTicketsAccess = authorizeRoles(ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN, ROLES.COORDINATOR);
+router.get('/support/tickets', supportTicketsAccess, getMentorSupportTickets);
+router.post('/support/tickets', supportTicketsAccess, createMentorSupportTicket);
+router.put('/support/tickets/:id', supportTicketsAccess, updateMentorSupportTicket);
+router.post('/support/tickets/:id/escalate', supportTicketsAccess, escalateMentorSupportTicket);
 
 export default router;

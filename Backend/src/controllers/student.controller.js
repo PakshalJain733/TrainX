@@ -1018,20 +1018,29 @@ export const getStudentPerformance = async (req, res, next) => {
 
 export const getSupportTickets = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id || 1;
+    let userId = req.user?.userId || req.user?.id;
+    if (!userId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) userId = u[0].id;
+    }
     let tickets = [];
     try {
-      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [userId]);
+      tickets = await query(
+        `SELECT * FROM support_tickets WHERE (user_id = ? AND ? IS NOT NULL) OR (? IS NULL AND user_id IS NULL) ORDER BY id DESC`,
+        [userId || null, userId || null, userId || null]
+      );
     } catch (e) {
       console.warn('[DB getSupportTickets fallback]', e.message);
+      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
     }
 
     const formatted = (tickets || []).map(t => ({
       id: `TICK-${t.id}`,
       dbId: t.id,
-      subject: t.subject,
+      title: t.subject || 'Support Ticket',
+      subject: t.subject || 'Support Ticket',
       category: t.category || 'Technical',
-      priority: t.priority || 'Medium',
+      priority: t.priority || 'Normal',
       status: t.status || 'Open',
       created: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
       description: t.description || '',
@@ -1048,34 +1057,51 @@ export const getSupportTickets = async (req, res, next) => {
 
 export const createSupportTicket = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id || 1;
-    const { subject, category, priority, description } = req.body;
+    let userId = req.user?.userId || req.user?.id;
+    if (!userId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) userId = u[0].id;
+    }
+    if (userId) {
+      const checkUser = await query('SELECT id FROM users WHERE id = ?', [userId]);
+      if (!checkUser || checkUser.length === 0) userId = null;
+    }
+    const { subject, category = 'Academics & Labs', priority = 'Normal', description } = req.body;
+    if (!subject || !subject.trim()) return sendError(res, 'Ticket subject is required', 400);
 
     let insertId = Math.floor(1000 + Math.random() * 9000);
     try {
       const result = await query(
-        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description)
-         VALUES (?, ?, ?, ?, 'Open', ?)`,
-        [userId, subject, category || 'Technical', priority || 'Medium', description || '']
+        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
+         VALUES (?, ?, ?, ?, 'Open', ?, 'mentor', NOW())`,
+        [userId || null, subject.trim(), category, priority || 'Normal', description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
 
-      // Automatically generate a notification for College Admin
+      // Automatically generate a notification for College Admin if valid college exists
       try {
-        const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
-        const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
-        const userCollegeId = uRows && uRows[0] ? uRows[0].college_id : 1;
+        if (userId) {
+          const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
+          const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
+          let userCollegeId = uRows && uRows[0] ? uRows[0].college_id : null;
+          if (userCollegeId) {
+            const cCheck = await query('SELECT id FROM colleges WHERE id = ?', [userCollegeId]);
+            if (!cCheck || cCheck.length === 0) userCollegeId = null;
+          }
 
-        await query(
-          `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
-           VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
-          [
-            userCollegeId,
-            `🎫 Support Ticket: ${subject}`,
-            `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Medium'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
-            userName
-          ]
-        );
+          if (userCollegeId) {
+            await query(
+              `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
+               VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
+              [
+                userCollegeId,
+                `🎫 Support Ticket: ${subject}`,
+                `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Normal'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
+                userName
+              ]
+            );
+          }
+        }
       } catch (notifErr) {
         console.warn('[DB notifySupportTicket warning]', notifErr.message);
       }
@@ -1085,11 +1111,14 @@ export const createSupportTicket = async (req, res, next) => {
 
     const ticket = {
       id: `TICK-${insertId}`,
+      dbId: insertId,
       subject,
-      category: category || 'Technical',
-      priority: priority || 'Medium',
+      title: subject,
+      category: category || 'Academics & Labs',
+      priority: priority || 'Normal',
       status: 'Open',
       created_at: new Date().toISOString().split('T')[0],
+      created: 'Just now',
       description: description || ''
     };
     return sendSuccess(res, 'Support ticket created successfully', ticket, 201);

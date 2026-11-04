@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
+import { downloadPdfGuide } from "../../../utils/downloadPdfGuide";
 import "../Styles/MN_Help.css";
 
 /* ── Inline dropdown for Mentor Help using CustomSelect ── */
@@ -65,6 +66,8 @@ export default function Help() {
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [successPopup, setSuccessPopup] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
@@ -111,16 +114,44 @@ export default function Help() {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    if (!newTicket.subject.trim() || !newTicket.description.trim()) return;
+    if (!newTicket.subject.trim() || !newTicket.description.trim()) {
+      setSubmitError("Please provide both a Subject and Detailed Description.");
+      return;
+    }
+    setSubmitError(null);
+    setIsSubmitting(true);
 
     try {
       const res = await apiFetch('/mentor/support/tickets', {
         method: 'POST',
         body: JSON.stringify(newTicket),
       });
+
+      if (res && res.error) {
+        setSubmitError(res.error);
+        setIsSubmitting(false);
+        return;
+      }
+
       const createdData = res?.data || res;
       if (res && (res.success || res.data || res.id)) {
         const ticketId = createdData?.id || 'TICK-' + (createdData?.dbId || Date.now());
+        const optimisticTicket = {
+          id: ticketId,
+          dbId: createdData?.dbId || Date.now(),
+          title: newTicket.subject,
+          subject: newTicket.subject,
+          category: newTicket.category,
+          priority: newTicket.priority,
+          status: 'Open',
+          created: new Date().toISOString().split('T')[0],
+          time: 'Today',
+          description: newTicket.description,
+          requesterName: 'Me (Mentor)',
+          role: 'MENTOR',
+          isOwner: true
+        };
+        setTickets(prev => [optimisticTicket, ...(Array.isArray(prev) ? prev.filter(t => t.id !== ticketId) : [])]);
         setSuccessPopup({
           id: ticketId,
           subject: newTicket.subject,
@@ -131,9 +162,14 @@ export default function Help() {
         setIsTicketModalOpen(false);
         setActiveTab("tickets");
         fetchTickets();
+      } else {
+        setSubmitError(res?.message || 'Failed to create ticket. Please try again.');
       }
     } catch (err) {
       console.error('[MN_Help handleCreateTicket error]', err);
+      setSubmitError(err.message || 'Network error submitting ticket.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -448,9 +484,7 @@ export default function Help() {
               <p className="help-kb-desc">{guide.desc}</p>
               <button
                 className="help-kb-download-btn"
-                onClick={() => {
-                  alert(`Downloading ${guide.title}...`);
-                }}
+                onClick={() => downloadPdfGuide(guide)}
               >
                 <Download size={14} /> Download PDF Guide
               </button>
@@ -473,6 +507,12 @@ export default function Help() {
             </div>
 
             <form onSubmit={handleCreateTicket} className="help-modal-form">
+              {submitError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={16} />
+                  <span>{submitError}</span>
+                </div>
+              )}
               <div className="help-form-group">
                 <label className="help-form-label">Subject / Issue Summary *</label>
                 <input
@@ -531,8 +571,8 @@ export default function Help() {
                 <button type="button" className="help-cancel-btn" onClick={() => setIsTicketModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="help-submit-btn">
-                  Submit Ticket
+                <button type="submit" className="help-submit-btn" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit Ticket"}
                 </button>
               </div>
             </form>

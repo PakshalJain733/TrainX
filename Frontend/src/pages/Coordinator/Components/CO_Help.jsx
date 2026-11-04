@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { downloadPdfGuide } from "../../../utils/downloadPdfGuide";
 import "../../Student/Styles/ST_Help.css";
 import "../Styles/CO_Help.css";
 
@@ -150,6 +151,22 @@ export default function CoordinatorHelp() {
       const createdData = res?.data || res;
       if (res && (res.success || res.data || res.id)) {
         const ticketId = createdData?.id || 'TICK-' + (createdData?.dbId || Date.now());
+        const optimisticTicket = {
+          id: ticketId,
+          dbId: createdData?.dbId || Date.now(),
+          title: newTicket.subject,
+          subject: newTicket.subject,
+          category: newTicket.category,
+          priority: newTicket.priority,
+          status: 'Open',
+          created: new Date().toISOString().split('T')[0],
+          time: 'Today',
+          description: newTicket.description,
+          requesterName: 'Me (Coordinator)',
+          role: 'COORDINATOR',
+          isOwner: true
+        };
+        setTickets(prev => [optimisticTicket, ...(Array.isArray(prev) ? prev.filter(t => t.id !== ticketId) : [])]);
         setSuccessPopup({
           id: ticketId,
           subject: newTicket.subject,
@@ -248,7 +265,7 @@ export default function CoordinatorHelp() {
 
         <div
           className="help-channel-card-modern coord-help-card-clickable"
-          onClick={() => { window.location.href = "mailto:support@acadnexus.com"; }}
+          onClick={() => { window.location.href = "mailto:ganeshvshinde2006@gmail.com"; }}
         >
           <div className="help-channel-icon-avatar help-icon-emerald">
             <MessageCircle size={22} />
@@ -256,14 +273,14 @@ export default function CoordinatorHelp() {
           <div className="help-channel-info">
             <span className="help-channel-badge help-badge-emerald">EMAIL ASSISTANCE</span>
             <h3 className="help-channel-title">Email Support</h3>
-            <p className="help-channel-sub">Direct response from department coordinator within 24 hours.</p>
-            <span className="help-channel-action-link help-link-emerald">support@acadnexus.com →</span>
+            <p className="help-channel-sub">Direct response from admin within 24 hours.</p>
+            <span className="help-channel-action-link help-link-emerald">ganeshvshinde2006@gmail.com →</span>
           </div>
         </div>
 
         <div
           className="help-channel-card-modern coord-help-card-clickable"
-          onClick={() => { window.location.href = "tel:+919876543210"; }}
+          onClick={() => { window.location.href = "tel:+918779351143"; }}
         >
           <div className="help-channel-icon-avatar help-icon-purple">
             <Phone size={22} />
@@ -272,7 +289,7 @@ export default function CoordinatorHelp() {
             <span className="help-channel-badge help-badge-purple">HELPLINE</span>
             <h3 className="help-channel-title">Campus Hotline</h3>
             <p className="help-channel-sub">Mon – Fri, 9:00 AM – 6:00 PM</p>
-            <span className="help-channel-action-link help-link-purple">+91 98765 43210 →</span>
+            <span className="help-channel-action-link help-link-purple">+91 87793 51143 →</span>
           </div>
         </div>
       </div>
@@ -475,9 +492,7 @@ export default function CoordinatorHelp() {
               <p className="help-kb-desc">{guide.desc}</p>
               <button
                 className="help-kb-download-btn"
-                onClick={() => {
-                  alert(`Downloading ${guide.title}...`);
-                }}
+                onClick={() => downloadPdfGuide(guide)}
               >
                 <Download size={14} /> Download PDF Guide
               </button>

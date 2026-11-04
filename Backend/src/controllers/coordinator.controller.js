@@ -975,8 +975,12 @@ export const createCoordinatorLiveSession = async (req, res, next) => {
  */
 export const getCoordinatorSupportTickets = async (req, res, next) => {
   try {
-    const coordId = req.user?.userId || req.user?.id || 1;
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    let coordId = req.user?.userId || req.user?.id;
+    if (!coordId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) coordId = u[0].id;
+    }
+    const collegeId = req.user?.collegeId || req.user?.college_id || null;
 
     let tickets = [];
     try {
@@ -989,13 +993,13 @@ export const getCoordinatorSupportTickets = async (req, res, next) => {
          FROM support_tickets st
          LEFT JOIN users u ON st.user_id = u.id
          LEFT JOIN students s ON u.id = s.user_id
-         WHERE st.user_id = ? OR (u.college_id = ? OR ? IS NULL)
+         WHERE (st.user_id = ? AND ? IS NOT NULL) OR (u.college_id = ? AND ? IS NOT NULL) OR (? IS NULL AND ? IS NULL)
          ORDER BY st.id DESC`,
-        [coordId, collegeId, collegeId]
+        [coordId || null, coordId || null, collegeId, collegeId, coordId || null, collegeId]
       );
     } catch (e) {
       console.warn('[DB getCoordinatorSupportTickets fallback]', e.message);
-      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [coordId]).catch(() => []);
+      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
     }
 
     const formatted = (tickets || []).map(t => ({
@@ -1028,16 +1032,24 @@ export const getCoordinatorSupportTickets = async (req, res, next) => {
 
 export const createCoordinatorSupportTicket = async (req, res, next) => {
   try {
-    const coordId = req.user?.userId || req.user?.id || 1;
+    let coordId = req.user?.userId || req.user?.id;
+    if (!coordId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) coordId = u[0].id;
+    }
+    if (coordId) {
+      const checkUser = await query('SELECT id FROM users WHERE id = ?', [coordId]);
+      if (!checkUser || checkUser.length === 0) coordId = null;
+    }
     const { subject, category = 'Academics & Labs', priority = 'Normal', description } = req.body;
-    if (!subject) return sendError(res, 'Ticket subject is required', 400);
+    if (!subject || !subject.trim()) return sendError(res, 'Ticket subject is required', 400);
 
-    let insertId = Date.now();
+    let insertId = Math.floor(1000 + Math.random() * 9000);
     try {
       const result = await query(
         `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
          VALUES (?, ?, ?, ?, 'Open', ?, 'admin', NOW())`,
-        [coordId, subject.trim(), category, priority, description ? description.trim() : '']
+        [coordId || null, subject.trim(), category, priority, description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {
@@ -1048,6 +1060,7 @@ export const createCoordinatorSupportTicket = async (req, res, next) => {
       id: `TICK-${insertId}`,
       dbId: insertId,
       subject,
+      title: subject,
       category,
       priority,
       status: 'Open'

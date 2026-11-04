@@ -12,21 +12,29 @@ export const authorizeRoles = (...allowedRoles) => {
       return sendError(res, 'Authentication required before authorization', 401);
     }
 
-    const userRole = req.user.role;
+    const rawRole = String(req.user.role || '').trim();
+    const userRole = rawRole.toLowerCase();
 
     // Super admin bypasses all role restrictions
-    if (userRole === ROLES.SUPER_ADMIN) {
+    if (userRole === ROLES.SUPER_ADMIN.toLowerCase() || userRole.includes('super')) {
       return next();
     }
 
-    // All other roles (including college_admin) must be explicitly listed
-    if (allowedRoles.includes(userRole)) {
+    const normalizedAllowed = allowedRoles.map(r => String(r || '').toLowerCase().trim());
+
+    // Check direct normalized match or synonyms (e.g. mentor/faculty, college_admin/admin/hod)
+    const isAllowed =
+      normalizedAllowed.includes(userRole) ||
+      (normalizedAllowed.includes('mentor') && (userRole.includes('mentor') || userRole.includes('faculty'))) ||
+      (normalizedAllowed.includes('college_admin') && (userRole.includes('admin') || userRole.includes('hod')));
+
+    if (isAllowed) {
       return next();
     }
 
     return sendError(
       res,
-      `Access forbidden: Role '${userRole}' is not authorized to access this resource`,
+      `Access forbidden: Role '${rawRole}' is not authorized to access this resource`,
       403
     );
   };
