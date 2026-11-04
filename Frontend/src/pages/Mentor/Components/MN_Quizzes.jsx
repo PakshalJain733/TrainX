@@ -327,6 +327,7 @@ export default function MentorQuizzes() {
 
   // Form
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [batch, setBatch] = useState("All Batches");
   const [numQuestions, setNumQuestions] = useState("10");
   const [durationMins, setDurationMins] = useState("30");
@@ -572,7 +573,7 @@ export default function MentorQuizzes() {
 
     const res = await fetch(`${API_BASE}/assessments`, {
       method: "POST", headers: getAuthHeaders(),
-      body: JSON.stringify({ title: title.trim(), batch_id: batchObj?.id || null, batch_name: batch, category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz", description: `${quizType} quiz for ${batch}`, status: "published", is_published: true, total_marks: marks, pass_marks: pass, duration_minutes: parseInt(durationMins) || 30 }),
+      body: JSON.stringify({ title: title.trim(), batch_id: batchObj?.id || null, batch_name: batch, category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz", description: description && description.trim() ? description.trim() : `${quizType} quiz for ${batch}`, status: "published", is_published: true, total_marks: marks, pass_marks: pass, duration_minutes: parseInt(durationMins) || 30 }),
     });
     const d = await res.json();
     if (!d.success) throw new Error(d.message || "Failed to create quiz");
@@ -594,8 +595,8 @@ export default function MentorQuizzes() {
     setQText(""); setOptA(""); setOptB(""); setOptC(""); setOptD(""); setCorrectOpt("a");
   };
 
-  const fetchAIQuestions = async (topic, count) => {
-    const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ title: topic, count: parseInt(count, 10) || 10 }) });
+  const fetchAIQuestions = async (topic, count, desc = "") => {
+    const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ title: topic, count: parseInt(count, 10) || 10, description: desc || "" }) });
     const d = await res.json();
     if (!d.success || !Array.isArray(d.data) || !d.data.length) throw new Error(d.message || "AI question generation failed");
     return d.data;
@@ -608,7 +609,7 @@ export default function MentorQuizzes() {
     setIsGenerating(true);
     try {
       if (mode === "ai") {
-        const aiQs = await fetchAIQuestions(title, numQuestions);
+        const aiQs = await fetchAIQuestions(title, numQuestions, description);
         await saveQuizToDB(aiQs, "AI Generated");
       } else if (mode === "bulk") {
         if (!parsedBulkQuestions.length) { alert("No valid questions parsed. Please upload a valid Excel (.xlsx, .xls, .csv) file."); setIsGenerating(false); return; }
@@ -624,7 +625,7 @@ export default function MentorQuizzes() {
   };
 
   const resetForm = () => {
-    setTitle(""); setBatch("All Batches"); setNumQuestions("10"); setDurationMins("30");
+    setTitle(""); setDescription(""); setBatch("All Batches"); setNumQuestions("10"); setDurationMins("30");
     setTotalMarks(""); setPassMarks(""); setManualQuestions([]); setShowForm(false); setShowManualModal(false);
     setParsedBulkQuestions([]); setShowBulkPreview(false); setBulkFileName("");
   };
@@ -669,20 +670,21 @@ export default function MentorQuizzes() {
 
   return (
     <div className="admin-quizzes-container">
-      <div className="ui-section-header-MN">
-        <div className="ui-section-main">
-          <div>
-            <h2 className="ui-section-title">
-              <GraduationCap size={22} className="ui-section-title-icon" />
-              <span>Quiz Management</span>
-            </h2>
-            <p className="ui-section-desc">
-              Create, manage, and track quiz assessments. View real-time student results.
-            </p>
-          </div>
-          <div className="ui-section-action">
-            <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn"><Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}</button>
-          </div>
+      {/* Page Header */}
+      <div className="mentor-quiz-header">
+        <div className="mentor-quiz-header-left">
+          <h2 className="mentor-quiz-header-title">
+            <GraduationCap size={22} color="#4f46e5" className="ui-section-title-icon" />
+            <span>Quiz Management</span>
+          </h2>
+          <p className="mentor-quiz-header-subtitle">
+            Create, manage, and track quiz assessments. View real-time student results.
+          </p>
+        </div>
+        <div className="mentor-quiz-header-action">
+          <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
+            <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
+          </button>
         </div>
       </div>
 
@@ -767,6 +769,42 @@ export default function MentorQuizzes() {
                     <input className="form-input" type="number" placeholder="Default: 60% of total" value={passMarks} onChange={e => setPassMarks(e.target.value)} />
                   </div>
                 </div>
+
+                {/* AI Generation Topics & Description Section */}
+                {mode === "ai" && (
+                  <div className="form-group" style={{ marginTop: '12px', width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label className="form-label" style={{ margin: 0 }}>
+                        Topics / Description for AI Generation <span style={{ color: '#4f46e5', fontWeight: 500, fontSize: '12px' }}>(AI generates questions on these topics)</span>
+                      </label>
+                      <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px' }}>Recommended</span>
+                    </div>
+                    <textarea
+                      className="form-input"
+                      rows={3}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Focus on OOP concepts: Polymorphism, Method Overriding, Abstract Classes, Interfaces, Exception Handling with try-catch-finally, and Collections Framework."
+                      style={{ width: '100%', resize: 'vertical', minHeight: '68px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    />
+                    <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                      Specify target topics, syllabus modules, or concepts for the AI to focus on.
+                    </span>
+                  </div>
+                )}
+                {mode !== "ai" && (
+                  <div className="form-group" style={{ marginTop: '12px', width: '100%' }}>
+                    <label className="form-label">Quiz Description (Optional)</label>
+                    <textarea
+                      className="form-input"
+                      rows={2}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Mid-term technical assessment for evaluation."
+                      style={{ width: '100%', resize: 'vertical', minHeight: '52px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                )}
 
                 {/* DEDICATED COMPACT EXCEL BULK UPLOAD SECTION */}
                 {mode === "bulk" && (

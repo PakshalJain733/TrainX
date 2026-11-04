@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
 import {
   getBatches,
   createBatch,
@@ -22,13 +24,15 @@ import {
 const router = Router();
 router.use(authenticateToken);
 
+const batchManager = authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.TRAINER);
+
 router.get('/', getBatches);
-router.post('/', createBatch);
+router.post('/', batchManager, createBatch);
 router.post('/join', joinBatch);
 router.get('/my-batches', getMyBatches);
 router.get('/:id/students', getBatchStudents);
 router.get('/:id/daily-topics', getBatchDailyTopics);
-router.post('/:id/daily-topics', saveBatchDailyTopic);
+router.post('/:id/daily-topics', batchManager, saveBatchDailyTopic);
 router.get('/tasks/detail/:taskId', getTaskById);
 router.get('/tasks/:taskId/submissions', getTaskSubmissions);
 router.get('/:id/tasks/:taskId/submissions', getTaskSubmissions);
@@ -39,7 +43,7 @@ router.put('/tasks/:taskId', updateBatchTask);
 router.delete('/:id/tasks/:taskId', deleteBatchTask);
 router.delete('/tasks/:taskId', deleteBatchTask);
 router.get('/:id', getBatchById);
-router.put('/:id', updateBatch);
-router.delete('/:id', deleteBatch);
+router.put('/:id', batchManager, updateBatch);
+router.delete('/:id', batchManager, deleteBatch);
 
 export default router;

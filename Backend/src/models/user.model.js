@@ -670,13 +670,16 @@ export const getRelatedCollegeIds = async (collegeId) => {
     const tCode = String(target.code || '').trim().toLowerCase();
     const tName = String(target.name || '').trim().toLowerCase();
 
-    // Strictly match the target college or duplicate records with exact matching name/code (never across different colleges)
+    // Match the target college or duplicate/alias records for the same institution (e.g., PVPPCOE & VPPCOE / Vasant)
     const matched = rows.filter((r) => {
       if (r.id === targetId) return true;
       const c = String(r.code || '').trim().toLowerCase();
       const n = String(r.name || '').trim().toLowerCase();
       if (tCode && c && tCode === c) return true;
       if (tName && n && tName === n) return true;
+      const isPvppA = tCode.includes('pvpp') || tCode.includes('vpp') || tName.includes('vasant');
+      const isPvppB = c.includes('pvpp') || c.includes('vpp') || n.includes('vasant');
+      if (isPvppA && isPvppB) return true;
       return false;
     });
 
@@ -741,11 +744,11 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
   if (collegeId) {
     const relatedIds = await getRelatedCollegeIds(collegeId);
     if (relatedIds.length === 1) {
-      sql += ' AND (u.college_id = ? OR (u.college_id IS NULL AND s.college_id = ?))';
+      sql += ' AND (u.college_id = ? OR (u.college_id IS NULL AND (s.college_id = ? OR u.role = \'trainer\')))';
       params.push(relatedIds[0], relatedIds[0]);
     } else if (relatedIds.length > 1) {
       const placeholders = relatedIds.map(() => '?').join(',');
-      sql += ` AND (u.college_id IN (${placeholders}) OR (u.college_id IS NULL AND s.college_id IN (${placeholders})))`;
+      sql += ` AND (u.college_id IN (${placeholders}) OR (u.college_id IS NULL AND (s.college_id IN (${placeholders}) OR u.role = 'trainer')))`;
       params.push(...relatedIds, ...relatedIds);
     }
   }
@@ -1088,18 +1091,19 @@ export const deleteUserModel = async (id) => {
 
 export const getUserStatsModel = async (collegeId = null) => {
   const allUsers = await getAllUsersModel(collegeId);
-  // Only admin-approved users are counted in user statistics
-  const users = allUsers.filter((u) => u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1');
-  const totalUsers = users.length;
-  const students = users.filter((u) => u.role === ROLES.STUDENT).length;
-  const trainers = users.filter((u) => u.role === ROLES.TRAINER).length;
-  const mentors = users.filter((u) => u.role === ROLES.MENTOR).length;
-  const coordinators = users.filter((u) => u.role === ROLES.COORDINATOR).length;
-  const admins = users.filter((u) => u.role === ROLES.COLLEGE_ADMIN || u.role === ROLES.SUPER_ADMIN).length;
+  // Total registered non-admin users belonging to this college
+  const registeredUsers = allUsers.filter((u) => !String(u.role || '').toLowerCase().includes('admin'));
+  const students = registeredUsers.filter((u) => u.role === ROLES.STUDENT).length;
+  const trainers = registeredUsers.filter((u) => u.role === ROLES.TRAINER).length;
+  const mentors = registeredUsers.filter((u) => u.role === ROLES.MENTOR).length;
+  const coordinators = registeredUsers.filter((u) => u.role === ROLES.COORDINATOR).length;
+  const totalUsers = students + trainers + mentors + coordinators;
+  const admins = allUsers.filter((u) => u.role === ROLES.COLLEGE_ADMIN || u.role === ROLES.SUPER_ADMIN).length;
 
   return {
     totalUsers,
     students,
+    trainers,
     mentors,
     coordinators,
     admins,

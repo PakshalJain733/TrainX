@@ -87,12 +87,36 @@ export default function Leaderboard() {
   const studentContext = leaderboardData.studentContext || {};
   const myRankInfo = studentContext.myRank || { overallRank: "-", departmentRank: "-", milestoneRank: "-", score: 0, totalStudents: 0 };
 
+  // Resolve current student's department
+  const currentStudent = (leaderboardData.overall || []).find((s) => s.isCurrentUser) ||
+                         (leaderboardData.department || []).find((s) => s.isCurrentUser);
+  const myDepartment = myRankInfo.myDepartment || currentStudent?.department || currentStudent?.sub || currentStudent?.department_name || "";
+
   // Current tab items list
   let currentList = [];
-  if (activeTab === "overall") currentList = leaderboardData.overall || [];
-  else if (activeTab === "department") currentList = leaderboardData.department || [];
-  else if (activeTab === "milestone") currentList = leaderboardData.milestone || [];
-  else if (activeTab === "batches") currentList = leaderboardData.topBatches || [];
+  if (activeTab === "overall") {
+    currentList = leaderboardData.overall || [];
+  } else if (activeTab === "department") {
+    let deptList = leaderboardData.department || [];
+    // Strict department filtering: only keep students matching the current student's department
+    if (myDepartment) {
+      const normMyDept = myDepartment.trim().toLowerCase();
+      deptList = deptList.filter((s) => {
+        const sDept = String(s.department || s.sub || s.department_name || "").trim().toLowerCase();
+        return sDept === normMyDept || sDept.includes(normMyDept) || normMyDept.includes(sDept);
+      });
+      // Re-index ranks for the filtered department standing
+      deptList = deptList.map((st, i) => ({
+        ...st,
+        rank: i + 1,
+      }));
+    }
+    currentList = deptList;
+  } else if (activeTab === "milestone") {
+    currentList = leaderboardData.milestone || [];
+  } else if (activeTab === "batches") {
+    currentList = leaderboardData.topBatches || [];
+  }
 
   return (
     <div className="leaderboard-page">
@@ -126,7 +150,7 @@ export default function Leaderboard() {
           <div>
             <div className="leaderboard-kpi-label">Department Standing</div>
             <p className="leaderboard-kpi-val">#{myRankInfo.departmentRank}</p>
-            <p className="leaderboard-kpi-sub">In your department</p>
+            <p className="leaderboard-kpi-sub">{myDepartment ? `In ${myDepartment}` : "In your department"}</p>
           </div>
         </div>
 
@@ -170,7 +194,7 @@ export default function Leaderboard() {
           <div>
             <h3 className="leaderboard-list-title">
               {activeTab === "overall" && "College-Wide Overall Ranking"}
-              {activeTab === "department" && "Department Standing Ranking"}
+              {activeTab === "department" && (myDepartment ? `Department Standing Ranking (${myDepartment})` : "Department Standing Ranking")}
               {activeTab === "batches" && "Top Batches Ranking"}
             </h3>
             <p className="leaderboard-list-desc">

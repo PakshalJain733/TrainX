@@ -1,4 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
+import { ROLES } from '../utils/constants.js';
+import { getRelatedCollegeIds } from '../models/user.model.js';
 import { query } from '../config/db.js';
 import { getMentorAssignedBatchIds } from './mentor.controller.js';
 
@@ -152,6 +154,8 @@ export const getBatches = async (req, res, next) => {
         bdt.description AS dailyDescription,
         bdt.trainer AS dailyTrainer,
         bdt.status AS dailyStatus,
+        tu.name AS registeredTrainerName,
+        tu.email AS registeredTrainerEmail,
         (
           SELECT COUNT(*) 
           FROM students s 
@@ -167,13 +171,25 @@ export const getBatches = async (req, res, next) => {
       LEFT JOIN colleges c ON b.college_id = c.id
       LEFT JOIN departments d ON b.department_id = d.id
       LEFT JOIN batch_daily_topics bdt ON (bdt.batch_id = b.id AND bdt.topic_date = ?)
+      LEFT JOIN users tu ON (b.trainer_id = tu.id OR (tu.role = 'trainer' AND LOWER(TRIM(tu.name)) = LOWER(TRIM(b.trainer))))
       WHERE 1=1
     `;
     const params = [queryDate];
 
-    if (collegeId && collegeId !== 'all') {
-      sql += ' AND (b.college_id = ? OR b.college_id IS NULL)';
-      params.push(collegeId);
+    const effCollegeId = (collegeId && collegeId !== 'all')
+      ? collegeId
+      : (req.user?.role !== ROLES.SUPER_ADMIN ? (req.user?.college_id || req.user?.collegeId) : null);
+
+    if (effCollegeId && effCollegeId !== 'all') {
+      const relatedIds = await getRelatedCollegeIds(effCollegeId);
+      if (relatedIds.length === 1) {
+        sql += ' AND (b.college_id = ? OR b.college_id IS NULL)';
+        params.push(relatedIds[0]);
+      } else if (relatedIds.length > 1) {
+        const placeholders = relatedIds.map(() => '?').join(', ');
+        sql += ` AND (b.college_id IN (${placeholders}) OR b.college_id IS NULL)`;
+        params.push(...relatedIds);
+      }
     }
     let effDeptId = departmentId;
     if ((!effDeptId || effDeptId === 'all') && (req.user?.role === 'coordinator' || String(req.user?.role || '').toLowerCase().includes('coordinator'))) {
@@ -219,8 +235,12 @@ export const getBatches = async (req, res, next) => {
       const pPct = Number(b.dynamicProgressPct || 0);
       const activeTopic = b.dailyTopic || b.topic;
       const activeDesc = b.dailyDescription || b.description;
-      const activeTrainer = b.dailyTrainer || b.trainer || b.mentor || 'Faculty Instructor';
-      const activeStatus = b.dailyStatus || b.status;
+      const registeredTrainer = b.registeredTrainerName;
+      const activeTrainer = registeredTrainer || b.dailyTrainer || (b.trainer && b.trainer !== 'Faculty Instructor' ? b.trainer : 'Unassigned');
+      const rawStatus = b.status || 'Active';
+      const cleanBatchStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+      const cleanDailyStatus = b.dailyStatus ? (b.dailyStatus.charAt(0).toUpperCase() + b.dailyStatus.slice(1)) : 'Scheduled';
+
       return {
         ...b,
         collegeId: b.college_id || 1,
@@ -228,6 +248,9 @@ export const getBatches = async (req, res, next) => {
         collegeName: b.collegeName || b.college_name || 'College Campus',
         departmentName: b.departmentName || b.department_name || 'Academic Stream',
         trainer: activeTrainer,
+        registeredTrainerName: registeredTrainer || null,
+        registeredTrainerEmail: b.registeredTrainerEmail || null,
+        isTrainerRegistered: Boolean(registeredTrainer),
         schedule: b.schedule || 'Mon, Wed, Fri (10:00 AM)',
         studentsCount: sCount,
         students: sCount,
@@ -236,7 +259,10 @@ export const getBatches = async (req, res, next) => {
         topic: activeTopic || "DSA & System Architecture",
         description: activeDesc || "Core concepts and masterclass",
         date: queryDate,
-        status: activeStatus ? (activeStatus.charAt(0).toUpperCase() + activeStatus.slice(1)) : 'Active',
+        status: cleanBatchStatus,
+        batchStatus: cleanBatchStatus,
+        dailyStatus: cleanDailyStatus,
+        topicStatus: cleanDailyStatus,
       };
     });
 
@@ -249,7 +275,7 @@ export const getBatches = async (req, res, next) => {
 export const createBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, schedule, topic, description, date } = req.body;
+    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, trainer_id, schedule, topic, description, date } = req.body;
     if (!name || (!code && !join_code)) {
       return sendError(res, 'Batch Name and Join Code are required', 400);
     }
@@ -259,9 +285,22 @@ export const createBatch = async (req, res, next) => {
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
     const targetCollegeId = collegeId || req.user?.college_id || req.user?.collegeId || 1;
 
+    let trainerId = trainer_id ? parseInt(trainer_id, 10) : null;
+    if (!trainerId && batchTrainer && batchTrainer !== 'Faculty Instructor') {
+      try {
+        const [trainerUser] = await query(
+          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role = 'trainer' LIMIT 1",
+          [batchTrainer, batchTrainer]
+        );
+        if (trainerUser) {
+          trainerId = trainerUser.id;
+        }
+      } catch (_) {}
+    }
+
     const result = await query(
-      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, schedule, topic, description, date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, trainer_id, schedule, topic, description, date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
         name.trim(),
         batchCode,
@@ -270,6 +309,7 @@ export const createBatch = async (req, res, next) => {
         targetCollegeId,
         departmentId || 1,
         batchTrainer,
+        trainerId || null,
         batchSchedule,
         topic || null,
         description || null,
@@ -278,6 +318,15 @@ export const createBatch = async (req, res, next) => {
     );
 
     const insertedId = result.insertId;
+    if (trainerId) {
+      try {
+        await query(
+          `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+          [trainerId, insertedId]
+        );
+      } catch (_) {}
+    }
+
     const [newBatch] = await query(`
       SELECT 
         b.*,

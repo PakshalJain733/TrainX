@@ -41,11 +41,29 @@ const storage = multer.diskStorage({
   },
 });
 
+// Allowed safe file extensions for documents, training media, and coursework
+const SAFE_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.csv',
+  '.txt', '.png', '.jpg', '.jpeg', '.webp', '.mp4', '.zip', '.rar', '.7z'
+]);
+
+// Explicitly blocked executable and script extensions (anti-malware & anti-XSS)
+const DANGEROUS_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.sh', '.php', '.phtml', '.php3', '.php4',
+  '.html', '.htm', '.svg', '.js', '.vbs', '.ps1', '.msi', '.jar', '.dll'
+]);
+
 export const upload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max limit (prevents memory and disk exhaustion)
   fileFilter: (req, file, cb) => {
-    // Allow documents, presentations, spreadsheets, archives, images, videos, audio, and code
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (DANGEROUS_EXTENSIONS.has(ext)) {
+      return cb(new Error(`File upload rejected: '${ext}' files are prohibited for security reasons.`), false);
+    }
+    if (ext && !SAFE_EXTENSIONS.has(ext)) {
+      return cb(new Error(`File upload rejected: '${ext}' is not an authorized file type.`), false);
+    }
     cb(null, true);
   },
 });

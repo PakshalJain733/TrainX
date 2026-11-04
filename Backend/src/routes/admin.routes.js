@@ -22,6 +22,7 @@ import {
   deleteAdminBroadcast,
   getAdminPerformance,
   assignMentorToStudents,
+  unassignMentorFromStudents,
   getMentorAssignments,
   getAdminC2CEnrollments,
   getAdminSupportTickets,
@@ -79,6 +80,8 @@ router.get('/performance', getAdminPerformance);
 // Faculty Mentor Assignment Routes
 router.post('/assign-mentor', assignMentorToStudents);
 router.get('/assign-mentor', getMentorAssignments);
+router.delete('/assign-mentor', unassignMentorFromStudents);
+router.post('/unassign-mentor', unassignMentorFromStudents);
 
 // C2C 2029 Training Enrollments
 router.get('/c2c/enrollments', getAdminC2CEnrollments);

@@ -151,6 +151,8 @@ export default function AdminBatches() {
   const [copiedId, setCopiedId] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [enlargedBatchCode, setEnlargedBatchCode] = useState(null);
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
 
   // Visit Batch modal state
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -182,6 +184,22 @@ export default function AdminBatches() {
   const [viewingCodeSubmission, setViewingCodeSubmission] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
 
+  const fetchTrainers = async () => {
+    setLoadingTrainers(true);
+    try {
+      const res = await apiFetch("/admin/users?role=trainer");
+      const list = res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(list)) {
+        const onlyTrainers = list.filter(u => String(u.role || "").toLowerCase() === "trainer");
+        setTrainers(onlyTrainers);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch trainers for batch creation:", err);
+    } finally {
+      setLoadingTrainers(false);
+    }
+  };
+
   const fetchBatches = async () => {
     setLoading(true);
     try {
@@ -204,6 +222,7 @@ export default function AdminBatches() {
 
   useEffect(() => {
     fetchBatches();
+    fetchTrainers();
     const handleBatchUpdate = () => fetchBatches();
     window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
     return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
@@ -220,8 +239,11 @@ export default function AdminBatches() {
   const handleOpenForm = () => {
     const nextState = !showAddForm;
     setShowAddForm(nextState);
-    if (nextState && !joinCode) {
-      setJoinCode(generateJoinCode(name));
+    if (nextState) {
+      fetchTrainers();
+      if (!joinCode) {
+        setJoinCode(generateJoinCode(name));
+      }
     }
   };
 
@@ -263,6 +285,7 @@ export default function AdminBatches() {
     setSubmitting(false);
 
     try {
+      const selectedTrainerObj = trainers.find(t => t.name === mentor);
       await apiFetch("/batches", {
         method: "POST",
         body: JSON.stringify({
@@ -273,9 +296,9 @@ export default function AdminBatches() {
           schedule: newBatchObj.schedule,
           mentor: newBatchObj.mentor,
           trainer: newBatchObj.mentor,
+          trainer_id: selectedTrainerObj?.id || null,
           students: 0,
           status: "active",
-          college_id: 1,
         }),
       });
       window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: newBatchObj }));
@@ -1650,13 +1673,21 @@ export default function AdminBatches() {
                   </div>
                   <div className="form-group-admin">
                     <label>Assigned Trainer *</label>
-                    <input
-                      className="form-input-admin"
+                    <AdminBatchSelect
                       value={mentor}
-                      onChange={(e) => setMentor(e.target.value)}
-                      placeholder="e.g. Dr. Kulkarni"
-                      required
+                      options={trainers.map((t) => ({
+                        value: t.name,
+                        label: t.name,
+                      }))}
+                      onChange={(val) => setMentor(val)}
+                      placeholder={loadingTrainers ? "Loading registered trainers..." : (trainers.length === 0 ? "No registered trainers found" : "Select Trainer...")}
+                      icon={Users}
                     />
+                    {!loadingTrainers && trainers.length === 0 && (
+                      <span className="form-hint" style={{ color: "#ef4444", fontSize: "11px", marginTop: "4px", display: "block" }}>
+                        No registered trainers found. Please add a user with role "Trainer" in User Management.
+                      </span>
+                    )}
                   </div>
                 </div>
 

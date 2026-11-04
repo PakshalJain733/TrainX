@@ -388,7 +388,60 @@ const runDockerSandbox = async ({ langKey, code, stdin, execTimeout }) => {
  * Used when Docker is not installed, daemon is stopped, or deployed in serverless
  * environments (e.g. Render) without Docker socket access.
  */
+const DANGEROUS_PATTERNS = [
+  // Node.js
+  /\bchild_process\b/i,
+  /\bcluster\b/i,
+  /\bworker_threads\b/i,
+  /\bprocess\s*\.\s*(env|exit|kill|abort|chdir|binding|dlopen)\b/i,
+  /\brequire\s*\(\s*['"`](fs|child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]\s*\)/i,
+  /\bimport\s+.*['"`](fs|child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]/i,
+  // Python
+  /\b(import\s+os|from\s+os\s+import)\b/i,
+  /\b(import\s+sys|from\s+sys\s+import)\b/i,
+  /\b(import\s+subprocess|from\s+subprocess\s+import)\b/i,
+  /\b(import\s+shutil|from\s+shutil\s+import)\b/i,
+  /\b(import\s+socket|from\s+socket\s+import)\b/i,
+  /\b(import\s+pty|from\s+pty\s+import)\b/i,
+  /\b__import__\b/i,
+  // Java
+  /\bjava\s*\.\s*lang\s*\.\s*Runtime\b/i,
+  /\bRuntime\s*\.\s*getRuntime\b/i,
+  /\bProcessBuilder\b/i,
+  /\bjava\s*\.\s*io\s*\.\s*(File|FileInputStream|FileOutputStream)\b/i,
+  /\bjava\s*\.\s*net\b/i,
+  // C / C++
+  /#\s*include\s*[<"](sys\/|windows\.h|winsock|unistd\.h)[>"]/i,
+  /\b(system|popen|fork|execl|execv|execvp)\s*\(/i,
+];
+
+export const isCodeSafeForHostExecution = (code) => {
+  const codeStr = String(code || '');
+  for (const pattern of DANGEROUS_PATTERNS) {
+    if (pattern.test(codeStr)) {
+      return {
+        safe: false,
+        reason: 'Security violation: System calls, network access, and file operations are strictly prohibited in the code execution sandbox.',
+      };
+    }
+  }
+  return { safe: true };
+};
+
 const runLocalSandbox = async ({ langKey, code, stdin = '', execTimeout = 5 }) => {
+  const safetyCheck = isCodeSafeForHostExecution(code);
+  if (!safetyCheck.safe) {
+    return {
+      stdout: '',
+      stderr: safetyCheck.reason,
+      exitCode: 1,
+      executionTime: 0,
+      timedOut: false,
+      compilationError: true,
+      sandbox: 'security-guard',
+    };
+  }
+
   const hostDir = await fs.mkdtemp(path.join(os.tmpdir(), 'trainx-local-run-'));
   const startedAt = Date.now();
 

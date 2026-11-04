@@ -107,7 +107,7 @@ export default function Students() {
     };
   }, []);
 
-  const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
+  const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "";
 
   const generateGoogleMeetLink = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyz';

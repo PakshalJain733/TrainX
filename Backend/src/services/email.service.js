@@ -2,7 +2,14 @@ import { BrevoClient } from '@getbrevo/brevo';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
+import dns from 'dns';
+import net from 'net';
 import { query } from '../config/db.js';
+
+// Enforce IPv4 resolution order across Node.js to prevent ENETUNREACH on platforms without IPv6 routing
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 // Ensure environment variables are loaded regardless of current working directory
 dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
@@ -10,6 +17,9 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 let brevoClient = null;
 let smtpTransporter = null;
+let cachedIpv4Host = null;
+let lastSmtpFailureTime = 0;
+const SMTP_CIRCUIT_BREAKER_TTL = 10 * 60 * 1000; // 10 minutes cache when SMTP network is unreachable
 
 export const getPrimaryFrontendUrl = () => {
   const raw = process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com';
@@ -18,32 +28,51 @@ export const getPrimaryFrontendUrl = () => {
   return firstUrl.replace(/\/+$/, '');
 };
 
-const createTransporterInstance = (port, isSecure) => {
+const getResolvedIpv4Host = async (host) => {
+  if (!host || net.isIP(host)) return host;
+  if (cachedIpv4Host) return cachedIpv4Host;
+  try {
+    const ips = await dns.promises.resolve4(host);
+    if (ips && ips.length > 0) {
+      cachedIpv4Host = ips[0];
+      return cachedIpv4Host;
+    }
+  } catch (_) {}
+  return host;
+};
+
+const createTransporterInstance = async (port, isSecure) => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const user = (process.env.SMTP_USER || '').trim();
   const pass = (process.env.SMTP_PASS || '').trim();
+  const resolvedHost = await getResolvedIpv4Host(host);
+
   return nodemailer.createTransport({
-    host,
+    host: resolvedHost,
     port,
     secure: isSecure,
     auth: { user, pass },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 25000,
+    connectionTimeout: 4000, // Fast 4s timeout so blocked SMTP ports don't stall user requests
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
+    tls: {
+      servername: host, // Ensures TLS certificate validates correctly against smtp.gmail.com
+      rejectUnauthorized: true,
+    },
   });
 };
 
-const getSmtpTransporter = (alternatePort = false) => {
+const getSmtpTransporter = async (alternatePort = false) => {
   const defaultPort = parseInt(process.env.SMTP_PORT || '465', 10);
   const defaultSecure = process.env.SMTP_SECURE === 'true' || defaultPort === 465;
 
   if (alternatePort) {
     const fallbackPort = defaultPort === 465 ? 587 : 465;
-    return createTransporterInstance(fallbackPort, fallbackPort === 465);
+    return await createTransporterInstance(fallbackPort, fallbackPort === 465);
   }
 
   if (!smtpTransporter) {
-    smtpTransporter = createTransporterInstance(defaultPort, defaultSecure);
+    smtpTransporter = await createTransporterInstance(defaultPort, defaultSecure);
   }
   return smtpTransporter;
 };
@@ -93,9 +122,10 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
   const smtpUser = (process.env.SMTP_USER || '').trim();
   const smtpPass = (process.env.SMTP_PASS || '').trim();
   const hasSmtpConfig = Boolean(smtpUser && smtpPass);
+  const isSmtpCircuitOpen = (Date.now() - lastSmtpFailureTime) < SMTP_CIRCUIT_BREAKER_TTL;
 
-  // SMTP is the primary mail delivery service
-  if (provider !== 'brevo' && hasSmtpConfig) {
+  // SMTP is attempted when configured, not overridden to brevo, and circuit breaker is not currently tripped
+  if (provider !== 'brevo' && hasSmtpConfig && !isSmtpCircuitOpen) {
     const senderEmail = (process.env.SMTP_FROM_EMAIL || smtpUser || 'admin@trainingportal.com').trim();
     const senderName = (process.env.SMTP_FROM_NAME || 'TrainX').trim();
     const mailPayload = {
@@ -106,9 +136,9 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
       html: htmlContent || textContent || '',
     };
 
-    // Attempt 1: Primary SMTP port (default 465 SSL)
+    // Attempt 1: Primary SMTP port (default 465 SSL, forced IPv4)
     try {
-      const transporter = getSmtpTransporter(false);
+      const transporter = await getSmtpTransporter(false);
       const info = await transporter.sendMail(mailPayload);
       console.log(`[SMTP Primary] Email successfully delivered to ${to} (Message ID: ${info.messageId})`);
       return info;
@@ -118,15 +148,18 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
 
       // Attempt 2: Alternate SMTP port (port 587 STARTTLS)
       try {
-        const altTransporter = getSmtpTransporter(true);
+        const altTransporter = await getSmtpTransporter(true);
         const info2 = await altTransporter.sendMail(mailPayload);
         console.log(`[SMTP Alternate] Email successfully delivered to ${to} via alternate port (Message ID: ${info2.messageId})`);
         return info2;
       } catch (smtpErr2) {
         console.error(`[SMTP Error] Both SMTP attempts failed for ${to}: ${smtpErr2.message}`);
+        lastSmtpFailureTime = Date.now();
         console.warn('[SMTP Fallback] Engaging Brevo as backup delivery to ensure OTP delivery...');
       }
     }
+  } else if (isSmtpCircuitOpen && hasSmtpConfig) {
+    console.info(`[SMTP Circuit Active] Direct SMTP previously unreachable. Fast-routing ${to} directly to Brevo HTTPS API.`);
   }
 
   const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
@@ -387,7 +420,8 @@ export const sendWelcomeEmail = async ({
 }) => {
   try {
     const roleUpper = role.toUpperCase();
-    const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
+    const isStudent = String(role || '').toLowerCase().trim() === 'student';
+    const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : role.toLowerCase() === 'trainer' ? '#3b82f6' : '#6366f1';
     
     const queryParamsObj = {
       email: to || '',
@@ -396,9 +430,11 @@ export const sendWelcomeEmail = async ({
       mobile_number: mobile_number || '',
       roll_number: roll_number || '',
       department: department || '',
-      year: year || '',
-      division: division || '',
     };
+    if (isStudent) {
+      if (year) queryParamsObj.year = year;
+      if (division) queryParamsObj.division = division;
+    }
     if (secure_code) {
       queryParamsObj.secure_code = secure_code;
       queryParamsObj.code = secure_code;
@@ -442,7 +478,7 @@ export const sendWelcomeEmail = async ({
         ${mobile_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Mobile Number:</strong> ${mobile_number}</div>` : ''}
         ${roll_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">College / Roll ID:</strong> ${roll_number}</div>` : ''}
         ${department ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Department:</strong> ${department}</div>` : ''}
-        ${year ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Academic Year:</strong> ${year} ${division ? `(Division ${division})` : ''}</div>` : ''}
+        ${isStudent && year ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Academic Year:</strong> ${year} ${division ? `(Division ${division})` : ''}</div>` : ''}
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155;">
           <strong style="width: 140px;">Assigned Role:</strong> 
           <span style="background-color: ${badgeBg}; color: #ffffff; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
@@ -649,6 +685,123 @@ export const sendAdminCredentialsEmail = async ({
     return null;
   }
 };
+
+/**
+ * Send Student Credentials Email on Bulk Upload
+ * Sends immediate login credentials with default password '12345678'
+ */
+export const sendStudentCredentialsEmail = async ({
+  to,
+  name,
+  password = '12345678',
+  roll_number = '',
+  department = '',
+  collegeName = '',
+}) => {
+  try {
+    const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
+    const loginUrl = `${frontendBase}/`;
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to Campus Training Portal, ${name}! 🎉
+      </div>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your student training account has been registered and activated. You can now log in directly to access your courses, practice problems, mock assessments, and campus training sessions.
+      </p>
+
+      <!-- Credentials Box -->
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 22px; margin: 24px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-size: 12px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">
+          🔑 YOUR LOGIN CREDENTIALS
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 140px;">Portal Link:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <a href="${loginUrl}" style="color: #4f46e5; text-decoration: none;">${loginUrl}</a>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Login Email:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 14px;">${to}</span>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Default Password:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 15px; letter-spacing: 0.5px;">${password}</span>
+            </td>
+          </tr>
+          ${roll_number ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Roll / Student ID:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${roll_number}</td>
+          </tr>` : ''}
+          ${department ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Department:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${department}</td>
+          </tr>` : ''}
+          ${collegeName ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">College:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${collegeName}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Assigned Role:</td>
+            <td style="padding: 10px 0;">
+              <span style="background-color: #3b82f6; color: #ffffff; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                STUDENT
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Quick Steps -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Getting Started:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13.5px; line-height: 1.6;">
+          <li>Click the <strong>Log In to Portal</strong> button below.</li>
+          <li>Enter your <strong>Login Email</strong> and default password: <strong>${password}</strong>.</li>
+          <li>We recommend updating your password after logging in from your <strong>Profile Settings</strong>.</li>
+        </ol>
+      </div>
+
+      <!-- Login CTA Button -->
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          Log In to Portal &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to Campus Training Portal',
+      subtitle: 'Your Account Credentials & Portal Access',
+      contentHtml,
+      footerNote: 'This email contains your login credentials. Keep them safe and change your password after initial login.',
+    });
+
+    const subject = `Welcome to Campus Training Portal - Your Login Credentials`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour student account has been created. You can log in directly using the credentials below:\n\nPortal URL: ${loginUrl}\nEmail: ${to}\nDefault Password: ${password}\n${roll_number ? `Roll No: ${roll_number}\n` : ''}${department ? `Department: ${department}\n` : ''}\n\nLog in now at ${loginUrl}\n\nBest regards,\nCampus Training Portal Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStudentCredentialsEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
 
 /**
  * Send Secure Access Code & Registration Invitation Email to College Admin

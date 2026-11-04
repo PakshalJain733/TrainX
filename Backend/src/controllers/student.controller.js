@@ -176,7 +176,16 @@ export const getStudentProfile = async (req, res, next) => {
 export const updateStudentProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const updated = await updateUserModel(userId, { ...req.body, is_profile_updated: true });
+    // Security Allowlist: prevent mass assignment and privilege escalation (role, is_approved, college_id)
+    const allowed = [
+      'name', 'mobile_number', 'phone', 'gender', 'city', 'emergency_contact',
+      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester', 'roll_number'
+    ];
+    const safeData = { is_profile_updated: true };
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) safeData[key] = req.body[key];
+    }
+    const updated = await updateUserModel(userId, safeData);
     return sendSuccess(res, 'Student profile updated successfully', updated);
   } catch (error) {
     next(error);
