@@ -85,6 +85,7 @@ const SAFE_USER_FIELDS = [
   'current_year',
   'area_of_expertise',
   'specialization',
+  'experience',
   'avatar_url',
   'bio',
   'created_at',
@@ -491,16 +492,32 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
   const placeholders = identifierCandidates.map(() => '?').join(', ');
   try {
     const results = await query(
-      `SELECT id FROM otps
-       WHERE email IN (${placeholders}) AND otp = ? AND expires_at > NOW()
+      `SELECT id, otp, COALESCE(attempts, 0) as attempts FROM otps
+       WHERE email IN (${placeholders}) AND expires_at > NOW()
        ORDER BY id DESC LIMIT 1`,
-      [...identifierCandidates, cleanOtp]
+      identifierCandidates
     );
-    if (results && results.length > 0) {
-      const matchedId = results[0].id;
-      await query('DELETE FROM otps WHERE id = ?', [matchedId]).catch(() => { });
+    if (!results || results.length === 0) {
+      return false;
+    }
+
+    const record = results[0];
+    if (record.attempts >= 5) {
+      // Invalidate locked OTP record due to brute-force attempts
+      await query('DELETE FROM otps WHERE id = ?', [record.id]).catch(() => { });
+      return false;
+    }
+
+    if (String(record.otp).trim() === cleanOtp) {
+      await query('DELETE FROM otps WHERE id = ?', [record.id]).catch(() => { });
       return true;
     }
+
+    // Increment failed attempt counter
+    try {
+      await query('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+    } catch (_) {}
+
     return false;
   } catch (_) {
     return false;
@@ -961,6 +978,12 @@ export const updateUserModel = async (id, data) => {
         'INSERT INTO coordinator_departments (coordinator_id, department_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE department_id = VALUES(department_id)',
         [numId, resolvedDeptId]
       );
+    } catch (_) { }
+  }
+
+  if (data.experience !== undefined) {
+    try {
+      await query('UPDATE users SET experience = ? WHERE id = ?', [data.experience, numId]);
     } catch (_) { }
   }
 

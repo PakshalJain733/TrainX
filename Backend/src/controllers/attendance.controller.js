@@ -38,6 +38,11 @@ export const getStudentAttendanceById = async (req, res, next) => {
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
     }
+    const callerId = req.user?.userId || req.user?.id;
+    const callerRole = (req.user?.role || '').toLowerCase();
+    if (callerRole === 'student' && Number(callerId) !== studentId) {
+      return sendError(res, 'Access denied: You can only view your own attendance', 403);
+    }
     const data = await getStudentAttendanceSummaryService(studentId);
     return sendSuccess(res, 'Student attendance summary retrieved successfully', data);
   } catch (error) {
@@ -51,9 +56,14 @@ export const getStudentAttendanceById = async (req, res, next) => {
  */
 export const getStudentAttendanceHistory = async (req, res, next) => {
   try {
-    const studentId = req.params.studentId ? Number(req.params.studentId) : (req.user.id || req.user.userId);
+    const callerId = req.user?.userId || req.user?.id;
+    const callerRole = (req.user?.role || '').toLowerCase();
+    const studentId = req.params.studentId ? Number(req.params.studentId) : callerId;
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
+    }
+    if (callerRole === 'student' && Number(callerId) !== Number(studentId)) {
+      return sendError(res, 'Access denied: You can only view your own attendance history', 403);
     }
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const data = await getStudentAttendanceHistoryService(studentId, limit);
@@ -590,10 +600,12 @@ export const getMyAttendanceScans = async (req, res, next) => {
 export const getLeaveRequests = async (req, res, next) => {
   try {
     const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    const callerId = req.user?.userId || req.user?.id;
+    const isStudent = req.user?.role === 'student';
+
     let leaves = [];
     try {
-      leaves = await query(
-        `SELECT l.*, 
+      const sql = `SELECT l.*, 
                 COALESCE(u.name, 'Student') as student_name, 
                 COALESCE(u.name, 'Student') as studentName, 
                 u.email, 
@@ -605,10 +617,10 @@ export const getLeaveRequests = async (req, res, next) => {
          LEFT JOIN users u ON l.user_id = u.id
          LEFT JOIN students s ON s.user_id = u.id
          LEFT JOIN batches b ON s.batch_id = b.id
-         WHERE l.college_id = ? OR l.college_id IS NULL
-         ORDER BY l.id DESC`,
-        [collegeId]
-      );
+         WHERE ${isStudent ? 'l.user_id = ?' : '(l.college_id = ? OR l.college_id IS NULL)'}
+         ORDER BY l.id DESC`;
+      const params = isStudent ? [callerId] : [collegeId];
+      leaves = await query(sql, params);
     } catch (e) {
       console.warn('[DB getLeaveRequests fallback]', e.message);
     }
@@ -721,8 +733,15 @@ export const updateLeaveRequestStatus = async (req, res, next) => {
 export const deleteLeaveRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const callerId = req.user?.userId || req.user?.id;
+    const isStaffOrAdmin = ['super_admin', 'college_admin', 'coordinator', 'mentor'].includes(req.user?.role);
+
     try {
-      await query(`DELETE FROM leave_requests WHERE id = ?`, [id]);
+      if (isStaffOrAdmin) {
+        await query(`DELETE FROM leave_requests WHERE id = ?`, [id]);
+      } else {
+        await query(`DELETE FROM leave_requests WHERE id = ? AND user_id = ?`, [id, callerId]);
+      }
     } catch (e) {
       console.warn('[DB deleteLeaveRequest fallback]', e.message);
     }

@@ -147,6 +147,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_approved BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN profile_pic VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN experience VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
 
     // 4.05 Ensure Coordinator Departments Mapping Table
@@ -1200,36 +1201,15 @@ export async function initializeDatabase() {
       console.warn('[DB Init] College seed notice:', e.message);
     }
 
-    // B. Ensure default Department
-    let defaultDeptId = 1;
+    // B. Department check (no hardcoded seeds)
+    let defaultDeptId = null;
     try {
       const [depts] = await conn.query(`SELECT id FROM departments WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
-      if (!depts || depts.length === 0) {
-        const [ins] = await conn.query(`
-          INSERT INTO departments (college_id, name, code, status)
-          VALUES (?, 'Computer Engineering', 'CE', 'Active')
-        `, [defaultCollegeId]);
-        defaultDeptId = ins.insertId;
-        console.log(`[DB Init] Seeded default Department (ID: ${defaultDeptId})`);
-      } else {
+      if (depts && depts.length > 0) {
         defaultDeptId = depts[0].id;
       }
     } catch (e) {
-      console.warn('[DB Init] Department seed notice:', e.message);
-    }
-
-    // C. Ensure default Batch
-    try {
-      const [batches] = await conn.query(`SELECT id FROM batches WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
-      if (!batches || batches.length === 0) {
-        await conn.query(`
-          INSERT INTO batches (college_id, department_id, name, status, year, division)
-          VALUES (?, ?, 'Batch A', 'active', 'TE', 'A')
-        `, [defaultCollegeId, defaultDeptId]);
-        console.log('[DB Init] Seeded default Batch for College');
-      }
-    } catch (e) {
-      console.warn('[DB Init] Batch seed notice:', e.message);
+      console.warn('[DB Init] Department check notice:', e.message);
     }
 
     // D. Ensure default C2C 2026 Training Program exists
@@ -1248,20 +1228,29 @@ export async function initializeDatabase() {
 
     // E. Ensure Super Admin Account
     try {
-      const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+      const superEmail = process.env.SUPER_ADMIN_EMAIL ? process.env.SUPER_ADMIN_EMAIL.trim().toLowerCase() : null;
       const superPass = process.env.SUPER_ADMIN_PASSWORD;
-      const superPasswordHash = superPass ? await bcrypt.hash(superPass, 12) : null;
-      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
-      if (!superUsers || superUsers.length === 0) {
-        await conn.query(
-          `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, 'super_admin', NULL, 1)`,
-          [superEmail, superPasswordHash]
-        );
-        console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
-      } else if (superPasswordHash) {
-        await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
+      const superName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
+      const superMobile = process.env.SUPER_ADMIN_MOBILE || '9876543210';
+
+      if (superEmail) {
+        const superPasswordHash = superPass ? await bcrypt.hash(superPass, 12) : null;
+        const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
+        if (!superUsers || superUsers.length === 0) {
+          if (superPasswordHash) {
+            await conn.query(
+              `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, 'super_admin', NULL, 1, 1, 1)`,
+              [superName, superEmail, superMobile, superPasswordHash]
+            );
+            console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
+          }
+        } else if (superPasswordHash) {
+          await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
+        } else {
+          await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        }
       } else {
-        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        console.log('[DB Init] SUPER_ADMIN_EMAIL not set in .env; skipping automated Super Admin seeding.');
       }
     } catch (e) {
       console.warn('[DB Init] Super Admin seed notice:', e.message);

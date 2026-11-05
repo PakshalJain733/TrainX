@@ -242,7 +242,7 @@ export default function Leaderboard() {
                 const displayScore = st.score !== undefined ? st.score : (st.overall_score !== undefined ? st.overall_score : (st.xp || 0));
                 const displaySub = activeTab === "batches"
                   ? `${st.students || st.student_count || 0} Enrolled Students`
-                  : [st.batch || st.batch_name || "All Batches", st.department || st.dept_name || st.sub].filter(Boolean).join(" • ");
+                  : [st.batch || st.batch_name, st.department || st.dept_name || st.sub].filter(Boolean).join(" • ") || "—";
 
                 return (
                   <div

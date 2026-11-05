@@ -141,6 +141,7 @@ export const getMe = async (req, res, next) => {
       area_of_expertise: user.area_of_expertise || user.specialization || null,
       areaOfExpertise: user.area_of_expertise || user.specialization || null,
       specialization: user.area_of_expertise || user.specialization || user.target_track || null,
+      experience: user.experience || null,
       avatar_url: user.avatar_url || null,
       avatarUrl: user.avatar_url || null,
       remember_me: Boolean(user.remember_me),
@@ -200,7 +201,8 @@ export const updateProfile = async (req, res, next) => {
     // Security Allowlist: strip protected privilege fields
     const allowed = [
       'name', 'mobile_number', 'phone', 'gender', 'city', 'emergency_contact',
-      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester'
+      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester',
+      'department', 'department_id', 'experience', 'specialization', 'area_of_expertise'
     ];
     const safeData = {};
     for (const key of allowed) {

@@ -87,11 +87,26 @@ export const getColleges = async (req, res, next) => {
       dbColleges = matched.length > 0 ? matched : [];
     }
 
-    const formatted = (dbColleges || []).map((c) => ({
-      ...c,
-      adminEmail: c.adminEmail || c.contact_email || '',
-      adminName: c.adminName || c.admin_name || '',
-    }));
+    const isPrivileged = req.user && ['super_admin', 'college_admin', 'coordinator', 'mentor'].includes(userRole);
+    const formatted = (dbColleges || []).map((c) => {
+      if (!isPrivileged) {
+        return {
+          id: c.id,
+          name: c.name,
+          code: c.code,
+          domain: c.domain,
+          location: c.location,
+          city: c.city,
+          type: c.type,
+          status: c.status,
+        };
+      }
+      return {
+        ...c,
+        adminEmail: c.adminEmail || c.contact_email || '',
+        adminName: c.adminName || c.admin_name || '',
+      };
+    });
     return sendSuccess(res, 'Colleges retrieved successfully', formatted);
   } catch (error) {
     next(error);

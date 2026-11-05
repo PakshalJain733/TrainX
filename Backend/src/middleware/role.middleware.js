@@ -16,17 +16,17 @@ export const authorizeRoles = (...allowedRoles) => {
     const userRole = rawRole.toLowerCase();
 
     // Super admin bypasses all role restrictions
-    if (userRole === ROLES.SUPER_ADMIN.toLowerCase() || userRole.includes('super')) {
+    if (userRole === ROLES.SUPER_ADMIN.toLowerCase() || userRole === 'super_admin' || userRole === 'superadmin') {
       return next();
     }
 
     const normalizedAllowed = allowedRoles.map(r => String(r || '').toLowerCase().trim());
 
-    // Check direct normalized match or synonyms (e.g. mentor/faculty, college_admin/admin/hod)
+    // Check direct normalized match or defined canonical synonyms (e.g. mentor/faculty, college_admin/admin/hod)
     const isAllowed =
       normalizedAllowed.includes(userRole) ||
-      (normalizedAllowed.includes('mentor') && (userRole.includes('mentor') || userRole.includes('faculty'))) ||
-      (normalizedAllowed.includes('college_admin') && (userRole.includes('admin') || userRole.includes('hod')));
+      (normalizedAllowed.includes('mentor') && ['mentor', 'faculty'].includes(userRole)) ||
+      (normalizedAllowed.includes('college_admin') && ['college_admin', 'admin', 'hod'].includes(userRole));
 
     if (isAllowed) {
       return next();

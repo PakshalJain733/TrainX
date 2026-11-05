@@ -73,7 +73,7 @@ export default function CoordinatorMentors() {
     specialization: "",
     assignedBatch: "",
     experience: "",
-    department: "Computer Engineering",
+    department: coordDept || "",
   });
 
   const fetchMentors = () => {
@@ -169,9 +169,9 @@ export default function CoordinatorMentors() {
       name: "",
       email: "",
       specialization: "",
-      assignedBatch: "CSE 2026 Alpha Cohort",
-      experience: "5+ Yrs",
-      department: "Computer Engineering",
+      assignedBatch: "",
+      experience: "",
+      department: coordDept || "",
     });
 
     apiFetch("/coordinator/mentors", {

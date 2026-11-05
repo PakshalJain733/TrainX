@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 import { getRelatedCollegeIds } from '../models/user.model.js';
@@ -1073,7 +1075,7 @@ export const getBatchStudents = async (req, res, next) => {
       rollNo: s.rollNo || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
       name: s.name || s.full_name || "Student User",
       email: s.email,
-      department: s.department || "Computer Engineering",
+      department: s.department || null,
       status: true
     }));
 
@@ -1082,8 +1084,6 @@ export const getBatchStudents = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 export const getBatchById = async (req, res, next) => {
   try {
@@ -1306,5 +1306,701 @@ export const getTaskSubmissions = async (req, res, next) => {
   }
 };
 
+export const getBatchAllSubmissions = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+    if (!cleanBatchId) {
+      return sendSuccess(res, 'Submissions retrieved successfully', []);
+    }
 
+    const callerId = req.user?.userId || req.user?.id;
+    const isStudent = req.user?.role === 'student';
 
+    // 1. Task submissions directly tied to this batch (students only see their own)
+    let taskRows = [];
+    try {
+      const taskSql = `SELECT ts.id, ts.task_id, ts.user_id, ts.batch_id, 
+                COALESCE(ts.code_submission, ts.submitted_code) AS submitted_code, 
+                ts.status, 
+                COALESCE(ts.marks_obtained, ts.score, 0) AS marks_obtained,
+                COALESCE(ts.score, ts.marks_obtained, 0) AS score,
+                ts.feedback, 
+                ts.submitted_at,
+                COALESCE(bt.language, 'Java') AS language,
+                COALESCE(bt.title, 'Batch Assignment') AS task_title,
+                COALESCE(bt.points, 100) AS total_marks,
+                COALESCE(u.name, 'Student') AS student_name, 
+                u.email AS student_email, 
+                s.roll_number, 
+                s.department,
+                'batch_task' AS submission_type
+         FROM task_submissions ts
+         JOIN users u ON ts.user_id = u.id
+         LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
+         WHERE ts.batch_id = ? ${isStudent ? 'AND ts.user_id = ?' : ''}
+         ORDER BY ts.submitted_at DESC`;
+      const taskParams = isStudent ? [cleanBatchId, callerId] : [cleanBatchId];
+      taskRows = await query(taskSql, taskParams);
+    } catch (_e) {}
+
+    // 2. Practice/coding problem submissions from students in this batch (students only see their own)
+    let codingRows = [];
+    try {
+      const codingSql = `SELECT cs.id, NULL AS task_id, cs.student_id AS user_id, s.batch_id,
+                cs.submitted_code,
+                cs.status,
+                COALESCE(cs.marks, cs.score, 0) AS marks_obtained,
+                COALESCE(cs.score, cs.marks, 0) AS score,
+                cs.feedback,
+                COALESCE(cs.submitted_at, cs.created_at) AS submitted_at,
+                cs.language,
+                COALESCE(pp.title, cp.title, CONCAT('Problem #', cs.problem_id)) AS task_title,
+                100 AS total_marks,
+                COALESCE(u.name, 'Student') AS student_name,
+                u.email AS student_email,
+                s.roll_number,
+                s.department,
+                'coding_problem' AS submission_type
+         FROM coding_submissions cs
+         JOIN users u ON cs.student_id = u.id
+         JOIN students s ON s.user_id = u.id
+         LEFT JOIN practice_problems pp ON cs.problem_id = pp.id
+         LEFT JOIN coding_problems cp ON cs.problem_id = cp.id
+         WHERE s.batch_id = ? ${isStudent ? 'AND cs.student_id = ?' : ''}
+         ORDER BY cs.submitted_at DESC`;
+      const codingParams = isStudent ? [cleanBatchId, callerId] : [cleanBatchId];
+      codingRows = await query(codingSql, codingParams);
+    } catch (_e) {}
+
+    const allSubmissions = [...(taskRows || []), ...(codingRows || [])];
+    allSubmissions.sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
+
+    return sendSuccess(res, 'Batch submissions retrieved successfully', allSubmissions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTaskSubmissionFeedback = async (req, res, next) => {
+  try {
+    const role = (req.user?.role || '').toLowerCase();
+    if (role === 'student') {
+      return sendError(res, 'Access denied: Students cannot evaluate submissions.', 403);
+    }
+    await ensureTables();
+    const { submissionId } = req.params;
+    const { feedback, marks_obtained, score, status, submission_type } = req.body || {};
+    const cleanId = parseInt(String(submissionId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanId) return sendError(res, 'Invalid submission ID', 400);
+
+    const reviewerName = req.user?.name || 'Trainer';
+
+    if (submission_type === 'coding_problem') {
+      await query(
+        `UPDATE coding_submissions 
+         SET feedback = ?, feedback_by = ?, feedback_at = NOW() 
+         WHERE id = ?`,
+        [feedback || '', reviewerName, cleanId]
+      );
+      return sendSuccess(res, 'Feedback saved successfully');
+    }
+
+    const updateFields = [];
+    const params = [];
+    if (feedback !== undefined) {
+      updateFields.push('feedback = ?');
+      params.push(feedback);
+    }
+    const finalScore = marks_obtained !== undefined ? marks_obtained : score;
+    if (finalScore !== undefined) {
+      updateFields.push('marks_obtained = ?');
+      params.push(Number(finalScore));
+      updateFields.push('score = ?');
+      params.push(Number(finalScore));
+    }
+    if (status !== undefined) {
+      updateFields.push('status = ?');
+      params.push(status);
+    }
+
+    if (updateFields.length > 0) {
+      params.push(cleanId);
+      await query(`UPDATE task_submissions SET ${updateFields.join(', ')} WHERE id = ?`, params);
+    }
+
+    return sendSuccess(res, 'Feedback updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/batches/:id/task-report
+ * GET /api/v1/batches/:id/task-report/download
+ *
+ * Matrix report of task submissions per batch:
+ * - Columns: Name of Task (plus Roll No, Student Name, Email, Department, and Summary Stats)
+ * - Rows: Student Names
+ * - Role Access Scoping:
+ *     - Admin & Trainer: ALL students enrolled in this batch
+ *     - Mentor: ONLY assigned students of this mentor enrolled in this batch
+ * - Formats: JSON matrix or downloadable Excel (.xlsx) file
+ */
+export const getBatchTaskReport = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+    if (!cleanBatchId) {
+      return sendError(res, 'Invalid batch ID', 400);
+    }
+
+    // 1. Fetch batch information
+    const [batch] = await query(
+      `SELECT b.*, c.name AS college_name, d.name AS department_name
+       FROM batches b
+       LEFT JOIN colleges c ON b.college_id = c.id
+       LEFT JOIN departments d ON b.department_id = d.id
+       WHERE b.id = ? LIMIT 1`,
+      [cleanBatchId]
+    );
+
+    if (!batch) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    const callerRole = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    const callerId = req.user?.userId || req.user?.id;
+    const callerEmail = req.user?.email || '';
+    const callerName = req.user?.name || '';
+
+    if (callerRole === 'student') {
+      return sendError(res, 'Access denied: Students cannot access batch task submission reports.', 403);
+    }
+
+    // Multi-college data isolation: Non-super-admins cannot access batches belonging to another college
+    if (callerRole !== 'super_admin' && req.user?.college_id && batch.college_id) {
+      if (Number(req.user.college_id) !== Number(batch.college_id)) {
+        return sendError(res, 'Access denied: This batch belongs to another college.', 403);
+      }
+    }
+
+    // 2. Fetch all tasks assigned to this batch
+    const tasks = await query(
+      `SELECT id, title, topic, difficulty, points, deadline, created_at
+       FROM batch_tasks
+       WHERE batch_id = ?
+       ORDER BY id ASC`,
+      [cleanBatchId]
+    );
+
+    // 3. Fetch students based on caller role:
+    // - Admin / Trainer / Coordinator: ALL students enrolled in this batch
+    // - Mentor: ONLY assigned students of this mentor enrolled in this batch
+    let students = [];
+    const isMentor = callerRole === 'mentor';
+
+    if (isMentor) {
+      students = await query(
+        `SELECT DISTINCT 
+           u.id AS student_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           COALESCE(s.roll_number, CONCAT('STU-', LPAD(u.id, 3, '0'))) AS roll_number,
+           COALESCE(s.department, u.department, 'Engineering') AS department,
+           s.division,
+           s.year
+         FROM users u
+         LEFT JOIN students s ON u.id = s.user_id
+         LEFT JOIN student_batches sb ON sb.user_id = u.id
+         WHERE (sb.batch_id = ? OR s.batch_id = ?)
+           AND u.role = 'student'
+           AND COALESCE(u.is_active, 1) = 1
+           AND (
+             u.id IN (SELECT student_id FROM mentor_student_assignments WHERE mentor_id = ?)
+             OR u.id IN (SELECT student_id FROM mentor_assignments WHERE mentor_id = ? OR LOWER(mentor_email) = LOWER(?) OR LOWER(mentor_name) = LOWER(?))
+             OR s.mentor_id = ?
+             OR u.mentor_id = ?
+           )
+         ORDER BY u.name ASC`,
+        [cleanBatchId, cleanBatchId, callerId, callerId, callerEmail, callerName, callerId, callerId]
+      );
+    } else {
+      students = await query(
+        `SELECT DISTINCT 
+           u.id AS student_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           COALESCE(s.roll_number, CONCAT('STU-', LPAD(u.id, 3, '0'))) AS roll_number,
+           COALESCE(s.department, u.department, 'Engineering') AS department,
+           s.division,
+           s.year
+         FROM users u
+         LEFT JOIN students s ON u.id = s.user_id
+         LEFT JOIN student_batches sb ON sb.user_id = u.id
+         WHERE (sb.batch_id = ? OR s.batch_id = ?)
+           AND u.role = 'student'
+           AND COALESCE(u.is_active, 1) = 1
+         ORDER BY u.name ASC`,
+        [cleanBatchId, cleanBatchId]
+      );
+    }
+
+    // 4. Fetch all task submissions for this batch
+    let submissions = [];
+    if (tasks.length > 0) {
+      const taskIds = tasks.map((t) => t.id);
+      submissions = await query(
+        `SELECT ts.id, ts.task_id, ts.user_id, ts.status, 
+                COALESCE(ts.marks_obtained, ts.score, 0) AS score, 
+                ts.feedback, ts.submitted_at
+         FROM task_submissions ts
+         WHERE ts.batch_id = ? OR ts.task_id IN (?)`,
+        [cleanBatchId, taskIds]
+      );
+    }
+
+    // Index submissions by `${studentId}_${taskId}`
+    const submissionMap = new Map();
+    (submissions || []).forEach((sub) => {
+      const key = `${sub.user_id}_${sub.task_id}`;
+      if (!submissionMap.has(key) || Number(sub.score || 0) > Number(submissionMap.get(key).score || 0)) {
+        submissionMap.set(key, sub);
+      }
+    });
+
+    // 5. Build report rows (one row per student, one column per task)
+    const totalBatchTasks = tasks.length;
+    const maxBatchScore = tasks.reduce((sum, t) => sum + (Number(t.points) || 100), 0);
+
+    const reportRows = students.map((st, idx) => {
+      let completedCount = 0;
+      let totalStudentScore = 0;
+      const taskDetails = {};
+      const excelRow = {
+        'S.No': idx + 1,
+        'Roll No': st.roll_number || `STU-${String(st.student_id).padStart(3, '0')}`,
+        'Student Name': st.name,
+        'Email': st.email,
+        'Department': st.department || 'General',
+      };
+
+      tasks.forEach((task) => {
+        const key = `${st.student_id}_${task.id}`;
+        const sub = submissionMap.get(key);
+        const taskPoints = Number(task.points) || 100;
+        const taskTitle = task.title || `Task ${task.id}`;
+
+        if (sub) {
+          const score = Number(sub.score) || 0;
+          const statusLower = String(sub.status || '').toLowerCase();
+          const isPassed =
+            statusLower === 'passed' ||
+            statusLower === 'completed' ||
+            statusLower === 'accepted' ||
+            score > 0;
+          if (isPassed) {
+            completedCount++;
+          }
+          totalStudentScore += score;
+
+          // Excel cell value formatted for this task column
+          excelRow[taskTitle] = `${sub.status || 'Submitted'} (${score}/${taskPoints})`;
+
+          taskDetails[task.id] = {
+            taskId: task.id,
+            taskTitle: task.title,
+            submitted: true,
+            status: sub.status || 'Submitted',
+            score: score,
+            maxPoints: taskPoints,
+            submittedAt: sub.submitted_at || null,
+          };
+        } else {
+          excelRow[taskTitle] = 'Not Submitted';
+          taskDetails[task.id] = {
+            taskId: task.id,
+            taskTitle: task.title,
+            submitted: false,
+            status: 'Not Submitted',
+            score: 0,
+            maxPoints: taskPoints,
+            submittedAt: null,
+          };
+        }
+      });
+
+      const completionPct =
+        totalBatchTasks > 0 ? Math.round((completedCount / totalBatchTasks) * 100) : 0;
+      excelRow['Completed Tasks'] = `${completedCount}/${totalBatchTasks}`;
+      excelRow['Total Score'] = totalStudentScore;
+      excelRow['Max Score'] = maxBatchScore;
+      excelRow['Completion Rate (%)'] = `${completionPct}%`;
+
+      return {
+        studentId: st.student_id,
+        rollNo: st.roll_number,
+        name: st.name,
+        email: st.email,
+        department: st.department,
+        completedTasks: completedCount,
+        totalTasks: totalBatchTasks,
+        totalScore: totalStudentScore,
+        maxScore: maxBatchScore,
+        completionPercentage: completionPct,
+        tasks: taskDetails,
+        excelRow,
+      };
+    });
+
+    const isDownload =
+      req.path.endsWith('/download') ||
+      req.query.format === 'excel' ||
+      req.query.format === 'xlsx';
+
+    if (isDownload) {
+      const excelData = reportRows.map((r) => r.excelRow);
+
+      // Create Worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Auto-size columns based on maximum content width
+      const colKeys = excelData.length > 0 ? Object.keys(excelData[0]) : [];
+      worksheet['!cols'] = colKeys.map((k) => {
+        let maxLen = k.length;
+        excelData.forEach((row) => {
+          const val = row[k] ? String(row[k]) : '';
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        return { wch: Math.min(Math.max(maxLen + 3, 10), 45) };
+      });
+
+      const workbook = XLSX.utils.book_new();
+      const safeSheetName = (batch.name || 'Batch')
+        .slice(0, 31)
+        .replace(/[:\\\/\?\*\[\]]/g, '_');
+      XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+
+      const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+      const safeBatchName = (batch.name || `Batch_${cleanBatchId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `${safeBatchName}_Task_Submissions_Report.xlsx`;
+
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(buffer);
+    }
+
+    return sendSuccess(res, 'Batch task submission report generated successfully', {
+      batch: {
+        id: batch.id,
+        name: batch.name,
+        code: batch.code || batch.join_code,
+        schedule: batch.schedule,
+        college: batch.college_name,
+        department: batch.department_name,
+      },
+      summary: {
+        totalTasks: totalBatchTasks,
+        totalStudents: students.length,
+        scopedRole: callerRole,
+        isMentorScoped: isMentor,
+      },
+      tasks: tasks.map((t) => ({ id: t.id, title: t.title, points: t.points, topic: t.topic })),
+      students: reportRows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/batches/:id/task-report
+ * GET /api/v1/batches/:id/task-report/download
+ *
+ * Matrix report of task submissions per batch:
+ * - Columns: Name of Task (plus Roll No, Student Name, Email, Department, and Summary Stats)
+ * - Rows: Student Names
+ * - Role Access Scoping:
+ *     - Admin & Trainer: ALL students enrolled in this batch
+ *     - Mentor: ONLY assigned students of this mentor enrolled in this batch
+ * - Formats: JSON matrix or downloadable Excel (.xlsx) file
+ */
+export const getBatchTaskReport = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanBatchId = parseInt(String(id).replace(/[^0-9]/g, ''), 10);
+    if (!cleanBatchId) {
+      return sendError(res, 'Invalid batch ID', 400);
+    }
+
+    // 1. Fetch batch information
+    const [batch] = await query(
+      `SELECT b.*, c.name AS college_name, d.name AS department_name
+       FROM batches b
+       LEFT JOIN colleges c ON b.college_id = c.id
+       LEFT JOIN departments d ON b.department_id = d.id
+       WHERE b.id = ? LIMIT 1`,
+      [cleanBatchId]
+    );
+
+    if (!batch) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    const callerRole = (req.user?.role || req.user?.role_name || '').toLowerCase();
+    const callerId = req.user?.userId || req.user?.id;
+    const callerEmail = req.user?.email || '';
+    const callerName = req.user?.name || '';
+
+    if (callerRole === 'student') {
+      return sendError(res, 'Access denied: Students cannot access batch task submission reports.', 403);
+    }
+
+    // Multi-college data isolation: Non-super-admins cannot access batches belonging to another college
+    if (callerRole !== 'super_admin' && req.user?.college_id && batch.college_id) {
+      if (Number(req.user.college_id) !== Number(batch.college_id)) {
+        return sendError(res, 'Access denied: This batch belongs to another college.', 403);
+      }
+    }
+
+    // 2. Fetch all tasks assigned to this batch
+    const tasks = await query(
+      `SELECT id, title, topic, difficulty, points, deadline, created_at
+       FROM batch_tasks
+       WHERE batch_id = ?
+       ORDER BY id ASC`,
+      [cleanBatchId]
+    );
+
+    // 3. Fetch students based on caller role:
+    // - Admin / Trainer / Coordinator: ALL students enrolled in this batch
+    // - Mentor: ONLY assigned students of this mentor enrolled in this batch
+    let students = [];
+    const isMentor = callerRole === 'mentor';
+
+    if (isMentor) {
+      students = await query(
+        `SELECT DISTINCT 
+           u.id AS student_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           COALESCE(s.roll_number, CONCAT('STU-', LPAD(u.id, 3, '0'))) AS roll_number,
+           COALESCE(s.department, u.department, 'Engineering') AS department,
+           s.division,
+           s.year
+         FROM users u
+         LEFT JOIN students s ON u.id = s.user_id
+         LEFT JOIN student_batches sb ON sb.user_id = u.id
+         WHERE (sb.batch_id = ? OR s.batch_id = ?)
+           AND u.role = 'student'
+           AND COALESCE(u.is_active, 1) = 1
+           AND (
+             u.id IN (SELECT student_id FROM mentor_student_assignments WHERE mentor_id = ?)
+             OR u.id IN (SELECT student_id FROM mentor_assignments WHERE mentor_id = ? OR LOWER(mentor_email) = LOWER(?) OR LOWER(mentor_name) = LOWER(?))
+             OR s.mentor_id = ?
+             OR u.mentor_id = ?
+           )
+         ORDER BY u.name ASC`,
+        [cleanBatchId, cleanBatchId, callerId, callerId, callerEmail, callerName, callerId, callerId]
+      );
+    } else {
+      students = await query(
+        `SELECT DISTINCT 
+           u.id AS student_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           COALESCE(s.roll_number, CONCAT('STU-', LPAD(u.id, 3, '0'))) AS roll_number,
+           COALESCE(s.department, u.department, 'Engineering') AS department,
+           s.division,
+           s.year
+         FROM users u
+         LEFT JOIN students s ON u.id = s.user_id
+         LEFT JOIN student_batches sb ON sb.user_id = u.id
+         WHERE (sb.batch_id = ? OR s.batch_id = ?)
+           AND u.role = 'student'
+           AND COALESCE(u.is_active, 1) = 1
+         ORDER BY u.name ASC`,
+        [cleanBatchId, cleanBatchId]
+      );
+    }
+
+    // 4. Fetch all task submissions for this batch
+    let submissions = [];
+    if (tasks.length > 0) {
+      const taskIds = tasks.map((t) => t.id);
+      submissions = await query(
+        `SELECT ts.id, ts.task_id, ts.user_id, ts.status, 
+                COALESCE(ts.marks_obtained, ts.score, 0) AS score, 
+                ts.feedback, ts.submitted_at
+         FROM task_submissions ts
+         WHERE ts.batch_id = ? OR ts.task_id IN (?)`,
+        [cleanBatchId, taskIds]
+      );
+    }
+
+    // Index submissions by `${studentId}_${taskId}`
+    const submissionMap = new Map();
+    (submissions || []).forEach((sub) => {
+      const key = `${sub.user_id}_${sub.task_id}`;
+      if (!submissionMap.has(key) || Number(sub.score || 0) > Number(submissionMap.get(key).score || 0)) {
+        submissionMap.set(key, sub);
+      }
+    });
+
+    // 5. Build report rows (one row per student, one column per task)
+    const totalBatchTasks = tasks.length;
+    const maxBatchScore = tasks.reduce((sum, t) => sum + (Number(t.points) || 100), 0);
+
+    const reportRows = students.map((st, idx) => {
+      let completedCount = 0;
+      let totalStudentScore = 0;
+      const taskDetails = {};
+      const excelRow = {
+        'S.No': idx + 1,
+        'Roll No': st.roll_number || `STU-${String(st.student_id).padStart(3, '0')}`,
+        'Student Name': st.name,
+        'Email': st.email,
+        'Department': st.department || 'General',
+      };
+
+      tasks.forEach((task) => {
+        const key = `${st.student_id}_${task.id}`;
+        const sub = submissionMap.get(key);
+        const taskPoints = Number(task.points) || 100;
+        const taskTitle = task.title || `Task ${task.id}`;
+
+        if (sub) {
+          const score = Number(sub.score) || 0;
+          const statusLower = String(sub.status || '').toLowerCase();
+          const isPassed =
+            statusLower === 'passed' ||
+            statusLower === 'completed' ||
+            statusLower === 'accepted' ||
+            score > 0;
+          if (isPassed) {
+            completedCount++;
+          }
+          totalStudentScore += score;
+
+          // Excel cell value formatted for this task column
+          excelRow[taskTitle] = `${sub.status || 'Submitted'} (${score}/${taskPoints})`;
+
+          taskDetails[task.id] = {
+            taskId: task.id,
+            taskTitle: task.title,
+            submitted: true,
+            status: sub.status || 'Submitted',
+            score: score,
+            maxPoints: taskPoints,
+            submittedAt: sub.submitted_at || null,
+          };
+        } else {
+          excelRow[taskTitle] = 'Not Submitted';
+          taskDetails[task.id] = {
+            taskId: task.id,
+            taskTitle: task.title,
+            submitted: false,
+            status: 'Not Submitted',
+            score: 0,
+            maxPoints: taskPoints,
+            submittedAt: null,
+          };
+        }
+      });
+
+      const completionPct =
+        totalBatchTasks > 0 ? Math.round((completedCount / totalBatchTasks) * 100) : 0;
+      excelRow['Completed Tasks'] = `${completedCount}/${totalBatchTasks}`;
+      excelRow['Total Score'] = totalStudentScore;
+      excelRow['Max Score'] = maxBatchScore;
+      excelRow['Completion Rate (%)'] = `${completionPct}%`;
+
+      return {
+        studentId: st.student_id,
+        rollNo: st.roll_number,
+        name: st.name,
+        email: st.email,
+        department: st.department,
+        completedTasks: completedCount,
+        totalTasks: totalBatchTasks,
+        totalScore: totalStudentScore,
+        maxScore: maxBatchScore,
+        completionPercentage: completionPct,
+        tasks: taskDetails,
+        excelRow,
+      };
+    });
+
+    const isDownload =
+      req.path.endsWith('/download') ||
+      req.query.format === 'excel' ||
+      req.query.format === 'xlsx';
+
+    if (isDownload) {
+      const excelData = reportRows.map((r) => r.excelRow);
+
+      // Create Worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Auto-size columns based on maximum content width
+      const colKeys = excelData.length > 0 ? Object.keys(excelData[0]) : [];
+      worksheet['!cols'] = colKeys.map((k) => {
+        let maxLen = k.length;
+        excelData.forEach((row) => {
+          const val = row[k] ? String(row[k]) : '';
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        return { wch: Math.min(Math.max(maxLen + 3, 10), 45) };
+      });
+
+      const workbook = XLSX.utils.book_new();
+      const safeSheetName = (batch.name || 'Batch')
+        .slice(0, 31)
+        .replace(/[:\\\/\?\*\[\]]/g, '_');
+      XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+
+      const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+      const safeBatchName = (batch.name || `Batch_${cleanBatchId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `${safeBatchName}_Task_Submissions_Report.xlsx`;
+
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(buffer);
+    }
+
+    return sendSuccess(res, 'Batch task submission report generated successfully', {
+      batch: {
+        id: batch.id,
+        name: batch.name,
+        code: batch.code || batch.join_code,
+        schedule: batch.schedule,
+        college: batch.college_name,
+        department: batch.department_name,
+      },
+      summary: {
+        totalTasks: totalBatchTasks,
+        totalStudents: students.length,
+        scopedRole: callerRole,
+        isMentorScoped: isMentor,
+      },
+      tasks: tasks.map((t) => ({ id: t.id, title: t.title, points: t.points, topic: t.topic })),
+      students: reportRows,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

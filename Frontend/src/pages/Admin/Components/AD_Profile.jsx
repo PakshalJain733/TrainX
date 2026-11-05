@@ -20,7 +20,7 @@ export default function AdminProfile() {
     email: "admin@pvppcoe.ac.in",
     phone: "+91 98765 43210",
     role: "College Administrator",
-    department: "Computer Engineering",
+    department: "",
     college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
     location: "Mumbai, Maharashtra",
     notifSystemAlerts: true,

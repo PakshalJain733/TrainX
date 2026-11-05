@@ -76,6 +76,8 @@ app.use(
     contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
     frameguard: { action: 'sameorigin' }, // Clickjacking protection (same-site previews permitted)
     xContentTypeOptions: true, // MIME-sniffing protection enabled
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   })
 );
 
@@ -86,10 +88,11 @@ app.use(apiMetricsMiddleware);
 // Security Rate Limiters (skip preflight OPTIONS and preserve CORS headers on 429)
 export const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 3000, // High-concurrency headroom for campus Wi-Fi / NAT gateways
+  max: 120, // Rate limit for authentication attempts (per IP/identifier)
   keyGenerator: (req) => {
     // Key by email/token when available so students on shared campus IP don't lock each other out
-    return req.body?.email || (req.headers.authorization ? req.headers.authorization.slice(-16) : req.ip);
+    const identifier = req.body?.email || req.body?.mobile || req.body?.identifier || (req.headers.authorization ? req.headers.authorization.slice(-16) : req.ip);
+    return String(identifier || req.ip).toLowerCase().trim();
   },
   validate: { default: false, xForwardedForHeader: false },
   standardHeaders: true,
@@ -98,7 +101,7 @@ export const authLimiter = rateLimit({
   handler: (req, res, next, options) => {
     res.status(options.statusCode).json({
       success: false,
-      message: 'Too many authentication attempts from this IP. Please try again after 10 minutes.',
+      message: 'Too many authentication attempts. Please try again after 10 minutes.',
     });
   },
 });
@@ -212,7 +215,7 @@ app.use('/api/system/health', systemHealthRoutes);
 
 // Mount Module Routes under /api/v1 (Section 11)
 app.use('/api/v1/auth', authLimiter, authRoutes);
-app.use('/api/v1', authRoutes);
+app.use('/api/v1', authLimiter, authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/practice-problems', studentRoutes);
@@ -240,7 +243,7 @@ app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/mock-drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
-app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/secure-codes', authLimiter, secureCodeRoutes);
 app.use('/api/v1/code', codingRoutes);
 app.use('/api/v1/coding', codingRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);

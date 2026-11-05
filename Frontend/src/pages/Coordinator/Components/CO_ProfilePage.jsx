@@ -30,7 +30,7 @@ export default function CoordinatorProfilePage() {
     name: initialUser.name,
     email: initialUser.email,
     phone: initialUser.mobile_number || coordinatorProfile?.phone || "",
-    department: initialUser.department || coordinatorProfile?.department || "Computer Engineering",
+    department: initialUser.department || coordinatorProfile?.department || "",
     role: "Department Coordinator",
     college: coordinatorProfile?.college || "P.V.P.P. College of Engineering",
     officeLocation: coordinatorProfile?.officeLocation || "Room 402, Block B",

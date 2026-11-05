@@ -166,7 +166,6 @@ export const sendRegistrationOtp = async (data = {}) => {
 
   const otp = generateOtp(6);
   await saveRegistrationOtp(email, otp);
-  console.log(`🔑 [AUTH OTP] Registration OTP generated for ${email}: ${otp}`);
 
   try {
     const emailResult = await sendOtpEmail({ to: email, otp, name: data.name || '' });
@@ -603,26 +602,29 @@ export const sendUserOtp = async (identifier) => {
   const cleanIdentifier = String(identifier).trim();
   let user = await findUserByEmailOrMobile(cleanIdentifier);
 
-  const envSuperEmail = (process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com').trim().toLowerCase();
-  const isSuperAdminEmail =
-    cleanIdentifier.toLowerCase() === envSuperEmail ||
-    cleanIdentifier.toLowerCase() === 'admin@trainingportal.com' ||
-    cleanIdentifier.toLowerCase() === 'super.admin0987@gmail.com';
+  const envSuperEmail = process.env.SUPER_ADMIN_EMAIL ? process.env.SUPER_ADMIN_EMAIL.trim().toLowerCase() : null;
+  const isSuperAdminEmail = Boolean(envSuperEmail && cleanIdentifier.toLowerCase() === envSuperEmail);
 
   if (!user && isSuperAdminEmail) {
     try {
-      const superPass = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-      const passHash = await bcrypt.hash(superPass, 12);
-      const newId = await createUser({
-        name: 'Super Admin',
-        email: cleanIdentifier.toLowerCase(),
-        mobile_number: '9876543210',
-        password_hash: passHash,
-        role: 'super_admin',
-        college_id: null,
-        is_active: 1,
-      });
-      user = await findUserById(newId);
+      const superPass = process.env.SUPER_ADMIN_PASSWORD;
+      if (superPass) {
+        const passHash = await bcrypt.hash(superPass, 12);
+        const superName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
+        const superMobile = process.env.SUPER_ADMIN_MOBILE || '9876543210';
+        const newId = await createUser({
+          name: superName,
+          email: envSuperEmail,
+          mobile_number: superMobile,
+          password_hash: passHash,
+          role: 'super_admin',
+          college_id: null,
+          is_active: 1,
+          is_verified: 1,
+          is_approved: 1,
+        });
+        user = await findUserById(newId);
+      }
     } catch (e) {
       console.error('[AUTH] Auto-create Super Admin in sendUserOtp failed:', e.message);
     }
@@ -646,14 +648,12 @@ export const sendUserOtp = async (identifier) => {
   }
 
   await saveOtpRecord(cleanIdentifier, otp);
-  console.log(`🔑 [AUTH OTP] Verification OTP generated for ${recipientEmail}: ${otp}`);
 
   try {
     const emailResult = await sendOtpEmail({ to: recipientEmail, otp, name: user.name || 'User' });
     console.log(`[AUTH] OTP email successfully dispatched to ${recipientEmail} (Message ID: ${emailResult?.messageId || 'sent'})`);
   } catch (error) {
     console.error(`[AUTH Error] OTP email dispatch failed for ${recipientEmail}:`, error.message);
-    console.log(`[AUTH Tester Notice] Testers can use master OTP 123456 or general password Student@123 for direct access.`);
   }
 
   return { identifier: cleanIdentifier };
@@ -665,49 +665,15 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
   }
 
   const cleanIdentifier = String(identifier).trim();
-  let user = await findUserByEmailOrMobile(cleanIdentifier);
-
-  const envSuperEmail = (process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com').trim().toLowerCase();
-  const isSuperAdminEmail =
-    cleanIdentifier.toLowerCase() === envSuperEmail ||
-    cleanIdentifier.toLowerCase() === 'admin@trainingportal.com' ||
-    cleanIdentifier.toLowerCase() === 'super.admin0987@gmail.com';
-
-  if (!user && isSuperAdminEmail) {
-    try {
-      const superPass = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-      const passHash = await bcrypt.hash(superPass, 12);
-      const newId = await createUser({
-        name: 'Super Admin',
-        email: cleanIdentifier.toLowerCase(),
-        mobile_number: '9876543210',
-        password_hash: passHash,
-        role: 'super_admin',
-        college_id: null,
-        is_active: 1,
-      });
-      user = await findUserById(newId);
-    } catch (e) {
-      console.error('[AUTH] Auto-create Super Admin in verifyUserOtpAndLogin failed:', e.message);
-    }
-  }
+  const user = await findUserByEmailOrMobile(cleanIdentifier);
 
   if (!user) {
     throw createAuthError('Invalid credentials.', 401);
   }
 
-  const isMasterOtp = otp === '123456' || otp === '999999';
-  if (isMasterOtp && user.role !== 'super_admin') {
-    user.is_active = 1;
-    user.is_verified = 1;
-  } else if (user.role === 'super_admin' || isSuperAdminEmail) {
-    user.is_active = 1;
-    user.role = 'super_admin';
-  } else {
-    assertUserCanAuthenticate(user);
-  }
+  assertUserCanAuthenticate(user);
 
-  const isValid = isMasterOtp || await verifyOtpRecord(cleanIdentifier, otp);
+  const isValid = await verifyOtpRecord(cleanIdentifier, otp);
   if (!isValid) {
     throw createAuthError('Invalid or expired OTP', 400);
   }
@@ -755,85 +721,18 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   const cleanIdentifier = String(identifier).trim();
   const cleanPassword = String(password).trim();
 
-  const envSuperEmail = (process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com').trim().toLowerCase();
-  const envSuperPass = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-
-  let user = await findUserByEmailOrMobile(cleanIdentifier);
-
-  const isSuperAdminEmail =
-    cleanIdentifier.toLowerCase() === envSuperEmail ||
-    cleanIdentifier.toLowerCase() === 'admin@trainingportal.com' ||
-    cleanIdentifier.toLowerCase() === 'super.admin0987@gmail.com';
-
-  const isSuperAdminPassword =
-    cleanPassword === envSuperPass ||
-    cleanPassword === 'TrainX@2026' ||
-    cleanPassword === 'Admin@1234' ||
-    cleanPassword === 'Admin@123' ||
-    cleanPassword === 'admin123';
-
-  if (!user && isSuperAdminEmail) {
-    try {
-      const passHash = await bcrypt.hash(cleanPassword, 12);
-      const newId = await createUser({
-        name: 'Super Admin',
-        email: cleanIdentifier.toLowerCase(),
-        mobile_number: '9876543210',
-        password_hash: passHash,
-        role: 'super_admin',
-        college_id: null,
-        is_active: 1
-      });
-      user = await findUserById(newId);
-    } catch (e) {
-      console.error('[AUTH] Auto-create Super Admin failed:', e.message);
-    }
-  }
+  const user = await findUserByEmailOrMobile(cleanIdentifier);
 
   if (!user) {
     throw createAuthError('Invalid credentials.', 401);
   }
 
-  const GENERAL_TEST_PASSWORDS = [
-    '12345678',
-    'Student@123',
-    'TrainX@123',
-    'Trainx@2026',
-    'Test@123',
-    'admin123',
-    'Pass@123',
-  ];
-  const isGeneralTestPassword = GENERAL_TEST_PASSWORDS.includes(cleanPassword);
-
-  // If using general tester password for a student or tester account
-  if (isGeneralTestPassword && user.role !== 'super_admin') {
-    user.is_active = 1;
-    user.is_verified = 1;
-  } else if (user.role === 'super_admin' || isSuperAdminEmail) {
-    user.is_active = 1;
-    user.role = 'super_admin';
-  } else {
-    assertUserCanAuthenticate(user);
-  }
+  assertUserCanAuthenticate(user);
 
   const isValid = await verifyStoredPassword(user, cleanPassword);
 
-  const isSuperAdminMatch = Boolean(
-    (user.email?.toLowerCase() === envSuperEmail || user.role === 'super_admin' || isSuperAdminEmail)
-    && (isSuperAdminPassword || isValid)
-  );
-
-  const isAuthenticationGranted = isValid || isSuperAdminMatch || (isGeneralTestPassword && user.role !== 'super_admin');
-
-  if (!isAuthenticationGranted) {
+  if (!isValid) {
     throw createAuthError('Invalid password. Please check your credentials.', 401);
-  }
-
-  if (((isSuperAdminMatch || user.role === 'super_admin') && !isValid) || (isGeneralTestPassword && !isValid)) {
-    try {
-      const passHash = await bcrypt.hash(cleanPassword, 12);
-      await updateUser(user.id, { password_hash: passHash, is_active: 1, is_verified: 1 });
-    } catch (_) {}
   }
 
   await updateUserRememberMe(user.id, rememberMe);

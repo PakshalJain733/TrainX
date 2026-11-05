@@ -327,9 +327,9 @@ const executeStudentsRawPerformance = async (filters = {}) => {
           college_id: r.college_id,
           college_name: r.college_name || 'College',
           department_id: r.department_id,
-          department_name: r.department_name || 'General',
+          department_name: r.department_name || null,
           batch_id: r.batch_id,
-          batch_name: r.batch_name || 'General Batch',
+          batch_name: r.batch_name || null,
 
           quiz_points: quizPoints,
           quizzes_taken: Number(r.quizzes_taken) || 0,
@@ -562,7 +562,8 @@ export const getTopBatchesLeaderboard = async (filters = {}) => {
   const batchMap = new Map();
 
   students.forEach((s) => {
-    const bName = s.batch_name || 'General Batch';
+    const bName = s.batch_name ? String(s.batch_name).trim() : '';
+    if (!bName) return; // Ignore unassigned students instead of grouping into fake 'General Batch'
     if (!batchMap.has(bName)) {
       batchMap.set(bName, {
         name: bName,

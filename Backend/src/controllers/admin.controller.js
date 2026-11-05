@@ -452,14 +452,33 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     if (existing) {
-      // Requirement: "if admin add one user name ganesh and that users registers first but with different then that name should be updated in db"
-      // "no one should be directly approved"
+      // Requirement: If user was pre-added or registers with updated name, sync details
       const trimmedName = (name || '').trim();
+      const existingApproved = isSuperAdminAddingAdmin ? 1 : 0;
+      const existingVerified = isSuperAdminAddingAdmin ? 1 : (existing.is_verified || 0);
+
       if (trimmedName) {
-        await query(
-          'UPDATE users SET name = ?, role = ?, college_id = ?, department = ?, department_id = ?, is_approved = 0 WHERE id = ?',
-          [trimmedName, canonicalRole, targetCollegeId, validatedDeptName, validatedDeptId, existing.id]
-        );
+        if (isSuperAdminAddingAdmin) {
+          const updateData = {
+            name: trimmedName,
+            role: canonicalRole,
+            college_id: targetCollegeId,
+            department: validatedDeptName,
+            department_id: validatedDeptId,
+            is_approved: 1,
+            is_active: 1,
+            is_verified: 1,
+          };
+          if (finalPassword) {
+            updateData.password = finalPassword;
+          }
+          await updateUserModel(existing.id, updateData);
+        } else {
+          await query(
+            'UPDATE users SET name = ?, role = ?, college_id = ?, department = ?, department_id = ?, is_approved = ? WHERE id = ?',
+            [trimmedName, canonicalRole, targetCollegeId, validatedDeptName, validatedDeptId, existingApproved, existing.id]
+          );
+        }
       }
 
       if (canonicalRole === ROLES.STUDENT) {
@@ -496,6 +515,10 @@ export const createUserAdmin = async (req, res, next) => {
         }
       }
 
+      const msg = isSuperAdminAddingAdmin
+        ? 'Administrator account provisioned and approved successfully.'
+        : 'User name and details updated in database. Status set to pending approval.';
+
       return sendSuccess(res, {
         user: {
           id: existing.id,
@@ -503,14 +526,16 @@ export const createUserAdmin = async (req, res, next) => {
           email: existing.email,
           role: canonicalRole,
           college_id: targetCollegeId,
-          is_approved: 0,
+          is_approved: existingApproved,
           is_active: 1,
+          is_verified: existingVerified,
         }
-      }, 'User name and details updated in database. Status set to pending approval.');
+      }, msg);
     }
 
-    // Requirement: "no one should be directly approved"
-    const isApprovedVal = 0;
+    // When Super Admin directly adds an Admin account, they are immediately approved and active.
+    // Self-registering users from the registration page are created with is_approved = 0 and require manual approval.
+    const isApprovedVal = isSuperAdminAddingAdmin ? 1 : 0;
 
     const newUser = await createUser({
       name,
@@ -523,7 +548,7 @@ export const createUserAdmin = async (req, res, next) => {
       department_id: validatedDeptId,
       is_active: 1,
       is_verified: isSuperAdminAddingAdmin ? 1 : 0,
-      is_approved: 0,
+      is_approved: isApprovedVal,
     });
 
     let studentProfile = null;

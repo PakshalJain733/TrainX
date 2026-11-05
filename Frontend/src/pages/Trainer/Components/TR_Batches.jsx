@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Users,
   Plus,
@@ -15,12 +16,15 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  FileSpreadsheet,
   X
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import "../Styles/TR_Batches.css";
 
 export function TrainerBatches() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("myBatches"); // 'myBatches' | 'available'
   const [myBatches, setMyBatches] = useState([]);
   const [allBatches, setAllBatches] = useState([]);
@@ -28,8 +32,8 @@ export function TrainerBatches() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBatch, setSelectedBatch] = useState(null);
 
-  // Detail view state for selected batch
-  const [batchDetailTab, setBatchDetailTab] = useState("assignedTasks"); // 'students' | 'leaderboard' | 'addTask' | 'assignedTasks'
+  // Detail view state for selected batch (Only Enrolled Students & Assigned Tasks)
+  const [batchDetailTab, setBatchDetailTab] = useState("students"); // 'students' | 'assignedTasks'
   const [batchStudents, setBatchStudents] = useState([]);
   const [batchLeaderboard, setBatchLeaderboard] = useState([]);
   const [batchTasks, setBatchTasks] = useState([]);
@@ -52,6 +56,7 @@ export function TrainerBatches() {
   };
   const [taskForm, setTaskForm] = useState(initialTaskForm);
   const [submittingTask, setSubmittingTask] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
 
   // Submissions Modal State
   const [activeTaskForSubmissions, setActiveTaskForSubmissions] = useState(null);
@@ -78,9 +83,6 @@ export function TrainerBatches() {
 
   useEffect(() => {
     fetchBatches();
-    const handleBatchJoined = () => fetchBatches();
-    window.addEventListener("trainer_batch_joined", handleBatchJoined);
-    return () => window.removeEventListener("trainer_batch_joined", handleBatchJoined);
   }, []);
 
   // Fetch details of selected batch
@@ -109,27 +111,27 @@ export function TrainerBatches() {
 
   const handleSelectBatch = (batch) => {
     setSelectedBatch(batch);
-    setBatchDetailTab("assignedTasks");
+    setBatchDetailTab("students");
     setFeedback({ type: "", message: "" });
     fetchBatchDetails(batch.id);
   };
 
-  // Join batch action (for available batches)
-  const handleJoinBatch = async (batch) => {
+  const handleDownloadTaskReport = async () => {
+    if (!selectedBatch?.id) return;
+    setDownloadingReport(true);
     try {
-      const res = await apiFetch("/batches/join", {
-        method: "POST",
-        body: JSON.stringify({ batch_id: batch.id, join_code: batch.code || batch.join_code }),
+      const result = await downloadBatchTaskReport(selectedBatch.id, selectedBatch.name);
+      setFeedback({
+        type: result.success ? "success" : "error",
+        message: result.message,
       });
-      if (res?.success) {
-        setFeedback({ type: "success", message: `Successfully joined "${batch.name}" as Trainer!` });
-        await fetchBatches();
-        handleSelectBatch(batch);
-      } else {
-        alert(res?.message || "Failed to join batch");
-      }
     } catch (err) {
-      alert(err?.message || "Error joining batch");
+      setFeedback({
+        type: "error",
+        message: err.message || "Failed to download task submission report.",
+      });
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -268,7 +270,7 @@ export function TrainerBatches() {
             <ArrowLeft size={16} /> Back to All Batches
           </button>
           <span className="trainer-batch-code-pill">
-            Code: {selectedBatch.code || selectedBatch.join_code || `BTCH-${selectedBatch.id}`}
+            Code: {selectedBatch.code || selectedBatch.join_code || (selectedBatch.id ? `B-${selectedBatch.id}` : '—')}
           </span>
         </div>
 
@@ -282,17 +284,38 @@ export function TrainerBatches() {
               </span>
             </div>
             <p className="trainer-batch-hero-sub">
-              Schedule: <strong>{selectedBatch.schedule || "Regular Sessions"}</strong> • Year/Div:{" "}
-              <strong>{selectedBatch.year || "TE"} {selectedBatch.division || "A"}</strong> • Department:{" "}
-              <strong>{selectedBatch.departmentName || "Engineering"}</strong>
+              Schedule: <strong>{selectedBatch.schedule || "—"}</strong>
+              {[selectedBatch.year, selectedBatch.division].filter(Boolean).length > 0 && (
+                <> • Year/Div: <strong>{[selectedBatch.year, selectedBatch.division].filter(Boolean).join(' ')}</strong></>
+              )}
             </p>
           </div>
 
           <div className="trainer-batch-hero-actions">
             <button
               type="button"
+              className="trainer-btn-outline"
+              onClick={handleDownloadTaskReport}
+              disabled={downloadingReport}
+              title="Download Task Submission Report (.xlsx)"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#ffffff",
+                color: "#059669",
+                borderColor: "#a7f3d0",
+                fontWeight: "700",
+                cursor: downloadingReport ? "not-allowed" : "pointer"
+              }}
+            >
+              <FileSpreadsheet size={16} />
+              {downloadingReport ? "Generating Report..." : "Download Report"}
+            </button>
+            <button
+              type="button"
               className="trainer-btn-primary trainer-btn-hero-assign"
-              onClick={() => setBatchDetailTab("addTask")}
+              onClick={() => navigate("/trainer/tasks")}
             >
               <Plus size={16} /> Assign New Task
             </button>
@@ -313,22 +336,8 @@ export function TrainerBatches() {
           </div>
         )}
 
-        {/* Sub-Tabs Navigation */}
+        {/* Sub-Tabs Navigation (Only Enrolled Students & Assigned Tasks) */}
         <div className="trainer-tabs-bar">
-          <button
-            type="button"
-            className={`trainer-tab-btn ${batchDetailTab === "assignedTasks" ? "active" : ""}`}
-            onClick={() => setBatchDetailTab("assignedTasks")}
-          >
-            <CheckSquare size={17} /> Assigned Tasks ({batchTasks.length})
-          </button>
-          <button
-            type="button"
-            className={`trainer-tab-btn ${batchDetailTab === "addTask" ? "active" : ""}`}
-            onClick={() => setBatchDetailTab("addTask")}
-          >
-            <Plus size={17} /> Add Batch Task
-          </button>
           <button
             type="button"
             className={`trainer-tab-btn ${batchDetailTab === "students" ? "active" : ""}`}
@@ -338,10 +347,10 @@ export function TrainerBatches() {
           </button>
           <button
             type="button"
-            className={`trainer-tab-btn ${batchDetailTab === "leaderboard" ? "active" : ""}`}
-            onClick={() => setBatchDetailTab("leaderboard")}
+            className={`trainer-tab-btn ${batchDetailTab === "assignedTasks" ? "active" : ""}`}
+            onClick={() => setBatchDetailTab("assignedTasks")}
           >
-            <Trophy size={17} /> Batch Leaderboard
+            <CheckSquare size={17} /> Assigned Tasks ({batchTasks.length})
           </button>
         </div>
 
@@ -355,7 +364,7 @@ export function TrainerBatches() {
               <button
                 type="button"
                 className="trainer-btn-primary trainer-btn-compact"
-                onClick={() => setBatchDetailTab("addTask")}
+                onClick={() => navigate("/trainer/tasks")}
               >
                 <Plus size={15} /> Add Task
               </button>
@@ -373,7 +382,7 @@ export function TrainerBatches() {
                 <button
                   type="button"
                   className="trainer-btn-primary"
-                  onClick={() => setBatchDetailTab("addTask")}
+                  onClick={() => navigate("/trainer/tasks")}
                 >
                   <Plus size={16} /> Create First Batch Task
                 </button>
@@ -442,201 +451,7 @@ export function TrainerBatches() {
           </div>
         )}
 
-        {/* TAB 2: Add Batch Task */}
-        {batchDetailTab === "addTask" && (
-          <div className="trainer-add-task-card">
-            <div className="trainer-add-task-header">
-              <h3 className="trainer-add-task-title">
-                Assign New Task to {selectedBatch.name}
-              </h3>
-              <p className="trainer-add-task-sub">
-                This problem will immediately appear on all student dashboards enrolled in this batch.
-              </p>
-            </div>
 
-            <form onSubmit={handleTaskSubmit} className="trainer-task-form">
-              {/* Row 1: Title & Language */}
-              <div className="trainer-form-grid-2">
-                <div>
-                  <label className="trainer-field-label">
-                    Problem Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g., Two Sum Array Optimization"
-                    value={taskForm.title}
-                    onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                    className="trainer-field-input"
-                  />
-                </div>
-                <div>
-                  <label className="trainer-field-label">
-                    Language
-                  </label>
-                  <select
-                    value={taskForm.language}
-                    onChange={(e) => setTaskForm({ ...taskForm, language: e.target.value })}
-                    className="trainer-field-select"
-                  >
-                    <option value="Java">Java</option>
-                    <option value="Python">Python</option>
-                    <option value="C++">C++</option>
-                    <option value="C">C</option>
-                    <option value="JavaScript">JavaScript</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 2: Topic, Difficulty, Points, Deadline */}
-              <div className="trainer-form-grid-4">
-                <div>
-                  <label className="trainer-field-label">
-                    Topic
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Arrays, Trees, Dynamic Programming"
-                    value={taskForm.topic}
-                    onChange={(e) => setTaskForm({ ...taskForm, topic: e.target.value })}
-                    className="trainer-field-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="trainer-field-label">
-                    Difficulty
-                  </label>
-                  <select
-                    value={taskForm.difficulty}
-                    onChange={(e) => setTaskForm({ ...taskForm, difficulty: e.target.value })}
-                    className="trainer-field-select"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="trainer-field-label">
-                    Points / Marks
-                  </label>
-                  <input
-                    type="number"
-                    min="10"
-                    max="500"
-                    value={taskForm.points}
-                    onChange={(e) => setTaskForm({ ...taskForm, points: Number(e.target.value) || 100 })}
-                    className="trainer-field-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="trainer-field-label">
-                    Deadline Date
-                  </label>
-                  <input
-                    type="date"
-                    value={taskForm.deadline}
-                    onChange={(e) => setTaskForm({ ...taskForm, deadline: e.target.value })}
-                    className="trainer-field-input"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="trainer-field-label">
-                  Problem Statement & Instructions
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Explain the problem constraints, input format, output format, and examples..."
-                  value={taskForm.desc}
-                  onChange={(e) => setTaskForm({ ...taskForm, desc: e.target.value })}
-                  className="trainer-field-textarea"
-                />
-              </div>
-
-              {/* Test Cases Builder */}
-              <div className="trainer-test-cases-builder">
-                <div className="trainer-test-cases-header">
-                  <div>
-                    <h4 className="trainer-test-cases-title">
-                      Evaluation Test Cases ({taskForm.testCases.length})
-                    </h4>
-                    <span className="trainer-test-cases-sub">
-                      Used to auto-evaluate submitted student code in the compiler.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="trainer-btn-outline"
-                    onClick={handleAddTestCase}
-                  >
-                    <Plus size={14} /> Add Test Case
-                  </button>
-                </div>
-
-                <div className="trainer-test-cases-list">
-                  {taskForm.testCases.map((tc, idx) => (
-                    <div key={idx} className="trainer-test-case-row">
-                      <input
-                        type="text"
-                        placeholder={`Input #${idx + 1}`}
-                        value={tc.input}
-                        onChange={(e) => handleTestCaseChange(idx, "input", e.target.value)}
-                        className="trainer-test-case-input"
-                      />
-                      <input
-                        type="text"
-                        placeholder={`Expected Output #${idx + 1}`}
-                        value={tc.expectedOutput}
-                        onChange={(e) => handleTestCaseChange(idx, "expectedOutput", e.target.value)}
-                        className="trainer-test-case-input"
-                      />
-                      <label className="trainer-test-case-checkbox-label">
-                        <input
-                          type="checkbox"
-                          checked={tc.isHidden}
-                          onChange={(e) => handleTestCaseChange(idx, "isHidden", e.target.checked)}
-                        />
-                        Hidden
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTestCase(idx)}
-                        className="trainer-test-case-del-btn"
-                        title="Remove"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="trainer-form-actions-footer">
-                <button
-                  type="button"
-                  className="trainer-btn-outline"
-                  onClick={() => setBatchDetailTab("assignedTasks")}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="trainer-btn-primary"
-                  disabled={submittingTask}
-                >
-                  {submittingTask ? "Assigning Task..." : `Assign Task to ${selectedBatch.name}`}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {/* TAB 3: Enrolled Students */}
         {batchDetailTab === "students" && (
@@ -670,54 +485,11 @@ export function TrainerBatches() {
                         </td>
                         <td className="trainer-td-name">{st.name || "Student"}</td>
                         <td className="trainer-td-email">{st.email || "—"}</td>
-                        <td className="trainer-td-dept">{st.department || selectedBatch.departmentName || "General"}</td>
+                        <td className="trainer-td-dept">{st.department || "—"}</td>
                         <td className="trainer-td">
                           <span className="trainer-status-badge--active">
                             Active
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: Batch Leaderboard */}
-        {batchDetailTab === "leaderboard" && (
-          <div className="trainer-roster-card">
-            <div className="trainer-roster-header">
-              <h3 className="trainer-roster-title">
-                Performance Leaderboard — {selectedBatch.name}
-              </h3>
-            </div>
-            {batchLeaderboard.length === 0 ? (
-              <div className="trainer-roster-empty">
-                No leaderboard entries yet for this batch. Students will appear here as they solve tasks!
-              </div>
-            ) : (
-              <div className="trainer-table-responsive">
-                <table className="trainer-table">
-                  <thead>
-                    <tr className="trainer-table-head-row">
-                      <th className="trainer-th">Rank</th>
-                      <th className="trainer-th">Student</th>
-                      <th className="trainer-th">Solved Tasks</th>
-                      <th className="trainer-th">XP / Points</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batchLeaderboard.map((lb, idx) => (
-                      <tr key={lb.id || idx} className="trainer-table-row">
-                        <td className="trainer-td-roll">
-                          #{idx + 1}
-                        </td>
-                        <td className="trainer-td-name">{lb.name || lb.student_name}</td>
-                        <td className="trainer-td">{lb.problems_solved || lb.solved_tasks || 0}</td>
-                        <td className="trainer-td trainer-td--score">
-                          {lb.total_points || lb.xp || 0} pts
                         </td>
                       </tr>
                     ))}
@@ -909,11 +681,16 @@ export function TrainerBatches() {
     <div className="trainer-batches-container">
       {/* Header */}
       <div className="trainer-header-row">
-        <div>
-          <h1 className="trainer-page-title">Training Batches</h1>
-          <p className="trainer-page-sub">
-            Join admin-created batches, assign tasks with test cases, and evaluate student code submissions.
-          </p>
+        <div className="trainer-header-title-group">
+          <div className="trainer-page-icon-box">
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="trainer-page-title">Training Batches</h1>
+            <p className="trainer-page-sub">
+              Manage assigned batches, monitor enrolled students, and assign tasks with test cases.
+            </p>
+          </div>
         </div>
 
         <div className="trainer-header-actions">
@@ -930,170 +707,78 @@ export function TrainerBatches() {
         </div>
       </div>
 
-      {/* Tabs Bar */}
-      <div className="trainer-tabs-bar">
-        <button
-          type="button"
-          className={`trainer-tab-btn ${activeTab === "myBatches" ? "active" : ""}`}
-          onClick={() => setActiveTab("myBatches")}
-        >
-          <Users size={17} /> My Joined Batches <span className="trainer-tab-count">{myBatches.length}</span>
-        </button>
-        <button
-          type="button"
-          className={`trainer-tab-btn ${activeTab === "available" ? "active" : ""}`}
-          onClick={() => setActiveTab("available")}
-        >
-          <Plus size={17} /> Available Batches Created by Admin{" "}
-          <span className="trainer-tab-count">{availableBatches.length}</span>
-        </button>
+      {/* JOINED BATCHES LIST */}
+      <div>
+        {loading ? (
+          <div className="trainer-loading-state">Loading your batches...</div>
+        ) : filteredMyBatches.length === 0 ? (
+          <div className="trainer-task-empty-card">
+            <Users size={44} className="trainer-task-empty-icon" />
+            <h3 className="trainer-empty-state-title">
+              No assigned batches found
+            </h3>
+            <p className="trainer-empty-state-desc">
+              You are not currently assigned to any batches. Batches assigned to you by your Administrator will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="trainer-batch-grid">
+            {filteredMyBatches.map((batch) => (
+              <div key={batch.id} className="trainer-batch-card">
+                <div className="trainer-batch-card-header">
+                  <div>
+                    <h3 className="trainer-batch-name">{batch.name}</h3>
+                    <div className="trainer-batch-meta">
+                      <Calendar size={13} /> {batch.schedule || "Mon, Wed, Fri"}
+                    </div>
+                  </div>
+                  <span className="trainer-batch-badge joined">Joined</span>
+                </div>
+
+                <div className="trainer-batch-stats-row">
+                  <div className="trainer-batch-stat-item">
+                    <span className="trainer-batch-stat-val">
+                      {batch.dynamicStudentsCount || batch.students || 0}
+                    </span>
+                    <span className="trainer-batch-stat-lbl">Enrolled Students</span>
+                  </div>
+                  <div className="trainer-batch-stat-item">
+                    <span className="trainer-batch-stat-val">{batch.tasksCount || 0}</span>
+                    <span className="trainer-batch-stat-lbl">Batch Tasks</span>
+                  </div>
+                  <div className="trainer-batch-stat-item">
+                    <span className="trainer-batch-stat-val trainer-text-accent">
+                      {batch.progress || 0}%
+                    </span>
+                    <span className="trainer-batch-stat-lbl">Progress</span>
+                  </div>
+                </div>
+
+                <div className="trainer-batch-meta-bottom">
+                  <span className="trainer-batch-code-pill">
+                    Code: {batch.code || batch.join_code || (batch.id ? `B-${batch.id}` : '—')}
+                  </span>
+                  {[batch.year, batch.division].filter(Boolean).length > 0 && (
+                    <span className="trainer-batch-dept-text">
+                      {[batch.year, batch.division].filter(Boolean).join(' ')}
+                    </span>
+                  )}
+                </div>
+
+                <div className="trainer-batch-card-actions">
+                  <button
+                    type="button"
+                    className="trainer-btn-primary trainer-batch-open-btn"
+                    onClick={() => handleSelectBatch(batch)}
+                  >
+                    Open Batch Workspace <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* TAB CONTENT: MY JOINED BATCHES */}
-      {activeTab === "myBatches" && (
-        <div>
-          {loading ? (
-            <div className="trainer-loading-state">Loading your batches...</div>
-          ) : filteredMyBatches.length === 0 ? (
-            <div className="trainer-task-empty-card">
-              <Users size={44} className="trainer-task-empty-icon" />
-              <h3 className="trainer-empty-state-title">
-                You have not joined any batches yet
-              </h3>
-              <p className="trainer-empty-state-desc">
-                Switch to the "Available Batches" tab to join a batch created by Admin, or enter a join code.
-              </p>
-              <button
-                type="button"
-                className="trainer-btn-primary"
-                onClick={() => setActiveTab("available")}
-              >
-                Browse Available Batches
-              </button>
-            </div>
-          ) : (
-            <div className="trainer-batch-grid">
-              {filteredMyBatches.map((batch) => (
-                <div key={batch.id} className="trainer-batch-card">
-                  <div className="trainer-batch-card-header">
-                    <div>
-                      <h3 className="trainer-batch-name">{batch.name}</h3>
-                      <div className="trainer-batch-meta">
-                        <Calendar size={13} /> {batch.schedule || "Mon, Wed, Fri"}
-                      </div>
-                    </div>
-                    <span className="trainer-batch-badge joined">Joined</span>
-                  </div>
-
-                  <div className="trainer-batch-stats-row">
-                    <div className="trainer-batch-stat-item">
-                      <span className="trainer-batch-stat-val">
-                        {batch.dynamicStudentsCount || batch.students || 0}
-                      </span>
-                      <span className="trainer-batch-stat-lbl">Enrolled Students</span>
-                    </div>
-                    <div className="trainer-batch-stat-item">
-                      <span className="trainer-batch-stat-val">{batch.tasksCount || 0}</span>
-                      <span className="trainer-batch-stat-lbl">Batch Tasks</span>
-                    </div>
-                    <div className="trainer-batch-stat-item">
-                      <span className="trainer-batch-stat-val trainer-text-accent">
-                        {batch.progress || 0}%
-                      </span>
-                      <span className="trainer-batch-stat-lbl">Progress</span>
-                    </div>
-                  </div>
-
-                  <div className="trainer-batch-meta-bottom">
-                    <span className="trainer-batch-code-pill">
-                      Code: {batch.code || batch.join_code || `BTCH-${batch.id}`}
-                    </span>
-                    <span className="trainer-batch-dept-text">
-                      Dept: {batch.departmentName || "Engineering"}
-                    </span>
-                  </div>
-
-                  <div className="trainer-batch-card-actions">
-                    <button
-                      type="button"
-                      className="trainer-btn-primary trainer-batch-open-btn"
-                      onClick={() => handleSelectBatch(batch)}
-                    >
-                      Open Batch Workspace <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB CONTENT: AVAILABLE BATCHES CREATED BY ADMIN */}
-      {activeTab === "available" && (
-        <div>
-          {loading ? (
-            <div className="trainer-loading-state">Loading available batches...</div>
-          ) : filteredAvailable.length === 0 ? (
-            <div className="trainer-task-empty-card">
-              <CheckCircle2 size={44} className="trainer-task-empty-icon--success" />
-              <h3 className="trainer-empty-state-title">
-                All available batches have been joined!
-              </h3>
-              <p className="trainer-empty-state-desc">
-                Check the "My Joined Batches" tab to manage your batches, or ask your College Admin to create a new batch.
-              </p>
-              <button
-                type="button"
-                className="trainer-btn-primary"
-                onClick={() => setActiveTab("myBatches")}
-              >
-                View My Joined Batches
-              </button>
-            </div>
-          ) : (
-            <div className="trainer-batch-grid">
-              {filteredAvailable.map((batch) => (
-                <div key={batch.id} className="trainer-batch-card">
-                  <div className="trainer-batch-card-header">
-                    <div>
-                      <h3 className="trainer-batch-name">{batch.name}</h3>
-                      <div className="trainer-batch-meta">
-                        <Calendar size={13} /> {batch.schedule || "Scheduled by Admin"}
-                      </div>
-                    </div>
-                    <span className="trainer-batch-badge">Available</span>
-                  </div>
-
-                  <p className="trainer-batch-card-desc">
-                    Created by Admin for <strong>{batch.collegeName || "Campus"}</strong>. Students enrolled:{" "}
-                    <strong>{batch.dynamicStudentsCount || batch.students || 0}</strong>.
-                  </p>
-
-                  <div className="trainer-batch-meta-bottom">
-                    <span className="trainer-batch-code-pill">
-                      Code: {batch.code || batch.join_code || `BTCH-${batch.id}`}
-                    </span>
-                    <span className="trainer-batch-dept-text">
-                      Dept: {batch.departmentName || "Engineering"}
-                    </span>
-                  </div>
-
-                  <div className="trainer-batch-card-actions">
-                    <button
-                      type="button"
-                      className="trainer-btn-primary trainer-batch-open-btn"
-                      onClick={() => handleJoinBatch(batch)}
-                    >
-                      <Plus size={16} /> Join as Trainer
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

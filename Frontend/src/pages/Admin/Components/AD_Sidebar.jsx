@@ -7,7 +7,12 @@ import "../Styles/AD_Sidebar.css";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
-    <div className="sidebar-brand">
+    <Link
+      to="/admin"
+      className="sidebar-brand"
+      title="Go to Overview"
+      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+    >
       <div className="sidebar-brand-logo-container">
         <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
       </div>
@@ -20,7 +25,7 @@ function SidebarBrand({ collapsed, subtitle }) {
           <span className="sidebar-brand-sub">{subtitle || "College Administrator"}</span>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 

@@ -113,6 +113,7 @@ const TrainerLayout = lazy(() => import('./pages/Trainer/Components/TR_Layout'))
 const TrainerOverview = lazy(() => import('./pages/Trainer/Components/TR_Overview'));
 const TrainerBatches = lazy(() => import('./pages/Trainer/Components/TR_Batches'));
 const TrainerTasks = lazy(() => import('./pages/Trainer/Components/TR_Tasks'));
+const TrainerSubmissions = lazy(() => import('./pages/Trainer/Components/TR_Submissions'));
 const TrainerLeaderboard = lazy(() => import('./pages/Trainer/Components/TR_Leaderboard'));
 const TrainerProfile = lazy(() => import('./pages/Trainer/Components/TR_Profile'));
 
@@ -268,9 +269,10 @@ function App() {
               <Route index element={<TrainerOverview />} />
               <Route path="batches" element={<TrainerBatches />} />
               <Route path="tasks" element={<TrainerTasks />} />
-              <Route path="submissions" element={<TrainerTasks />} />
+              <Route path="submissions" element={<TrainerSubmissions />} />
               <Route path="leaderboard" element={<TrainerLeaderboard />} />
               <Route path="profile" element={<TrainerProfile />} />
+              <Route path="help" element={<MentorHelp />} />
             </Route>
 
             {/* Super Admin Workspace Routes */}

@@ -258,7 +258,11 @@ export const transferStudentTraining = async (req, res, next) => {
  */
 export const handleMultiTrainingWebhook = async (req, res, next) => {
   try {
-    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026';
+    const isProd = process.env.NODE_ENV === 'production';
+    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || (isProd ? null : 'TrainX_C2C_Webhook_Secret_Key_2026');
+    if (!expectedSecret) {
+      return sendError(res, 'Server misconfiguration: C2C_WEBHOOK_SECRET must be configured in environment.', 500);
+    }
     const providedSecret =
       req.headers['x-c2c-secret'] ||
       req.headers['x-c2c-webhook-secret'] ||

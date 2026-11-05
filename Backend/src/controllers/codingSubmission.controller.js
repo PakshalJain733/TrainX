@@ -78,6 +78,16 @@ export const getCodingSubmissionById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const submission = await getSubmissionByIdService(id);
+    if (!submission) {
+      return sendError(res, 'Coding submission not found', 404);
+    }
+
+    const callerId = req.user?.userId || req.user?.id;
+    const role = (req.user?.role || '').toLowerCase();
+    if (role === 'student' && String(submission.student_id) !== String(callerId)) {
+      return sendError(res, 'Access denied: You can only view your own coding submissions', 403);
+    }
+
     return sendSuccess(res, 'Coding submission retrieved successfully', submission, 200);
   } catch (error) {
     if (error.statusCode) {

@@ -282,7 +282,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
         studentId: s.id,
         name: s.name,
         rollNumber: s.roll_number,
-        batch: s.batch_name || 'General Batch',
+        batch: s.batch_name || null,
         attendance: `${s.attendance}%`,
         avgScore: `${s.avg_quiz_score}%`,
         riskStatus: s.attendance < 65 ? 'High Risk' : 'Moderate Risk',
@@ -577,7 +577,7 @@ export const createCoordinatorMentor = async (req, res, next) => {
     }
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
     const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, req.query?.department);
-    const mentorDept = department || scope.primaryDeptName || 'Computer Engineering';
+    const mentorDept = department || scope.primaryDeptName || null;
 
     const [existing] = await query('SELECT id FROM users WHERE email = ?', [email]);
     let mentorId;
@@ -790,8 +790,8 @@ export const getCoordinatorSkillGaps = async (req, res, next) => {
           studentId: row.student_id,
           studentName: row.student_name,
           rollNo: row.roll_number || `R-${row.student_id}`,
-          department: row.department || 'Engineering',
-          batch: row.batch_name || 'General Batch',
+          department: row.department || null,
+          batch: row.batch_name || null,
           assignedMentor: row.mentor_name || 'Assigned',
           weakSkills: [],
           priorityScores: { High: 0, Medium: 0, Low: 0 },

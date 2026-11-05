@@ -24,8 +24,8 @@ export default function AdminWeeklyReports() {
           const mapped = dataList.map((item, index) => ({
             id: item.id || index + 1,
             title: item.title || item.report_name || `Weekly Progress Report #${item.id || index + 1}`,
-            batch: item.batch_name || item.batch || "General Batch",
-            department: item.department || "Engineering",
+            batch: item.batch_name || item.batch || "—",
+            department: item.department || "—",
             author: item.mentorName || item.author || "Coordinator",
             submittedAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent",
             attendanceRate: item.attendance_score || "85%",

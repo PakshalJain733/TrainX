@@ -25,7 +25,7 @@ export const authenticateToken = (req, res, next) => {
 
   const jwtSecret = getJwtSecret();
 
-  jwt.verify(token, jwtSecret, (err, decodedUser) => {
+  jwt.verify(token, jwtSecret, { algorithms: ['HS256'] }, (err, decodedUser) => {
     if (err) {
       return sendError(res, 'Invalid or expired authentication token. Please log in again.', 401);
     }
@@ -74,7 +74,7 @@ export const optionalAuthenticateToken = (req, res, next) => {
 
   const jwtSecret = getJwtSecret();
 
-  jwt.verify(token, jwtSecret, (err, decodedUser) => {
+  jwt.verify(token, jwtSecret, { algorithms: ['HS256'] }, (err, decodedUser) => {
     if (err || !decodedUser) {
       req.user = null;
       return next();

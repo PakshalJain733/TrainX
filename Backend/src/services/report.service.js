@@ -66,7 +66,7 @@ export const generateStudentWeeklyReport = async (studentId, options = {}) => {
 
   const studentName = user ? user.name || user.fullName || 'Student' : 'Student';
   const rollNumber = studentProfile ? studentProfile.roll_number || '2026COMP042' : '2026COMP042';
-  const department = studentProfile ? studentProfile.department || 'Computer Engineering' : 'Computer Engineering';
+  const department = studentProfile ? studentProfile.department || null : null;
   const collegeId = user ? user.college_id || 1 : 1;
   const batchId = studentProfile ? studentProfile.batch_id || 1 : 1;
 

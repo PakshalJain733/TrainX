@@ -49,9 +49,9 @@ export default function AdminOverview() {
 
   const rawName = adminUser.name || adminUser.fullName || adminUser.full_name;
   const email = adminUser.email || "";
-  const fullName = formatDisplayName(rawName, email, "Ganesh Shinde");
+  const fullName = formatDisplayName(rawName, email, "Administrator");
   const role = adminUser.role || "Campus Admin";
-  const dept = adminUser.department || adminUser.dept || "Computer Engineering";
+  const dept = adminUser.department || adminUser.dept || "";
 
   const getInitials = (name) => {
     if (!name) return "GS";
@@ -128,7 +128,7 @@ export default function AdminOverview() {
               Welcome back, {fullName}!
             </h1>
             <p className="overview-hero-desc">
-              {role || "Administrator"} &nbsp;|&nbsp; {email || "admin@pvppcoe.ac.in"} &nbsp;|&nbsp; {dept || "Computer Engineering"}
+              {[role || "Administrator", email, dept].filter(Boolean).join("  •  ")}
             </p>
           </div>
         </div>

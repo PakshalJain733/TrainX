@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, PowerOff } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, PowerOff, FileSpreadsheet } from "lucide-react";
+import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -161,6 +162,7 @@ export default function AdminBatches() {
   const [batchLeaderboard, setBatchLeaderboard] = useState([]);
   const [batchTasks, setBatchTasks] = useState([]);
   const [batchFeedback, setBatchFeedback] = useState({ type: "", message: "" });
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: "",
     topic: "",
@@ -427,6 +429,25 @@ export default function AdminBatches() {
     }
   };
 
+  const handleDownloadTaskReport = async () => {
+    if (!selectedBatch?.id) return;
+    setDownloadingReport(true);
+    try {
+      const result = await downloadBatchTaskReport(selectedBatch.id, selectedBatch.name);
+      setBatchFeedback({
+        type: result.success ? "success" : "error",
+        message: result.message,
+      });
+    } catch (err) {
+      setBatchFeedback({
+        type: "error",
+        message: err.message || "Failed to download task submission report.",
+      });
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   const handleTaskSubmit = async (e) => {
     e.preventDefault();
     if (!taskForm.title || !selectedBatch) return;
@@ -577,6 +598,32 @@ export default function AdminBatches() {
               </div>
               <h1 style={{ fontSize: "22px", fontWeight: "800", margin: "2px 0 0 0", color: "#0f172a" }}>{selectedBatch.name}</h1>
             </div>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleDownloadTaskReport}
+              disabled={downloadingReport}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "9px 18px",
+                background: "#059669",
+                border: "1px solid #059669",
+                borderRadius: "10px",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: downloadingReport ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+                boxShadow: "0 2px 4px rgba(5, 150, 105, 0.2)"
+              }}
+              title="Download Task Submission Report (.xlsx)"
+            >
+              <FileSpreadsheet size={16} />
+              {downloadingReport ? "Generating Report..." : "Download Report"}
+            </button>
           </div>
         </div>
 

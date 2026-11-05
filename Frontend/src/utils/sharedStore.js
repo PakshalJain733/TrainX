@@ -103,7 +103,7 @@ export const addSharedQuiz = async (newQuiz) => {
     batch_name:  newQuiz.batch || 'All Batches',
     status:      'Active',
     data: {
-      subject:        newQuiz.subject || newQuiz.category || 'Computer Engineering',
+      subject:        newQuiz.subject || newQuiz.category || 'General Assessment',
       questionsCount: newQuiz.questionsCount || newQuiz.questions?.length || 10,
       questions:      newQuiz.questions || [],
       duration:       newQuiz.duration || '30 mins',

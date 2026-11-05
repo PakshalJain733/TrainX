@@ -7,7 +7,12 @@ import "../Styles/CO_Sidebar.css";
 
 function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   return (
-    <div className="sidebar-brand">
+    <Link
+      to="/coordinator"
+      className="sidebar-brand"
+      title="Go to Overview"
+      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+    >
       <div className="sidebar-brand-logo-container">
         <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
       </div>
@@ -20,7 +25,7 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
           <span className="sidebar-brand-sub">{subtitle || "Coordinator"}</span>
         </div>
       )}
-    </div>
+    </Link>
   );
 }
 

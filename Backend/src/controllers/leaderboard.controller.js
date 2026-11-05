@@ -55,7 +55,7 @@ export const getOverallLeaderboardController = async (req, res, next) => {
     const filters = {
       college_id: req.query.college_id || (user.role !== 'SUPER_ADMIN' ? user.college_id : null),
       department_id: req.query.department_id || req.query.department,
-      batch_id: req.query.batch_id,
+      batch_id: req.query.batch_id || req.query.batchId,
     };
     const data = await getOverallLeaderboard(filters);
     return sendSuccess(res, 'Overall leaderboard retrieved successfully', data);
@@ -114,7 +114,7 @@ export const getMilestoneLeaderboardController = async (req, res, next) => {
     const filters = {
       college_id: req.query.college_id || (user.role !== 'SUPER_ADMIN' ? user.college_id : null),
       department_id: req.query.department_id || req.query.department,
-      batch_id: req.query.batch_id,
+      batch_id: req.query.batch_id || req.query.batchId,
     };
     const data = await getMilestoneLeaderboard(filters);
     return sendSuccess(res, 'Milestone leaderboard retrieved successfully', data);

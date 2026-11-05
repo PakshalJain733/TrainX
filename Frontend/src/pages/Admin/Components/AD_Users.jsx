@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus } from "lucide-react";
@@ -2252,6 +2252,28 @@ export default function AdminUsers() {
     fetchStats();
   }, []);
 
+  const [loadingDepts, setLoadingDepts] = useState(false);
+
+  const fetchDepartments = useCallback(async () => {
+    setLoadingDepts(true);
+    try {
+      const res = await apiFetch("/departments");
+      const list = res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(list)) {
+        setDepartments(list);
+        return list;
+      }
+      setDepartments([]);
+      return [];
+    } catch (err) {
+      console.warn("Failed to fetch departments:", err);
+      setDepartments([]);
+      return [];
+    } finally {
+      setLoadingDepts(false);
+    }
+  }, []);
+
   const departmentOptions = useMemo(() => {
     if (departments && departments.length > 0) {
       return departments.map((d) => ({
@@ -2259,35 +2281,31 @@ export default function AdminUsers() {
         label: d.name && d.code && d.name !== d.code ? `${d.name} (${d.code})` : (d.code || d.name),
       }));
     }
-    return [
-      { value: "CE", label: "Computer Engineering (CE)" },
-      { value: "IT", label: "Information Technology (IT)" },
-      { value: "ECS", label: "Electronics & Computer Science (ECS)" },
-      { value: "AIDS", label: "Artificial Intelligence & Data Science (AIDS)" },
-      { value: "EXTC", label: "Electronics & Telecommunication (EXTC)" },
-      { value: "MECH", label: "Mechanical Engineering (MECH)" },
-      { value: "CIVIL", label: "Civil Engineering (CIVIL)" },
-    ];
+    return [];
   }, [departments]);
 
   // Fetch departments for the dropdown
   useEffect(() => {
-    apiFetch("/departments")
-      .then((res) => {
-        const list = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(list) && list.length > 0) {
-          setDepartments(list);
-          // Set the default department in the form
-          setFormData(prev => ({
-            ...prev,
-            department: prev.department || list[0]?.code || list[0]?.name || "",
-          }));
-        }
-      })
-      .catch(() => {});
-  }, []);
+    fetchDepartments().then((list) => {
+      if (Array.isArray(list) && list.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          department: prev.department || list[0]?.code || list[0]?.name || "",
+        }));
+      }
+    });
+  }, [fetchDepartments]);
 
   const handleOpenAdd = () => {
+    fetchDepartments().then((list) => {
+      const activeList = Array.isArray(list) && list.length > 0 ? list : departments;
+      const firstDept = activeList[0]?.code || activeList[0]?.name || "";
+      setFormData((prev) => ({
+        ...prev,
+        department: firstDept,
+      }));
+    });
+
     const firstDept = departments[0]?.code || departments[0]?.name || "";
     setFormData({
       name: "",
@@ -2358,6 +2376,17 @@ export default function AdminUsers() {
     setFeedback({ type: "", message: "" });
 
     try {
+      if (formData.role === "student" && !formData.department) {
+        setFeedback({
+          type: "error",
+          message: departments.length === 0
+            ? "No department added by admin. Please add a department first from Department Management."
+            : "Please select a department for the student."
+        });
+        setActionLoading(false);
+        return;
+      }
+
       let finalSem = formData.semester;
       if (formData.role === "student") {
         if (formData.year === "SE") finalSem = "3";
@@ -2366,17 +2395,20 @@ export default function AdminUsers() {
         else if (formData.year === "FE") finalSem = "1";
       }
 
-      const selectedDeptObj = (departments || []).find(
-        (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
-      );
-
       const isStudentRole = formData.role === "student";
+      const selectedDeptObj = isStudentRole
+        ? (departments || []).find(
+            (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+          )
+        : null;
+
       const payload = {
         ...formData,
         year: isStudentRole ? formData.year : "",
         division: isStudentRole ? formData.division : "",
         semester: isStudentRole ? (finalSem || "1") : null,
-        department_id: selectedDeptObj?.id || formData.department_id || null,
+        department: isStudentRole ? formData.department : "",
+        department_id: isStudentRole ? (selectedDeptObj?.id || formData.department_id || null) : null,
         secure_code: generatedCode || formData.secure_code || "",
         is_approved: 0,
         is_active: 1,
@@ -2407,13 +2439,17 @@ export default function AdminUsers() {
     setFeedback({ type: "", message: "" });
 
     try {
-      const selectedDeptObj = (departments || []).find(
-        (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
-      );
+      const isStudentRole = formData.role === "student" || formData.role === "Student";
+      const selectedDeptObj = isStudentRole
+        ? (departments || []).find(
+            (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+          )
+        : null;
 
       const updatePayload = {
         ...formData,
-        department_id: selectedDeptObj?.id || formData.department_id || null,
+        department: isStudentRole ? formData.department : "",
+        department_id: isStudentRole ? (selectedDeptObj?.id || formData.department_id || null) : null,
       };
 
       const res = await apiFetch(`/admin/users/${selectedUser.id}`, {
@@ -2789,7 +2825,11 @@ export default function AdminUsers() {
                     <AdminUserSelect
                       value={formData.role}
                       onChange={(val) => {
-                        setFormData({ ...formData, role: val });
+                        setFormData({
+                          ...formData,
+                          role: val,
+                          department: val === 'student' ? formData.department : '',
+                        });
                         setGeneratedCode('');
                       }}
                       options={[
@@ -2837,20 +2877,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                {/* Department / Branch Selection for Mentors & Non-Students */}
-                {formData.role !== 'student' && (
-                  <div className="form-group-admin" style={{ marginBottom: '14px' }}>
-                    <label>
-                      {formData.role === 'mentor' ? 'Mentor Department / Branch *' : 'Assigned Department / Branch *'}
-                    </label>
-                    <AdminUserSelect
-                      value={formData.department}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      options={departmentOptions}
-                      placeholder="Select Department / Branch"
-                    />
-                  </div>
-                )}
+
 
                 {formData.role !== 'student' && (
                   <div className="admin-user-token-section">
@@ -2959,9 +2986,26 @@ export default function AdminUsers() {
                         <AdminUserSelect
                           value={formData.department}
                           onChange={(val) => setFormData({ ...formData, department: val })}
-                          options={departmentOptions}
-                          placeholder="Select Department"
+                          options={
+                            loadingDepts
+                              ? [{ value: "", label: "Loading departments...", disabled: true }]
+                              : departmentOptions.length > 0
+                              ? departmentOptions
+                              : [{ value: "", label: "No department added" }]
+                          }
+                          placeholder={
+                            loadingDepts
+                              ? "Loading departments..."
+                              : departmentOptions.length > 0
+                              ? "Select Department"
+                              : "No department added"
+                          }
                         />
+                        {departmentOptions.length === 0 && !loadingDepts && (
+                          <span style={{ fontSize: "11.5px", color: "#e11d48", marginTop: "4px", display: "block", fontWeight: 500 }}>
+                            No department added by admin.
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -3109,19 +3153,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                {(formData.role !== "student" && formData.role !== "Student") && (
-                  <div className="form-group-admin" style={{ marginTop: '14px', marginBottom: '8px' }}>
-                    <label>
-                      {formData.role === "mentor" ? "Mentor Department / Branch" : "Assigned Department / Branch"}
-                    </label>
-                    <AdminUserSelect
-                      value={formData.department}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      options={departmentOptions}
-                      placeholder="Select Department / Branch"
-                    />
-                  </div>
-                )}
+
 
                 {(formData.role === "student" || formData.role === "Student") && (
                   <>
@@ -3141,9 +3173,26 @@ export default function AdminUsers() {
                         <AdminUserSelect
                           value={formData.department}
                           onChange={(val) => setFormData({ ...formData, department: val })}
-                          options={departmentOptions}
-                          placeholder="Select Department"
+                          options={
+                            loadingDepts
+                              ? [{ value: "", label: "Loading departments...", disabled: true }]
+                              : departmentOptions.length > 0
+                              ? departmentOptions
+                              : [{ value: "", label: "No department added" }]
+                          }
+                          placeholder={
+                            loadingDepts
+                              ? "Loading departments..."
+                              : departmentOptions.length > 0
+                              ? "Select Department"
+                              : "No department added"
+                          }
                         />
+                        {departmentOptions.length === 0 && !loadingDepts && (
+                          <span style={{ fontSize: "11.5px", color: "#e11d48", marginTop: "4px", display: "block", fontWeight: 500 }}>
+                            No department added by admin.
+                          </span>
+                        )}
                       </div>
                     </div>
 

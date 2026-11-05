@@ -61,8 +61,8 @@ export const isOriginAllowed = (origin) => {
     return true;
   }
 
-  // 5. Match Render, Vercel, Netlify previews and hosted domains
-  if (/^https:\/\/([a-zA-Z0-9-]+\.)?(onrender\.com|vercel\.app|netlify\.app)$/i.test(normalized)) {
+  // 5. Match authorized TrainX platform deployment domains on Render and Vercel
+  if (/^https:\/\/(trainx-[a-zA-Z0-9-]+\.onrender\.com|(trainx|campus-training-portal)[a-zA-Z0-9-]*\.vercel\.app)$/i.test(normalized)) {
     return true;
   }
 

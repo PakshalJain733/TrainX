@@ -78,7 +78,15 @@ const SEARCH_REGISTRY = [
   { id: 'co-requests', title: 'Requests & Approvals', path: '/coordinator/requests', role: 'coordinator', category: 'Management', icon: Inbox, keywords: ['requests', 'approvals', 'inbox'] },
   { id: 'co-broadcast', title: 'Broadcast Notice Center', path: '/coordinator/broadcast', role: 'coordinator', category: 'Communication', icon: Megaphone, keywords: ['broadcast notice center', 'announcements'] },
   { id: 'co-help', title: 'Support Ticket', path: '/coordinator/help', role: 'coordinator', category: 'Support', icon: HelpCircle, keywords: ['support ticket', 'help'] },
-  { id: 'co-profile', title: 'Coordinator Profile', path: '/coordinator/profile', role: 'coordinator', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] }
+  { id: 'co-profile', title: 'Coordinator Profile', path: '/coordinator/profile', role: 'coordinator', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
+
+  // ── TRAINER DASHBOARD ──
+  { id: 'tr-overview', title: 'Overview', path: '/trainer', role: 'trainer', category: 'Dashboard', icon: LayoutDashboard, keywords: ['overview', 'dashboard', 'home', 'stats', 'metrics'] },
+  { id: 'tr-batches', title: 'My Batches', path: '/trainer/batches', role: 'trainer', category: 'Academic', icon: Users, keywords: ['batches', 'my batches', 'assigned batches', 'cohorts', 'join batch'] },
+  { id: 'tr-tasks', title: 'Batch Tasks & Code', path: '/trainer/tasks', role: 'trainer', category: 'Coding', icon: Code2, keywords: ['tasks', 'coding tasks', 'challenges', 'assign task', 'test cases'] },
+  { id: 'tr-submissions', title: 'Submissions & Reviews', path: '/trainer/submissions', role: 'trainer', category: 'Evaluations', icon: FileCheck2, keywords: ['submissions', 'reviews', 'evaluations', 'grades', 'code review'] },
+  { id: 'tr-leaderboard', title: 'Leaderboard', path: '/trainer/leaderboard', role: 'trainer', category: 'Rankings', icon: Trophy, keywords: ['leaderboard', 'ranks', 'scores', 'batch rankings'] },
+  { id: 'tr-profile', title: 'Trainer Profile', path: '/trainer/profile', role: 'trainer', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings', 'password'] }
 ];
 
 export default function GlobalHeaderSearch({ role }) {

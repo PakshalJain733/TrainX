@@ -940,8 +940,8 @@ export const getMentorLeaderboard = async (req, res, next) => {
         userId: s.userId || s.id,
         name: s.name,
         rollNo: s.rollNo || s.roll_number || 'N/A',
-        batch: s.batch || s.batch_name || 'Cohort A',
-        department: s.department || 'Computer Engineering',
+        batch: s.batch || s.batch_name || null,
+        department: s.department || null,
         points: points,
         codingPoints: s.coding || points,
         solved: solved,
@@ -2245,7 +2245,7 @@ export const getMentorMenteeInterviews = async (req, res, next) => {
         u.name AS student_name,
         u.email AS student_email,
         s.roll_number,
-        COALESCE(b.name, s.department, 'Batch A') AS batch_name
+        b.name AS batch_name
        FROM interview_sessions iv
        JOIN users u ON iv.user_id = u.id
        LEFT JOIN students s ON u.id = s.user_id
@@ -2259,7 +2259,7 @@ export const getMentorMenteeInterviews = async (req, res, next) => {
       id: r.id,
       studentName: r.student_name || 'Student',
       rollNo: r.roll_number || 'N/A',
-      batch: r.batch_name || 'Batch A',
+      batch: r.batch_name || null,
       targetRole: r.interview_type || 'Software Engineer',
       topic: r.interview_type || 'General AI Mock',
       score: r.overall_score || 0,

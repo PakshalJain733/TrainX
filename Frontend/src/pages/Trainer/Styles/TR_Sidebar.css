@@ -1,180 +1,302 @@
-/* Trainer Sidebar CSS */
+/* ─── TR_Sidebar.css (Unified TrainX Modern Theme) ─── */
+
 :root {
-  --tr-sidebar-bg: #0f172a;
-  --tr-sidebar-text: #94a3b8;
-  --tr-sidebar-active: #38bdf8;
-  --tr-sidebar-active-bg: rgba(56, 189, 248, 0.12);
-  --tr-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
-  --tr-sidebar-border: #1e293b;
+  --tr-sidebar-bg: var(--app-sidebar-bg, #dbe6f2);
+  --tr-sidebar-border: var(--app-sidebar-border, #cbd5e1);
+  --tr-sidebar-width: 240px;
+  --tr-sidebar-width-icon: 68px;
+  --tr-sidebar-text: #64748b;
+  --tr-sidebar-text-bright: #0f172a;
+  --tr-sidebar-primary: var(--primary-color, #0055ba);
+  --tr-sidebar-primary-fg: #ffffff;
+  --tr-sidebar-hover-bg: #eff6ff;
+  --tr-sidebar-active-bg: #0055ba;
+  --tr-sidebar-active-text: #ffffff;
+  --tr-sidebar-radius: 8px;
+  --tr-sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
 }
 
+/* ── Shell ── */
 .trainer-sidebar {
   display: flex;
   flex-direction: column;
-  width: 248px;
+  width: var(--tr-sidebar-width);
   min-height: 100vh;
+  height: 100vh;
   background: var(--tr-sidebar-bg);
-  border-right: 1px solid var(--tr-sidebar-border);
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow-y: auto;
+  border-right: none !important;
+  transition: var(--tr-sidebar-transition);
+  overflow: hidden;
   position: relative;
   z-index: 100;
   flex-shrink: 0;
+  padding: 12px 0;
   box-sizing: border-box;
 }
 
 .trainer-sidebar.sidebar--collapsed {
-  width: 68px;
+  width: var(--tr-sidebar-width-icon);
 }
 
+/* Mobile drawer mode */
+@media (max-width: 768px) {
+  .trainer-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1000 !important;
+    width: 260px !important;
+    transform: translateX(-100%) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .trainer-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .trainer-sidebar.sidebar--collapsed {
+    width: 260px !important;
+  }
+}
+
+/* ── Header ── */
 .sidebar-header-trainer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--tr-sidebar-border);
+  padding: 0 16px 14px 16px !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
+  height: auto;
   min-height: 64px;
+  gap: 8px;
+  box-sizing: border-box;
+  margin-bottom: 10px !important;
 }
 
-.trainer-brand-row {
+.sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  overflow: hidden;
 }
 
-.trainer-brand-logo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-.trainer-brand-title {
-  font-size: 17px;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: -0.3px;
+.sidebar-brand-logo-container {
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50% !important;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.trainer-brand-x {
-  color: #38bdf8;
+.sidebar-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50% !important;
 }
 
-.trainer-brand-badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
-  color: #ffffff;
-  padding: 2px 7px;
-  border-radius: 6px;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  justify-content: center;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.brand-name1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+}
+
+.brand-x-img-trainer {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
   display: inline-block;
+  vertical-align: middle;
+  padding-bottom: 2px;
 }
 
-.trainer-sidebar-nav {
+.sidebar-brand-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.2;
+  letter-spacing: 0.15px;
+}
+
+/* ── Content ── */
+.trainer-sidebar .sidebar-content {
   flex: 1;
-  padding: 14px 10px;
+  padding: 12px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.trainer-sidebar .sidebar-content::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ── Menu ── */
+.trainer-sidebar .sidebar-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.trainer-nav-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: 8px 12px 4px;
+.trainer-sidebar .sidebar-menu-item {
+  width: 100%;
 }
 
-.trainer-nav-item {
+/* ── Menu button / link ── */
+.sidebar-menu-btn-trainer {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
-  color: var(--tr-sidebar-text);
-  text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-}
-
-.trainer-nav-item:hover {
-  background: var(--tr-sidebar-hover-bg);
-  color: #f1f5f9;
-}
-
-.trainer-nav-item--active {
-  background: var(--tr-sidebar-active-bg);
-  color: var(--tr-sidebar-active) !important;
-  font-weight: 700;
-  border-left: 3px solid var(--tr-sidebar-active);
-}
-
-.trainer-nav-item-badge {
-  margin-left: auto;
-  font-size: 11px;
-  background: #1e293b;
-  color: #38bdf8;
-  padding: 2px 7px;
-  border-radius: 10px;
-  font-weight: 700;
-}
-
-.trainer-sidebar-action-wrap {
-  margin-top: 16px;
-  padding: 0 4px;
-}
-
-.trainer-sidebar-join-btn {
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  color: #ffffff;
-  border: none;
+  height: 44px;
+  padding: 0 16px;
   border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--tr-sidebar-text, #64748b);
+  font-size: 13.5px;
   font-weight: 700;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  position: relative;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.trainer-sidebar-join-btn:hover {
-  opacity: 0.92;
+.sidebar-menu-btn-trainer:hover {
+  background: #eff6ff !important;
+  color: #0052cc !important;
+  font-weight: 600 !important;
 }
 
-.trainer-sidebar-footer {
-  padding: 14px;
-  border-top: 1px solid var(--tr-sidebar-border);
+.sidebar-menu-btn-trainer:hover .sidebar-icon-trainer,
+.sidebar-menu-btn-trainer:hover svg {
+  stroke: #0052cc !important;
+  color: #0052cc !important;
+  opacity: 1 !important;
 }
 
-.trainer-sidebar-version {
-  font-size: 11px;
-  color: #64748b;
-  text-align: center;
+.sidebar-menu-btn-trainer--active {
+  background: #0055ba !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(0, 85, 186, 0.22);
 }
 
-@media (max-width: 768px) {
-  .trainer-sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 1000;
-  }
-  .trainer-sidebar.mobile-open {
-    transform: translateX(0);
-  }
+.sidebar-menu-btn-trainer--active .sidebar-icon-trainer,
+.sidebar-menu-btn-trainer--active svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.sidebar-menu-btn-trainer--active:hover {
+  background: #003e8c !important;
+  color: #ffffff !important;
+}
+
+.sidebar-menu-btn-trainer--active:hover .sidebar-icon-trainer,
+.sidebar-menu-btn-trainer--active:hover svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.sidebar-icon-trainer {
+  flex-shrink: 0;
+  stroke: currentColor;
+  opacity: 0.85;
+}
+
+.sidebar-label-trainer,
+.sidebar-label {
+  flex: 1;
+}
+
+/* ── Footer ── */
+.trainer-sidebar .sidebar-footer {
+  padding: 14px 12px 12px 12px !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.12) !important;
+  margin-top: 10px !important;
+}
+
+/* ── Collapsed icon centering & state refinement ── */
+.trainer-sidebar.sidebar--collapsed .sidebar-menu-btn-trainer {
+  justify-content: center;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  border-radius: 10px;
+  gap: 0;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-brand {
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-brand-logo-container {
+  margin: 0 auto;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-icon-trainer {
+  margin: 0 auto;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-header-trainer {
+  justify-content: center;
+  padding: 12px 0;
+  gap: 0;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-content {
+  padding: 12px 0;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-footer {
+  padding: 12px 0;
+}
+
+.trainer-sidebar.sidebar--collapsed .sidebar-label-trainer,
+.trainer-sidebar.sidebar--collapsed .sidebar-label {
+  display: none !important;
 }

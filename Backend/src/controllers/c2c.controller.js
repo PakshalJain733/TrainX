@@ -11,7 +11,11 @@ import {
  */
 export const handleGoogleFormWebhook = async (req, res, next) => {
   try {
-    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026';
+    const isProd = process.env.NODE_ENV === 'production';
+    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || (isProd ? null : 'TrainX_C2C_Webhook_Secret_Key_2026');
+    if (!expectedSecret) {
+      return sendError(res, 'Server misconfiguration: C2C_WEBHOOK_SECRET must be configured in environment.', 500);
+    }
     
     // Extract secret from header, query param, or body
     const providedSecret =

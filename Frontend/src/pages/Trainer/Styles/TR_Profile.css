@@ -1,132 +1,323 @@
-/* Trainer Profile CSS */
+@import "../../Admin/Styles/AD_Profile.css";
+
+/* Trainer Profile Refinements */
 .trainer-profile-container {
-  max-width: 760px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.trainer-profile-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 32px;
-}
-
-.trainer-profile-hero {
+.trainer-profile-header-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 28px;
+  gap: 16px;
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.trainer-profile-hero-left {
+.trainer-profile-header-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
 }
 
-.trainer-profile-avatar-large {
-  width: 72px;
-  height: 72px;
+.trainer-profile-header-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #0055ba;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trainer-profile-header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.trainer-profile-header-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.profile-avatar-initials-trainer {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  background: linear-gradient(135deg, #0055ba 0%, #3b82f6 100%);
   color: #ffffff;
   font-size: 28px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 85, 186, 0.3);
 }
 
-.trainer-profile-name {
-  font-size: 20px;
-  font-weight: 800;
-  margin: 0 0 4px;
-  color: #0f172a;
-}
-
-.trainer-profile-badge-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.trainer-profile-badge-icon {
-  display: inline;
-  margin-right: 4px;
-}
-
-.trainer-profile-campus {
-  font-size: 12.5px;
-  color: #64748b;
-}
-
-.trainer-profile-grid {
+/* Quick Metrics Row for Trainer Dossier */
+.trainer-stats-mini-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.trainer-profile-info-block {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 8px;
   background: #f8fafc;
-  padding: 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
+  text-align: center;
 }
 
-.trainer-profile-info-block--full {
-  grid-column: 1 / -1;
-}
-
-.trainer-profile-info-lbl {
-  font-size: 12px;
-  color: #64748b;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.trainer-profile-info-val {
-  font-size: 13.5px;
-  color: #0f172a;
-}
-
-.trainer-profile-info-val--accent {
-  font-size: 13.5px;
-  color: #0284c7;
-}
-
-.trainer-profile-security-footer {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 20px;
+.trainer-stat-mini-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.trainer-profile-security-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  margin: 0 0 2px;
+.trainer-stat-mini-num {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0055ba;
+  line-height: 1.2;
+}
+
+.trainer-stat-mini-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Modern Trainer Profile Input & Field Styling */
+.trainer-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.trainer-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #0055ba;
+  pointer-events: none;
+  flex-shrink: 0;
+  z-index: 2;
+  transition: color 0.15s ease;
+}
+
+.trainer-input {
+  width: 100%;
+  padding: 10px 14px 10px 42px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.trainer-input:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.trainer-input:focus {
+  background: #ffffff !important;
+  border-color: #0055ba !important;
+  box-shadow: 0 0 0 3px rgba(0, 85, 186, 0.14) !important;
+}
+
+/* Readonly Clean State (Not Editing) */
+.trainer-input-readonly {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  cursor: default !important;
+  opacity: 1 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.trainer-input-readonly:hover {
+  border-color: #cbd5e1 !important;
+}
+
+/* Editing Active State */
+.trainer-input-editable {
+  background: #ffffff !important;
+  border: 1.5px solid #93c5fd !important;
+  box-shadow: 0 1px 3px rgba(0, 85, 186, 0.06) !important;
+}
+
+.trainer-textarea {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+
+.trainer-textarea:focus {
+  background: #ffffff !important;
+  border-color: #0055ba !important;
+  box-shadow: 0 0 0 3px rgba(0, 85, 186, 0.14) !important;
+}
+
+.trainer-textarea-readonly {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  cursor: default !important;
+  opacity: 1 !important;
+}
+
+.profile-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: #16a34a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.2);
+  transition: all 0.15s ease;
+}
+
+.profile-save-btn:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.profile-save-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.profile-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-cancel-btn:hover {
+  background: #e2e8f0;
   color: #0f172a;
 }
 
-.trainer-profile-security-sub {
-  font-size: 12.5px;
-  color: #64748b;
+/* Notification & Alert Preferences in Trainer Profile */
+.trainer-notif-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1.5px solid #f1f5f9;
 }
 
-.trainer-profile-footer-actions {
+.trainer-notif-header {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-bottom: 14px;
 }
 
-@media (max-width: 600px) {
-  .trainer-profile-grid {
-    grid-template-columns: 1fr;
-  }
+.trainer-notif-icon {
+  color: #0055ba;
+  flex-shrink: 0;
+}
+
+.trainer-notif-heading {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.trainer-notif-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.trainer-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trainer-toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 15px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.trainer-toggle-item:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.trainer-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trainer-toggle-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.trainer-toggle-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.trainer-profile-switch input:checked + .profile-slider {
+  background-color: #0055ba !important;
 }

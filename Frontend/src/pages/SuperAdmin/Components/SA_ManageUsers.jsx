@@ -1408,7 +1408,7 @@ export default function ManageUsers() {
               email: u.email,
               phone: u.mobile_number || u.phone || '',
               college: u.college_name || u.college || 'Partner Institution',
-              department: u.department_name || u.department || 'Computer Engineering',
+              department: u.department_name || u.department || '—',
               status: u.is_active ? 'Active' : 'Inactive'
             })));
           }

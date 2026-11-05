@@ -143,7 +143,7 @@ export default function Overview() {
   }
   if (!fullName) fullName = "Mentor";
   const role = mentorUser.role || asText(firstValue(mentor, ["role", "designation"])) || "Mentor";
-  const department = mentorUser.department || asText(firstValue(mentor, ["department", "departmentName", "department_name", "dept"])) || "Computer Engineering";
+  const department = mentorUser.department || asText(firstValue(mentor, ["department", "departmentName", "department_name", "dept"])) || "";
 
   // Resolve assigned students count from mentor overview stats, mentor student performance, or batch roster
   const overviewAssigned =
@@ -186,7 +186,7 @@ export default function Overview() {
             </div>
             <h1 className="overview-hero-title">Welcome back, {fullName}!</h1>
             <p className="overview-hero-desc">
-              {department} &nbsp;|&nbsp; {role} &nbsp;|&nbsp; {email}
+              {[department, role, email].filter(Boolean).join("  •  ")}
             </p>
           </div>
         </div>

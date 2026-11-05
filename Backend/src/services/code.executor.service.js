@@ -396,6 +396,8 @@ const DANGEROUS_PATTERNS = [
   /\bprocess\s*\.\s*(env|exit|kill|abort|chdir|binding|dlopen)\b/i,
   /\brequire\s*\(\s*['"`](fs|child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]\s*\)/i,
   /\bimport\s+.*['"`](fs|child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]/i,
+  /\b(eval|Function)\s*\(/i,
+  /\b(globalThis|global)\s*\[/i,
   // Python
   /\b(import\s+os|from\s+os\s+import)\b/i,
   /\b(import\s+sys|from\s+sys\s+import)\b/i,
@@ -403,16 +405,21 @@ const DANGEROUS_PATTERNS = [
   /\b(import\s+shutil|from\s+shutil\s+import)\b/i,
   /\b(import\s+socket|from\s+socket\s+import)\b/i,
   /\b(import\s+pty|from\s+pty\s+import)\b/i,
-  /\b__import__\b/i,
+  /\b(__import__|__builtins__|builtins)\b/i,
+  /\b(open|file)\s*\(/i,
+  /\b(eval|exec|compile|getattr)\s*\(/i,
+  /\b(globals|locals)\s*\(/i,
   // Java
   /\bjava\s*\.\s*lang\s*\.\s*Runtime\b/i,
   /\bRuntime\s*\.\s*getRuntime\b/i,
   /\bProcessBuilder\b/i,
   /\bjava\s*\.\s*io\s*\.\s*(File|FileInputStream|FileOutputStream)\b/i,
   /\bjava\s*\.\s*net\b/i,
+  /\bSystem\s*\.\s*(exit|load|loadLibrary)\b/i,
   // C / C++
   /#\s*include\s*[<"](sys\/|windows\.h|winsock|unistd\.h)[>"]/i,
   /\b(system|popen|fork|execl|execv|execvp)\s*\(/i,
+  /\b(remove|rename|unlink|rmdir)\s*\(/i,
 ];
 
 export const isCodeSafeForHostExecution = (code) => {

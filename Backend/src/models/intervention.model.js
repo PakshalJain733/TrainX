@@ -232,8 +232,8 @@ export const getAllDefaultersModel = async (filters = {}) => {
     if (rows && Array.isArray(rows) && rows.length > 0) {
       return rows.map((r) => ({
         ...r,
-        department: r.department || 'Computer Engineering',
-        batch_name: r.batch_name || 'Active Cohort',
+        department: r.department || null,
+        batch_name: r.batch_name || null,
         reasons: typeof r.reasons === 'string' ? JSON.parse(r.reasons) : (r.reasons || []),
         weak_areas: typeof r.weak_areas === 'string' ? JSON.parse(r.weak_areas) : (r.weak_areas || []),
       }));

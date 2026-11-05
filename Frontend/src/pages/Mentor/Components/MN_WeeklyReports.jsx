@@ -88,7 +88,7 @@ export default function WeeklyReports() {
     mentorName: loggedInMentor.name,
     studentId: "all",
     studentName: "All Assigned Mentees",
-    batchName: "Computer Engineering - Batch A",
+    batchName: "",
     weekTitle: "",
     topicsCovered: "",
     attendanceNotes: "",
@@ -667,7 +667,7 @@ export default function WeeklyReports() {
                           type="text"
                           required
                           className="mentor-report-input"
-                          placeholder="e.g. Computer Engineering - Batch A"
+                          placeholder="e.g. Enter Batch Name"
                           value={formData.batchName}
                           onChange={(e) => {
                             setFormData({ ...formData, batchName: e.target.value });

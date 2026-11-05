@@ -150,7 +150,30 @@ export const getAssessmentById = async (req, res, next) => {
     }
 
     const memoryQs = mockQuestionsByAssessment[id] || [];
-    const finalQuestions = questions.length > 0 ? questions : (assessment.questions && assessment.questions.length > 0 ? assessment.questions : memoryQs);
+    const rawQuestions = questions.length > 0 ? questions : (assessment.questions && assessment.questions.length > 0 ? assessment.questions : memoryQs);
+
+    // Prevent Quiz Answer Key and Explanation disclosure to students prior to completion
+    const isStudent = req.user?.role === 'student';
+    let hasCompleted = false;
+    if (isStudent) {
+      try {
+        const attemptRows = await query(
+          `SELECT id, status FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? AND status = 'completed' LIMIT 1`,
+          [id, req.user?.userId || req.user?.id]
+        );
+        if (attemptRows && attemptRows.length > 0) {
+          hasCompleted = true;
+        }
+      } catch (_) {}
+    }
+
+    const finalQuestions = (rawQuestions || []).map((q) => {
+      if (isStudent && !hasCompleted) {
+        const { correct_option, correct_answer, explanation, ...safeQ } = q;
+        return safeQ;
+      }
+      return q;
+    });
 
     return sendSuccess(res, 'Assessment details retrieved', {
       ...assessment,

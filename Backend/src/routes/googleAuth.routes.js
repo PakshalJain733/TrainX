@@ -10,6 +10,24 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
+const escapeHtml = (unsafeStr) => {
+  return String(unsafeStr || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
+const sanitizeReturnTo = (url) => {
+  if (!url || typeof url !== 'string') return '/mentor/live-sessions';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.includes('\\') && !trimmed.includes(':')) {
+    return trimmed;
+  }
+  return '/mentor/live-sessions';
+};
+
 /**
  * GET /status
  * Checks system-level configuration
@@ -79,16 +97,17 @@ router.post('/disconnect', authenticateToken, async (req, res) => {
 router.get('/login', async (req, res) => {
   try {
     const userId = req.query.userId || null;
-    const returnTo = req.query.returnTo || '/mentor/live-sessions';
+    const returnTo = sanitizeReturnTo(req.query.returnTo);
 
     const url = await getAuthUrl({ userId, returnTo });
     return res.redirect(url);
   } catch (err) {
+    const safeMsg = escapeHtml(err.message);
     return res.status(500).send(`
       <html>
         <body style="font-family: sans-serif; padding: 40px; text-align: center;">
           <h2 style="color: #ef4444;">Failed to start Google Authorization</h2>
-          <p>${err.message}</p>
+          <p>${safeMsg}</p>
         </body>
       </html>
     `);
@@ -103,6 +122,7 @@ router.get('/callback', async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
+    const safeError = escapeHtml(error);
     return res.status(400).send(`
       <!DOCTYPE html>
       <html>
@@ -118,7 +138,7 @@ router.get('/callback', async (req, res) => {
       <body>
         <div class="card">
           <h2>Authorization Cancelled</h2>
-          <p>Google authorization was not completed: <strong>${error}</strong></p>
+          <p>Google authorization was not completed: <strong>${safeError}</strong></p>
           <a href="/mentor/live-sessions" style="display:inline-block; margin-top:16px; padding: 10px 20px; background:#4f46e5; color:white; border-radius:8px; text-decoration:none;">Return to Portal</a>
         </div>
       </body>
@@ -132,7 +152,7 @@ router.get('/callback', async (req, res) => {
 
   try {
     const result = await handleAuthCallback(code, state);
-    const returnTo = result.returnTo || '/mentor/live-sessions';
+    const returnTo = sanitizeReturnTo(result.returnTo);
     const emailParam = result.googleEmail ? `&email=${encodeURIComponent(result.googleEmail)}` : '';
 
     // If request has returnTo, redirect directly back to the mentor's portal page
@@ -140,6 +160,7 @@ router.get('/callback', async (req, res) => {
     return res.redirect(redirectUrl);
   } catch (err) {
     console.error('Error exchanging Google OAuth code:', err);
+    const safeErrMsg = escapeHtml(err.message);
     return res.status(500).send(`
       <!DOCTYPE html>
       <html>
@@ -155,7 +176,7 @@ router.get('/callback', async (req, res) => {
       <body>
         <div class="card">
           <h2>Failed to Connect Google Account</h2>
-          <p>${err.message}</p>
+          <p>${safeErrMsg}</p>
           <a href="/mentor/live-sessions" style="display:inline-block; margin-top:16px; padding: 10px 20px; background:#2563eb; color:white; border-radius:8px; text-decoration:none;">Back to Portal</a>
         </div>
       </body>

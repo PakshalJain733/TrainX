@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
+import { GraduationCap, Search, Plus, Building2, Briefcase, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
 import { departmentAPI, collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/AD_Departments.css";
@@ -278,13 +278,6 @@ export default function Departments() {
         </div>
 
         <div className="departments-actions-wrap">
-          <button
-            onClick={loadData}
-            className="dept-btn-icon"
-            title="Refresh Data"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
           <button
             onClick={() => {
               if (colleges.length > 0 && !deptForm.collegeId) {

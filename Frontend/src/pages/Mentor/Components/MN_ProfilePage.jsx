@@ -122,7 +122,7 @@ function MN_ProfilePage() {
     name: initialUser.name || "Mentor",
     email: initialUser.email || "mentor@college.edu.in",
     mobile_number: initialUser.mobile_number || initialUser.phone || "",
-    department: initialUser.department || "Computer Engineering",
+    department: initialUser.department || "",
     current_year: initialUser.current_year || initialUser.currentYear || "Final Year (2026)",
     area_of_expertise: initialUser.area_of_expertise || initialUser.areaOfExpertise || initialUser.specialization || "Full Stack Development",
     role: initialUser.role || "Mentor",
@@ -377,7 +377,7 @@ function MN_ProfilePage() {
 
             <div className="profile-badges-wrap" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Badge variant="success">Active Mentor</Badge>
-              <Badge variant="default">{form.department || "Computer Engineering"}</Badge>
+              {form.department && <Badge variant="default">{form.department}</Badge>}
             </div>
 
             {/* Quick Metrics Cards */}

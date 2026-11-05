@@ -129,6 +129,10 @@ export const batchAPI = {
     });
     return res.data;
   },
+  getBatchTaskReport: async (id, format = "json") => {
+    const res = await request(`/batches/${id}/task-report?format=${format}`);
+    return res.data;
+  },
 };
 
 // Assessments API

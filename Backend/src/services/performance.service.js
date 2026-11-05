@@ -156,8 +156,8 @@ export const getStudentPerformanceService = async (userId) => {
 
   return {
     studentName: user.name,
-    department: user.department || 'Engineering',
-    batch: user.batch_name || 'General Batch',
+    department: user.department || null,
+    batch: user.batch_name || null,
     overallScore,
     status,
     trend,

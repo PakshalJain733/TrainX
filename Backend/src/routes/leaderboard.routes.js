@@ -13,6 +13,7 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/', getLeaderboardData);
+router.get('/batch', getOverallLeaderboardController);
 router.get('/overall', getOverallLeaderboardController);
 router.get('/department', getDepartmentLeaderboardController);
 router.get('/milestone', getMilestoneLeaderboardController);

@@ -22,8 +22,10 @@ import {
   Calendar,
   Sparkles,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  FileSpreadsheet
 } from "lucide-react";
+import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 
 import "../Styles/MN_Batches.css";
 
@@ -103,6 +105,30 @@ export default function Batches() {
   const [reviewFeedbackText, setReviewFeedbackText] = useState("");
   const [savingFeedback, setSavingFeedback] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState({ type: "", message: "" });
+
+  const handleDownloadTaskReport = async () => {
+    if (!selectedBatch?.id) return;
+    setDownloadingReport(true);
+    setReportFeedback({ type: "", message: "" });
+    try {
+      const result = await downloadBatchTaskReport(selectedBatch.id, selectedBatch.name);
+      setReportFeedback({
+        type: result.success ? "success" : "error",
+        message: result.message,
+      });
+      setTimeout(() => setReportFeedback({ type: "", message: "" }), 5000);
+    } catch (err) {
+      setReportFeedback({
+        type: "error",
+        message: err.message || "Failed to download task submission report.",
+      });
+      setTimeout(() => setReportFeedback({ type: "", message: "" }), 5000);
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -317,7 +343,24 @@ export default function Batches() {
                 </p>
               </div>
 
-              <div className="mentor-batch-quick-refresh">
+              <div className="mentor-batch-quick-refresh" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={handleDownloadTaskReport}
+                  disabled={downloadingReport}
+                  className="mentor-refresh-btn"
+                  style={{
+                    background: "#059669",
+                    color: "#ffffff",
+                    borderColor: "#059669",
+                    fontWeight: "600",
+                    cursor: downloadingReport ? "not-allowed" : "pointer"
+                  }}
+                  title="Download Assigned Students Task Report (.xlsx)"
+                >
+                  <FileSpreadsheet size={15} />
+                  <span>{downloadingReport ? "Generating..." : "Download Report"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleOpenBatch(selectedBatch)}
@@ -329,6 +372,25 @@ export default function Batches() {
                 </button>
               </div>
             </div>
+
+            {reportFeedback.message && (
+              <div style={{
+                margin: "0 0 16px 0",
+                padding: "10px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "600",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: reportFeedback.type === "success" ? "#dcfce7" : "#fee2e2",
+                color: reportFeedback.type === "success" ? "#166534" : "#991b1b",
+                border: `1px solid ${reportFeedback.type === "success" ? "#bbf7d0" : "#fecaca"}`
+              }}>
+                {reportFeedback.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{reportFeedback.message}</span>
+              </div>
+            )}
 
             {/* KPI Cards Summary */}
             <div className="mentor-batch-kpis-grid">
