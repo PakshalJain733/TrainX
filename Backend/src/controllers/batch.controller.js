@@ -1,5 +1,4 @@
 import * as XLSX from 'xlsx';
-import * as XLSX from 'xlsx';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 import { getRelatedCollegeIds } from '../models/user.model.js';
