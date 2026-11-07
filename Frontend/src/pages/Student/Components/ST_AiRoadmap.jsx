@@ -1155,6 +1155,15 @@ export default function AIRoadmap() {
 
   const [aiSource, setAiSource] = useState(null);
   const [error, setError] = useState(null);
+  const [roadmapRateLimit, setRoadmapRateLimit] = useState({
+    isLocked: false,
+    remainingDays: 0,
+    remainingHours: 0,
+    lockedUntil: null,
+    lastGeneratedAt: null,
+    currentRole: null,
+    message: "",
+  });
 
   // Load all saved student roadmaps on mount
   useEffect(() => {
@@ -1473,7 +1482,17 @@ export default function AIRoadmap() {
   const loadAllRoadmaps = async () => {
     setIsLoading(true);
     try {
-      const res = await apiFetch("/roadmaps/all");
+      const [res, lockRes] = await Promise.all([
+        apiFetch("/roadmaps/all"),
+        apiFetch("/roadmaps/lock-status"),
+      ]);
+
+      if (lockRes && lockRes.data) {
+        setRoadmapRateLimit(lockRes.data);
+      } else if (res && res.rateLimit) {
+        setRoadmapRateLimit(res.rateLimit);
+      }
+
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         const processed = res.data.map((rm) => mergeCachedProgress(rm));
         setAllRoadmaps(processed);
@@ -1485,6 +1504,9 @@ export default function AIRoadmap() {
       } else {
         // Fetch active single roadmap
         const resSingle = await apiFetch("/roadmaps");
+        if (resSingle && resSingle.rateLimit) {
+          setRoadmapRateLimit(resSingle.rateLimit);
+        }
         if (resSingle && resSingle.data && resSingle.data.milestones) {
           const rm = mergeCachedProgress(resSingle.data);
           setAllRoadmaps([rm]);
@@ -1630,13 +1652,51 @@ export default function AIRoadmap() {
   };
 
   const executeGeneration = async (targetRole) => {
+    const cleanRole = String(targetRole || "").trim();
+    if (!cleanRole) return;
+
+    // Check if the student already has this roadmap in their saved list
+    const existing = allRoadmaps.find(
+      (r) =>
+        r.targetRole &&
+        r.targetRole.trim().toLowerCase() === cleanRole.toLowerCase()
+    );
+
+    if (existing) {
+      handleSelectRoadmap(existing);
+      setGoalInput("");
+      return;
+    }
+
+    // Check 7-day generation lock
+    if (roadmapRateLimit.isLocked) {
+      setError(
+        roadmapRateLimit.message ||
+          `AI Roadmap generation is locked for 7 days so you can focus on mastering your current milestones. Next generation unlocks in ${roadmapRateLimit.remainingDays} day(s).`
+      );
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
     try {
       const response = await apiFetch("/roadmaps/generate", {
         method: "POST",
-        body: JSON.stringify({ targetRole: targetRole }),
+        body: JSON.stringify({ targetRole: cleanRole }),
       });
+
+      if (response && (response.status === 429 || response?.rateLimit?.isLocked || response.isLocked)) {
+        const lockInfo = response.rateLimit || response;
+        setRoadmapRateLimit({
+          isLocked: true,
+          remainingDays: lockInfo.remainingDays || 7,
+          remainingHours: lockInfo.remainingHours || 168,
+          lockedUntil: lockInfo.lockedUntil,
+          message: response.message || response.error,
+        });
+        setError(response.message || response.error || "AI Roadmap generation is locked for 7 days.");
+        return;
+      }
 
       if (response && response.data) {
         const genData = {
@@ -1652,6 +1712,9 @@ export default function AIRoadmap() {
         setActiveSection("theory");
         resetQuizState();
         if (genData.aiSource) setAiSource(genData.aiSource);
+        if (response.rateLimit) {
+          setRoadmapRateLimit(response.rateLimit);
+        }
       } else if (response && response.error) {
         setError(response.error);
       }
@@ -2023,6 +2086,62 @@ export default function AIRoadmap() {
         </p>
       </div>
 
+      {/* ── 7-Day Roadmap Rate Limit Notice ── */}
+      {roadmapRateLimit.isLocked && (
+        <div
+          className="roadmap-rate-limit-card"
+          style={{
+            background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+            border: "1.5px solid #a7f3d0",
+            borderRadius: "14px",
+            padding: "16px 20px",
+            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#065f46", fontWeight: "700", fontSize: "14px" }}>
+              <Clock size={18} />
+              <span>AI Roadmap Active &bull; 7-Day Milestone Focus Period</span>
+            </div>
+            <span
+              style={{
+                background: "#d1fae5",
+                color: "#047857",
+                padding: "3px 12px",
+                borderRadius: "999px",
+                fontSize: "12px",
+                fontWeight: "700",
+                border: "1px solid #6ee7b7",
+              }}
+            >
+              {roadmapRateLimit.remainingDays} Day{roadmapRateLimit.remainingDays > 1 ? "s" : ""} Remaining
+            </span>
+          </div>
+          <p style={{ margin: "0 0 10px 0", color: "#334155", fontSize: "13px", lineHeight: "1.5" }}>
+            {roadmapRateLimit.message ||
+              "To ensure in-depth learning and mastery, new AI roadmaps can be generated once every 7 days. Focus on mastering your current milestones, video lectures, and practice challenges below!"}
+          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#475569", borderTop: "1px dashed #a7f3d0", paddingTop: "8px", flexWrap: "wrap", gap: "6px" }}>
+            <span>
+              🔓 Next Roadmap Generation Available:{" "}
+              <strong style={{ color: "#065f46" }}>
+                {roadmapRateLimit.lockedUntil
+                  ? new Date(roadmapRateLimit.lockedUntil).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "In 7 days"}
+              </strong>
+            </span>
+            <span style={{ color: "#059669", fontWeight: "600" }}>
+              ✨ Continue learning with your current roadmap below
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── Generator & Search Bar ── */}
       <div className="roadmap-generator-card">
         <form onSubmit={handleGenerate} className="roadmap-form-wrap">
@@ -2050,13 +2169,19 @@ export default function AIRoadmap() {
 
             <button
               type="submit"
-              className="roadmap-gen-btn"
+              className={`roadmap-gen-btn ${roadmapRateLimit.isLocked ? "roadmap-gen-btn-locked" : ""}`}
               disabled={isGenerating || !goalInput.trim()}
+              style={roadmapRateLimit.isLocked ? { background: "#64748b" } : {}}
             >
               {isGenerating ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
                   <span>Generating AI Path...</span>
+                </>
+              ) : roadmapRateLimit.isLocked ? (
+                <>
+                  <Clock size={16} />
+                  <span>Locked &bull; {roadmapRateLimit.remainingDays}d Left</span>
                 </>
               ) : (
                 <>

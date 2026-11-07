@@ -272,6 +272,14 @@ export default function AIInterview() {
   const [isInterviewFinished, setIsInterviewFinished] = useState(false);
   const [overallScorecard, setOverallScorecard] = useState(null);
   const [pastInterviewsList, setPastInterviewsList] = useState([]);
+  const [rateLimit, setRateLimit] = useState({
+    isLocked: false,
+    remainingDays: 0,
+    remainingHours: 0,
+    lockedUntil: null,
+    lastAttendedAt: null,
+    message: "",
+  });
 
   const fetchPastInterviews = useCallback(() => {
     apiFetch("/interviews/history")
@@ -280,6 +288,17 @@ export default function AIInterview() {
           setPastInterviewsList(res.data.slice(0, 10));
         } else {
           setPastInterviewsList([]);
+        }
+        if (res && res.rateLimit) {
+          setRateLimit(res.rateLimit);
+        } else {
+          apiFetch("/interviews/lock-status")
+            .then((lockRes) => {
+              if (lockRes && lockRes.data) {
+                setRateLimit(lockRes.data);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => setPastInterviewsList([]));
@@ -1306,11 +1325,29 @@ export default function AIInterview() {
 
     socket.on("interview:complete", (summary) => {
       finishInterview(summary);
+      setRateLimit({
+        isLocked: true,
+        remainingDays: 7,
+        remainingHours: 168,
+        lockedUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        lastAttendedAt: new Date().toISOString(),
+        message: "You have completed your interview. To ensure deep preparation, mock interviews are locked for 7 days.",
+      });
     });
 
     socket.on("interview:error", (e) => {
       setIsEvaluating(false);
       setErrorMsg(e?.message || "Interview error occurred.");
+      if (e?.isLocked) {
+        setRateLimit({
+          isLocked: true,
+          lockedUntil: e.lockedUntil,
+          remainingDays: e.remainingDays || 7,
+          remainingHours: e.remainingHours || 168,
+          message: e.message,
+        });
+        setPhase("setup");
+      }
     });
 
     // Tell server to start
@@ -1331,6 +1368,14 @@ export default function AIInterview() {
 
   // ─── Start Interview ─────────────────────────────────────────────────────────
   const startInterview = useCallback(() => {
+    if (rateLimit.isLocked) {
+      setErrorMsg(
+        rateLimit.message ||
+          `AI Mock Interview is locked for 7 days. You can attend your next interview in ${rateLimit.remainingDays} day(s).`
+      );
+      return;
+    }
+
     if (!role.trim()) {
       setErrorMsg("Please choose a target role to begin.");
       return;
@@ -1377,7 +1422,7 @@ export default function AIInterview() {
 
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
-  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart, enableCamera]);
+  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart, enableCamera, rateLimit]);
 
   // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetInterview = useCallback(() => {
@@ -1482,6 +1527,62 @@ export default function AIInterview() {
               {studentName ? `Welcome, ${studentName}. ` : ""}
               Answer questions by typing or voice. The AI interviewer adapts to your responses and evaluates each answer.
             </p>
+
+            {rateLimit.isLocked && (
+              <div
+                className="ai-rate-limit-card"
+                style={{
+                  width: "100%",
+                  background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)",
+                  border: "1.5px solid #fecdd3",
+                  borderRadius: "12px",
+                  padding: "16px 20px",
+                  margin: "12px 0 16px 0",
+                  textAlign: "left",
+                  boxShadow: "0 2px 8px rgba(239, 68, 68, 0.06)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#b91c1c", fontWeight: "700", fontSize: "14px" }}>
+                    <Clock size={18} />
+                    <span>Interview Locked &bull; 7-Day Revision Window</span>
+                  </div>
+                  <span
+                    style={{
+                      background: "#fee2e2",
+                      color: "#991b1b",
+                      padding: "3px 10px",
+                      borderRadius: "999px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      border: "1px solid #fca5a5",
+                    }}
+                  >
+                    {rateLimit.remainingDays} Day{rateLimit.remainingDays > 1 ? "s" : ""} Remaining
+                  </span>
+                </div>
+                <p style={{ margin: "0 0 8px 0", color: "#475569", fontSize: "13px", lineHeight: "1.45" }}>
+                  {rateLimit.message ||
+                    "You have recently attended an interview. To ensure comprehensive preparation, interviews are locked for 7 days to give you time to study and master weak areas."}
+                </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#64748b", borderTop: "1px dashed #fecdd3", paddingTop: "8px", flexWrap: "wrap", gap: "6px" }}>
+                  <span>
+                    🔓 Next Session Unlocks:{" "}
+                    <strong style={{ color: "#0f172a" }}>
+                      {rateLimit.lockedUntil
+                        ? new Date(rateLimit.lockedUntil).toLocaleDateString(undefined, {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "In 7 days"}
+                    </strong>
+                  </span>
+                  <span style={{ color: "#2563eb", fontWeight: "600" }}>Review past scorecard below ⬇</span>
+                </div>
+              </div>
+            )}
 
             <div className="ai-welcome-meta-grid">
               <div className="ai-meta-item">
@@ -1651,11 +1752,32 @@ export default function AIInterview() {
             <div className="ai-setup-buttons">
               <button
                 type="button"
-                className={`ai-start-interview-btn ${compatibility.isMismatch ? "ai-start-btn-disabled" : ""}`}
+                className={`ai-start-interview-btn ${
+                  rateLimit.isLocked || compatibility.isMismatch ? "ai-start-btn-disabled" : ""
+                }`}
                 onClick={startInterview}
-                disabled={compatibility.isMismatch}
+                disabled={rateLimit.isLocked || compatibility.isMismatch}
+                style={
+                  rateLimit.isLocked
+                    ? {
+                        background: "#64748b",
+                        cursor: "not-allowed",
+                        opacity: 0.9,
+                        boxShadow: "none",
+                      }
+                    : {}
+                }
               >
-                <Play size={18} fill="currentColor" /> {compatibility.isMismatch ? "Select Matching Topic to Start" : "Start Interview"}
+                {rateLimit.isLocked ? (
+                  <>
+                    <Clock size={18} /> Locked &bull; Available in {rateLimit.remainingDays} Day{rateLimit.remainingDays > 1 ? "s" : ""}
+                  </>
+                ) : (
+                  <>
+                    <Play size={18} fill="currentColor" />{" "}
+                    {compatibility.isMismatch ? "Select Matching Topic to Start" : "Start Interview"}
+                  </>
+                )}
               </button>
             </div>
           </div>

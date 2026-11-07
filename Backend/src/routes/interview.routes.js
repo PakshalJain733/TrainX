@@ -3,11 +3,16 @@ import {
   getInterviewData,
   getInterviewById,
   saveInterviewSession,
+  getInterviewLockStatus,
 } from '../controllers/interview.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
 router.use(authenticateToken);
+
+router.get('/lock-status', getInterviewLockStatus);
+router.get('/rate-limit', getInterviewLockStatus);
+
 router.post('/', saveInterviewSession);
 router.get('/', getInterviewData);
 router.get('/history', getInterviewData);

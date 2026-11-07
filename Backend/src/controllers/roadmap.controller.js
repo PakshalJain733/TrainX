@@ -17,6 +17,24 @@ import {
   saveCachedMilestonePractice,
 } from '../models/roadmap.model.js';
 import { searchYouTubeVideos } from '../services/youtube.service.js';
+import { checkRoadmapLock } from '../utils/rateLimitChecker.js';
+
+/**
+ * Controller: Get student's roadmap generation lock status (7-day rate limit)
+ */
+export const getRoadmapLockStatus = async (req, res, next) => {
+  try {
+    let studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    if (req.user && req.user.role === 'student') {
+      studentId = req.user.id || req.user.userId;
+    }
+    const userRole = req.user?.role || 'student';
+    const lockStatus = await checkRoadmapLock(studentId, userRole);
+    return sendSuccess(res, 'Roadmap lock status retrieved', lockStatus);
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 /**
@@ -33,15 +51,24 @@ export const getRoadmapData = async (req, res, next) => {
       studentId = req.user.id || req.user.userId;
     }
 
-    // If a specific role is requested, look up that role's saved roadmap
-    const { role } = req.query;
-    if (role && String(role).trim()) {
-      const roadmap = await fetchStudentRoadmapByRole(studentId, String(role).trim());
-      return sendSuccess(res, roadmap ? 'Roadmap found' : 'No roadmap for this role', roadmap);
-    }
+    const userRole = req.user?.role || 'student';
+    const [roadmap, lockStatus] = await Promise.all([
+      (async () => {
+        const { role } = req.query;
+        if (role && String(role).trim()) {
+          return await fetchStudentRoadmapByRole(studentId, String(role).trim());
+        }
+        return await fetchStudentRoadmap(studentId);
+      })(),
+      checkRoadmapLock(studentId, userRole),
+    ]);
 
-    const roadmap = await fetchStudentRoadmap(studentId);
-    return sendSuccess(res, 'Roadmap retrieved successfully', roadmap);
+    return res.status(200).json({
+      success: true,
+      message: roadmap ? 'Roadmap retrieved successfully' : 'No roadmap found',
+      data: roadmap,
+      rateLimit: lockStatus,
+    });
   } catch (error) {
     next(error);
   }
@@ -56,8 +83,17 @@ export const getAllRoadmaps = async (req, res, next) => {
     if (req.user && req.user.role === 'student') {
       studentId = req.user.id || req.user.userId;
     }
-    const roadmaps = await fetchAllStudentRoadmaps(studentId);
-    return sendSuccess(res, 'All student roadmaps retrieved', roadmaps);
+    const userRole = req.user?.role || 'student';
+    const [roadmaps, lockStatus] = await Promise.all([
+      fetchAllStudentRoadmaps(studentId),
+      checkRoadmapLock(studentId, userRole),
+    ]);
+    return res.status(200).json({
+      success: true,
+      message: 'All student roadmaps retrieved',
+      data: roadmaps,
+      rateLimit: lockStatus,
+    });
   } catch (error) {
     next(error);
   }
@@ -72,8 +108,10 @@ export const generateRoadmap = async (req, res, next) => {
     if (req.user && req.user.role === 'student') {
       studentId = req.user.id || req.user.userId;
     }
+    const userRole = req.user?.role || 'student';
     const {
       targetRole,
+      forceRefresh,
       studentProfile,
       currentSkills,
       assessmentScores,
@@ -84,9 +122,30 @@ export const generateRoadmap = async (req, res, next) => {
     } = req.body || {};
 
     const requestedRole = targetRole ? String(targetRole).trim() : '';
+
+    // Check if the student already has a saved roadmap for this role
+    // If they already have it and forceRefresh is NOT requested, generateNewRoadmap restores it without AI
+    const existing = requestedRole ? await fetchStudentRoadmapByRole(studentId, requestedRole) : null;
+    const isRestoringExisting = existing && existing.milestones && existing.milestones.length > 0 && !forceRefresh;
+
+    if (!isRestoringExisting) {
+      // New generation attempt — check 7-day rate limit
+      const lockStatus = await checkRoadmapLock(studentId, userRole);
+      if (lockStatus.isLocked) {
+        return res.status(429).json({
+          success: false,
+          message: lockStatus.message,
+          error: lockStatus.message,
+          data: null,
+          rateLimit: lockStatus,
+        });
+      }
+    }
+
     console.log(`[Roadmap Controller] Generating AI roadmap for student #${studentId}, role: "${requestedRole}"`);
     
     const roadmap = await generateNewRoadmap(studentId, requestedRole, {
+      forceRefresh,
       studentProfile,
       currentSkills,
       assessmentScores,
@@ -96,7 +155,14 @@ export const generateRoadmap = async (req, res, next) => {
       interviewSignals,
     });
 
-    return sendSuccess(res, 'AI Roadmap generated successfully', roadmap);
+    const lockStatus = await checkRoadmapLock(studentId, userRole);
+
+    return res.status(200).json({
+      success: true,
+      message: 'AI Roadmap generated successfully',
+      data: roadmap,
+      rateLimit: lockStatus,
+    });
   } catch (error) {
     next(error);
   }
