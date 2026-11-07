@@ -266,6 +266,9 @@ app.use('/api/google/auth', googleAuthRoutes);
 app.use('/api/v1/google/auth', googleAuthRoutes);
 app.use('/api/integrations/career-gateway', careerGatewayRoutes);
 app.use('/api/v1/integrations/career-gateway', careerGatewayRoutes);
+app.use('/api/career-gateway', careerGatewayRoutes);
+app.use('/api/v1/career-gateway', careerGatewayRoutes);
+app.use('/integrations/career-gateway', careerGatewayRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

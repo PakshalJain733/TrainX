@@ -23,6 +23,33 @@ const router = Router();
 // 1. Inbound Service Endpoints (Protected by Career Gateway Service Token & Rate Limiter)
 // ============================================================================
 
+// Healthcheck & Probe Endpoints (prevents 404 on GET discovery or health probes)
+router.get('/', (req, res) => {
+  return res.json({
+    success: true,
+    message: 'TrainX Career Gateway Integration Service is online and active',
+    service: 'trainx-career-gateway-integration',
+    endpoints: {
+      provisioning: 'POST /students',
+      eligibility: 'PATCH /students/:studentId/eligibility',
+      activation: 'POST /activate-account',
+    },
+  });
+});
+
+router.get('/health', (req, res) => {
+  return res.json({ success: true, status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+router.get('/students', (req, res) => {
+  return res.json({
+    success: true,
+    message: 'TrainX Student Provisioning service is active and ready to receive POST requests with Bearer JWT token.',
+    expected_method: 'POST',
+    endpoint: '/students',
+  });
+});
+
 // Provision single or batch students from Career Gateway (SEC-05: burst-tolerant rate limiter)
 router.post('/students', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleProvisionStudents);
 
