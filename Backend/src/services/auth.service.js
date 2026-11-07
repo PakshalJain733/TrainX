@@ -20,13 +20,15 @@ import {
   updateUserRememberMe,
   findCollegeByAdminEmail,
   findCollegeByEmailDomain,
+  toSafeUser,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail, sendRegistrationPendingEmail, sendAdminNewPendingUserEmail } from './email.service.js';
-import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
+import { findSecureCode, findSecureCodeByCodeOnly, markCodeAsUsed } from '../models/secureCode.model.js';
 import { findCollegeById } from '../models/college.model.js';
+import { pool } from '../config/db.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -203,9 +205,42 @@ export const checkRegistrationEmailOtp = async ({ email, otp }) => {
  */
 export const verifyRegistrationOtpAndRegister = async (data = {}) => {
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
-  const role = typeof data.role === 'string' ? data.role.toLowerCase() : '';
-  const isStudent = !role || role.includes('student');
+  const potentialCode = (data.secure_code || data.code || data.roll_number || '').trim().toUpperCase();
 
+  // 1. Auto-detect role directly from code or pre-provisioned user record
+  let codeRecord = null;
+  if (potentialCode) {
+    codeRecord = await findSecureCodeByCodeOnly(potentialCode);
+  }
+
+  let existingUser = null;
+  if (email) {
+    existingUser = await findUserByEmailOrMobile(email);
+  }
+
+  let detectedRole = ROLES.STUDENT;
+  if (codeRecord && codeRecord.role && codeRecord.role !== 'all') {
+    const r = codeRecord.role.toLowerCase();
+    if (r.includes('admin') || r.includes('hod')) detectedRole = ROLES.COLLEGE_ADMIN;
+    else if (r.includes('coord')) detectedRole = ROLES.COORDINATOR;
+    else if (r.includes('mentor') || r.includes('faculty')) detectedRole = ROLES.MENTOR;
+    else if (r.includes('trainer')) detectedRole = ROLES.TRAINER;
+    else if (r.includes('student')) detectedRole = ROLES.STUDENT;
+    else detectedRole = r;
+  } else if (existingUser && existingUser.role && existingUser.role !== ROLES.STUDENT) {
+    detectedRole = existingUser.role;
+  } else if (data.role) {
+    const r = data.role.toLowerCase();
+    if (r.includes('admin') || r.includes('hod')) detectedRole = ROLES.COLLEGE_ADMIN;
+    else if (r.includes('coord')) detectedRole = ROLES.COORDINATOR;
+    else if (r.includes('mentor') || r.includes('faculty')) detectedRole = ROLES.MENTOR;
+    else if (r.includes('trainer')) detectedRole = ROLES.TRAINER;
+  }
+
+  const isStaff = detectedRole !== ROLES.STUDENT;
+  const isStudent = !isStaff;
+
+  // Only student registrations require mandatory email OTP (Staff authentication is authorized by Super Admin code)
   if (isStudent) {
     const otp = typeof data.otp === 'string' ? data.otp.trim() : '';
     if (!email || !otp) {
@@ -234,7 +269,13 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
       : ((typeof data.phone === 'string' && data.phone.trim()) ? data.phone.trim() : null));
 
   try {
-    return await registerUser({ ...data, email, mobile_number: cleanMobile });
+    return await registerUser({
+      ...data,
+      email,
+      mobile_number: cleanMobile,
+      role: detectedRole,
+      secure_code: codeRecord ? codeRecord.code : (data.secure_code || potentialCode || null),
+    });
   } catch (err) {
     if (isStudent) {
       await invalidateRegistrationOtps(email);
@@ -246,8 +287,32 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
 export const registerUser = async (data) => {
   const { name, email, mobile_number, password, role, secure_code, college_id, collegeId, roll_number, department, year, division, semester } = data;
 
+  let existingUser = null;
+  if (email) {
+    existingUser = await findUserByEmailOrMobile(email);
+  } else if (mobile_number) {
+    existingUser = await findUserByEmailOrMobile(mobile_number);
+  }
+
+  // 1. Auto-resolve role from code or pre-provisioned user record
+  const potentialCode = (secure_code || data.code || roll_number || '').trim().toUpperCase();
+  let codeRecord = null;
+  if (potentialCode) {
+    codeRecord = await findSecureCodeByCodeOnly(potentialCode);
+  }
+
   let canonicalRole = ROLES.STUDENT;
-  if (role) {
+  if (codeRecord && codeRecord.role && codeRecord.role !== 'all') {
+    const r = codeRecord.role.toLowerCase();
+    if (r.includes('admin') || r.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
+    else if (r.includes('coord')) canonicalRole = ROLES.COORDINATOR;
+    else if (r.includes('mentor') || r.includes('faculty')) canonicalRole = ROLES.MENTOR;
+    else if (r.includes('trainer')) canonicalRole = ROLES.TRAINER;
+    else if (r.includes('student')) canonicalRole = ROLES.STUDENT;
+    else canonicalRole = r;
+  } else if (existingUser && existingUser.role && existingUser.role !== ROLES.STUDENT) {
+    canonicalRole = existingUser.role;
+  } else if (role) {
     const lowerRole = role.toLowerCase();
     if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
     else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
@@ -262,13 +327,6 @@ export const registerUser = async (data) => {
     throw createAuthError('Password must be at least 6 characters long.', 400);
   }
 
-  let existingUser = null;
-  if (email) {
-    existingUser = await findUserByEmailOrMobile(email);
-  } else if (mobile_number) {
-    existingUser = await findUserByEmailOrMobile(mobile_number);
-  }
-
   if (existingUser) {
     // If the user already completed registration or was provisioned with a password:
     const isCompleted = Boolean(existingUser.is_profile_updated);
@@ -280,31 +338,28 @@ export const registerUser = async (data) => {
       throw createAuthError('You are already registered! Please log in with your email and password.', 409);
     }
 
-    let codeRecord = null;
     const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
     if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
-      if (secure_code && String(secure_code).trim().length > 0) {
-        codeRecord = await findSecureCode(secure_code, canonicalRole);
-        if (!codeRecord) {
-          throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
-        }
-        if (codeRecord.college_name) {
-          const codeColName = codeRecord.college_name.trim();
-          let codeCollege = null;
-          try {
-            const [cRows] = await pool.query(
-              'SELECT id, name, code, domain FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
-              [codeColName, codeColName]
-            );
-            if (cRows && cRows.length > 0) codeCollege = cRows[0];
-          } catch (_) {}
+      if (!codeRecord && (secure_code || potentialCode)) {
+        codeRecord = await findSecureCodeByCodeOnly(secure_code || potentialCode);
+      }
+      if (isNonStudentRole && !codeRecord) {
+        throw createAuthError(`Invalid or expired Secure Access Code for ${canonicalRole}. Please verify code with Super Admin.`, 400);
+      }
+      if (codeRecord && codeRecord.college_name) {
+        const codeColName = codeRecord.college_name.trim();
+        let codeCollege = null;
+        try {
+          const [cRows] = await pool.query(
+            'SELECT id, name, code, domain FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+            [codeColName, codeColName]
+          );
+          if (cRows && cRows.length > 0) codeCollege = cRows[0];
+        } catch (_) {}
 
-          if (existingUser.college_id && codeCollege && existingUser.college_id !== codeCollege.id) {
-            throw createAuthError(`This Secure Access Code was generated for "${codeRecord.college_name}". You cannot use it for this account.`, 403);
-          }
+        if (existingUser.college_id && codeCollege && existingUser.college_id !== codeCollege.id) {
+          throw createAuthError(`This Secure Access Code was generated for "${codeRecord.college_name}". You cannot use it for this account.`, 403);
         }
-      } else if (canonicalRole !== ROLES.COLLEGE_ADMIN) {
-        throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
       }
     }
 
@@ -394,16 +449,13 @@ export const registerUser = async (data) => {
     };
   }
 
-  let codeRecord = null;
   const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
   if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
-    if (!secure_code || String(secure_code).trim().length === 0) {
-      throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
+    if (!codeRecord && (secure_code || potentialCode)) {
+      codeRecord = await findSecureCodeByCodeOnly(secure_code || potentialCode);
     }
-
-    codeRecord = await findSecureCode(secure_code, canonicalRole);
-    if (!codeRecord) {
-      throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
+    if (isNonStudentRole && !codeRecord) {
+      throw createAuthError(`Invalid or expired Secure Access Code for ${canonicalRole}. Please verify code with Super Admin.`, 400);
     }
   }
 
@@ -789,5 +841,147 @@ export const resetUserPasswordWithOtp = async (identifier, otp, newPassword) => 
 
   await updateUser(user.id, { password: newPassword });
   return { message: 'Password reset successfully' };
+};
+
+export const verifyInstitutionToken = async (token) => {
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    throw createAuthError('Institution setup token is required.', 400);
+  }
+  const cleanToken = token.trim().toUpperCase();
+  const codeRecord = await findSecureCodeByCodeOnly(cleanToken);
+
+  if (!codeRecord) {
+    throw createAuthError('Invalid, expired, or already-used institution invitation token.', 404);
+  }
+
+  // Look up college details
+  let college = null;
+  if (codeRecord.college_name) {
+    const colName = codeRecord.college_name.trim();
+    const [cRows] = await pool.query(
+      `SELECT id, name, code, domain, location FROM colleges 
+       WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) 
+       LIMIT 1`,
+      [colName, colName]
+    );
+    if (cRows && cRows.length > 0) college = cRows[0];
+  }
+
+  return {
+    token: codeRecord.code,
+    role: codeRecord.role || 'college_admin',
+    collegeName: codeRecord.college_name || college?.name || 'Authorized Institution',
+    college,
+    description: codeRecord.description,
+    expiresAt: codeRecord.expires_at,
+  };
+};
+
+export const completeInstitutionSetup = async (data) => {
+  const { token, name, email, mobile_number, password } = data;
+
+  if (!token || !String(token).trim()) {
+    throw createAuthError('Institution token is required.', 400);
+  }
+  if (!name || !String(name).trim()) {
+    throw createAuthError('Full name is required.', 400);
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw createAuthError('A valid official email address is required.', 400);
+  }
+  if (!password || String(password).length < 6) {
+    throw createAuthError('Password must be at least 6 characters long.', 400);
+  }
+
+  const cleanToken = String(token).trim().toUpperCase();
+  const codeRecord = await findSecureCodeByCodeOnly(cleanToken);
+  if (!codeRecord) {
+    throw createAuthError('Invalid, expired, or already-used institution setup token. Please contact support.', 400);
+  }
+
+  // Resolve College
+  let matchingCollege = null;
+  if (codeRecord.college_name) {
+    const colName = codeRecord.college_name.trim();
+    const [colRows] = await pool.query(
+      'SELECT id, name, code, domain FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+      [colName, colName]
+    );
+    if (colRows && colRows.length > 0) matchingCollege = colRows[0];
+  }
+
+  if (!matchingCollege && email) {
+    matchingCollege = await findCollegeByEmailDomain(email);
+  }
+
+  if (!matchingCollege) {
+    throw createAuthError('Unable to resolve institution for this invitation. Please contact Super Admin.', 400);
+  }
+
+  // Domain verification if college has domain
+  const userEmail = String(email).trim().toLowerCase();
+  const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1].trim().toLowerCase() : '';
+  if (matchingCollege.domain && emailDomain) {
+    const expectedDomain = matchingCollege.domain.trim().toLowerCase().replace(/^@/, '');
+    if (expectedDomain && !emailDomain.endsWith(expectedDomain) && !emailDomain.includes(expectedDomain)) {
+      throw createAuthError(
+        `This invitation was issued for "${matchingCollege.name}". You must register with an official email (@${expectedDomain}).`,
+        403
+      );
+    }
+  }
+
+  // Check if user already exists
+  let existingUser = await findUserByEmailOrMobile(userEmail);
+  const canonicalRole = codeRecord.role && codeRecord.role !== 'all' ? codeRecord.role : ROLES.COLLEGE_ADMIN;
+  let finalUser = null;
+
+  if (existingUser) {
+    if (existingUser.password_hash && existingUser.is_active && existingUser.is_approved) {
+      throw createAuthError('An account with this email is already registered and active. Please log in directly.', 409);
+    }
+    await updateUserModel(existingUser.id, {
+      name: String(name).trim(),
+      email: userEmail,
+      mobile_number: mobile_number || existingUser.mobile_number,
+      password,
+      role: canonicalRole,
+      college_id: matchingCollege.id,
+      is_active: 1,
+      is_verified: 1,
+      is_approved: 1,
+      is_profile_updated: 1,
+    });
+    finalUser = await findUserById(existingUser.id);
+  } else {
+    finalUser = await createUser({
+      name: String(name).trim(),
+      email: userEmail,
+      mobile_number: mobile_number || null,
+      password,
+      role: canonicalRole,
+      college_id: matchingCollege.id,
+      is_active: 1,
+      is_verified: 1,
+      is_approved: 1,
+      is_profile_updated: 1,
+    });
+  }
+
+  // Mark token as used
+  await markCodeAsUsed(codeRecord.id, finalUser.id);
+
+  // Send welcome email
+  sendWelcomeEmail({ to: finalUser.email, name: finalUser.name, role: finalUser.role }).catch((err) => {
+    console.warn(`[AUTH] Welcome email skipped: ${err.message}`);
+  });
+
+  const authToken = generateFinalToken(finalUser);
+
+  return {
+    token: authToken,
+    user: toSafeUser(finalUser),
+    message: `Institutional setup completed successfully! Welcome, ${finalUser.name}.`,
+  };
 };
 

@@ -153,7 +153,7 @@ export async function runMigrations() {
 
       // Record migration as applied
       await conn.query(
-        'INSERT INTO schema_migrations (migration_name, batch) VALUES (?, ?)',
+        'INSERT INTO schema_migrations (migration_name, batch) VALUES (?, ?) ON DUPLICATE KEY UPDATE batch = VALUES(batch)',
         [file.name, currentBatch]
       );
       console.log(`[AutoMigrator] ✅ Applied migration: ${file.name}`);

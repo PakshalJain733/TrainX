@@ -16,7 +16,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 SET @col_exists = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'source_system');
-SET @sql = IF(@col_exists = 0, "ALTER TABLE users ADD COLUMN source_system VARCHAR(50) DEFAULT 'trainx' AFTER career_gateway_student_id", 'SELECT 1');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE users ADD COLUMN source_system VARCHAR(50) DEFAULT \'trainx\' AFTER career_gateway_student_id', 'SELECT 1');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
@@ -35,7 +35,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 SET @col_exists = (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'students' AND column_name = 'source_system');
-SET @sql = IF(@col_exists = 0, "ALTER TABLE students ADD COLUMN source_system VARCHAR(50) DEFAULT 'trainx' AFTER career_gateway_student_id", 'SELECT 1');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE students ADD COLUMN source_system VARCHAR(50) DEFAULT \'trainx\' AFTER career_gateway_student_id', 'SELECT 1');
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;

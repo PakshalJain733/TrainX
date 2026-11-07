@@ -731,14 +731,16 @@ function Login() {
                       {loading ? "Authenticating..." : "Sign in"}
                     </button>
 
-                    <div className="login-links">
-                      <p>
-                        Don&apos;t have an account?{" "}
-                        <Link className="login-registeration-link" to="/register">
-                          Create Account
-                        </Link>
-                      </p>
-                    </div>
+                    {registrationActive && (
+                      <div className="login-links">
+                        <p>
+                          Don&apos;t have an account?{" "}
+                          <Link className="login-registeration-link" to="/register">
+                            Create Account
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                   </form>
                 )}
 
@@ -783,14 +785,16 @@ function Login() {
                       {Icons.send} {loading ? "Sending..." : "Send OTP"}
                     </button>
 
-                    <div className="login-links">
-                      <p>
-                        Don&apos;t have an account?{" "}
-                        <Link className="login-registeration-link" to="/register">
-                          Create Account
-                        </Link>
-                      </p>
-                    </div>
+                    {registrationActive && (
+                      <div className="login-links">
+                        <p>
+                          Don&apos;t have an account?{" "}
+                          <Link className="login-registeration-link" to="/register">
+                            Create Account
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                   </form>
                 )}
 
@@ -851,14 +855,16 @@ function Login() {
                       {Icons.send} {loading ? "Verifying..." : "Verify & Login"}
                     </button>
 
-                    <div className="login-links">
-                      <p>
-                        Don&apos;t have an account?{" "}
-                        <Link className="login-registeration-link" to="/register">
-                          Create Account
-                        </Link>
-                      </p>
-                    </div>
+                    {registrationActive && (
+                      <div className="login-links">
+                        <p>
+                          Don&apos;t have an account?{" "}
+                          <Link className="login-registeration-link" to="/register">
+                            Create Account
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                   </form>
                 )}
               </>

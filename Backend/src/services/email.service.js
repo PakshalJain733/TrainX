@@ -815,7 +815,7 @@ export const sendAdminRegistrationCodeEmail = async ({
 }) => {
   try {
     const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
-    const regUrl = `${frontendBase}/register?email=${encodeURIComponent(to)}&name=${encodeURIComponent(name)}&code=${encodeURIComponent(secure_code)}&role=admin`;
+    const regUrl = `${frontendBase}/setup-institution?token=${encodeURIComponent(secure_code)}&email=${encodeURIComponent(to)}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">

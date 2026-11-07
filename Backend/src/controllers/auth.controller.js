@@ -1,4 +1,4 @@
-import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
+import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, changeUserPassword, resetUserPasswordWithOtp, verifyInstitutionToken, completeInstitutionSetup } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
@@ -352,6 +352,28 @@ export const deleteSecureCodeRequestByEmail = async (req, res, next) => {
     const { email } = req.params;
     await pool.query(`DELETE FROM secure_code_requests WHERE LOWER(email) = LOWER(?)`, [email]);
     return sendSuccess(res, 'Secure code request removed');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyInstitutionTokenHandler = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    const result = await verifyInstitutionToken(token);
+    return sendSuccess(res, 'Institution invitation token verified successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const completeInstitutionSetupHandler = async (req, res, next) => {
+  try {
+    const result = await completeInstitutionSetup(req.body);
+    return sendSuccess(res, result.message, {
+      token: result.token,
+      user: result.user,
+    });
   } catch (error) {
     next(error);
   }

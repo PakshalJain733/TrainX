@@ -17,13 +17,14 @@ export const authenticateCareerGatewayService = (req, res, next) => {
 
   // Dedicated Inbound Secret agreed with Career Gateway
   const serviceSecret =
+    process.env.TRAINX_INTEGRATION_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_KEY;
 
   if (!serviceSecret) {
     return sendError(
       res,
-      'Internal Server Error: CAREER_GATEWAY_SERVICE_SECRET is not configured on TrainX',
+      'Internal Server Error: Inbound service secret is not configured on TrainX. Please set TRAINX_INTEGRATION_SECRET or CAREER_GATEWAY_SERVICE_SECRET in .env',
       500
     );
   }

@@ -10,6 +10,7 @@ import RouteLoadingFallback from './components/Common/RouteLoadingFallback';
 // ── Auth & Registration Pages (Lazy Loaded) ──
 const Login = lazy(() => import('./pages/authentication/login'));
 const Register = lazy(() => import('./pages/authentication/register'));
+const SetupInstitution = lazy(() => import('./pages/authentication/SetupInstitution'));
 const TrainingRegistrationPage = lazy(() => import('./pages/Student/Components/TrainingRegistrationPage'));
 
 // ── Student Workspace Pages (Lazy Loaded) ──
@@ -128,6 +129,7 @@ function App() {
             {/* Auth & Public Routes */}
             <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
             <Route path="/register" element={<MaintenanceGuard moduleKey="userRegistration"><Register /></MaintenanceGuard>} />
+            <Route path="/setup-institution" element={<SetupInstitution />} />
             <Route path="/trainings/register" element={<MaintenanceGuard moduleKey="trainingRegistration"><TrainingRegistrationPage /></MaintenanceGuard>} />
 
             {/* Student Workspace Routes */}

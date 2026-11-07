@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, getMe, updateProfile, changePassword, resetPasswordWithOtp, getDepartmentsByEmail, getCollegeByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, getMe, updateProfile, changePassword, resetPasswordWithOtp, getDepartmentsByEmail, getCollegeByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail, verifyInstitutionTokenHandler, completeInstitutionSetupHandler } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -21,6 +21,10 @@ router.get('/secure-code-requests', authenticateToken, getSecureCodeRequests);
 router.patch('/secure-code-requests/:id', authenticateToken, resolveSecureCodeRequest);
 router.delete('/secure-code-requests/:id', authenticateToken, deleteSecureCodeRequest);
 router.delete('/secure-code-requests/by-email/:email', authenticateToken, deleteSecureCodeRequestByEmail);
+
+// Private Institution Setup (Option 1: Private Email Invitation Link)
+router.get('/verify-institution-token', verifyInstitutionTokenHandler);
+router.post('/complete-institution-setup', validateRequestBody(['token', 'name', 'email', 'password']), completeInstitutionSetupHandler);
 
 // OTP & Password Login flows
 router.post('/send-otp', sendOtp);

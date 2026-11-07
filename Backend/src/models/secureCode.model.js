@@ -4,6 +4,11 @@ export async function findSecureCode(code, role) {
   if (!code) return null;
   const cleanCode = String(code).trim().toUpperCase();
   
+  // If role is omitted, search code regardless of role
+  if (!role) {
+    return findSecureCodeByCodeOnly(cleanCode);
+  }
+
   // Normalize role string matching
   let normalizedRole = 'student';
   if (role) {
@@ -28,6 +33,21 @@ export async function findSecureCode(code, role) {
     [cleanCode, normalizedRole]
   );
 
+  return rows.length > 0 ? rows[0] : null;
+}
+
+export async function findSecureCodeByCodeOnly(code) {
+  if (!code) return null;
+  const cleanCode = String(code).trim().toUpperCase();
+  const [rows] = await pool.query(
+    `SELECT * FROM secure_codes 
+     WHERE UPPER(code) = ? 
+       AND status = 'active'
+       AND (expires_at IS NULL OR expires_at > NOW())
+       AND (max_uses IS NULL OR max_uses = 0 OR uses_count < max_uses)
+     LIMIT 1`,
+    [cleanCode]
+  );
   return rows.length > 0 ? rows[0] : null;
 }
 

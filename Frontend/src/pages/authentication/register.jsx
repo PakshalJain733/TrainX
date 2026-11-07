@@ -485,13 +485,18 @@ function Register() {
   };
 
   const validateDetails = () => {
-    if (!role) {
-      setErrorMsg("Please select your role.");
-      return false;
-    }
     const name = (formData.name || "").trim();
     if (!name) {
       setErrorMsg("Please enter your full name.");
+      return false;
+    }
+    const roll = (formData.roll_number || "").trim();
+    if (!roll) {
+      setErrorMsg("Please enter your College ID.");
+      return false;
+    }
+    if (deptOptions.length > 0 && !formData.department) {
+      setErrorMsg("Please select your department.");
       return false;
     }
     const email = (formData.email || "").trim();
@@ -501,6 +506,23 @@ function Register() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setErrorMsg("Please enter a valid college email address.");
+      return false;
+    }
+    const mobile = (formData.mobile_number || "").trim();
+    if (!mobile) {
+      setErrorMsg("Please enter your mobile number.");
+      return false;
+    }
+    if (mobile.length < 10) {
+      setErrorMsg("Please enter a valid 10-digit mobile number.");
+      return false;
+    }
+    if (!formData.year) {
+      setErrorMsg("Please select your academic year.");
+      return false;
+    }
+    if (!(formData.division || "").trim()) {
+      setErrorMsg("Please enter your division.");
       return false;
     }
     if (!formData.password) {
@@ -515,57 +537,10 @@ function Register() {
       setErrorMsg("Passwords do not match. Please re-enter passwords.");
       return false;
     }
-    if (role === "Student") {
-      const roll = (formData.roll_number || "").trim();
-      if (!roll) {
-        setErrorMsg("Please enter your College ID.");
-        return false;
-      }
-      const mobile = (formData.mobile_number || "").trim();
-      if (!mobile) {
-        setErrorMsg("Please enter your mobile number.");
-        return false;
-      }
-      if (mobile.length < 10) {
-        setErrorMsg("Please enter a valid 10-digit mobile number.");
-        return false;
-      }
-      if (deptOptions.length > 0 && !formData.department) {
-        setErrorMsg("Please select your department.");
-        return false;
-      }
-      if (!formData.year) {
-        setErrorMsg("Please select your academic year.");
-        return false;
-      }
-      if (!(formData.division || "").trim()) {
-        setErrorMsg("Please enter your division.");
-        return false;
-      }
-    } else {
-      const mobile = (formData.mobile_number || "").trim();
-      if (mobile && mobile.length < 10) {
-        setErrorMsg("Please enter a valid 10-digit mobile number.");
-        return false;
-      }
-      if (role === "Coordinator") {
-        const dept = (formData.department || "").trim();
-        if (!dept) {
-          setErrorMsg("Please select your department.");
-          return false;
-        }
-      }
-      const secureCode = (formData.secure_code || "").trim();
-      if (!secureCode) {
-        setErrorMsg("Please enter your Secure Access Code.");
-        return false;
-      }
-    }
     return true;
   };
 
   const isFormFullyFilled = () => {
-    if (!role) return false;
     const name = (formData.name || "").trim();
     const email = (formData.email || "").trim();
     const pass = formData.password || "";
@@ -575,21 +550,12 @@ function Register() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
     if (pass.length < 6 || pass !== confirmPass) return false;
 
-    if (role === "Student") {
-      const roll = (formData.roll_number || "").trim();
-      const mobile = (formData.mobile_number || "").trim();
-      const yr = formData.year || "";
-      const div = formData.division || "";
-      if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
-      if (deptOptions.length > 0 && !formData.department) return false;
-    } else if (role === "Coordinator") {
-      const colOrSecure = (formData.secure_code || "").trim();
-      const dept = (formData.department || "").trim();
-      if (!colOrSecure || !dept) return false;
-    } else {
-      const secureCode = (formData.secure_code || "").trim();
-      if (!secureCode) return false;
-    }
+    const roll = (formData.roll_number || "").trim();
+    const mobile = (formData.mobile_number || "").trim();
+    const yr = formData.year || "";
+    const div = formData.division || "";
+    if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
+    if (deptOptions.length > 0 && !formData.department) return false;
 
     return true;
   };
@@ -705,19 +671,25 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Email verification check for Student role
-    if (role === "Student" && !emailVerified) {
-      setErrorMsg("Please request and verify the 6-digit OTP sent to your college email before completing registration.");
+    // Email verification check
+    if (!emailVerified) {
+      if (!emailOtpSent) {
+        await requestEmailOtp();
+        return;
+      }
+      const otp = emailOtp.join("");
+      if (!/^\d{6}$/.test(otp)) {
+        setErrorMsg("Please enter the complete 6-digit verification code sent to your email.");
+        return;
+      }
+      await handleVerifyEmailOtp(otp);
       return;
     }
 
-    let otp = "";
-    if (role === "Student") {
-      otp = emailOtp.join("");
-      if (!/^\d{6}$/.test(otp)) {
-        setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
-        return;
-      }
+    const otp = emailOtp.join("");
+    if (!/^\d{6}$/.test(otp)) {
+      setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
+      return;
     }
 
     setLoading(true);
@@ -731,7 +703,8 @@ function Register() {
         body: JSON.stringify({
           ...formData,
           email: formData.email.trim(),
-          role,
+          secure_code: formData.secure_code || formData.roll_number,
+          code: formData.roll_number,
           otp,
         }),
       });
@@ -877,29 +850,9 @@ function Register() {
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            {/* ── Select Role ── */}
-            <div className="role-select-container" style={{ position: "relative", zIndex: 100 }}>
-              <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
-              <RegSelect
-                value={role}
-                wrapperClass="reg-select"
-                options={[
-                  { value: "Student", label: "Student" },
-                  { value: "Coordinator", label: "Coordinator" },
-                  { value: "Admin", label: "Admin" },
-                  { value: "Mentor", label: "Mentor" },
-                  { value: "Trainer", label: "Trainer" },
-                ]}
-                onChange={(val) => setRole(val)}
-                placeholder="Select your role"
-              />
-            </div>
-
-            {/* ── STUDENT ROLE FIELDS ── */}
-            {role === "Student" && (
-              <div key="Student">
-                {/* Row 1: Full Name | College ID */}
-                <div className="form-grid-2">
+            <div>
+              {/* Row 1: Full Name | College ID */}
+              <div className="form-grid-2">
                   <div className="input-group">
                     <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
                     <input
@@ -1157,132 +1110,9 @@ function Register() {
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* ── OTHER ROLE FIELDS (Mentor / HOD / Admin) ── */}
-            {role !== "Student" && role !== "" && (
-              <div key={role}>
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      placeholder="Mobile number (optional)"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="user@college.edu"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* Department dropdown for Coordinator */}
-                {role === "Coordinator" && (
-                  <div className="input-group" style={{ marginTop: "4px", marginBottom: "16px" }}>
-                    <FieldLabel icon={Icons.dept}>Coordinator Department *</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder={
-                        deptOptions.length > 0
-                          ? "Select Coordinator Department (e.g. CS, IT)"
-                          : "Select Department"
-                      }
-                    />
-                  </div>
-                )}
-
-                {/* Row: Password | Confirm Password for Staff/Mentors */}
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
-                    <div className="register-password-wrapper">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        required
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className="register-password-toggle"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
-                    <div className="register-password-wrapper">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirm_password"
-                        required
-                        placeholder="••••••••"
-                        value={formData.confirm_password}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className="register-password-toggle"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
-                  <div className="register-secure-code-wrap">
-                    <input
-                      type="text"
-                      name="secure_code"
-                      placeholder={`Enter ${role} secure code`}
-                      value={formData.secure_code}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button type="submit" disabled={loading || (role === "Student" && !emailVerified)}>
-              {loading ? "Registering..." : (role === "Student" && !emailVerified ? "Verify Email to Register" : "Register")}
+            <button type="submit" disabled={loading}>
+              {loading ? "Please wait..." : (!emailVerified ? "Verify Email to Register" : "Register")}
             </button>
 
             <div className="links">
@@ -1291,19 +1121,6 @@ function Register() {
                 <Link to="/"> Login</Link>
               </p>
             </div>
-
-            {role === "Admin" && (
-              <div className="request-key-banner">
-                <p className="request-key-text">Don't have an Invitation Access Code for your Institution?</p>
-                <button
-                  type="button"
-                  className="btn-request-key-link"
-                  onClick={() => setIsRequestDemoOpen(true)}
-                >
-                  Request College Demo / Access Key
-                </button>
-              </div>
-            )}
           </form>
         )}
       </div>
