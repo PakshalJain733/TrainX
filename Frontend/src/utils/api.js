@@ -111,6 +111,34 @@ export async function apiFetch(endpoint, options = {}) {
       const errorData = await res.json().catch(() => ({}));
       const message = errorData.message || `Request failed with status ${res.status}`;
       console.warn(`[apiFetch] ${endpoint}: ${message}`);
+
+      // Handle invalid or dead session tokens (e.g. user deleted or database reseeded)
+      if (res.status === 401 && token) {
+        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/verify-otp') || endpoint.includes('/auth/register');
+        if (!isAuthEndpoint) {
+          sessionStorage.removeItem("token");
+          sessionStorage.removeItem("authToken");
+          sessionStorage.removeItem("auth_token");
+          sessionStorage.removeItem("user");
+          sessionStorage.removeItem("role");
+          localStorage.removeItem("token");
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("role");
+
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.startsWith("/login") &&
+            !window.location.pathname.startsWith("/activate-account") &&
+            !window.location.pathname.startsWith("/register") &&
+            !window.location.pathname.startsWith("/setup-institution")
+          ) {
+            window.location.href = "/login?session_expired=1";
+          }
+        }
+      }
+
       return { data: null, error: message, status: res.status };
     }
 

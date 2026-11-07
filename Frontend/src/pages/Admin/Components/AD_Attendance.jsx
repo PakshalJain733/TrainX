@@ -230,18 +230,38 @@ export default function AdminAttendance() {
         } catch (_) { }
       }
 
-      setStudents(fetchedStudents);
-
       // Query database for attendance marked on the selected date or present via live scan
       try {
         const queryDate = sessionDate || new Date().toISOString().split('T')[0];
         const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}&batch_id=${batchId || ''}`);
         const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
 
+        // Dynamic union: ensure students who scanned attendance are included even if not pre-seeded in batch roster
+        const studentMap = new Map();
+        fetchedStudents.forEach(s => studentMap.set(String(s.id), s));
+
+        dbList.forEach(d => {
+          const dId = String(d.id || d.student_id || d.user_id || d.studentId || d.userId || '');
+          if (dId && !studentMap.has(dId) && (d.today_status === 'present' || d.is_scanned || String(d.status || '').toLowerCase() === 'present')) {
+            const extraStudent = {
+              id: dId,
+              userId: d.userId || d.user_id || dId,
+              studentId: d.studentId || d.student_id || dId,
+              rollNo: d.roll_number || d.rollNo || `STU-${dId}`,
+              name: d.student_name || d.name || d.studentName || 'Student User',
+              status: true
+            };
+            studentMap.set(dId, extraStudent);
+          }
+        });
+
+        const unifiedStudents = Array.from(studentMap.values());
+        setStudents(unifiedStudents);
+
         const attendanceMap = {};
         const scannedMap = {};
 
-        fetchedStudents.forEach((s) => {
+        unifiedStudents.forEach((s) => {
           // Check if student has marked attendance present on DB (by ID, roll number, or student name)
           const record = dbList.find(d => {
             const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
@@ -264,6 +284,7 @@ export default function AdminAttendance() {
         setAttendance(attendanceMap);
         setQrScannedMap(scannedMap);
       } catch (_) {
+        setStudents(fetchedStudents);
         const initialMap = {};
         fetchedStudents.forEach(s => { initialMap[s.id] = false; });
         setAttendance(initialMap);

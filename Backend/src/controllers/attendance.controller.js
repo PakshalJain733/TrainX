@@ -764,15 +764,15 @@ export const getBatchAttendanceHistory = async (req, res, next) => {
     let queryStr = `
       SELECT 
         a.batch_id as batchId,
-        DATE_FORMAT(a.session_date, '%Y-%m-%d') as date,
-        COALESCE(b.name, 'Training Batch') as batchName,
-        COALESCE(b.join_code, b.code, CONCAT('BATCH-', a.batch_id)) as batchCode,
+        DATE_FORMAT(MAX(a.session_date), '%Y-%m-%d') as date,
+        COALESCE(MAX(b.name), 'Training Batch') as batchName,
+        COALESCE(MAX(b.join_code), MAX(b.code), CONCAT('BATCH-', a.batch_id)) as batchCode,
         COUNT(a.id) as total,
         SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present,
         SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent,
         ROUND((SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) / COUNT(a.id)) * 100) as rate,
-        COALESCE(u.name, 'System Admin') as savedBy,
-        DATE_FORMAT(MAX(a.updated_at), '%b %d, %Y, %h:%i %p') as savedAt
+        COALESCE(MAX(u.name), 'System Admin') as savedBy,
+        DATE_FORMAT(MAX(COALESCE(a.updated_at, a.created_at, a.session_date)), '%b %d, %Y, %h:%i %p') as savedAt
       FROM attendance a
       LEFT JOIN batches b ON a.batch_id = b.id
       LEFT JOIN users u ON a.marked_by = u.id
@@ -787,7 +787,7 @@ export const getBatchAttendanceHistory = async (req, res, next) => {
 
     queryStr += `
       GROUP BY a.batch_id, DATE(a.session_date), a.marked_by
-      ORDER BY a.session_date DESC, a.batch_id ASC
+      ORDER BY MAX(a.session_date) DESC, a.batch_id ASC
       LIMIT ?
     `;
     params.push(Number(limit) || 50);

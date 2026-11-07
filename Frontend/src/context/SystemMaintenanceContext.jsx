@@ -1236,15 +1236,22 @@ const KEY_ALIASES = {
   coordinatorNotifications: "coordinatorNotifications",
   superAdminMaintenance: "superAdminFeatureSwitches",
   superAdminFeatureSwitches: "superAdminFeatureSwitches",
+  register: "userRegistration",
+  registration: "userRegistration",
+  selfRegistration: "userRegistration",
+  userRegistration: "userRegistration",
+  signUp: "userRegistration",
+  signup: "userRegistration",
 };
 
 const SWITCH_STORAGE_KEY = "system_switch_states";
 
-// Merges only switch booleans and messages into code-defined initialMaintenanceConfig.
+// Merges switch booleans and messages into code-defined initialMaintenanceConfig.
 // Never caches or overrides module definitions, names, or descriptions from code!
 function applySwitchState(baseConfig, savedState) {
   if (!savedState || typeof savedState !== "object") return baseConfig;
-  const switches = savedState.switches || {};
+  const rawSwitches = savedState.switches || (savedState.modules ? {} : savedState);
+  const rawModules = savedState.modules || {};
   const messages = savedState.messages || {};
   const emergency = typeof savedState.emergency === "boolean"
     ? savedState.emergency
@@ -1252,12 +1259,31 @@ function applySwitchState(baseConfig, savedState) {
 
   const nextModules = { ...baseConfig.modules };
   Object.keys(nextModules).forEach((k) => {
-    const sw = switches[k];
-    const msg = messages[k];
-    if (typeof sw === "boolean" || msg !== undefined) {
+    // 1. Check direct key
+    let sw = rawSwitches[k];
+
+    // 2. Check in modules object if present
+    if (sw === undefined && rawModules[k]) {
+      sw = typeof rawModules[k].active === "boolean"
+        ? rawModules[k].active
+        : (typeof rawModules[k].is_active === "boolean" ? rawModules[k].is_active : (rawModules[k].is_active === 0 ? false : undefined));
+    }
+
+    // 3. Check alias keys
+    if (sw === undefined) {
+      for (const [aliasKey, targetKey] of Object.entries(KEY_ALIASES)) {
+        if (targetKey === k && rawSwitches[aliasKey] !== undefined) {
+          sw = rawSwitches[aliasKey];
+          break;
+        }
+      }
+    }
+
+    const msg = messages[k] || (rawModules[k]?.message);
+    if (typeof sw === "boolean" || sw === 0 || sw === 1 || msg !== undefined) {
       nextModules[k] = {
         ...nextModules[k],
-        ...(typeof sw === "boolean" ? { active: sw } : {}),
+        ...(sw !== undefined ? { active: sw === 1 || sw === true || sw === 'true' } : {}),
         ...(msg !== undefined ? { message: msg } : {}),
       };
     }
@@ -1342,50 +1368,62 @@ export function SystemMaintenanceProvider({ children }) {
     }).catch(err => console.warn('Failed to sync maintenance config to backend:', err));
   };
 
-  useEffect(() => {
-    // 1. Fetch backend state directly from database table feature_switches
-    const fetchServerConfig = () => {
-      fetch(`${getApiBaseUrl()}/feature-switches`, {
-        headers: getAuthHeader(),
-      })
-        .then((res) => res.json())
-        .then((json) => {
-          const serverData = json?.data;
-          if (serverData && typeof serverData === "object" && serverData.switches) {
+  // Dedicated server synchronization helper that can be called anywhere (e.g. on login page mount)
+  const refreshSwitches = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/feature-switches?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          ...getAuthHeader(),
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const serverData = json?.data;
+        if (serverData && typeof serverData === "object" && (serverData.switches || serverData.modules)) {
+          setConfig((prev) => {
+            const updated = applySwitchState(prev, serverData);
+            try {
+              const switchState = extractSwitchState(updated);
+              localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+              sessionStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+            } catch (e) {}
+            return updated;
+          });
+          return serverData;
+        }
+      }
+    } catch (err) {
+      // Fallback to shared-content endpoint if needed
+      try {
+        const fbRes = await fetch(`${getApiBaseUrl()}/shared-content?type=maintenance&_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: getAuthHeader(),
+        });
+        if (fbRes.ok) {
+          const json = await fbRes.json();
+          const serverData = json?.data?.[0]?.data;
+          if (serverData && typeof serverData === "object") {
             setConfig((prev) => {
               const updated = applySwitchState(prev, serverData);
               try {
                 const switchState = extractSwitchState(updated);
                 localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+                sessionStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
               } catch (e) {}
               return updated;
             });
+            return serverData;
           }
-        })
-        .catch(() => {
-          // Fallback to shared-content endpoint if needed
-          fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          })
-            .then((res) => res.json())
-            .then((json) => {
-              const serverData = json?.data?.[0]?.data;
-              if (serverData && typeof serverData === "object") {
-                setConfig((prev) => {
-                  const updated = applySwitchState(prev, serverData);
-                  try {
-                    const switchState = extractSwitchState(updated);
-                    localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
-                  } catch (e) {}
-                  return updated;
-                });
-              }
-            })
-            .catch(() => {});
-        });
-    };
+        }
+      } catch (_) {}
+    }
+  };
 
-    fetchServerConfig();
+  useEffect(() => {
+    refreshSwitches();
 
     // 2. Cross-tab real-time sync via storage event
     const handleStorageChange = (e) => {
@@ -1591,6 +1629,7 @@ export function SystemMaintenanceProvider({ children }) {
         toggleGlobalEmergencyMode,
         turnAllModulesOn,
         resetToFullDefault,
+        refreshSwitches,
       }}
     >
       {children}

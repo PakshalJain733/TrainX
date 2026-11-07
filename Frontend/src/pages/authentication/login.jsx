@@ -179,11 +179,16 @@ function Login() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
+  const { isModuleActive, getModuleConfig, refreshSwitches } = useSystemMaintenance();
   const passwordActive = isModuleActive("loginWithPassword");
   const otpActive = isModuleActive("loginWithOTP");
-  const registrationActive = isModuleActive("userRegistration");
+  const registrationActive = isModuleActive("userRegistration") && isModuleActive("register");
   const passwordResetActive = isModuleActive("passwordReset");
+
+  useEffect(() => {
+    // Re-verify feature switch status on page load so login view strictly matches backend switch state
+    refreshSwitches?.();
+  }, []);
 
   useEffect(() => {
     if (!passwordActive && otpActive && authMode === "password") {

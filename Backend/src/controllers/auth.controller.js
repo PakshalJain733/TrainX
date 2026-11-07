@@ -28,8 +28,27 @@ export const getCollegeByEmail = async (req, res, next) => {
   }
 };
 
+const checkRegistrationFeatureActive = async () => {
+  try {
+    const rows = await query(`SELECT is_active, notice_message FROM feature_switches WHERE feature_key IN ('userRegistration', 'register') LIMIT 1`);
+    if (rows && rows.length > 0 && Number(rows[0].is_active) === 0) {
+      return {
+        allowed: false,
+        message: rows[0].notice_message || 'Self-registration and new account sign-up is currently disabled by system administration.',
+      };
+    }
+  } catch (err) {
+    // If table doesn't exist or query fails, default to allowed
+  }
+  return { allowed: true };
+};
+
 export const sendRegisterOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await sendRegistrationOtp(req.body);
     return sendSuccess(res, 'Verification code sent to your college email.', result);
   } catch (error) {
@@ -39,6 +58,10 @@ export const sendRegisterOtp = async (req, res, next) => {
 
 export const verifyRegisterEmailOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await checkRegistrationEmailOtp(req.body);
     return sendSuccess(res, 'College email verified successfully!', result);
   } catch (error) {
@@ -48,6 +71,10 @@ export const verifyRegisterEmailOtp = async (req, res, next) => {
 
 export const verifyRegisterOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await verifyRegistrationOtpAndRegister(req.body);
     return sendSuccess(res, 'User registered successfully', result, 201);
   } catch (error) {

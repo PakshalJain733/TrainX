@@ -13,9 +13,9 @@ import { query } from '../../../../config/db.js';
  * @param {Object} options - { sinceTimestamp, collegeId, limit }
  */
 export async function collectTrainingExportRecords(options = {}) {
-  const { sinceTimestamp = null, collegeId = null, limit = 500 } = options;
+  const { sinceTimestamp = null, collegeId = null, studentId = null, userId = null, limit = 500 } = options;
 
-  // 1. Retrieve active Career Gateway student mappings (scoped by college if provided)
+  // 1. Retrieve active Career Gateway student mappings (scoped by college and/or individual student)
   let mappingSql = `
     SELECT m.trainx_user_id, m.career_gateway_student_id, m.clg_id, u.email, u.name, u.college_id, s.department, s.roll_number
     FROM career_gateway_student_mappings m
@@ -27,6 +27,14 @@ export async function collectTrainingExportRecords(options = {}) {
   if (collegeId) {
     mappingSql += ' AND u.college_id = ?';
     mappingParams.push(collegeId);
+  }
+  if (studentId !== null && studentId !== undefined) {
+    mappingSql += ' AND m.career_gateway_student_id = ?';
+    mappingParams.push(studentId);
+  }
+  if (userId !== null && userId !== undefined) {
+    mappingSql += ' AND m.trainx_user_id = ?';
+    mappingParams.push(userId);
   }
 
   const mappings = await query(mappingSql, mappingParams);
@@ -56,10 +64,33 @@ export async function collectTrainingExportRecords(options = {}) {
 
   const userIds = Array.from(userToCgMap.keys());
   const collegeIds = Array.from(collegeIdsSet);
+  const isIndividualStudent = (studentId !== null && studentId !== undefined) || (userId !== null && userId !== undefined);
 
   // 2. Category 1: Batches
   let batches = [];
-  if (collegeIds.length > 0) {
+  if (isIndividualStudent && userIds.length === 1) {
+    // Individual student sync: select batches the student is enrolled in
+    const targetUserId = userIds[0];
+    const collegeParamClause = collegeIds.length > 0 ? `AND b.college_id IN (${collegeIds.map(() => '?').join(',')})` : '';
+    const batchRows = await query(
+      `SELECT DISTINCT b.id as batch_id, b.college_id, b.name as batch_name, b.year, b.division, b.schedule, b.students as student_count
+       FROM batches b
+       LEFT JOIN student_batches sb ON sb.batch_id = b.id AND sb.user_id = ?
+       LEFT JOIN students s ON s.batch_id = b.id AND s.user_id = ?
+       WHERE (sb.user_id IS NOT NULL OR s.user_id IS NOT NULL) ${collegeParamClause}
+       ORDER BY b.id ASC`,
+      [targetUserId, targetUserId, ...collegeIds]
+    );
+    batches = (batchRows || []).map((b) => ({
+      batch_id: b.batch_id,
+      batch_name: b.batch_name,
+      college_id: b.college_id,
+      year: b.year,
+      division: b.division,
+      schedule: b.schedule,
+      student_count: b.student_count,
+    }));
+  } else if (collegeIds.length > 0) {
     const collegePlaceholders = collegeIds.map(() => '?').join(',');
     const batchRows = await query(
       `SELECT b.id as batch_id, b.college_id, b.name as batch_name, b.year, b.division, b.schedule, b.students as student_count
@@ -81,7 +112,34 @@ export async function collectTrainingExportRecords(options = {}) {
 
   // 3. Category 2: Sessions
   let sessions = [];
-  if (collegeIds.length > 0) {
+  if (isIndividualStudent && userIds.length === 1) {
+    const studentBatchIds = batches.map(b => b.batch_id).filter(Boolean);
+    const sessionBatchPlaceholders = studentBatchIds.length > 0 ? studentBatchIds.map(() => '?').join(',') : 'NULL';
+    let sessionSql = `
+      SELECT DISTINCT s.id as session_id, s.college_id, s.batch_id, s.title, s.session_date, s.start_time, s.end_time, s.faculty_id
+      FROM attendance_sessions s
+      LEFT JOIN attendance a ON a.session_id = s.id AND a.user_id = ?
+      WHERE (a.user_id IS NOT NULL ${studentBatchIds.length > 0 ? `OR s.batch_id IN (${sessionBatchPlaceholders})` : ''})
+    `;
+    const sessionParams = [userIds[0], ...studentBatchIds];
+    if (sinceTimestamp) {
+      sessionSql += ' AND s.created_at >= ?';
+      sessionParams.push(sinceTimestamp);
+    }
+    sessionSql += ` ORDER BY s.session_date DESC LIMIT ?`;
+    sessionParams.push(parseInt(limit, 10));
+
+    const sessionRows = await query(sessionSql, sessionParams);
+    sessions = (sessionRows || []).map((s) => ({
+      session_id: s.session_id,
+      batch_id: s.batch_id,
+      title: s.title,
+      session_date: s.session_date,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      trainer_id: s.faculty_id,
+    }));
+  } else if (collegeIds.length > 0) {
     const collegePlaceholders = collegeIds.map(() => '?').join(',');
     let sessionSql = `
       SELECT s.id as session_id, s.college_id, s.batch_id, s.title, s.session_date, s.start_time, s.end_time, s.faculty_id
@@ -145,7 +203,35 @@ export async function collectTrainingExportRecords(options = {}) {
   // 5. Category 4: Assessments
   // Uses actual MySQL schema: total_marks, pass_marks (passing_percentage is computed dynamically)
   let assessments = [];
-  if (collegeIds.length > 0) {
+  if (isIndividualStudent && userIds.length === 1) {
+    const studentBatchIds = batches.map(b => b.batch_id).filter(Boolean);
+    const batchPlaceholders = studentBatchIds.length > 0 ? studentBatchIds.map(() => '?').join(',') : 'NULL';
+    const collegePlaceholders = collegeIds.length > 0 ? collegeIds.map(() => '?').join(',') : 'NULL';
+    const assessmentDefRows = await query(
+      `SELECT DISTINCT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
+       FROM assessments asm
+       LEFT JOIN assessment_attempts att ON att.assessment_id = asm.id AND att.user_id = ?
+       WHERE (att.user_id IS NOT NULL 
+              ${studentBatchIds.length > 0 ? `OR asm.batch_id IN (${batchPlaceholders})` : ''} 
+              ${collegeIds.length > 0 ? `OR (asm.college_id IN (${collegePlaceholders}) AND asm.batch_id IS NULL)` : 'OR asm.college_id IS NULL'})
+       ORDER BY asm.id ASC`,
+      [userIds[0], ...studentBatchIds, ...collegeIds]
+    );
+    assessments = (assessmentDefRows || []).map((a) => {
+      const totalMarks = parseFloat(a.total_marks) || 0;
+      const passMarks = parseFloat(a.pass_marks) || 0;
+      const passingPct = totalMarks > 0 ? Math.round((passMarks / totalMarks) * 100) : 60;
+      return {
+        assessment_id: a.assessment_id,
+        batch_id: a.batch_id,
+        title: a.title,
+        category: a.category,
+        total_marks: a.total_marks,
+        pass_marks: a.pass_marks,
+        passing_percentage: passingPct,
+      };
+    });
+  } else if (collegeIds.length > 0) {
     const collegePlaceholders = collegeIds.map(() => '?').join(',');
     const assessmentDefRows = await query(
       `SELECT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks

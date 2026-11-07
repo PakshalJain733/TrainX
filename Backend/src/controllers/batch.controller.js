@@ -212,7 +212,7 @@ export const getBatches = async (req, res, next) => {
     }
 
     if (filterStatus && filterStatus !== 'all') {
-      sql += ' AND (LOWER(COALESCE(b.status, "Active")) = ?)';
+      sql += " AND (LOWER(COALESCE(b.status, 'Active')) = ?)";
       params.push(filterStatus.toLowerCase().trim());
     }
 
@@ -1092,16 +1092,32 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // Query students enrolled via student_batches join table or students table
+    // Query students enrolled via student_batches join table, students table, department linkage, or attendance scans
     const enrolledUsers = await query(
-      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, COALESCE(s.roll_number, '') AS rollNo, s.department
+      `SELECT DISTINCT 
+         u.id, 
+         u.name, 
+         u.email, 
+         u.mobile_number, 
+         COALESCE(s.roll_number, '') AS rollNo, 
+         COALESCE(s.department, d.name, '') AS department
        FROM users u
        LEFT JOIN students s ON u.id = s.user_id
+       LEFT JOIN departments d ON s.department_id = d.id
        LEFT JOIN student_batches sb ON sb.user_id = u.id
-       WHERE (sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?)
-         AND u.role = 'student'
+       LEFT JOIN attendance att ON att.user_id = u.id AND (att.batch_id = ? OR att.batch_id = ?)
+       LEFT JOIN batches b ON (b.id = ? OR b.id = ?)
+       WHERE (
+         sb.batch_id = ? 
+         OR sb.batch_id = ? 
+         OR s.batch_id = ? 
+         OR s.batch_id = ? 
+         OR att.batch_id IS NOT NULL
+         OR (b.department_id IS NOT NULL AND s.department_id = b.department_id AND (b.college_id IS NULL OR s.college_id = b.college_id))
+       )
+       AND u.role = 'student'
        ORDER BY u.name ASC`,
-      [id, cleanId, id, cleanId]
+      [id, cleanId, id, cleanId, id, cleanId, id, cleanId]
     );
 
     const formatted = (enrolledUsers || []).map((s, idx) => ({
