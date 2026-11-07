@@ -1,8 +1,5 @@
-import {
-  syncStudentsFromCareerGateway,
-  pushReadinessMetricsToCareerGateway,
-  getCareerGatewaySyncStatus
-} from '../services/careerGatewayBridge.service.js';
+import { executeDailyTrainingSync } from '../modules/integrations/careerGateway/services/dailyTrainingSync.worker.js';
+import { getIntegrationStatus } from '../modules/integrations/careerGateway/controllers/careerGatewayMonitoring.controller.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import {
@@ -439,7 +436,7 @@ export const createUserAdmin = async (req, res, next) => {
       if (isSuperAdminAddingAdmin) {
         finalPassword = `Admin@${Math.random().toString(36).slice(-6)}!`;
       } else if (canonicalRole === ROLES.STUDENT) {
-        finalPassword = 'Student@123';
+        finalPassword = 'Student@' + Math.random().toString(36).slice(-6) + '!';
       }
     }
 
@@ -813,7 +810,7 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
       }
 
       // All validations passed: Safely insert User and Student Profile linked to validated department
-      const defaultPassword = item.password || '12345678';
+      const defaultPassword = item.password || ('Temp@' + Math.random().toString(36).slice(-8) + '!');
       const resolvedDeptName = matchedDept.name || rawDept;
       const resolvedDeptId = matchedDept.id;
 
@@ -2178,12 +2175,11 @@ export const createAdminSupportTicket = async (req, res, next) => {
 // ---------------------------------------------------------------------------
 export const handleCareerGatewayInboundSync = async (req, res, next) => {
   try {
-    const targetCollegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const result = await syncStudentsFromCareerGateway({
-      targetCollegeId,
-      triggerSource: req.user?.email || 'admin_manual'
+    return sendSuccess(res, 'Student synchronization is actively governed by real-time Career Gateway Webhooks (POST /api/integrations/career-gateway/students). Direct cross-database polling has been retired.', {
+      sync_mode: 'webhook_event_driven',
+      inbound_endpoint: '/api/integrations/career-gateway/students',
+      status: 'active'
     });
-    return sendSuccess(res, 'Career Gateway inbound student sync completed successfully', result);
   } catch (error) {
     next(error);
   }
@@ -2191,10 +2187,10 @@ export const handleCareerGatewayInboundSync = async (req, res, next) => {
 
 export const handleCareerGatewayOutboundSync = async (req, res, next) => {
   try {
-    const result = await pushReadinessMetricsToCareerGateway({
-      triggerSource: req.user?.email || 'admin_manual'
+    const result = await executeDailyTrainingSync({
+      triggeredBy: req.user?.email || 'admin_manual'
     });
-    return sendSuccess(res, 'Career Gateway outbound readiness metrics pushed successfully', result);
+    return sendSuccess(res, 'Career Gateway outbound training sync triggered successfully', result);
   } catch (error) {
     next(error);
   }
@@ -2202,8 +2198,7 @@ export const handleCareerGatewayOutboundSync = async (req, res, next) => {
 
 export const handleCareerGatewaySyncStatus = async (req, res, next) => {
   try {
-    const status = await getCareerGatewaySyncStatus();
-    return sendSuccess(res, 'Career Gateway sync status and audit logs retrieved', status);
+    return getIntegrationStatus(req, res, next);
   } catch (error) {
     next(error);
   }

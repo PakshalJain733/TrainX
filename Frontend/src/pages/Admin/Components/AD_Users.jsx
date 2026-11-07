@@ -583,8 +583,6 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   // Real DB mentors (only approved)
   const mentors = users.filter((u) => {
     const r = (u.role || "").toLowerCase();
@@ -599,7 +597,7 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
     return (r.includes("student") || r === "user" || (!r && u.name)) && isApproved;
   });
 
-  // Students currently assigned to the selected mentor
+  // Students currently assigned to the selected mentor (MUST be defined before any early return to obey React Rules of Hooks)
   const mentorCurrentMentees = useMemo(() => {
     if (!selectedMentor) return [];
     const selLower = selectedMentor.toLowerCase().trim();
@@ -608,6 +606,8 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
       return m === selLower;
     });
   }, [selectedMentor, allStudents, assignmentsMap]);
+
+  if (!isOpen) return null;
 
   // Remove/Unassign student from mentor group
   const handleRemoveStudentFromMentor = async (student) => {
@@ -3313,15 +3313,17 @@ export default function AdminUsers() {
       />
 
       {/* Assign Mentor Modal */}
-      <AssignMentorModal
-        isOpen={isAssignMentorOpen}
-        onClose={() => setIsAssignMentorOpen(false)}
-        onSuccess={() => {
-          fetchUsers();
-          fetchStats();
-        }}
-        users={users}
-      />
+      {isAssignMentorOpen && (
+        <AssignMentorModal
+          isOpen={isAssignMentorOpen}
+          onClose={() => setIsAssignMentorOpen(false)}
+          onSuccess={() => {
+            fetchUsers();
+            fetchStats();
+          }}
+          users={users}
+        />
+      )}
 
       {/* Career Gateway Sync Modal */}
       {syncModalOpen && createPortal(

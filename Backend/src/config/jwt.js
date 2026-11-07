@@ -6,22 +6,17 @@ import 'dotenv/config';
  */
 export const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET;
-  const isProduction = process.env.NODE_ENV === 'production';
 
-  if (!secret) {
-    if (isProduction) {
-      throw new Error(
-        'CRITICAL SECURITY ERROR: JWT_SECRET environment variable is strictly required in production mode! Server startup aborted.'
-      );
-    }
-    console.warn(
-      '[Security Warning] JWT_SECRET is not defined in environment variables. Falling back to local development secret. Set JWT_SECRET in .env for production.'
+  if (!secret || typeof secret !== 'string' || secret.trim().length === 0) {
+    throw new Error(
+      'CRITICAL SECURITY ERROR: JWT_SECRET environment variable must be defined in your environment (.env file). Server startup aborted.'
     );
-    return 'dev_jwt_secret_key_trainx_2026_super_secret';
   }
 
-  return secret;
+  return secret.trim();
 };
 
 export const JWT_SECRET = getJwtSecret();
 export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+export const JWT_ISSUER = process.env.JWT_ISSUER || 'https://api.trainingportal.getflytechnologies.com';
+export const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'trainx-portal';

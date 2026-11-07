@@ -276,7 +276,7 @@ export const getBatches = async (req, res, next) => {
 export const createBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, trainer_id, schedule, topic, description, date } = req.body;
+    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, trainer_id, schedule, topic, description, date, year, division } = req.body;
     if (!name || (!code && !join_code)) {
       return sendError(res, 'Batch Name and Join Code are required', 400);
     }
@@ -284,8 +284,42 @@ export const createBatch = async (req, res, next) => {
     const batchCode = (code || join_code).trim();
     const batchTrainer = (trainer || mentor || 'Faculty Instructor').trim();
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
-    const targetCollegeId = collegeId || req.user?.college_id || req.user?.collegeId || 1;
 
+    // 1. Resolve valid targetCollegeId satisfying foreign key batches_ibfk_1
+    let targetCollegeId = collegeId || req.user?.college_id || req.user?.collegeId;
+    if (targetCollegeId) {
+      const [colRow] = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [targetCollegeId]);
+      if (!colRow) targetCollegeId = null;
+    }
+    if (!targetCollegeId) {
+      const [firstCollege] = await query('SELECT id FROM colleges ORDER BY id ASC LIMIT 1');
+      if (!firstCollege) {
+        return sendError(res, 'No college found in system to associate batch with', 400);
+      }
+      targetCollegeId = firstCollege.id;
+    }
+
+    // 2. Resolve valid targetDepartmentId satisfying foreign key batches_ibfk_2
+    let targetDepartmentId = departmentId || req.user?.department_id || req.user?.departmentId;
+    if (targetDepartmentId) {
+      const [deptRow] = await query('SELECT id FROM departments WHERE id = ? AND college_id = ? LIMIT 1', [targetDepartmentId, targetCollegeId]);
+      if (!deptRow) targetDepartmentId = null;
+    }
+    if (!targetDepartmentId) {
+      const [firstDept] = await query('SELECT id FROM departments WHERE college_id = ? ORDER BY id ASC LIMIT 1', [targetCollegeId]);
+      if (firstDept) {
+        targetDepartmentId = firstDept.id;
+      } else {
+        // Automatically create a default department for this college so foreign key is satisfied
+        const insertDept = await query(
+          'INSERT INTO departments (college_id, name, code, status) VALUES (?, ?, ?, ?)',
+          [targetCollegeId, 'General Engineering', 'GEN', 'Active']
+        );
+        targetDepartmentId = insertDept.insertId;
+      }
+    }
+
+    // 3. Resolve trainerId
     let trainerId = trainer_id ? parseInt(trainer_id, 10) : null;
     if (!trainerId && batchTrainer && batchTrainer !== 'Faculty Instructor') {
       try {
@@ -299,22 +333,26 @@ export const createBatch = async (req, res, next) => {
       } catch (_) {}
     }
 
+    const expiresAt = code_expires_at ? Number(code_expires_at) : null;
+
     const result = await query(
-      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, trainer_id, schedule, topic, description, date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, trainer_id, schedule, topic, description, date, year, division, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
       [
         name.trim(),
         batchCode,
         batchCode,
-        code_expires_at || null,
+        expiresAt,
         targetCollegeId,
-        departmentId || 1,
+        targetDepartmentId,
         batchTrainer,
         trainerId || null,
         batchSchedule,
         topic || null,
         description || null,
-        date || new Date().toISOString().split("T")[0]
+        date || new Date().toISOString().split("T")[0],
+        year || 'TE',
+        division || 'A'
       ]
     );
 
@@ -341,8 +379,8 @@ export const createBatch = async (req, res, next) => {
 
     const formattedCreated = {
       ...newBatch,
-      collegeId: newBatch?.college_id || collegeId || 1,
-      departmentId: newBatch?.department_id || departmentId || 1,
+      collegeId: newBatch?.college_id || targetCollegeId,
+      departmentId: newBatch?.department_id || targetDepartmentId,
       collegeName: newBatch?.collegeName || 'College Campus',
       departmentName: newBatch?.departmentName || 'Academic Stream',
       trainer: newBatch?.trainer || batchTrainer,

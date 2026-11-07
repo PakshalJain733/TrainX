@@ -8,6 +8,7 @@ import {
   updateTraining,
   updateTrainingStatus,
   getOverallTrainingStats,
+  getAllTrainingEnrollments,
   getEnrollmentsByTrainingId,
   registerStudentForTraining,
   upsertWebhookTrainingEnrollment,
@@ -133,6 +134,26 @@ export const changeTrainingStatus = async (req, res, next) => {
     }
     const updated = await updateTrainingStatus(id, status);
     return sendSuccess(res, `Training status updated to '${updated.status}'`, updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/trainings/enrollments
+ * Admin: Retrieve all training enrollments across all programs with optional filtering.
+ */
+export const getAllEnrollments = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeId(req);
+    const filters = {
+      search: req.query.search || '',
+      branch: req.query.branch || 'all',
+      paymentStatus: req.query.payment_status || req.query.paymentStatus || 'all',
+      approvalStatus: req.query.approval_status || req.query.approvalStatus || 'all',
+    };
+    const enrollments = await getAllTrainingEnrollments(filters, collegeId);
+    return sendSuccess(res, 'Training enrollments retrieved successfully', enrollments);
   } catch (error) {
     next(error);
   }

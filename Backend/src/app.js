@@ -39,6 +39,7 @@ import c2cRoutes from './routes/c2c.routes.js';
 import featureSwitchRoutes from './routes/featureSwitch.routes.js';
 import systemHealthRoutes from './routes/systemHealth.routes.js';
 import googleAuthRoutes from './routes/googleAuth.routes.js';
+import careerGatewayRoutes from './modules/integrations/careerGateway/careerGateway.routes.js';
 import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
@@ -88,7 +89,7 @@ app.use(apiMetricsMiddleware);
 // Security Rate Limiters (skip preflight OPTIONS and preserve CORS headers on 429)
 export const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 120, // Rate limit for authentication attempts (per IP/identifier)
+  max: nodeEnv === 'production' ? 120 : 2000, // Rate limit for authentication attempts (per IP/identifier)
   keyGenerator: (req) => {
     // Key by email/token when available so students on shared campus IP don't lock each other out
     const identifier = req.body?.email || req.body?.mobile || req.body?.identifier || (req.headers.authorization ? req.headers.authorization.slice(-16) : req.ip);
@@ -97,7 +98,14 @@ export const authLimiter = rateLimit({
   validate: { default: false, xForwardedForHeader: false },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === 'OPTIONS',
+  skip: (req) => {
+    // Never rate limit GET, HEAD, or OPTIONS requests (e.g. /auth/me, /colleges, /broadcast)
+    if (req.method === 'OPTIONS' || req.method === 'GET' || req.method === 'HEAD') return true;
+    const url = req.originalUrl || req.path || '';
+    // Only throttle actual authentication attempt endpoints
+    const isAuthAttempt = /\/(login|login-password|send-otp|verify-otp|verify-email-otp|reset-password-otp|register\/send-otp)/i.test(url);
+    return !isAuthAttempt;
+  },
   handler: (req, res, next, options) => {
     res.status(options.statusCode).json({
       success: false,
@@ -215,7 +223,7 @@ app.use('/api/system/health', systemHealthRoutes);
 
 // Mount Module Routes under /api/v1 (Section 11)
 app.use('/api/v1/auth', authLimiter, authRoutes);
-app.use('/api/v1', authLimiter, authRoutes);
+app.use('/api/v1', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/practice-problems', studentRoutes);
@@ -256,6 +264,8 @@ app.use('/api/v1/feature-switches', featureSwitchRoutes);
 app.use('/api/v1/maintenance', featureSwitchRoutes);
 app.use('/api/google/auth', googleAuthRoutes);
 app.use('/api/v1/google/auth', googleAuthRoutes);
+app.use('/api/integrations/career-gateway', careerGatewayRoutes);
+app.use('/api/v1/integrations/career-gateway', careerGatewayRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

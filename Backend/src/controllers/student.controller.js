@@ -194,7 +194,15 @@ export const updateStudentProfile = async (req, res, next) => {
 
 export const getStudentDashboard = async (req, res, next) => {
   try {
-    const collegeId = req.user.collegeId || 1;
+    // TENANT-03: Strict tenant validation - no silent fallback to college 1
+    let collegeId = req.user?.collegeId || req.user?.college_id;
+    if (!collegeId) {
+      if (req.user?.role === ROLES.SUPER_ADMIN && req.query?.collegeId) {
+        collegeId = parseInt(req.query.collegeId, 10);
+      } else {
+        return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
+      }
+    }
     const callerId = req.user.userId || req.user.id;
 
     // Multi-college isolation: retrieve students from the same college
@@ -779,8 +787,12 @@ export const getStudentAttendance = async (req, res, next) => {
 export const applyStudentLeave = async (req, res, next) => {
   try {
     const { category, startDate, endDate, days, reason, attachment } = req.body;
-    const userId = req.user?.userId || req.user?.id || 1;
-    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    const userId = req.user?.userId || req.user?.id;
+    const collegeId = req.user?.college_id || req.user?.collegeId;
+
+    if (!collegeId) {
+      return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
+    }
 
     if (!startDate) {
       return sendError(res, 'Start date is required', 400);
@@ -859,7 +871,10 @@ export const applyStudentLeave = async (req, res, next) => {
 
 export const getStudentNotifications = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || 1;
+    const collegeId = req.user?.collegeId || req.user?.college_id;
+    if (!collegeId) {
+      return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
+    }
     let broadcasts = await getBroadcastsModel(collegeId, 'student');
     if (req.user) {
       broadcasts = await filterContentByMentorAssignment(broadcasts, req.user, 'created_by');

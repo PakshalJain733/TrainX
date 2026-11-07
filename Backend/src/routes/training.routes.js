@@ -7,6 +7,7 @@ import {
   createNewTraining,
   updateTrainingDetails,
   changeTrainingStatus,
+  getAllEnrollments,
   getTrainingEnrollments,
   registerForTraining,
   updatePaymentStatus,
@@ -66,6 +67,14 @@ router.post(
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
   createNewTraining
+);
+
+// All Training Enrollments (Admin) - Defined before /:id to prevent matching "enrollments" as an ID
+router.get(
+  '/enrollments',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  getAllEnrollments
 );
 
 router.get(

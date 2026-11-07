@@ -7,6 +7,7 @@ import { checkDatabaseConnection } from './src/config/db.js';
 import { initializeDatabase } from './src/config/init_db.js';
 import { migrateOnBoot } from './src/config/migrator.js';
 import { initInterviewSocket } from './src/socket/interview.socket.js';
+import { initCareerGatewayScheduler } from './src/scheduler/careerGatewayScheduler.js';
 import http from 'node:http';
 
 const startServer = async () => {
@@ -16,6 +17,7 @@ const startServer = async () => {
       await checkDatabaseConnection();
       await initializeDatabase();
       await migrateOnBoot();
+      initCareerGatewayScheduler();
     } catch (dbErr) {
       console.error('Initial database connection warning:', dbErr.message);
       console.log('Server will continue starting to serve CORS and health check endpoints. Retrying DB in background...');
@@ -23,7 +25,8 @@ const startServer = async () => {
         try {
           await checkDatabaseConnection();
           await initializeDatabase();
-      await migrateOnBoot();
+          await migrateOnBoot();
+          initCareerGatewayScheduler();
           console.log('Background database initialization succeeded.');
         } catch (retryErr) {
           console.error('Background DB retry error:', retryErr.message);
@@ -31,7 +34,6 @@ const startServer = async () => {
       }, 5000);
     }
 
-    // Trigger reload: 2026-10-19
     const PORT = process.env.PORT || 5000;
     const NODE_ENV = process.env.NODE_ENV || 'development';
     const server = http.createServer(app);
@@ -44,6 +46,7 @@ const startServer = async () => {
       console.log(`Environment: ${NODE_ENV}`);
       console.log(`Health Check: http://localhost:${PORT}/api/v1/health`);
       console.log(`Socket.IO interview namespace: /interviews`);
+      console.log(`Career Gateway Integration API: /api/v1/integrations/career-gateway`);
       console.log(`==================================================`);
     });
 
@@ -69,4 +72,3 @@ const startServer = async () => {
 };
 
 startServer();
-

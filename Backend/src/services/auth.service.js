@@ -374,15 +374,7 @@ export const registerUser = async (data) => {
       });
     }
 
-    const token = canonicalRole === ROLES.SUPER_ADMIN
-      ? generateToken({
-          userId: updatedUser.id,
-          email: updatedUser.email,
-          mobile: updatedUser.mobile_number,
-          role: updatedUser.role,
-          collegeId: updatedUser.college_id || 1,
-        })
-      : null;
+    const token = canonicalRole === ROLES.SUPER_ADMIN ? generateFinalToken(updatedUser) : null;
 
     return {
       token,
@@ -682,13 +674,7 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
 
   const studentProfile = await getStudentByUserId(user.id);
 
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    mobile: user.mobile_number,
-    role: user.role,
-    collegeId: user.college_id || 1,
-  });
+  const token = generateFinalToken(user);
 
   return {
     token,
