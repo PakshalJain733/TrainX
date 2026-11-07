@@ -272,6 +272,7 @@ app.use('/integrations/career-gateway', careerGatewayRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {
+  console.log(`[TrainX 404 Debug] Unmatched incoming request: ${req.method} ${req.originalUrl}`);
   return sendError(res, `Route not found: ${req.originalUrl}`, 404);
 });
 

@@ -8,6 +8,7 @@ import {
   handleProvisionStudents,
   handleUpdateEligibility,
   handleActivateAccount,
+  handleDeactivateStudent,
 } from './controllers/careerGatewayProvisioning.controller.js';
 import {
   getIntegrationStatus,
@@ -52,6 +53,9 @@ router.get('/students', (req, res) => {
 
 // Provision single or batch students from Career Gateway (SEC-05: burst-tolerant rate limiter)
 router.post('/students', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleProvisionStudents);
+
+// Deactivate student from Career Gateway
+router.post('/students/deactivate', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleDeactivateStudent);
 
 // Update or revoke student eligibility (SEC-05: burst-tolerant rate limiter)
 router.patch('/students/:studentId/eligibility', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleUpdateEligibility);

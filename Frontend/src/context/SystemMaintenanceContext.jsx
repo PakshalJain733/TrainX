@@ -1292,6 +1292,12 @@ function extractSwitchState(cfg) {
   };
 }
 
+function getAuthHeader() {
+  const token = getAuthToken();
+  if (!token) return {};
+  return { Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}` };
+}
+
 export function SystemMaintenanceProvider({ children }) {
   // Driven directly by code definition in initialMaintenanceConfig,
   // overlaid with active switch states from storage (zero cached module objects).
@@ -1317,12 +1323,11 @@ export function SystemMaintenanceProvider({ children }) {
       window.dispatchEvent(new CustomEvent("system_maintenance_changed", { detail: newConfig }));
     } catch (e) {}
 
-    const token = getAuthToken() || '';
     fetch(`${getApiBaseUrl()}/shared-content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeader(),
       },
       body: JSON.stringify({
         type: 'maintenance',
@@ -1340,9 +1345,8 @@ export function SystemMaintenanceProvider({ children }) {
   useEffect(() => {
     // 1. Fetch backend state directly from database table feature_switches
     const fetchServerConfig = () => {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: getAuthHeader(),
       })
         .then((res) => res.json())
         .then((json) => {
@@ -1457,12 +1461,11 @@ export function SystemMaintenanceProvider({ children }) {
     // When ON -> is_active = true (1) in database
     // When OFF -> is_active = false (0) in database
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/toggle`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({
           feature_key: resolvedKey,
@@ -1470,7 +1473,11 @@ export function SystemMaintenanceProvider({ children }) {
           feature_name: mod.name,
           category: mod.category,
         })
-      }).catch(err => console.warn('Failed to sync feature switch to DB:', err));
+      })
+        .then(res => {
+          if (!res.ok) console.warn('Feature switch toggle response not OK:', res.status);
+        })
+        .catch(err => console.warn('Failed to sync feature switch to DB:', err));
     } catch (_) {}
   };
 
@@ -1493,12 +1500,11 @@ export function SystemMaintenanceProvider({ children }) {
     saveConfig(nextConfig);
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/notice`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({
           feature_key: resolvedKey,
@@ -1517,12 +1523,11 @@ export function SystemMaintenanceProvider({ children }) {
     });
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/emergency`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({ globalEmergencyMode: nextEmergency })
       }).catch(() => {});
@@ -1546,12 +1551,11 @@ export function SystemMaintenanceProvider({ children }) {
     });
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
       }).catch(() => {});
     } catch (_) {}
@@ -1566,12 +1570,11 @@ export function SystemMaintenanceProvider({ children }) {
     saveConfig(initialMaintenanceConfig);
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
       }).catch(() => {});
     } catch (_) {}

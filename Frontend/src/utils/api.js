@@ -52,15 +52,31 @@ export const getBackendOrigin = () => {
 //   sessionStorage → Remember Me was OFF (cleared when browser closes)
 //   localStorage   → Remember Me was ON  (persists across restarts)
 export function getAuthToken() {
-  return (
+  const directToken =
     sessionStorage.getItem("token") ||
     localStorage.getItem("token") ||
     sessionStorage.getItem("authToken") ||
     localStorage.getItem("authToken") ||
     sessionStorage.getItem("auth_token") ||
-    localStorage.getItem("auth_token") ||
-    null
-  );
+    localStorage.getItem("auth_token");
+  if (directToken) return directToken;
+
+  try {
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      return (
+        u?.token ||
+        u?.authToken ||
+        u?.auth_token ||
+        u?.accessToken ||
+        u?.jwt ||
+        null
+      );
+    }
+  } catch (_) {}
+
+  return null;
 }
 
 export async function apiFetch(endpoint, options = {}) {

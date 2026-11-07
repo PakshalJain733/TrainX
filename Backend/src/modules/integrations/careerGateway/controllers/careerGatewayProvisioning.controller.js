@@ -41,9 +41,15 @@ export async function handleProvisionStudents(req, res, next) {
       }
     }
 
+    const firstSuccessful = results.find((r) => r.status !== 'failed' && r.trainx_user_id);
+    const referenceId = firstSuccessful ? `tx_student_${firstSuccessful.trainx_user_id}` : null;
+    const userId = firstSuccessful ? firstSuccessful.trainx_user_id : null;
+
     const httpStatus = failureCount === 0 ? 200 : (successCount > 0 ? 207 : firstFailureStatusCode);
     return res.status(httpStatus).json({
       success: failureCount === 0,
+      reference_id: referenceId,
+      id: userId,
       message: `Provisioned ${successCount} student(s) (${failureCount} failed)`,
       total: students.length,
       success_count: successCount,
@@ -77,6 +83,28 @@ export async function handleUpdateEligibility(req, res, next) {
       eligible: true,
     });
     return sendSuccess(res, 'Student eligibility restored successfully', result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/integrations/career-gateway/students/deactivate
+ * Deactivates a student from Career Gateway.
+ */
+export async function handleDeactivateStudent(req, res, next) {
+  try {
+    const studentId = req.body.student_id || req.body.career_gateway_student_id || req.body.id;
+    if (!studentId) {
+      return sendError(res, 'student_id or career_gateway_student_id is required', 400);
+    }
+    const result = await revokeStudentEligibility(studentId, req.body.reason || 'Deactivated via Career Gateway S2S');
+    return res.status(200).json({
+      success: true,
+      reference_id: `tx_deact_${studentId}`,
+      message: 'Student deactivated successfully',
+      data: result,
+    });
   } catch (err) {
     next(err);
   }

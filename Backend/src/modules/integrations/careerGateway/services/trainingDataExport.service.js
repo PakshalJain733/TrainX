@@ -131,33 +131,46 @@ export async function collectTrainingExportRecords(options = {}) {
 
   // 5. Category 4: Assessments
   const assessmentDefRows = await query(
-    `SELECT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks, asm.passing_percentage
+    `SELECT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
      FROM assessments asm
      WHERE asm.college_id IN (${collegeInClause})
      ORDER BY asm.id ASC`
   );
-  const assessments = (assessmentDefRows || []).map((a) => ({
-    assessment_id: a.assessment_id,
-    batch_id: a.batch_id,
-    title: a.title,
-    category: a.category,
-    total_marks: a.total_marks,
-    pass_marks: a.pass_marks,
-    passing_percentage: a.passing_percentage,
-  }));
+  const assessments = (assessmentDefRows || []).map((a) => {
+    const totalMarks = parseFloat(a.total_marks) || 0;
+    const passMarks = parseFloat(a.pass_marks) || 0;
+    const passingPct = totalMarks > 0 ? Math.round((passMarks / totalMarks) * 100) : 60;
+    return {
+      assessment_id: a.assessment_id,
+      batch_id: a.batch_id,
+      title: a.title,
+      category: a.category,
+      total_marks: a.total_marks,
+      pass_marks: a.pass_marks,
+      passing_percentage: passingPct,
+    };
+  });
 
   // 6. Category 5: Assessment Results
   let attemptSql = `
-    SELECT att.id as attempt_id, att.user_id, att.assessment_id, att.score, att.total_questions, att.attempted_questions, att.correct_count, att.created_at as attempt_date
+    SELECT 
+      att.id as attempt_id, 
+      att.user_id, 
+      att.assessment_id, 
+      att.score, 
+      COALESCE(att.total_questions, 0) as total_questions, 
+      COALESCE(att.correct_count, att.correct_answers, 0) as attempted_questions, 
+      COALESCE(att.correct_count, att.correct_answers, 0) as correct_count, 
+      COALESCE(att.submitted_at, att.completed_at, att.started_at, CURRENT_TIMESTAMP) as attempt_date
     FROM assessment_attempts att
     WHERE att.user_id IN (${inClause})
   `;
   const attemptParams = [];
   if (sinceTimestamp) {
-    attemptSql += ' AND att.created_at >= ?';
+    attemptSql += ' AND COALESCE(att.submitted_at, att.completed_at, att.started_at) >= ?';
     attemptParams.push(sinceTimestamp);
   }
-  attemptSql += ` ORDER BY att.created_at DESC LIMIT ${parseInt(limit, 10)}`;
+  attemptSql += ` ORDER BY COALESCE(att.submitted_at, att.completed_at, att.started_at) DESC LIMIT ${parseInt(limit, 10)}`;
 
   const attemptRows = await query(attemptSql, attemptParams);
   const assessment_results = [];

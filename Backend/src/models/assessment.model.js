@@ -421,7 +421,8 @@ export const getAttemptByIdModel = async (attemptId) => {
   const numId = parseInt(attemptId, 10);
   try {
     const results = await query(
-      `SELECT a.*, asm.title as assessment_title, asm.passing_percentage,
+      `SELECT a.*, asm.title as assessment_title, asm.pass_marks,
+              ROUND(IF(asm.total_marks > 0, (asm.pass_marks / asm.total_marks) * 100, 60.00), 2) as passing_percentage,
               asm.total_marks as assessment_total_marks, asm.category
        FROM assessment_attempts a
        JOIN assessments asm ON a.assessment_id = asm.id
