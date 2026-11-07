@@ -131,7 +131,30 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL UNIQUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL`); } catch (_) { }
+
+    // Prune redundant duplicate auto-generated indexes on users and students tables
+    try {
+      const [redundantIndexes] = await conn.query(`
+        SELECT DISTINCT TABLE_NAME, INDEX_NAME 
+        FROM INFORMATION_SCHEMA.STATISTICS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME IN ('users', 'students') 
+          AND (
+            INDEX_NAME REGEXP '.*_[0-9]+$' 
+            OR (COLUMN_NAME = 'email' AND INDEX_NAME NOT IN ('email', 'PRIMARY', 'users_email_unique'))
+          )
+          AND INDEX_NAME != 'PRIMARY'
+      `);
+      for (const row of (redundantIndexes || [])) {
+        try {
+          await conn.query(`ALTER TABLE \`${row.TABLE_NAME}\` DROP INDEX \`${row.INDEX_NAME}\``);
+          console.log(`[DB Init] Pruned redundant duplicate index: ${row.TABLE_NAME}.${row.INDEX_NAME}`);
+        } catch (_) {}
+      }
+    } catch (idxErr) {
+      console.warn('[DB Init] Notice checking redundant indexes:', idxErr.message);
+    }
     try { await conn.query(`ALTER TABLE users MODIFY COLUMN role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student', 'trainer') NOT NULL DEFAULT 'student'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users DROP COLUMN password`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }

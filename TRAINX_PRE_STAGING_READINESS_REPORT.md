@@ -48,7 +48,7 @@ The working tree contains 12 modified files and 7 untracked integration files. A
 | `Backend/src/scheduler/careerGatewayScheduler.js` | Modified (Uncommitted) | **SYNC-01 Verified**: Fragile minute string equality replaced with drift-proof `02:00+ IST` check, 30s watchdog ticker, and restart recovery. |
 | `Backend/src/controllers/student.controller.js` | Modified (Uncommitted) | **TENANT-03 Verified**: Purged silent fallback `req.user.collegeId || 1`; rejects unassociated non-superadmin requests with `HTTP 403 Forbidden`. |
 | `Backend/src/middleware/auth.middleware.js` | Modified (Uncommitted) | **SEC-01 Verified**: Database lookup on every authenticated request rejects deactivated/revoked users immediately (`users.is_active === 1`). |
-| `Backend/src/migrations/20261106_career_gateway_contract_alignment.sql` | New (Untracked) | **DATA-01 Verified**: Idempotent DDL adding `clg_id`, `assigned_batch`, and `career_gateway_college_id`. |
+| `Backend/src/migrations/20261107_career_gateway_contract_alignment.sql` | New (Untracked) | **DATA-01 Verified**: Idempotent DDL adding `clg_id`, `assigned_batch`, and `career_gateway_college_id`. |
 | `Backend/src/services/careerGatewayBridge.service.js` | Modified (Uncommitted) | Cross-database queries retired; redirects to REST API worker. |
 
 ### 2.3 Remediation Report Alignment
@@ -208,7 +208,7 @@ DISABLE_CAREER_GATEWAY_SCHEDULER=false
 ## 8. Staging Deployment Execution Plan
 
 1. **Database Migration:**
-   Apply `Backend/src/migrations/20261106_career_gateway_contract_alignment.sql` to the staging database. This script is fully idempotent and non-destructive.
+   Apply `Backend/src/migrations/20261107_career_gateway_contract_alignment.sql` to the staging database. This script is fully idempotent and non-destructive.
 2. **Commit & Push:**
    Stage and commit the remediated files with a clear release message (e.g., `fix(integrations): career gateway contract alignment and security remediation`).
 3. **Configure Environment:**

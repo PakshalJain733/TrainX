@@ -27,7 +27,7 @@
 ## 1. Files Created or Modified
 
 ### 1.1 Database Migrations
-- **Created**: `Backend/src/migrations/20261106_career_gateway_contract_alignment.sql`
+- **Created**: `Backend/src/migrations/20261107_career_gateway_contract_alignment.sql`
   - Added `clg_id VARCHAR(100) NULL` to `students` and `career_gateway_student_mappings`.
   - Added `assigned_batch VARCHAR(100) NULL` to `career_gateway_student_mappings`.
   - Added index `idx_mapping_clg_id` on `career_gateway_student_mappings`.
