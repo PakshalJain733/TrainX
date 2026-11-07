@@ -12,6 +12,8 @@ import {
 } from '../ai/interview.ai.js';
 import { ingestDocument, clearOwnerKnowledge } from '../services/rag/rag.service.js';
 import { createInterviewSessionModel } from '../models/interview.model.js';
+import { checkInterviewLock, recordInterviewStart } from '../utils/rateLimitChecker.js';
+import { query } from '../config/db.js';
 
 const activeSessions = new Map();
 
@@ -113,43 +115,61 @@ async function finalizeSession(io, socket, session, reason = 'completed', explic
   socket.emit('interview:complete', summary);
 
   try {
-    await createInterviewSessionModel({
-      user_id: session.userId,
-      interview_type: session.topic || session.role || 'Technical Mock',
-      overall_score: finalReport.overallScore,
-      grade: finalReport.grade || 'Average',
-      feedback: finalReport.feedback || '',
-      status: 'Completed',
-      details: {
-        role: session.role,
-        topic: session.topic,
-        difficulty: session.difficulty,
-        startedAt: session.startedAt,
-        endedAt: session.endedAt,
-        durationSeconds,
-        questionsAnswered: session.evaluationHistory.length,
-        questions: session.evaluationHistory.map((e) => e.question),
-        answers: session.evaluationHistory.map((e) => e.answer),
-        questionScores: session.evaluationHistory.map((e) => e.score),
-        questionFeedbacks: session.evaluationHistory.map((e) => e.feedback),
-        modelAnswers: session.evaluationHistory.map((e) => e.modelAnswer),
-        overallScore: finalReport.overallScore,
-        technical: finalReport.technical,
-        communication: finalReport.communication,
-        problemSolving: finalReport.problemSolving,
-        strengths: finalReport.strengths,
-        weaknesses: finalReport.improvementAreas,
-        skillGaps: finalReport.recommendedTopics,
-        recommendations: finalReport.improvementAreas,
-        feedback: finalReport.feedback,
-        readiness: finalReport.readiness,
-        grade: finalReport.grade,
-        evaluationHistory: session.evaluationHistory,
-        scorecard: finalReport,
-        endReason: finalEndReason,
-        proctoringWarnings,
-      },
-    });
+    const detailsPayload = {
+      role: session.role,
+      topic: session.topic,
+      difficulty: session.difficulty,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      durationSeconds,
+      questionsAnswered: session.evaluationHistory.length,
+      questions: session.evaluationHistory.map((e) => e.question),
+      answers: session.evaluationHistory.map((e) => e.answer),
+      questionScores: session.evaluationHistory.map((e) => e.score),
+      questionFeedbacks: session.evaluationHistory.map((e) => e.feedback),
+      modelAnswers: session.evaluationHistory.map((e) => e.modelAnswer),
+      overallScore: finalReport.overallScore,
+      technical: finalReport.technical,
+      communication: finalReport.communication,
+      problemSolving: finalReport.problemSolving,
+      strengths: finalReport.strengths,
+      weaknesses: finalReport.improvementAreas,
+      skillGaps: finalReport.recommendedTopics,
+      recommendations: finalReport.improvementAreas,
+      feedback: finalReport.feedback,
+      readiness: finalReport.readiness,
+      grade: finalReport.grade,
+      evaluationHistory: session.evaluationHistory,
+      scorecard: finalReport,
+      endReason: finalEndReason,
+      proctoringWarnings,
+    };
+
+    if (session.dbSessionId) {
+      await query(
+        `UPDATE interview_sessions
+         SET interview_type = ?, overall_score = ?, grade = ?, feedback = ?, status = 'Completed', details = ?
+         WHERE id = ?`,
+        [
+          session.topic || session.role || 'Technical Mock',
+          finalReport.overallScore,
+          finalReport.grade || 'Average',
+          finalReport.feedback || '',
+          JSON.stringify(detailsPayload),
+          session.dbSessionId,
+        ]
+      );
+    } else {
+      await createInterviewSessionModel({
+        user_id: session.userId,
+        interview_type: session.topic || session.role || 'Technical Mock',
+        overall_score: finalReport.overallScore,
+        grade: finalReport.grade || 'Average',
+        feedback: finalReport.feedback || '',
+        status: 'Completed',
+        details: detailsPayload,
+      });
+    }
   } catch (err) {
     console.warn(`[Interview Socket] Could not persist session ${session.id}: ${err.message}`);
   }
@@ -225,6 +245,19 @@ export function initInterviewSocket(httpServer) {
 
     socket.on('interview:start', async (payload = {}) => {
       try {
+        const userRole = socket.data.user?.role || 'student';
+        const lock = await checkInterviewLock(userId, userRole);
+        if (lock.isLocked) {
+          socket.emit('interview:error', {
+            message: lock.message,
+            isLocked: true,
+            lockedUntil: lock.lockedUntil,
+            remainingDays: lock.remainingDays,
+            remainingHours: lock.remainingHours,
+          });
+          return;
+        }
+
         const sessionId = normalizeSessionId(payload.sessionId || `${userId}-${Date.now()}`);
         const owner = String(`${userId}-${sessionId}`);
         const session = getOrCreateSession(sessionId, {
@@ -235,6 +268,10 @@ export function initInterviewSocket(httpServer) {
           totalQuestions: payload.totalQuestions,
           owner,
         });
+
+        // Record the start immediately to activate the 7-day cooldown
+        const dbSessionId = await recordInterviewStart(userId, payload.role, payload.topic);
+        session.dbSessionId = dbSessionId;
 
         // Fresh interview — reset runtime state
         session.askedTopics = [];
