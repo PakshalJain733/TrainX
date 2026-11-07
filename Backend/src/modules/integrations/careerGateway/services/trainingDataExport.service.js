@@ -55,139 +55,177 @@ export async function collectTrainingExportRecords(options = {}) {
   }
 
   const userIds = Array.from(userToCgMap.keys());
-  const inClause = userIds.join(',');
-  const collegeInClause = Array.from(collegeIdsSet).join(',') || 'NULL';
+  const collegeIds = Array.from(collegeIdsSet);
 
   // 2. Category 1: Batches
-  const batchRows = await query(
-    `SELECT b.id as batch_id, b.college_id, b.name as batch_name, b.year, b.division, b.schedule, b.students as student_count
-     FROM batches b
-     WHERE b.college_id IN (${collegeInClause})
-     ORDER BY b.id ASC`
-  );
-  const batches = (batchRows || []).map((b) => ({
-    batch_id: b.batch_id,
-    batch_name: b.batch_name,
-    college_id: b.college_id,
-    year: b.year,
-    division: b.division,
-    schedule: b.schedule,
-    student_count: b.student_count,
-  }));
+  let batches = [];
+  if (collegeIds.length > 0) {
+    const collegePlaceholders = collegeIds.map(() => '?').join(',');
+    const batchRows = await query(
+      `SELECT b.id as batch_id, b.college_id, b.name as batch_name, b.year, b.division, b.schedule, b.students as student_count
+       FROM batches b
+       WHERE b.college_id IN (${collegePlaceholders})
+       ORDER BY b.id ASC`,
+      collegeIds
+    );
+    batches = (batchRows || []).map((b) => ({
+      batch_id: b.batch_id,
+      batch_name: b.batch_name,
+      college_id: b.college_id,
+      year: b.year,
+      division: b.division,
+      schedule: b.schedule,
+      student_count: b.student_count,
+    }));
+  }
 
   // 3. Category 2: Sessions
-  let sessionSql = `
-    SELECT s.id as session_id, s.college_id, s.batch_id, s.title, s.session_date, s.start_time, s.end_time, s.faculty_id
-    FROM attendance_sessions s
-    WHERE s.college_id IN (${collegeInClause})
-  `;
-  const sessionParams = [];
-  if (sinceTimestamp) {
-    sessionSql += ' AND s.created_at >= ?';
-    sessionParams.push(sinceTimestamp);
-  }
-  sessionSql += ` ORDER BY s.session_date DESC LIMIT ${parseInt(limit, 10)}`;
+  let sessions = [];
+  if (collegeIds.length > 0) {
+    const collegePlaceholders = collegeIds.map(() => '?').join(',');
+    let sessionSql = `
+      SELECT s.id as session_id, s.college_id, s.batch_id, s.title, s.session_date, s.start_time, s.end_time, s.faculty_id
+      FROM attendance_sessions s
+      WHERE s.college_id IN (${collegePlaceholders})
+    `;
+    const sessionParams = [...collegeIds];
+    if (sinceTimestamp) {
+      sessionSql += ' AND s.created_at >= ?';
+      sessionParams.push(sinceTimestamp);
+    }
+    sessionSql += ` ORDER BY s.session_date DESC LIMIT ?`;
+    sessionParams.push(parseInt(limit, 10));
 
-  const sessionRows = await query(sessionSql, sessionParams);
-  const sessions = (sessionRows || []).map((s) => ({
-    session_id: s.session_id,
-    batch_id: s.batch_id,
-    title: s.title,
-    session_date: s.session_date,
-    start_time: s.start_time,
-    end_time: s.end_time,
-    trainer_id: s.faculty_id,
-  }));
+    const sessionRows = await query(sessionSql, sessionParams);
+    sessions = (sessionRows || []).map((s) => ({
+      session_id: s.session_id,
+      batch_id: s.batch_id,
+      title: s.title,
+      session_date: s.session_date,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      trainer_id: s.faculty_id,
+    }));
+  }
 
   // 4. Category 3: Attendance
-  let attendanceSql = `
-    SELECT a.id as attendance_id, a.user_id, a.batch_id, a.session_id, a.session_date, a.status as attendance_status, a.remarks
-    FROM attendance a
-    WHERE a.user_id IN (${inClause})
-  `;
-  const attendanceParams = [];
-  if (sinceTimestamp) {
-    attendanceSql += ' AND a.created_at >= ?';
-    attendanceParams.push(sinceTimestamp);
-  }
-  attendanceSql += ` ORDER BY a.session_date DESC LIMIT ${parseInt(limit, 10)}`;
+  let attendance = [];
+  if (userIds.length > 0) {
+    const userPlaceholders = userIds.map(() => '?').join(',');
+    let attendanceSql = `
+      SELECT a.id as attendance_id, a.user_id, a.batch_id, a.session_id, a.session_date, a.status as attendance_status, a.remarks
+      FROM attendance a
+      WHERE a.user_id IN (${userPlaceholders})
+    `;
+    const attendanceParams = [...userIds];
+    if (sinceTimestamp) {
+      attendanceSql += ' AND a.created_at >= ?';
+      attendanceParams.push(sinceTimestamp);
+    }
+    attendanceSql += ` ORDER BY a.session_date DESC LIMIT ?`;
+    attendanceParams.push(parseInt(limit, 10));
 
-  const attendanceRows = await query(attendanceSql, attendanceParams);
-  const attendance = [];
-  for (const a of attendanceRows) {
-    const cgStudentId = userToCgMap.get(a.user_id);
-    if (!cgStudentId) continue;
-    attendance.push({
-      attendance_id: a.attendance_id,
-      student_id: cgStudentId,
-      trainx_user_id: a.user_id,
-      batch_id: a.batch_id,
-      session_id: a.session_id,
-      session_date: a.session_date,
-      status: a.attendance_status,
-      remarks: a.remarks,
-    });
+    const attendanceRows = await query(attendanceSql, attendanceParams);
+    for (const a of (attendanceRows || [])) {
+      const cgStudentId = userToCgMap.get(a.user_id);
+      if (!cgStudentId) continue;
+      attendance.push({
+        attendance_id: a.attendance_id,
+        student_id: cgStudentId,
+        trainx_user_id: a.user_id,
+        batch_id: a.batch_id,
+        session_id: a.session_id,
+        session_date: a.session_date,
+        status: a.attendance_status,
+        remarks: a.remarks,
+      });
+    }
   }
 
   // 5. Category 4: Assessments
-  const assessmentDefRows = await query(
-    `SELECT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
-     FROM assessments asm
-     WHERE asm.college_id IN (${collegeInClause})
-     ORDER BY asm.id ASC`
-  );
-  const assessments = (assessmentDefRows || []).map((a) => {
-    const totalMarks = parseFloat(a.total_marks) || 0;
-    const passMarks = parseFloat(a.pass_marks) || 0;
-    const passingPct = totalMarks > 0 ? Math.round((passMarks / totalMarks) * 100) : 60;
-    return {
-      assessment_id: a.assessment_id,
-      batch_id: a.batch_id,
-      title: a.title,
-      category: a.category,
-      total_marks: a.total_marks,
-      pass_marks: a.pass_marks,
-      passing_percentage: passingPct,
-    };
-  });
+  // Uses actual MySQL schema: total_marks, pass_marks (passing_percentage is computed dynamically)
+  let assessments = [];
+  if (collegeIds.length > 0) {
+    const collegePlaceholders = collegeIds.map(() => '?').join(',');
+    const assessmentDefRows = await query(
+      `SELECT asm.id as assessment_id, asm.college_id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
+       FROM assessments asm
+       WHERE asm.college_id IN (${collegePlaceholders}) OR asm.college_id IS NULL
+       ORDER BY asm.id ASC`,
+      collegeIds
+    );
+    assessments = (assessmentDefRows || []).map((a) => {
+      const totalMarks = parseFloat(a.total_marks) || 0;
+      const passMarks = parseFloat(a.pass_marks) || 0;
+      const passingPct = totalMarks > 0 ? Math.round((passMarks / totalMarks) * 100) : 60;
+      return {
+        assessment_id: a.assessment_id,
+        batch_id: a.batch_id,
+        title: a.title,
+        category: a.category,
+        total_marks: a.total_marks,
+        pass_marks: a.pass_marks,
+        passing_percentage: passingPct,
+      };
+    });
+  }
 
   // 6. Category 5: Assessment Results
-  let attemptSql = `
-    SELECT 
-      att.id as attempt_id, 
-      att.user_id, 
-      att.assessment_id, 
-      att.score, 
-      COALESCE(att.total_questions, 0) as total_questions, 
-      COALESCE(att.correct_count, att.correct_answers, 0) as attempted_questions, 
-      COALESCE(att.correct_count, att.correct_answers, 0) as correct_count, 
-      COALESCE(att.submitted_at, att.completed_at, att.started_at, CURRENT_TIMESTAMP) as attempt_date
-    FROM assessment_attempts att
-    WHERE att.user_id IN (${inClause})
-  `;
-  const attemptParams = [];
-  if (sinceTimestamp) {
-    attemptSql += ' AND COALESCE(att.submitted_at, att.completed_at, att.started_at) >= ?';
-    attemptParams.push(sinceTimestamp);
-  }
-  attemptSql += ` ORDER BY COALESCE(att.submitted_at, att.completed_at, att.started_at) DESC LIMIT ${parseInt(limit, 10)}`;
+  // LEFT JOINs assessments table to ensure student attempts are never dropped even if an assessment is unassigned.
+  // Computes score, max_score, passing_score, passing_percentage, and pass/fail status safely.
+  let assessment_results = [];
+  if (userIds.length > 0) {
+    const userPlaceholders = userIds.map(() => '?').join(',');
+    let attemptSql = `
+      SELECT 
+        att.id as attempt_id, 
+        att.user_id, 
+        att.assessment_id, 
+        COALESCE(att.marks_obtained, att.score, 0) as score,
+        COALESCE(att.total_marks, asm.total_marks, 100) as max_score,
+        COALESCE(asm.pass_marks, 0) as passing_score,
+        ROUND(IF(COALESCE(asm.total_marks, 0) > 0, (COALESCE(asm.pass_marks, 0) / asm.total_marks) * 100, 60.00), 2) as passing_percentage,
+        COALESCE(att.percentage, ROUND(IF(COALESCE(asm.total_marks, 0) > 0, (COALESCE(att.marks_obtained, att.score, 0) / asm.total_marks) * 100, 0), 2)) as percentage,
+        CASE WHEN COALESCE(att.marks_obtained, att.score, 0) >= COALESCE(asm.pass_marks, 0) THEN 'passed' ELSE 'failed' END as status,
+        IF(COALESCE(att.marks_obtained, att.score, 0) >= COALESCE(asm.pass_marks, 0), 1, 0) as passed,
+        COALESCE(att.total_questions, 0) as total_questions, 
+        COALESCE(att.correct_count, att.correct_answers, 0) as attempted_questions, 
+        COALESCE(att.correct_count, att.correct_answers, 0) as correct_count, 
+        COALESCE(att.submitted_at, att.completed_at, att.started_at, CURRENT_TIMESTAMP) as attempt_date
+      FROM assessment_attempts att
+      LEFT JOIN assessments asm ON asm.id = att.assessment_id
+      WHERE att.user_id IN (${userPlaceholders})
+    `;
+    const attemptParams = [...userIds];
+    if (sinceTimestamp) {
+      attemptSql += ' AND COALESCE(att.submitted_at, att.completed_at, att.started_at) >= ?';
+      attemptParams.push(sinceTimestamp);
+    }
+    attemptSql += ` ORDER BY COALESCE(att.submitted_at, att.completed_at, att.started_at) DESC LIMIT ?`;
+    attemptParams.push(parseInt(limit, 10));
 
-  const attemptRows = await query(attemptSql, attemptParams);
-  const assessment_results = [];
-  for (const att of attemptRows) {
-    const cgStudentId = userToCgMap.get(att.user_id);
-    if (!cgStudentId) continue;
-    assessment_results.push({
-      attempt_id: att.attempt_id,
-      student_id: cgStudentId,
-      trainx_user_id: att.user_id,
-      assessment_id: att.assessment_id,
-      score: att.score,
-      total_questions: att.total_questions,
-      attempted_questions: att.attempted_questions,
-      correct_count: att.correct_count,
-      attempt_date: att.attempt_date,
-    });
+    const attemptRows = await query(attemptSql, attemptParams);
+    for (const att of (attemptRows || [])) {
+      const cgStudentId = userToCgMap.get(att.user_id);
+      if (!cgStudentId) continue;
+      assessment_results.push({
+        attempt_id: att.attempt_id,
+        student_id: cgStudentId,
+        trainx_user_id: att.user_id,
+        assessment_id: att.assessment_id,
+        score: att.score,
+        max_score: att.max_score,
+        passing_score: att.passing_score,
+        passing_percentage: att.passing_percentage,
+        percentage: att.percentage,
+        status: att.status,
+        passed: Boolean(att.passed),
+        total_questions: att.total_questions,
+        attempted_questions: att.attempted_questions,
+        correct_count: att.correct_count,
+        attempt_date: att.attempt_date,
+      });
+    }
   }
 
   // 7. Category 6: Student Progress
@@ -251,6 +289,18 @@ export async function collectTrainingExportRecords(options = {}) {
     assessment_results.length +
     student_progress.length;
 
+  let resolvedExternalCollegeId = null;
+  const targetColId = collegeId || (collegeIdsSet.size === 1 ? Array.from(collegeIdsSet)[0] : null);
+  if (targetColId) {
+    const colRows = await query(
+      'SELECT id, code, career_gateway_college_id FROM colleges WHERE id = ? OR career_gateway_college_id = ? LIMIT 1',
+      [isNaN(Number(targetColId)) ? -1 : Number(targetColId), String(targetColId)]
+    );
+    if (colRows && colRows.length > 0) {
+      resolvedExternalCollegeId = colRows[0].career_gateway_college_id || colRows[0].code || String(colRows[0].id);
+    }
+  }
+
   return {
     data: {
       batches,
@@ -262,5 +312,7 @@ export async function collectTrainingExportRecords(options = {}) {
     },
     total: grandTotal,
     studentsCount: mappings.length,
+    resolvedCollegeId: resolvedExternalCollegeId,
+    collegeCount: collegeIdsSet.size,
   };
 }

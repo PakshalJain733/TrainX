@@ -2,7 +2,10 @@ import {
   provisionStudentFromCareerGateway,
   revokeStudentEligibility,
 } from '../services/studentProvisioning.service.js';
-import { consumeAccountActivation } from '../services/accountActivation.service.js';
+import {
+  consumeAccountActivation,
+  resendAccountActivation,
+} from '../services/accountActivation.service.js';
 import { sendSuccess, sendError } from '../../../../utils/response.js';
 
 /**
@@ -128,5 +131,22 @@ export async function handleActivateAccount(req, res, next) {
     });
   } catch (err) {
     return sendError(res, err.message, 400);
+  }
+}
+
+/**
+ * POST /api/integrations/career-gateway/resend-activation
+ * Public endpoint to request a fresh activation link.
+ */
+export async function handleResendActivation(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return sendError(res, 'Email address is required', 400);
+    }
+    const result = await resendAccountActivation(email);
+    return sendSuccess(res, result.message, { success: true });
+  } catch (err) {
+    next(err);
   }
 }

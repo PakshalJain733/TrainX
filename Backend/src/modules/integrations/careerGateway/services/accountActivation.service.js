@@ -141,3 +141,41 @@ export async function consumeAccountActivation(rawToken, newPassword) {
     message: 'Account successfully activated! You can now log in.',
   };
 }
+
+/**
+ * Resends an activation email to a provisioned student whose token expired or was lost.
+ * Constant-time / generic response prevents user enumeration.
+ */
+export async function resendAccountActivation(email) {
+  const genericMessage = 'If an eligible pending account exists for this email, an activation link has been sent.';
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return { success: true, message: genericMessage };
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const [user] = await query(
+    `SELECT u.id, u.name, u.email, u.source_system, u.password_hash, u.is_active
+     FROM users u
+     WHERE LOWER(u.email) = ?
+     LIMIT 1`,
+    [cleanEmail]
+  );
+
+  // If user does not exist or has already set their password, return generic message
+  if (!user || (user.password_hash && user.password_hash.trim().length > 0 && user.is_active === 1)) {
+    return { success: true, message: genericMessage };
+  }
+
+  // Create fresh activation token (invalidates older unused tokens)
+  const { rawToken } = await createAccountActivation(user.id);
+
+  // Dispatch email
+  await sendActivationEmail({ to: user.email, name: user.name, rawToken }).catch((err) => {
+    console.warn(`[Activation Notice] Resend email failed for ${cleanEmail}: ${err.message}`);
+  });
+
+  return {
+    success: true,
+    message: genericMessage,
+  };
+}

@@ -62,11 +62,45 @@ export async function executeDailyTrainingSync(options = {}) {
     const sinceTimestamp = checkpoint?.last_successful_sync_at || null;
 
     // 3. Collect categorized training records (6 arrays)
-    const { data, total, studentsCount } = await collectTrainingExportRecords({
+    const { data, total, studentsCount, resolvedCollegeId } = await collectTrainingExportRecords({
       sinceTimestamp,
       collegeId,
       limit: 1000,
     });
+
+    // Resolve explicit non-null tenant identifier for Career Gateway export
+    let targetExternalCollegeId = null;
+
+    if (collegeId) {
+      const colRows = await query(
+        'SELECT career_gateway_college_id, code FROM colleges WHERE id = ? OR career_gateway_college_id = ? OR code = ? LIMIT 1',
+        [isNaN(Number(collegeId)) ? -1 : Number(collegeId), String(collegeId), String(collegeId)]
+      );
+      if (colRows && colRows.length > 0) {
+        targetExternalCollegeId = colRows[0].career_gateway_college_id || colRows[0].code || String(collegeId);
+      } else {
+        targetExternalCollegeId = String(collegeId);
+      }
+    } else if (process.env.CAREER_GATEWAY_COLLEGE_ID) {
+      targetExternalCollegeId = process.env.CAREER_GATEWAY_COLLEGE_ID.trim();
+    } else if (resolvedCollegeId) {
+      targetExternalCollegeId = resolvedCollegeId;
+    } else {
+      const defaultCols = await query(
+        'SELECT career_gateway_college_id, code FROM colleges WHERE career_gateway_college_id IS NOT NULL LIMIT 2'
+      );
+      if (defaultCols.length === 1) {
+        targetExternalCollegeId = defaultCols[0].career_gateway_college_id;
+      }
+    }
+
+    if (!targetExternalCollegeId && total > 0) {
+      const tenantErr = new Error(
+        'Unresolved college tenant for Career Gateway export: external college_id could not be resolved. Configure CAREER_GATEWAY_COLLEGE_ID or provide a tenant-scoped collegeId.'
+      );
+      console.error(`[Sync Worker Error] ${tenantErr.message}`);
+      throw tenantErr;
+    }
 
     // 4. Create batch audit record
     const batchInsert = await query(
@@ -127,7 +161,7 @@ export async function executeDailyTrainingSync(options = {}) {
       export_id: exportId,
       generated_at: new Date().toISOString(),
       since: sinceTimestamp ? new Date(sinceTimestamp).toISOString() : null,
-      college_id: collegeId ?? null,
+      college_id: targetExternalCollegeId || null,
       students_count: studentsCount,
       records_count: total,
       data: {

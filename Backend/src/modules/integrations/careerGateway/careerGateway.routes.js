@@ -8,6 +8,7 @@ import {
   handleProvisionStudents,
   handleUpdateEligibility,
   handleActivateAccount,
+  handleResendActivation,
   handleDeactivateStudent,
 } from './controllers/careerGatewayProvisioning.controller.js';
 import {
@@ -66,6 +67,7 @@ router.patch('/students/:studentId/eligibility', m2mProvisioningRateLimiter, aut
 
 // SEC-05: strict rate limiting to prevent bcrypt compute exhaustion attacks
 router.post('/activate-account', activationRateLimiter, handleActivateAccount);
+router.post('/resend-activation', activationRateLimiter, handleResendActivation);
 
 // ============================================================================
 // 3. Admin Integration Monitoring & Manual Trigger
