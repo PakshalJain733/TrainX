@@ -5,6 +5,15 @@ import { getRelatedCollegeIds } from '../models/user.model.js';
 import { query } from '../config/db.js';
 import { getMentorAssignedBatchIds } from './mentor.controller.js';
 
+export function generateAlphaNumericCode(length = 8) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 // Auto-initialize DB tables if not present
 let tablesInitialized = false;
 async function ensureTables() {
@@ -244,6 +253,11 @@ export const getBatches = async (req, res, next) => {
 
       return {
         ...b,
+        code: b.code || b.join_code,
+        joinCode: b.join_code || b.code,
+        join_code: b.join_code || b.code,
+        codeExpiresAt: b.code_expires_at ? Number(b.code_expires_at) : null,
+        code_expires_at: b.code_expires_at ? Number(b.code_expires_at) : null,
         collegeId: b.college_id || 1,
         departmentId: b.department_id || 1,
         collegeName: b.collegeName || b.college_name || 'College Campus',
@@ -277,11 +291,11 @@ export const createBatch = async (req, res, next) => {
   try {
     await ensureTables();
     const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, trainer_id, schedule, topic, description, date, year, division } = req.body;
-    if (!name || (!code && !join_code)) {
-      return sendError(res, 'Batch Name and Join Code are required', 400);
+    if (!name || (!name.trim())) {
+      return sendError(res, 'Batch Name is required', 400);
     }
 
-    const batchCode = (code || join_code).trim();
+    const batchCode = ((code || join_code || '').toString().trim().toUpperCase()) || generateAlphaNumericCode(8);
     const batchTrainer = (trainer || mentor || 'Faculty Instructor').trim();
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
 
@@ -402,34 +416,78 @@ export const updateBatch = async (req, res, next) => {
   try {
     await ensureTables();
     const { id } = req.params;
-    const { name, code, trainer, schedule, status, topic, description, date } = req.body;
+    const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+    const {
+      name,
+      code,
+      join_code,
+      joinCode,
+      code_expires_at,
+      codeExpiresAt,
+      trainer,
+      mentor,
+      schedule,
+      status,
+      topic,
+      description,
+      date,
+      year,
+      division,
+    } = req.body;
+
+    const newCode = (code || join_code || joinCode || '').toString().trim() || null;
+    const rawExpires = code_expires_at !== undefined ? code_expires_at : codeExpiresAt;
+    const newExpiresAt = (rawExpires !== undefined && rawExpires !== null && rawExpires !== '')
+      ? String(rawExpires)
+      : (newCode ? String(Date.now() + 5 * 60 * 1000) : null);
+    const effectiveTrainer = (trainer || mentor || '').trim() || null;
 
     await query(
       `UPDATE batches 
        SET name = COALESCE(?, name), 
            code = COALESCE(?, code), 
            join_code = COALESCE(?, join_code), 
+           code_expires_at = COALESCE(?, code_expires_at),
            trainer = COALESCE(?, trainer), 
            schedule = COALESCE(?, schedule), 
            status = COALESCE(?, status),
            topic = COALESCE(?, topic),
            description = COALESCE(?, description),
-           date = COALESCE(?, date)
-       WHERE id = ? OR code = ?`,
-      [name, code, code, trainer, schedule, status, topic, description, date, id, id]
+           date = COALESCE(?, date),
+           year = COALESCE(?, year),
+           division = COALESCE(?, division),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? OR id = ? OR code = ? OR join_code = ?`,
+      [
+        name ? name.trim() : null,
+        newCode,
+        newCode,
+        newExpiresAt,
+        effectiveTrainer,
+        schedule ? schedule.trim() : null,
+        status || null,
+        topic || null,
+        description || null,
+        date || null,
+        year || null,
+        division || null,
+        id,
+        cleanId,
+        id,
+        id,
+      ]
     );
 
-    if (trainer) {
+    if (effectiveTrainer) {
       try {
         const [trainerUser] = await query(
-          "SELECT id, name FROM users WHERE name = ? AND role = 'trainer' LIMIT 1",
-          [trainer]
+          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role = 'trainer' LIMIT 1",
+          [effectiveTrainer, effectiveTrainer]
         );
         if (trainerUser) {
-          const cleanId = String(id).replace(/[^0-9]/g, '') || id;
           await query(
-            `UPDATE batches SET trainer_id = ? WHERE id = ? OR code = ?`,
-            [trainerUser.id, id, id]
+            `UPDATE batches SET trainer_id = ? WHERE id = ? OR id = ? OR code = ? OR join_code = ?`,
+            [trainerUser.id, id, cleanId, id, id]
           );
           await query(
             `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
@@ -441,9 +499,86 @@ export const updateBatch = async (req, res, next) => {
       }
     }
 
-    const [updatedBatch] = await query('SELECT * FROM batches WHERE id = ? OR code = ? LIMIT 1', [id, id]);
+    const [updatedBatch] = await query(
+      'SELECT * FROM batches WHERE id = ? OR id = ? OR code = ? OR join_code = ? LIMIT 1',
+      [id, cleanId, id, id]
+    );
 
-    return sendSuccess(res, 'Batch updated successfully in database', updatedBatch || { id, name, trainer, schedule, status, topic, description, date });
+    if (updatedBatch) {
+      updatedBatch.code = updatedBatch.code || updatedBatch.join_code || newCode;
+      updatedBatch.joinCode = updatedBatch.join_code || updatedBatch.code || newCode;
+      updatedBatch.join_code = updatedBatch.join_code || updatedBatch.code || newCode;
+      updatedBatch.codeExpiresAt = updatedBatch.code_expires_at ? Number(updatedBatch.code_expires_at) : null;
+      updatedBatch.code_expires_at = updatedBatch.code_expires_at ? Number(updatedBatch.code_expires_at) : null;
+    }
+
+    return sendSuccess(res, 'Batch updated successfully in database', updatedBatch || {
+      id,
+      name,
+      code: newCode,
+      joinCode: newCode,
+      join_code: newCode,
+      codeExpiresAt: newExpiresAt ? Number(newExpiresAt) : null,
+      code_expires_at: newExpiresAt,
+      trainer: effectiveTrainer,
+      schedule,
+      status,
+      topic,
+      description,
+      date,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const regenerateBatchCode = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+
+    const [batch] = await query(
+      'SELECT * FROM batches WHERE id = ? OR id = ? OR code = ? OR join_code = ? LIMIT 1',
+      [id, cleanId, id, id]
+    );
+
+    if (!batch) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    let newCode = (req.body.code || req.body.join_code || req.body.joinCode || '').toString().trim().toUpperCase();
+    if (!newCode) {
+      newCode = generateAlphaNumericCode(8);
+    }
+
+    const durationMs = 5 * 60 * 1000;
+    const rawExpires = req.body.code_expires_at !== undefined ? req.body.code_expires_at : req.body.codeExpiresAt;
+    const expiresAt = (rawExpires !== undefined && rawExpires !== null && rawExpires !== '')
+      ? String(rawExpires)
+      : String(Date.now() + durationMs);
+
+    await query(
+      `UPDATE batches 
+       SET code = ?, 
+           join_code = ?, 
+           code_expires_at = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [newCode, newCode, expiresAt, batch.id]
+    );
+
+    const [updated] = await query('SELECT * FROM batches WHERE id = ? LIMIT 1', [batch.id]);
+
+    return sendSuccess(res, 'Batch code regenerated and updated in database successfully', {
+      ...updated,
+      id: updated?.id || batch.id,
+      code: updated?.code || newCode,
+      joinCode: updated?.join_code || updated?.code || newCode,
+      join_code: updated?.join_code || updated?.code || newCode,
+      code_expires_at: updated?.code_expires_at || expiresAt,
+      codeExpiresAt: Number(updated?.code_expires_at || expiresAt),
+    });
   } catch (error) {
     next(error);
   }
@@ -1157,6 +1292,11 @@ export const getBatchById = async (req, res, next) => {
       const b = rows[0];
       return sendSuccess(res, 'Batch retrieved successfully', {
         ...b,
+        code: b.code || b.join_code,
+        joinCode: b.join_code || b.code,
+        join_code: b.join_code || b.code,
+        codeExpiresAt: b.code_expires_at ? Number(b.code_expires_at) : null,
+        code_expires_at: b.code_expires_at ? Number(b.code_expires_at) : null,
         collegeId: b.college_id || 1,
         departmentId: b.department_id || 1,
         collegeName: b.collegeName || 'College Campus',

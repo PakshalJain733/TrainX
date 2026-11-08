@@ -22,6 +22,7 @@ import {
   getBatchAllSubmissions,
   updateTaskSubmissionFeedback,
   getBatchTaskReport,
+  regenerateBatchCode,
 } from '../controllers/batch.controller.js';
 
 const router = Router();
@@ -52,6 +53,8 @@ router.put('/tasks/:taskId', taskStaff, updateBatchTask);
 router.delete('/:id/tasks/:taskId', taskStaff, deleteBatchTask);
 router.delete('/tasks/:taskId', taskStaff, deleteBatchTask);
 router.get('/:id', getBatchById);
+router.post('/:id/regenerate-code', batchManager, regenerateBatchCode);
+router.patch('/:id/regenerate-code', batchManager, regenerateBatchCode);
 router.put('/:id', batchManager, updateBatch);
 router.delete('/:id', batchManager, deleteBatch);
 

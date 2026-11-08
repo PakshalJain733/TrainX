@@ -5,11 +5,13 @@ import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
 import { EVENTS } from '../../../utils/sharedStore';
 import "../Styles/SA_Batches.css";
 
-const generateJoinCode = (batchName = "") => {
-  const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
-  const prefix = clean ? clean.slice(0, 4).toUpperCase() : "BTCH";
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${randomPart}`;
+const generateJoinCode = (length = 8) => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 import CustomSelect from '../../../components/ui/CustomSelect';

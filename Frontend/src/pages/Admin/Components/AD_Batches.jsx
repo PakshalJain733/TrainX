@@ -104,11 +104,14 @@ import { apiFetch } from "../../../utils/api";
 
 const CODE_DURATION_MS = 5 * 60 * 1000; // 5 minutes validity for batch join codes
 
-const generateJoinCode = (batchName = "") => {
-  const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
-  const prefix = clean ? clean.slice(0, 4).toUpperCase() : "BTCH";
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${randomPart}`;
+const generateJoinCode = (length = 8) => {
+  // Generate a clean 8-character uppercase alphanumeric code (e.g. 8K2P9X4M)
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 const getInitials = (name) => {
@@ -244,20 +247,20 @@ export default function AdminBatches() {
     if (nextState) {
       fetchTrainers();
       if (!joinCode) {
-        setJoinCode(generateJoinCode(name));
+        setJoinCode(generateJoinCode());
       }
     }
   };
 
   const handleGenerateFormCode = () => {
-    setJoinCode(generateJoinCode(name || "BATCH"));
+    setJoinCode(generateJoinCode());
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSubmitting(true);
-    const finalCode = (joinCode || "").trim() || generateJoinCode(name);
+    const finalCode = (joinCode || "").trim() || generateJoinCode();
     const expiresAt = Date.now() + CODE_DURATION_MS;
 
     const newBatchObj = {
@@ -323,11 +326,12 @@ export default function AdminBatches() {
     const newExpiresAt = Date.now() + CODE_DURATION_MS;
 
     // Optimistically update UI
-    setBatches(
-      batches.map((b) =>
+    setBatches((prev) =>
+      prev.map((b) =>
         b.id === id
           ? {
               ...b,
+              code: newCode,
               joinCode: newCode,
               join_code: newCode,
               codeExpiresAt: newExpiresAt,
@@ -337,14 +341,65 @@ export default function AdminBatches() {
       )
     );
 
+    // If enlarged modal is active for this batch, update its code immediately
+    setEnlargedBatchCode((prev) =>
+      prev && (prev.batchId === id || prev.id === id || prev.name === batchName)
+        ? { ...prev, code: newCode }
+        : prev
+    );
+
     try {
-      await apiFetch(`/batches/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          join_code: newCode,
-          code_expires_at: newExpiresAt,
-        }),
-      });
+      const payload = {
+        code: newCode,
+        join_code: newCode,
+        joinCode: newCode,
+        code_expires_at: newExpiresAt,
+        codeExpiresAt: newExpiresAt,
+      };
+
+      const res = await apiFetch(`/batches/${id}/regenerate-code`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }).catch(() =>
+        apiFetch(`/batches/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        })
+      );
+
+      if (res && (res.data || res.success)) {
+        const saved = res.data || {};
+        const savedCode = saved.join_code || saved.code || saved.joinCode || newCode;
+        const savedExpires = saved.code_expires_at || saved.codeExpiresAt || newExpiresAt;
+
+        setBatches((prev) =>
+          prev.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  ...saved,
+                  code: savedCode,
+                  joinCode: savedCode,
+                  join_code: savedCode,
+                  codeExpiresAt: Number(savedExpires),
+                  code_expires_at: Number(savedExpires),
+                }
+              : b
+          )
+        );
+
+        setEnlargedBatchCode((prev) =>
+          prev && (prev.batchId === id || prev.id === id || prev.name === batchName)
+            ? { ...prev, code: savedCode }
+            : prev
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(EVENTS.BATCH_UPDATED, {
+            detail: { id, code: savedCode, join_code: savedCode, joinCode: savedCode },
+          })
+        );
+      }
     } catch (err) {
       console.error("Failed to update regenerated code in DB:", err);
     }
@@ -1697,8 +1752,8 @@ export default function AdminBatches() {
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
-                      if (!joinCode || joinCode.startsWith("BTCH") || joinCode.startsWith("BATC")) {
-                        setJoinCode(generateJoinCode(e.target.value));
+                      if (!joinCode) {
+                        setJoinCode(generateJoinCode());
                       }
                     }}
                     placeholder="e.g. Node.js Backend - Batch A"
@@ -1745,7 +1800,7 @@ export default function AdminBatches() {
                       className="form-input-admin"
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. NODE-A7X9"
+                      placeholder="e.g. 8K2P9X4M"
                     />
                     <button type="button" className="batch-code-gen-btn" onClick={handleGenerateFormCode} title="Auto-generate join code">
                       <Sparkles size={14} /> Generate Code
@@ -1866,7 +1921,7 @@ export default function AdminBatches() {
                           <button
                             type="button"
                             className="batch-enlarge-icon-btn"
-                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
+                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || b.join_code || b.code || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor, batchId: b.id })}
                             title="Enlarge Join Code for presentation"
                             aria-label="Enlarge Join Code"
                           >
@@ -1888,40 +1943,38 @@ export default function AdminBatches() {
                       <div className="batch-join-code-display">
                         <span 
                           className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}
-                          onClick={() => setEnlargedBatchCode({ code: b.joinCode || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor })}
+                          onClick={() => setEnlargedBatchCode({ code: b.joinCode || b.join_code || b.code || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor, batchId: b.id })}
                           title="Click to enlarge join code"
                           style={{ cursor: "pointer" }}
                         >
-                          {b.joinCode || "NO-CODE"}
+                          {b.joinCode || b.join_code || b.code || "NO-CODE"}
                         </span>
                         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          {timerInfo.expired ? (
-                            <button
-                              type="button"
-                              className="batch-renew-code-btn"
-                              onClick={() => handleRegenerateCode(b.id, b.name)}
-                              title="Generate a new active 5-minute code"
-                            >
-                              <RefreshCw size={12} /> Renew Code
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
-                              onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
-                              title="Copy Code to Clipboard"
-                            >
-                              {copiedId === b.id ? (
-                                <>
-                                  <Check size={13} /> Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy size={13} /> Copy Code
-                                </>
-                              )}
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
+                            onClick={() => handleCopyCode(b.id, b.joinCode || b.join_code || b.code, timerInfo.expired)}
+                            title="Copy Code to Clipboard"
+                          >
+                            {copiedId === b.id ? (
+                              <>
+                                <Check size={13} /> Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} /> Copy Code
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="batch-renew-code-btn"
+                            onClick={() => handleRegenerateCode(b.id, b.name)}
+                            title={timerInfo.expired ? "Generate a new active 5-minute code" : "Regenerate a new join code in database"}
+                            style={!timerInfo.expired ? { padding: "6px 10px", fontSize: "11px", background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1" } : {}}
+                          >
+                            <RefreshCw size={12} /> {timerInfo.expired ? "Renew Code" : "Regenerate"}
+                          </button>
                         </div>
                       </div>
                       {timerInfo.expired && (
@@ -2118,7 +2171,7 @@ export default function AdminBatches() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: "flex", gap: "12px", width: "100%" }}>
+            <div style={{ display: "flex", gap: "12px", width: "100%", flexWrap: "wrap" }}>
               <button
                 type="button"
                 onClick={() => {
@@ -2150,6 +2203,30 @@ export default function AdminBatches() {
                   <><Copy size={16} /> Copy Join Code</>
                 )}
               </button>
+              {enlargedBatchCode.batchId && (
+                <button
+                  type="button"
+                  onClick={() => handleRegenerateCode(enlargedBatchCode.batchId, enlargedBatchCode.name)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px 18px",
+                    background: "#eff6ff",
+                    color: "#2563eb",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                  title="Generate and update new code in database"
+                >
+                  <RefreshCw size={15} /> Regenerate
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setEnlargedBatchCode(null)}
