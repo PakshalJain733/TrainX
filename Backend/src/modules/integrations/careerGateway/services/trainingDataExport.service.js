@@ -326,11 +326,11 @@ export async function collectTrainingExportRecords(options = {}) {
       `SELECT 
          COUNT(*) as total_modules,
          SUM(CASE WHEN ri.status = 'completed' THEN 1 ELSE 0 END) as completed_modules,
-         MAX(ri.created_at) as last_roadmap_activity
+         MAX(COALESCE(r.updated_at, r.created_at)) as last_roadmap_activity
        FROM roadmaps r
        JOIN roadmap_items ri ON ri.roadmap_id = r.id
-       WHERE r.student_id = ?`,
-      [userId]
+       WHERE (r.student_id = ? OR r.user_id = ?)`,
+      [userId, userId]
     );
 
     // Task submissions completion
@@ -338,7 +338,7 @@ export async function collectTrainingExportRecords(options = {}) {
       `SELECT 
          COUNT(*) as total_tasks_submitted,
          SUM(CASE WHEN ts.status IN ('completed', 'accepted', 'approved') THEN 1 ELSE 0 END) as approved_tasks,
-         MAX(ts.created_at) as last_task_activity
+         MAX(ts.submitted_at) as last_task_activity
        FROM task_submissions ts
        WHERE ts.user_id = ?`,
       [userId]

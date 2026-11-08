@@ -756,6 +756,8 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN completed_topics JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN quizzes INT DEFAULT 0`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN exercises INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) { }
@@ -931,6 +933,8 @@ export async function initializeDatabase() {
         FOREIGN KEY (task_id) REFERENCES batch_tasks(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    try { await conn.query(`ALTER TABLE task_submissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
 
     // 30. Ensure Student Quiz Completions Table
     await conn.query(`
