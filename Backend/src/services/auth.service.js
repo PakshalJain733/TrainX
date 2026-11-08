@@ -20,6 +20,7 @@ import {
   updateUserRememberMe,
   findCollegeByAdminEmail,
   findCollegeByEmailDomain,
+  getCollegeForUser,
   toSafeUser,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
@@ -725,6 +726,9 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
   await updateUserRememberMe(user.id, rememberMe);
 
   const studentProfile = await getStudentByUserId(user.id);
+  const collegeInfo = await getCollegeForUser(user.id, user, studentProfile);
+  const collegeName = collegeInfo?.name || '';
+  const collegeId = collegeInfo?.id || user.college_id || null;
 
   const token = generateFinalToken(user);
 
@@ -736,6 +740,9 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      college: collegeName,
+      college_name: collegeName,
+      college_id: collegeId,
       remember_me: Boolean(rememberMe),
       department: studentProfile?.department || '',
       year: studentProfile?.year || '',
@@ -746,7 +753,12 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
         (user.is_profile_updated || studentProfile?.is_profile_updated) &&
         ((studentProfile?.gender && studentProfile?.city) || (user.gender && user.city) || (studentProfile?.skills && String(studentProfile.skills).trim().length > 0) || (studentProfile?.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) || (studentProfile?.target_track && String(studentProfile.target_track).trim().length > 0))
       ),
-      studentProfile,
+      studentProfile: {
+        ...studentProfile,
+        college: collegeName,
+        college_name: collegeName,
+        college_id: collegeId,
+      },
     },
   };
 };
@@ -776,6 +788,9 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   await updateUserRememberMe(user.id, rememberMe);
 
   const studentProfile = await getStudentByUserId(user.id);
+  const collegeInfo = await getCollegeForUser(user.id, user, studentProfile);
+  const collegeName = collegeInfo?.name || '';
+  const collegeId = collegeInfo?.id || user.college_id || null;
 
   const safeUser = {
     id: user.id,
@@ -783,6 +798,9 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
     email: user.email,
     mobile_number: user.mobile_number,
     role: user.role,
+    college: collegeName,
+    college_name: collegeName,
+    college_id: collegeId,
     remember_me: Boolean(rememberMe),
     department: studentProfile?.department || '',
     year: studentProfile?.year || '',
@@ -794,7 +812,12 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
       studentProfile?.is_profile_updated ||
       (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
     ),
-    studentProfile,
+    studentProfile: {
+      ...studentProfile,
+      college: collegeName,
+      college_name: collegeName,
+      college_id: collegeId,
+    },
   };
 
   const primaryAuth = await finalizePrimaryAuthentication(user);

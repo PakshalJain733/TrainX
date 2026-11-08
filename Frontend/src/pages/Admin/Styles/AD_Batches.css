@@ -361,16 +361,17 @@
 .batch-copy-code-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   color: #334155;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .batch-copy-code-btn:hover {
@@ -388,10 +389,10 @@
 .batch-renew-code-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   border: none;
   border-radius: 6px;
@@ -399,12 +400,27 @@
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .batch-renew-code-btn:hover {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(220, 38, 38, 0.35);
+}
+
+.batch-renew-code-btn--active {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.batch-renew-code-btn--active:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: none !important;
 }
 
 .batch-enlarge-code-btn {

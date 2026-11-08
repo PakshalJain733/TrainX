@@ -72,6 +72,8 @@ const SAFE_USER_FIELDS = [
   'mobile_number',
   'role',
   'college_id',
+  'college_name',
+  'college',
   'department',
   'department_id',
   'gender',
@@ -243,6 +245,94 @@ export const findCollegeByEmailDomain = async (email) => {
   }
 
   return null;
+};
+
+/**
+ * Resolves the college for any user / student from the database.
+ * Tries: user.college_id -> student.college_id -> batch.college_id -> training_program.college_id -> email domain -> secure_code_requests -> fallback active college
+ */
+export const getCollegeForUser = async (userId, userObj = null, studentProfileObj = null) => {
+  try {
+    let collegeId = userObj?.college_id || studentProfileObj?.college_id || null;
+
+    // 1. If collegeId exists, query colleges table directly
+    if (collegeId) {
+      const rows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [collegeId]);
+      if (rows && rows.length > 0) {
+        return rows[0];
+      }
+    }
+
+    // 2. Check users and students table in DB if not provided
+    if (!collegeId && userId) {
+      const uRows = await query('SELECT college_id, email FROM users WHERE id = ?', [userId]);
+      if (uRows && uRows.length > 0 && uRows[0].college_id) {
+        const cRows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [uRows[0].college_id]);
+        if (cRows && cRows.length > 0) return cRows[0];
+      }
+      const sRows = await query('SELECT college_id, batch_id FROM students WHERE user_id = ?', [userId]);
+      if (sRows && sRows.length > 0 && sRows[0].college_id) {
+        const cRows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [sRows[0].college_id]);
+        if (cRows && cRows.length > 0) return cRows[0];
+      }
+    }
+
+    // 3. Check student batch assignment or training enrollments
+    if (userId) {
+      const bRows = await query(
+        `SELECT c.id, c.name, c.code, c.domain, c.location FROM batches b
+         JOIN colleges c ON b.college_id = c.id
+         WHERE b.id = (SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL LIMIT 1)
+            OR b.id = (SELECT batch_id FROM training_enrollments WHERE student_user_id = ? AND batch_id IS NOT NULL ORDER BY id DESC LIMIT 1)
+         LIMIT 1`,
+        [userId, userId]
+      );
+      if (bRows && bRows.length > 0) return bRows[0];
+
+      const tpRows = await query(
+        `SELECT c.id, c.name, c.code, c.domain, c.location FROM training_enrollments te
+         JOIN training_programs tp ON tp.id = te.program_id
+         JOIN colleges c ON tp.college_id = c.id
+         WHERE te.student_user_id = ? AND tp.college_id IS NOT NULL
+         ORDER BY te.id DESC LIMIT 1`,
+        [userId]
+      );
+      if (tpRows && tpRows.length > 0) return tpRows[0];
+    }
+
+    // 4. Try matching college by email domain
+    const email = userObj?.email || (userId ? (await query('SELECT email FROM users WHERE id = ?', [userId]))?.[0]?.email : null);
+    if (email) {
+      const cDomain = await findCollegeByEmailDomain(email);
+      if (cDomain) return cDomain;
+    }
+
+    // 5. Try secure_code_requests
+    if (email) {
+      const scr = await query(
+        `SELECT college_name FROM secure_code_requests WHERE LOWER(email) = LOWER(?) AND college_name IS NOT NULL AND status != 'Rejected' ORDER BY id DESC LIMIT 1`,
+        [email]
+      );
+      if (scr && scr.length > 0 && scr[0].college_name) {
+        const reqName = scr[0].college_name.trim();
+        const cMatch = await query(
+          'SELECT id, name, code, domain, location FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+          [reqName, reqName]
+        );
+        if (cMatch && cMatch.length > 0) return cMatch[0];
+        return { id: null, name: reqName, code: '' };
+      }
+    }
+
+    // 6. Fallback to active college in DB
+    const defCol = await query('SELECT id, name, code, domain, location FROM colleges WHERE LOWER(status) = "active" OR status IS NULL ORDER BY id ASC LIMIT 1');
+    if (defCol && defCol.length > 0) return defCol[0];
+
+    return null;
+  } catch (err) {
+    console.warn('[User Model Warning] getCollegeForUser error:', err.message);
+    return null;
+  }
 };
 
 export const getDepartmentsByEmailDomain = async (email) => {

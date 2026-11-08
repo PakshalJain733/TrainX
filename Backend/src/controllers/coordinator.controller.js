@@ -742,10 +742,11 @@ export const createCoordinatorBroadcast = async (req, res, next) => {
       return sendError(res, 'Title and message are required', 400);
     }
 
+    const senderName = req.user?.name || req.user?.username || 'Coordinator';
     const result = await query(
-      `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [collegeId, title, message, message, target || 'Department Students', priority || 'General', userId]
+      `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by, created_by_name, sender_role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [collegeId, title, message, message, target || 'Department Students', priority || 'General Announcement', userId, senderName, 'Coordinator']
     );
 
     return sendSuccess(res, 'Broadcast announcement sent successfully', { id: result.insertId }, 201);

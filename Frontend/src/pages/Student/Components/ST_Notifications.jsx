@@ -30,15 +30,15 @@ export default function Notifications() {
 
       try {
         const res = await apiFetch("/student/notifications");
-        let broadcastMapped = [];
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          broadcastMapped = res.data.map((b) => ({
+        if (res && res.data && Array.isArray(res.data)) {
+          const broadcastMapped = res.data.map((b) => ({
             id: `broadcast-${b.id}`,
             title: `📢 [Notice] ${b.title}`,
-            body: b.message,
+            body: b.message || b.desc_text || '',
             target: b.target || 'All Batches',
             priority: b.priority || 'General Announcement',
             created_by_name: b.created_by_name || 'Admin',
+            sender_role: b.sender_role || 'Admin',
             time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
             category: "Broadcast",
             icon: Bell,
@@ -46,21 +46,19 @@ export default function Notifications() {
             iconBg: "#f5f3ff",
             unread: true,
           }));
+          setNotifications(broadcastMapped);
+          return;
         }
+      } catch (err) {
+        console.warn("[Notifications] Failed to load server notifications:", err);
+      }
+
+      if (sharedMapped.length > 0) {
         setNotifications((prev) => {
-          const allItems = [...sharedMapped, ...broadcastMapped];
           const existingIds = new Set(prev.map((p) => p.id));
-          const newNotifs = allItems.filter((n) => !existingIds.has(n.id));
+          const newNotifs = sharedMapped.filter((n) => !existingIds.has(n.id));
           return [...newNotifs, ...prev];
         });
-      } catch {
-        if (sharedMapped.length > 0) {
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const newNotifs = sharedMapped.filter((n) => !existingIds.has(n.id));
-            return [...newNotifs, ...prev];
-          });
-        }
       }
     };
 
@@ -191,7 +189,7 @@ export default function Notifications() {
                       )}
                       {item.created_by_name && (
                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#7e22ce', background: '#f3e8ff', padding: '2px 8px', borderRadius: '6px' }}>
-                          👤 By: {item.created_by_name}
+                          👤 By: {item.created_by_name}{item.sender_role ? ` • ${item.sender_role}` : ''}
                         </span>
                       )}
 

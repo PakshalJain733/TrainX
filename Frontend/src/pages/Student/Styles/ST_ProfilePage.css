@@ -634,7 +634,14 @@ input:checked + .profile-slider:before {
 .student-prof-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
 
 /* ── Profile Change Password Button Styles ── */
-.profile-change-pw-wrap,
+.profile-change-pw-wrap {
+  display: flex !important;
+  width: 100% !important;
+  margin-top: 18px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid #f1f5f9;
+}
+
 .profile-actions-wrapper {
   display: grid !important;
   grid-template-columns: 1.35fr 1fr !important;
@@ -646,7 +653,6 @@ input:checked + .profile-slider:before {
 }
 
 @media (max-width: 480px) {
-  .profile-change-pw-wrap,
   .profile-actions-wrapper {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
@@ -659,13 +665,13 @@ input:checked + .profile-slider:before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 9px 8px;
+  gap: 8px;
+  padding: 10px 16px;
   border-radius: 10px !important;
   border: none !important;
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
   color: #ffffff !important;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -676,8 +682,8 @@ input:checked + .profile-slider:before {
 
 .profile-change-pw-btn svg,
 .profile-change-pass-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   color: #ffffff !important;
   stroke: #ffffff !important;
   flex-shrink: 0;

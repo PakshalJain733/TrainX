@@ -1954,26 +1954,19 @@ export default function AdminBatches() {
                             type="button"
                             className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
                             onClick={() => handleCopyCode(b.id, b.joinCode || b.join_code || b.code, timerInfo.expired)}
-                            title="Copy Code to Clipboard"
+                            title={copiedId === b.id ? "Copied!" : "Copy Code"}
+                            aria-label="Copy Code"
                           >
-                            {copiedId === b.id ? (
-                              <>
-                                <Check size={13} /> Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={13} /> Copy Code
-                              </>
-                            )}
+                            {copiedId === b.id ? <Check size={14} /> : <Copy size={14} />}
                           </button>
                           <button
                             type="button"
-                            className="batch-renew-code-btn"
+                            className={`batch-renew-code-btn ${!timerInfo.expired ? "batch-renew-code-btn--active" : ""}`}
                             onClick={() => handleRegenerateCode(b.id, b.name)}
-                            title={timerInfo.expired ? "Generate a new active 5-minute code" : "Regenerate a new join code in database"}
-                            style={!timerInfo.expired ? { padding: "6px 10px", fontSize: "11px", background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1" } : {}}
+                            title={timerInfo.expired ? "Renew expired join code" : "Regenerate join code"}
+                            aria-label="Regenerate Join Code"
                           >
-                            <RefreshCw size={12} /> {timerInfo.expired ? "Renew Code" : "Regenerate"}
+                            <RefreshCw size={14} />
                           </button>
                         </div>
                       </div>

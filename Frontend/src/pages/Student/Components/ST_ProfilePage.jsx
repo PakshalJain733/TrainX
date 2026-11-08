@@ -156,9 +156,19 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const trackWrapperRef = useRef(null);
+  const redirectTimerRef = useRef(null);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [trackSearchFocus, setTrackSearchFocus] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -206,7 +216,7 @@ export default function ProfilePage() {
       skills: sp.skills || u.skills || "",
       profileCompleted: true,
       batch: sp.batch || u.batch || "",
-      college: u.college_name || u.college || sp.college_name || "Enterprise Partner Institution",
+      college: u.college_name || u.college || sp.college_name || sp.college || "",
       coordinator: "",
       mentor: "",
       track: sp.target_track || u.target_track || "",
@@ -258,8 +268,11 @@ export default function ProfilePage() {
             else if (rawYear === 'BE') derivedSem = 'Semester 7';
           }
 
+          const fetchedCollege = user.college_name || user.college || sp.college_name || sp.college || uStored.college_name || uStored.college || "";
+
           setForm((prev) => ({
             ...prev,
+            college: fetchedCollege || prev.college,
             name: user.name || prev.name,
             email: user.email || prev.email,
             phone: user.mobile_number || user.phone || prev.phone,
@@ -278,6 +291,15 @@ export default function ProfilePage() {
             notifWeeklyReport: sp.notif_weekly_report !== undefined ? Boolean(sp.notif_weekly_report) : prev.notifWeeklyReport,
             notifInterview: sp.notif_interview !== undefined ? Boolean(sp.notif_interview) : prev.notifInterview,
           }));
+
+          if (fetchedCollege) {
+            try {
+              const curStored = JSON.parse(sessionStorage.getItem("user") || "{}");
+              curStored.college = fetchedCollege;
+              curStored.college_name = fetchedCollege;
+              sessionStorage.setItem("user", JSON.stringify(curStored));
+            } catch {}
+          }
         }
       })
       .catch((err) => console.error("PROFILE FETCH ERROR:", err));
@@ -319,6 +341,7 @@ export default function ProfilePage() {
   const handleSave = async (e) => {
     e.preventDefault();
     setForm((prev) => ({ ...prev, profileCompleted: true }));
+    setIsSaving(true);
 
     try {
       const payload = {
@@ -366,13 +389,20 @@ export default function ProfilePage() {
       }
     } catch (err) {
       console.error("[ProfilePage] Save error:", err);
+    } finally {
+      setIsSaving(false);
     }
 
     setSaved(true);
     setIsEditing(false);
-    setTimeout(() => {
+
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+    }
+    redirectTimerRef.current = setTimeout(() => {
       setSaved(false);
-    }, 2000);
+      navigate("/student");
+    }, 2500);
   };
 
 
@@ -411,7 +441,7 @@ export default function ProfilePage() {
       {saved && (
         <div className="profile-alert-success">
           <CheckCircle2 size={18} />
-          <span>Profile saved successfully! Redirecting to Overview...</span>
+          <span>Profile updated successfully! Redirecting to Overview...</span>
         </div>
       )}
 
@@ -596,10 +626,9 @@ export default function ProfilePage() {
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
+                <Key size={14} />
                 <span>Change Password</span>
               </button>
-
-
             </div>
           </div>
         </div>
@@ -638,8 +667,21 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       className="profile-save-btn"
+                      disabled={isSaving}
                     >
-                      <Save size={15} /> Save Profile
+                      {isSaving ? (
+                        <>
+                          <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Saving...
+                        </>
+                      ) : saved ? (
+                        <>
+                          <Check size={15} /> Profile Updated
+                        </>
+                      ) : (
+                        <>
+                          <Save size={15} /> Save Profile
+                        </>
+                      )}
                     </button>
                   </>
                 )}

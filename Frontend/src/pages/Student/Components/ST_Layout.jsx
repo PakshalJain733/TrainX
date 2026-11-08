@@ -399,6 +399,7 @@ export default function StudentLayout() {
           target: b.target || "All Batches",
           priority: b.priority || "General Notice",
           created_by_name: b.created_by_name || "Admin",
+          sender_role: b.sender_role || "Admin",
         }));
 
         notifItems.push(...serverItems);

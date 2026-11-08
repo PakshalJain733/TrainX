@@ -42,6 +42,16 @@ export default function TrainingRegistrationPage() {
   const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
+    try {
+      const u = JSON.parse(sessionStorage.getItem("user") || "{}");
+      const c = u.college_name || u.college || "";
+      if (c) {
+        setFormData((prev) => ({ ...prev, college: c }));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     apiFetch("/departments")
       .then((res) => {
         const list = res?.data || res || [];

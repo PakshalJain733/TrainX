@@ -144,6 +144,7 @@ function App() {
               }
             >
               <Route index element={<MaintenanceGuard moduleKey="studentDashboard"><Overview /></MaintenanceGuard>} />
+              <Route path="overview" element={<MaintenanceGuard moduleKey="studentDashboard"><Overview /></MaintenanceGuard>} />
               <Route path="roadmap" element={<MaintenanceGuard moduleKey="aiRoadmaps"><AIRoadmap /></MaintenanceGuard>} />
               <Route path="learning" element={<MaintenanceGuard moduleKey="learningContent"><LearningContent /></MaintenanceGuard>} />
               <Route path="ai-interview" element={<MaintenanceGuard moduleKey="aiInterviews"><AIInterview /></MaintenanceGuard>} />
