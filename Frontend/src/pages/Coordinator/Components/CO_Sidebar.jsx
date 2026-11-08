@@ -3,29 +3,31 @@ import { LayoutDashboard, Users, GraduationCap, UserCheck, CalendarCheck, FileCh
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/CO_Sidebar.css";
 
 function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   return (
-    <Link
-      to="/coordinator"
-      className="sidebar-brand"
-      title="Go to Overview"
-      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-    >
-      <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
-      </div>
-      {(!collapsed || mobileOpen) && (
-        <div className="sidebar-brand-text">
-          <div className="brand-row">
-            <span className="brand-name1">Train</span>
-            <img src={trainXImg} alt="X" className="brand-x-img-coordinator" />
-          </div>
-          <span className="sidebar-brand-sub">{subtitle || "Coordinator"}</span>
+    <AppTooltip text="TrainX Overview" show={collapsed && !mobileOpen} position="right">
+      <Link
+        to="/coordinator"
+        className="sidebar-brand"
+        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+      >
+        <div className="sidebar-brand-logo-container">
+          <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-      )}
-    </Link>
+        {(!collapsed || mobileOpen) && (
+          <div className="sidebar-brand-text">
+            <div className="brand-row">
+              <span className="brand-name1">Train</span>
+              <img src={trainXImg} alt="X" className="brand-x-img-coordinator" />
+            </div>
+            <span className="sidebar-brand-sub">{subtitle || "Coordinator"}</span>
+          </div>
+        )}
+      </Link>
+    </AppTooltip>
   );
 }
 
@@ -84,15 +86,21 @@ export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
     const active = isActive(item.url, item.exact);
     return (
       <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn-coordinator ${active ? "sidebar-menu-btn-coordinator--active" : ""}`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
+        <AppTooltip
+          text={item.title}
+          show={collapsed && !mobileOpen}
+          position="right"
+          isActive={active}
         >
-          <item.icon size={18} className="sidebar-icon-coordinator" />
-          {(!collapsed || mobileOpen) && <span className="sidebar-label-coordinator">{item.title}</span>}
-        </Link>
+          <Link
+            to={item.url}
+            className={`sidebar-menu-btn-coordinator ${active ? "sidebar-menu-btn-coordinator--active" : ""}`}
+            onClick={handleNavClick}
+          >
+            <item.icon size={18} className="sidebar-icon-coordinator" />
+            {(!collapsed || mobileOpen) && <span className="sidebar-label-coordinator">{item.title}</span>}
+          </Link>
+        </AppTooltip>
       </li>
     );
   };

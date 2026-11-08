@@ -22,21 +22,30 @@
 .admin-sidebar {
   display: flex;
   flex-direction: column;
-  width: var(--sidebar-width);
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  max-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
+  flex-shrink: 0 !important;
   min-height: 100vh;
   background: var(--sidebar-bg);
   border-right: none !important;
-  transition: var(--sidebar-transition);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
   overflow: hidden;
   position: relative;
   z-index: 100;
-  flex-shrink: 0;
   padding: 12px 0;
   box-sizing: border-box;
 }
 
 .admin-sidebar.sidebar--collapsed {
-  width: var(--sidebar-width-icon);
+  width: var(--sidebar-width-icon) !important;
+  min-width: var(--sidebar-width-icon) !important;
+  max-width: var(--sidebar-width-icon) !important;
+  flex: 0 0 var(--sidebar-width-icon) !important;
 }
 
 /* ── Header ── */
@@ -392,13 +401,10 @@
 }
 
 @media (max-width: 768px) {
-
-
   .admin-sidebar,
   .fac-sidebar,
   .faculty-sidebar,
-  .hod-sidebar,
-  .admin-sidebar {
+  .hod-sidebar {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -407,6 +413,9 @@
     height: 100dvh !important;
     z-index: 1000 !important;
     width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    flex: 0 0 260px !important;
     transform: translateX(-100%) !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -415,17 +424,18 @@
   .admin-sidebar.mobile-open,
   .fac-sidebar.mobile-open,
   .faculty-sidebar.mobile-open,
-  .hod-sidebar.mobile-open,
-  .admin-sidebar.mobile-open {
+  .hod-sidebar.mobile-open {
     transform: translateX(0) !important;
   }
 
   .admin-sidebar.sidebar--collapsed,
   .fac-sidebar.sidebar--collapsed,
   .faculty-sidebar.sidebar--collapsed,
-  .hod-sidebar.sidebar--collapsed,
-  .admin-sidebar.sidebar--collapsed {
+  .hod-sidebar.sidebar--collapsed {
     width: 260px !important;
+    min-width: 260px !important;
+    max-width: 260px !important;
+    flex: 0 0 260px !important;
   }
 
   .sidebar--collapsed .sidebar-label,

@@ -11,6 +11,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
@@ -43,23 +44,31 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
     }
   }, [unreadCount, onUnreadChange]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const handleDeleteItem = (e, id) => {
+  const handleDeleteItem = async (e, id) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id);
     setNotifications([]);
+    await apiFetch("/notifications/clear-all", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
   };
 
-  const toggleSingleRead = (id) => {
+  const toggleSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const visibleNotifications = notifications.filter((n) => {
@@ -291,6 +300,12 @@ export default function AdminLayout() {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
+        const dbNotifsRes = await apiFetch("/notifications").catch(() => null);
+        if (dbNotifsRes && Array.isArray(dbNotifsRes.data) && dbNotifsRes.data.length > 0) {
+          setNotifications(dbNotifsRes.data);
+          return;
+        }
+
         const [broadcastRes, pendingUsersRes, c2cRes] = await Promise.all([
           apiFetch("/admin/broadcast").catch(() => null),
           apiFetch("/admin/pending-users").catch(() => null),
@@ -549,17 +564,18 @@ export default function AdminLayout() {
             {/* Integrated Header Bar Inside the Card */}
             <header className="admin-header">
               <div className="admin-header__left">
-                <button
-                  className="admin-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="admin-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 {collapsed && (
-                  <Link to="/admin" className="admin-header__collapsed-brand" title="TrainX Portal">
+                  <Link to="/admin" className="admin-header__collapsed-brand">
                     <div className="admin-header__collapsed-logo-box">
                       <img src={logoImg} alt="TrainX" className="admin-header__collapsed-logo" />
                     </div>
@@ -700,8 +716,14 @@ export default function AdminLayout() {
       <NotificationDetailModal
         notification={selectedNotifModal}
         onClose={() => setSelectedNotifModal(null)}
-        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
-        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onMarkRead={async (id) => {
+          setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n));
+          await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
+        }}
+        onDelete={async (id) => {
+          setNotifications((prev) => prev.filter((n) => n.id !== id));
+          await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
+        }}
         onNavigate={(path) => navigate(path)}
       />
       <FullNotificationModal

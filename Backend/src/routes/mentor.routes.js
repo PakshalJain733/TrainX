@@ -106,6 +106,9 @@ router.delete('/materials/:id', materialsWrite, deleteStudyMaterial);
 router.delete('/study-materials/:id', materialsWrite, deleteStudyMaterial);
 
 router.get('/notifications', mentorOnly, getMentorNotifications);
+router.get('/broadcast', mentorOnly, getMentorNotifications);
+router.post('/broadcast', mentorOnly, createCoordinatorBroadcast);
+router.delete('/broadcast/:id', mentorOnly, deleteAdminBroadcast);
 
 // Mentor Support Tickets & Escalation to College Admin
 const supportTicketsAccess = authorizeRoles(ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN, ROLES.COORDINATOR);

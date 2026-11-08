@@ -122,7 +122,7 @@
 
 .overview-stat-card {
   min-height: var(--stat-card-min-height, 120px);
-  max-height: 130px;
+  max-height: none;
   border-radius: var(--stat-card-radius, 12px);
   border: var(--card-border, 1px solid #e2e8f0);
   background: #ffffff;
@@ -516,3 +516,14 @@
   color: #d97706;
 }
 
+
+
+/* Zoom & High-DPI Adaptation */
+@media (max-width: 1280px) {
+  .overview-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .overview-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

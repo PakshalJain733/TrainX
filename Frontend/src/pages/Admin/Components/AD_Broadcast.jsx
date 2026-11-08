@@ -120,6 +120,8 @@ export default function AdminBroadcast() {
       });
 
       if (res && res.data) {
+        let curUser = {};
+        try { curUser = JSON.parse(sessionStorage.getItem("user") || "{}"); } catch (_) {}
         const newNotif = {
           id: res.data.id || Date.now(),
           type: "alert",
@@ -131,10 +133,17 @@ export default function AdminBroadcast() {
           category: "Broadcast",
           priority: priority,
           target: target,
+          created_by: curUser.id || 1,
+          created_by_name: curUser.name || "Admin",
+          sender_role: "Admin",
+          is_self_sent: true,
         };
 
-        // Trigger real-time popup & navbar notification badge update
-        window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
+        // Notify other windows/tabs (students, etc.) in real-time without popping up on sender's screen
+        try {
+          localStorage.setItem("app_broadcast_notifications", JSON.stringify([newNotif, Date.now()]));
+          localStorage.setItem("portal_broadcast_updated", String(Date.now()));
+        } catch (_) {}
 
         setTitle("");
         setMessage("");

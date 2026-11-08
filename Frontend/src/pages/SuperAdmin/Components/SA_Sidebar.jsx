@@ -2,29 +2,31 @@ import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, FileCheck2 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/SA_Sidebar.css";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
-    <Link
-      to="/super-admin"
-      className="sidebar-brand"
-      title="Go to Overview"
-      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-    >
-      <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
-      </div>
-      {!collapsed && (
-        <div className="sidebar-brand-text">
-          <div className="brand-row">
-            <span className="brand-name1">Train</span>
-            <img src={trainXImg} alt="X" className="brand-x-img-sa" />
-          </div>
-          <span className="sidebar-brand-sub">{subtitle || "Super Admin"}</span>
+    <AppTooltip text="TrainX Overview" show={collapsed} position="right">
+      <Link
+        to="/super-admin"
+        className="sidebar-brand"
+        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+      >
+        <div className="sidebar-brand-logo-container">
+          <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-      )}
-    </Link>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <div className="brand-row">
+              <span className="brand-name1">Train</span>
+              <img src={trainXImg} alt="X" className="brand-x-img-sa" />
+            </div>
+            <span className="sidebar-brand-sub">{subtitle || "Super Admin"}</span>
+          </div>
+        )}
+      </Link>
+    </AppTooltip>
   );
 }
 
@@ -57,15 +59,21 @@ export default function SuperAdminSidebar({ collapsed, mobileOpen, onClose }) {
     const active = isActive(item.url, item.exact);
     return (
       <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn-sa ${active ? "sidebar-menu-btn-sa--active" : ""}`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
+        <AppTooltip
+          text={item.title}
+          show={collapsed && !mobileOpen}
+          position="right"
+          isActive={active}
         >
-          <item.icon size={18} className="sidebar-icon-sa" />
-          {(!collapsed || mobileOpen) && <span className="sidebar-label-sa">{item.title}</span>}
-        </Link>
+          <Link
+            to={item.url}
+            className={`sidebar-menu-btn-sa ${active ? "sidebar-menu-btn-sa--active" : ""}`}
+            onClick={handleNavClick}
+          >
+            <item.icon size={18} className="sidebar-icon-sa" />
+            {(!collapsed || mobileOpen) && <span className="sidebar-label-sa">{item.title}</span>}
+          </Link>
+        </AppTooltip>
       </li>
     );
   };

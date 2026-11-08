@@ -22,6 +22,7 @@ import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/TR_Layout.css";
 
 function NotificationDropdown({
@@ -399,15 +400,16 @@ export function TrainerLayout() {
             {/* Header Bar */}
             <header className="trainer-header">
               <div className="trainer-header__left">
-                <button
-                  type="button"
-                  className="trainer-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    type="button"
+                    className="trainer-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 <GlobalHeaderSearch role="trainer" />
               </div>

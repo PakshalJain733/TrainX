@@ -32,19 +32,19 @@ export default function Notifications() {
         const res = await apiFetch("/student/notifications");
         if (res && res.data && Array.isArray(res.data)) {
           const broadcastMapped = res.data.map((b) => ({
-            id: `broadcast-${b.id}`,
-            title: `📢 [Notice] ${b.title}`,
-            body: b.message || b.desc_text || '',
+            id: b.id || `broadcast-${b.db_id || Math.random()}`,
+            title: b.title?.startsWith("📢") ? b.title : `📢 [Notice] ${b.title || 'Announcement'}`,
+            body: b.body || b.message || b.desc || '',
             target: b.target || 'All Batches',
             priority: b.priority || 'General Announcement',
             created_by_name: b.created_by_name || 'Admin',
             sender_role: b.sender_role || 'Admin',
-            time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
-            category: "Broadcast",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Recently"),
+            category: b.category || "Broadcast",
             icon: Bell,
             iconColor: "#7c3aed",
             iconBg: "#f5f3ff",
-            unread: true,
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
           }));
           setNotifications(broadcastMapped);
           return;
@@ -73,18 +73,21 @@ export default function Notifications() {
     };
   }, []);
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const deleteNotif = (id) => {
+  const deleteNotif = async (id) => {
     setNotifications((prev) => prev.filter((item) => item.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const markSingleRead = (id) => {
+  const markSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;

@@ -119,6 +119,8 @@ export default function MentorBroadcast() {
       });
 
       if (res && res.data) {
+        let curUser = {};
+        try { curUser = JSON.parse(sessionStorage.getItem("user") || "{}"); } catch (_) {}
         const newNotif = {
           id: res.data.id || Date.now(),
           type: "alert",
@@ -130,9 +132,16 @@ export default function MentorBroadcast() {
           category: "Broadcast",
           priority: priority,
           target: target,
+          created_by: curUser.id || 1,
+          created_by_name: curUser.name || "Mentor",
+          sender_role: "Mentor",
+          is_self_sent: true,
         };
 
-        window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
+        try {
+          localStorage.setItem("app_broadcast_notifications", JSON.stringify([newNotif, Date.now()]));
+          localStorage.setItem("portal_broadcast_updated", String(Date.now()));
+        } catch (_) {}
 
         setTitle("");
         setMessage("");

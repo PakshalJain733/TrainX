@@ -40,9 +40,17 @@ import "../Styles/AD_Progress.css";
 /* ── Custom Tooltip for Charts ── */
 function CustomBarTooltip({ active, payload, label }) {
   if (active && payload && payload.length) {
+    const studentCount = payload[0]?.payload?.students;
     return (
       <div className="prog-chart-tooltip">
-        <div className="prog-tooltip-title">{label}</div>
+        <div className="prog-tooltip-title">
+          <span>{label}</span>
+          {studentCount !== undefined && (
+            <span style={{ fontSize: "11px", fontWeight: "normal", color: "#64748b", marginLeft: "6px" }}>
+              ({studentCount} student{studentCount === 1 ? "" : "s"})
+            </span>
+          )}
+        </div>
         <div className="prog-tooltip-items">
           {payload.map((entry, index) => (
             <div key={`tooltip-item-${index}`} className="prog-tooltip-row">
@@ -201,27 +209,64 @@ export default function AdminProgress() {
   // Graph 1: Comparative Performance by Batch (or by student if a single batch is selected)
   const batchComparisonData = useMemo(() => {
     if (selectedBatch === "All Batches") {
-      // Group by batch
       const batchMap = {};
+
+      // 1. Include created college batches so comparison is always meaningful
+      if (Array.isArray(batches) && batches.length > 0) {
+        batches.forEach(b => {
+          const bName = b.name || `Batch ${b.id}`;
+          batchMap[bName] = { count: 0, quizSum: 0, taskSum: 0, attSum: 0, progSum: 0 };
+        });
+      }
+
+      // 2. Aggregate students into their batches
+      let unassignedCount = 0;
+      let unassignedQuiz = 0;
+      let unassignedTask = 0;
+      let unassignedAtt = 0;
+      let unassignedProg = 0;
+
       students.forEach(s => {
-        const b = s.batch || "Unassigned";
-        if (!batchMap[b]) {
-          batchMap[b] = { count: 0, quizSum: 0, taskSum: 0, attSum: 0, progSum: 0 };
+        const b = s.batch && s.batch !== "Unassigned Batch" && s.batch !== "Unassigned" ? s.batch : null;
+        if (b) {
+          if (!batchMap[b]) {
+            batchMap[b] = { count: 0, quizSum: 0, taskSum: 0, attSum: 0, progSum: 0 };
+          }
+          batchMap[b].count++;
+          batchMap[b].quizSum += s.quizAvg;
+          batchMap[b].taskSum += s.taskScore;
+          batchMap[b].attSum += s.attendance;
+          batchMap[b].progSum += s.overallProgress;
+        } else {
+          unassignedCount++;
+          unassignedQuiz += s.quizAvg;
+          unassignedTask += s.taskScore;
+          unassignedAtt += s.attendance;
+          unassignedProg += s.overallProgress;
         }
-        batchMap[b].count++;
-        batchMap[b].quizSum += s.quizAvg;
-        batchMap[b].taskSum += s.taskScore;
-        batchMap[b].attSum += s.attendance;
-        batchMap[b].progSum += s.overallProgress;
       });
 
-      return Object.entries(batchMap).map(([name, stats]) => ({
+      // If unassigned students exist, show them clearly as a group
+      if (unassignedCount > 0) {
+        batchMap["Unassigned"] = {
+          count: unassignedCount,
+          quizSum: unassignedQuiz,
+          taskSum: unassignedTask,
+          attSum: unassignedAtt,
+          progSum: unassignedProg,
+        };
+      }
+
+      const entries = Object.entries(batchMap);
+      if (entries.length === 0) return [];
+
+      return entries.map(([name, stats]) => ({
         name: name.length > 18 ? `${name.slice(0, 15)}...` : name,
         fullName: name,
-        Quiz: Math.round(stats.quizSum / stats.count),
-        Tasks: Math.round(stats.taskSum / stats.count),
-        Attendance: Math.round(stats.attSum / stats.count),
-        Overall: Math.round(stats.progSum / stats.count),
+        Quiz: stats.count > 0 ? Math.round(stats.quizSum / stats.count) : 0,
+        Tasks: stats.count > 0 ? Math.round(stats.taskSum / stats.count) : 0,
+        Attendance: stats.count > 0 ? Math.round(stats.attSum / stats.count) : 0,
+        Overall: stats.count > 0 ? Math.round(stats.progSum / stats.count) : 0,
         students: stats.count,
       }));
     } else {
@@ -235,7 +280,7 @@ export default function AdminProgress() {
         Overall: s.overallProgress,
       }));
     }
-  }, [students, batchFilteredStudents, selectedBatch]);
+  }, [students, batches, batchFilteredStudents, selectedBatch]);
 
   // Graph 2: Performance Tier Distribution (Donut Chart)
   const scoreDistributionData = useMemo(() => {
@@ -443,20 +488,20 @@ export default function AdminProgress() {
             ) : (
               <div className="prog-chart-canvas-wrap">
                 <ResponsiveContainer width="100%" height={290}>
-                  <BarChart data={batchComparisonData} margin={{ top: 12, right: 16, left: -14, bottom: 8 }} barGap={6}>
+                  <BarChart data={batchComparisonData} margin={{ top: 12, right: 16, left: -14, bottom: 8 }} barGap={6} maxBarSize={42}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={{ stroke: "#e2e8f0" }} />
-                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} />
-                    <Tooltip content={<CustomBarTooltip />} />
+                    <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} unit="%" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} />
+                    <Tooltip cursor={{ fill: "rgba(99, 102, 241, 0.04)", radius: 6 }} content={<CustomBarTooltip />} />
                     <Legend
                       verticalAlign="top"
                       align="right"
                       iconType="circle"
                       wrapperStyle={{ paddingBottom: 14, fontSize: 12, color: "#475569" }}
                     />
-                    <Bar dataKey="Quiz" fill="#6366f1" radius={[4, 4, 0, 0]} name="Quiz Score" />
-                    <Bar dataKey="Tasks" fill="#10b981" radius={[4, 4, 0, 0]} name="Task Score" />
-                    <Bar dataKey="Attendance" fill="#0ea5e9" radius={[4, 4, 0, 0]} name="Attendance" />
+                    <Bar dataKey="Quiz" fill="#6366f1" radius={[4, 4, 0, 0]} name="Quiz Score" minPointSize={4} />
+                    <Bar dataKey="Tasks" fill="#10b981" radius={[4, 4, 0, 0]} name="Task Score" minPointSize={4} />
+                    <Bar dataKey="Attendance" fill="#0ea5e9" radius={[4, 4, 0, 0]} name="Attendance" minPointSize={4} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

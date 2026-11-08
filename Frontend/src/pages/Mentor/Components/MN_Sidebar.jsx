@@ -3,29 +3,31 @@ import { LayoutDashboard, Users, Sparkles, Bot, AlertTriangle, CalendarCheck, Tr
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/MN_Sidebar.css";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
-    <Link
-      to="/mentor"
-      className="sidebar-brand"
-      title="Go to Overview"
-      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-    >
-      <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
-      </div>
-      {!collapsed && (
-        <div className="sidebar-brand-text">
-          <div className="brand-row">
-            <span className="brand-name1">Train</span>
-            <img src={trainXImg} alt="X" className="brand-x-img-mentor" />
-          </div>
-          <span className="sidebar-brand-sub">{subtitle || "Mentor"}</span>
+    <AppTooltip text="TrainX Overview" show={collapsed} position="right">
+      <Link
+        to="/mentor"
+        className="sidebar-brand"
+        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+      >
+        <div className="sidebar-brand-logo-container">
+          <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-      )}
-    </Link>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <div className="brand-row">
+              <span className="brand-name1">Train</span>
+              <img src={trainXImg} alt="X" className="brand-x-img-mentor" />
+            </div>
+            <span className="sidebar-brand-sub">{subtitle || "Mentor"}</span>
+          </div>
+        )}
+      </Link>
+    </AppTooltip>
   );
 }
 
@@ -74,15 +76,21 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
     const active = isActive(item.url, item.exact);
     return (
       <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn-mentor ${active ? "sidebar-menu-btn-mentor--active" : ""}`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
+        <AppTooltip
+          text={item.title}
+          show={collapsed && !mobileOpen}
+          position="right"
+          isActive={active}
         >
-          <item.icon size={18} className="sidebar-icon-mentor" />
-          {(!collapsed || mobileOpen) && <span className="sidebar-label-mentor">{item.title}</span>}
-        </Link>
+          <Link
+            to={item.url}
+            className={`sidebar-menu-btn-mentor ${active ? "sidebar-menu-btn-mentor--active" : ""}`}
+            onClick={handleNavClick}
+          >
+            <item.icon size={18} className="sidebar-icon-mentor" />
+            {(!collapsed || mobileOpen) && <span className="sidebar-label-mentor">{item.title}</span>}
+          </Link>
+        </AppTooltip>
       </li>
     );
   };

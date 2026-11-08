@@ -18,6 +18,7 @@ import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
 import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail } from '../services/email.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
+import { createNotification } from '../services/notification.service.js';
 
 /**
  * Helper to determine college isolation filter based on caller role
@@ -26,7 +27,7 @@ const getCallerCollegeFilter = (req) => {
   if (req.user.role === ROLES.SUPER_ADMIN) {
     return req.query.collegeId ? parseInt(req.query.collegeId, 10) : null;
   }
-  return req.user.collegeId;
+  return req.user.collegeId || req.user.college_id;
 };
 
 /**
@@ -1250,7 +1251,7 @@ export const createAdminBroadcast = async (req, res, next) => {
     const senderName = req.user ? (req.user.name || req.user.username || 'Admin') : 'Admin';
     const senderRole = req.user ? (req.user.role || 'Admin') : 'Admin';
 
-    const created = await createBroadcastModel({
+    const created = await createNotification({
       college_id: collegeId,
       title: title.trim(),
       message: message.trim(),
@@ -1260,7 +1261,7 @@ export const createAdminBroadcast = async (req, res, next) => {
       created_by_name: senderName,
       sender_role: senderRole,
     });
-    return sendSuccess(res, 'Broadcast sent successfully to all targets', created, 201);
+    return sendSuccess(res, 'Broadcast sent and saved in database successfully', created, 201);
   } catch (error) {
     next(error);
   }

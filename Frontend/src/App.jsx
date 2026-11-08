@@ -5,6 +5,7 @@ import MaintenanceGuard from './components/Common/MaintenanceGuard';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import DesktopNotificationListener from './components/Common/DesktopNotificationListener';
 import MeetingReminderBanner from './components/Common/MeetingReminderBanner';
+import GlobalTooltipManager from './components/Common/GlobalTooltipManager';
 import RouteLoadingFallback from './components/Common/RouteLoadingFallback';
 
 // ── Auth & Registration Pages (Lazy Loaded) ──
@@ -125,6 +126,7 @@ function App() {
       <BrowserRouter>
         <DesktopNotificationListener />
         <MeetingReminderBanner />
+        <GlobalTooltipManager />
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
             {/* Auth & Public Routes */}

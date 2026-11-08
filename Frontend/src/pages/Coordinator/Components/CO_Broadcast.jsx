@@ -148,6 +148,8 @@ export default function CoordinatorBroadcast() {
         // Fallback handled by addSharedBroadcast
       }
 
+      let curUser = {};
+      try { curUser = JSON.parse(sessionStorage.getItem("user") || "{}"); } catch (_) {}
       const newNotif = {
         id: created?.id || Date.now(),
         type: "alert",
@@ -159,9 +161,16 @@ export default function CoordinatorBroadcast() {
         category: "Broadcast",
         priority: priority,
         target: target,
+        created_by: curUser.id || 1,
+        created_by_name: curUser.name || "Coordinator",
+        sender_role: "Coordinator",
+        is_self_sent: true,
       };
 
-      window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
+      try {
+        localStorage.setItem("app_broadcast_notifications", JSON.stringify([newNotif, Date.now()]));
+        localStorage.setItem("portal_broadcast_updated", String(Date.now()));
+      } catch (_) {}
 
       setTitle("");
       setMessage("");

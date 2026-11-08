@@ -1,0 +1,157 @@
+/* ── App Floating Tooltip (Modern Sleek UI) ── */
+
+.app-floating-tooltip {
+  position: fixed;
+  z-index: 999999;
+  pointer-events: none;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.45), 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: opacity 0.12s ease;
+  will-change: transform, opacity;
+}
+
+/* Tooltip Arrow */
+.app-floating-tooltip__arrow {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1px;
+}
+
+/* Right Placement (Default for Collapsed Sidebars) */
+.app-floating-tooltip--right {
+  transform: translateY(-50%);
+  animation: appTooltipFadeRight 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.app-floating-tooltip--right .app-floating-tooltip__arrow {
+  left: -4.5px;
+  top: 50%;
+  margin-top: -3.5px;
+  border-right: none;
+  border-top: none;
+  transform: rotate(45deg);
+}
+
+@keyframes appTooltipFadeRight {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+/* Left Placement */
+.app-floating-tooltip--left {
+  transform: translate(-100%, -50%);
+  animation: appTooltipFadeLeft 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.app-floating-tooltip--left .app-floating-tooltip__arrow {
+  right: -4.5px;
+  top: 50%;
+  margin-top: -3.5px;
+  border-left: none;
+  border-bottom: none;
+  transform: rotate(45deg);
+}
+
+@keyframes appTooltipFadeLeft {
+  from {
+    opacity: 0;
+    transform: translate(-100%, -50%) translateX(5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-100%, -50%) translateX(0) scale(1);
+  }
+}
+
+/* Top Placement */
+.app-floating-tooltip--top {
+  transform: translate(-50%, -100%);
+  animation: appTooltipFadeTop 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.app-floating-tooltip--top .app-floating-tooltip__arrow {
+  bottom: -4.5px;
+  left: 50%;
+  margin-left: -3.5px;
+  border-left: none;
+  border-top: none;
+  transform: rotate(45deg);
+}
+
+@keyframes appTooltipFadeTop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(0) scale(1);
+  }
+}
+
+/* Bottom Placement */
+.app-floating-tooltip--bottom {
+  transform: translateX(-50%);
+  animation: appTooltipFadeBottom 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.app-floating-tooltip--bottom .app-floating-tooltip__arrow {
+  top: -4.5px;
+  left: 50%;
+  margin-left: -3.5px;
+  border-right: none;
+  border-bottom: none;
+  transform: rotate(45deg);
+}
+
+@keyframes appTooltipFadeBottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+/* Active Dot Indicator */
+.app-floating-tooltip__active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  flex-shrink: 0;
+}
+
+.app-floating-tooltip__text {
+  display: inline-block;
+  line-height: 1.2;
+}
+

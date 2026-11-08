@@ -406,6 +406,7 @@ export const getOverallLeaderboard = async (filters = {}) => {
     roll_number: s.roll_number,
     sub: s.department_name,
     department: s.department_name,
+    department_id: s.department_id,
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
@@ -484,6 +485,7 @@ export const getDepartmentLeaderboard = async (filters = {}) => {
     roll_number: s.roll_number,
     sub: s.department_name,
     department: s.department_name,
+    department_id: s.department_id,
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
@@ -657,8 +659,12 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     }
   }
 
-  // Fetch overall leaderboard first
-  const overall = await getOverallLeaderboard(filters);
+  // Fetch overall leaderboard without department restriction so overall campus standings remain intact
+  const overallFilters = { ...filters };
+  delete overallFilters.department_id;
+  delete overallFilters.department_name;
+  delete overallFilters.department;
+  const overall = await getOverallLeaderboard(overallFilters);
 
   // If studentDeptName/studentDeptId is still not known, find it from the student in overall list
   if ((role === 'student' || role === ROLES.STUDENT) && (!studentDeptId && !studentDeptName)) {

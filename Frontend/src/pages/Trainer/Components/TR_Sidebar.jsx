@@ -10,29 +10,31 @@ import {
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/TR_Sidebar.css";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
-    <Link
-      to="/trainer"
-      className="sidebar-brand"
-      title="Go to Overview"
-      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-    >
-      <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
-      </div>
-      {!collapsed && (
-        <div className="sidebar-brand-text">
-          <div className="brand-row">
-            <span className="brand-name1">Train</span>
-            <img src={trainXImg} alt="X" className="brand-x-img-trainer" />
-          </div>
-          <span className="sidebar-brand-sub">{subtitle || "Trainer"}</span>
+    <AppTooltip text="TrainX Overview" show={collapsed} position="right">
+      <Link
+        to="/trainer"
+        className="sidebar-brand"
+        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+      >
+        <div className="sidebar-brand-logo-container">
+          <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-      )}
-    </Link>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <div className="brand-row">
+              <span className="brand-name1">Train</span>
+              <img src={trainXImg} alt="X" className="brand-x-img-trainer" />
+            </div>
+            <span className="sidebar-brand-sub">{subtitle || "Trainer"}</span>
+          </div>
+        )}
+      </Link>
+    </AppTooltip>
   );
 }
 
@@ -62,19 +64,25 @@ export function TrainerSidebar({ collapsed, mobileOpen, onClose }) {
     const active = isActive(item.url, item.exact);
     return (
       <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn-trainer ${
-            active ? "sidebar-menu-btn-trainer--active" : ""
-          }`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
+        <AppTooltip
+          text={item.title}
+          show={collapsed && !mobileOpen}
+          position="right"
+          isActive={active}
         >
-          <item.icon size={18} className="sidebar-icon-trainer" />
-          {(!collapsed || mobileOpen) && (
-            <span className="sidebar-label-trainer">{item.title}</span>
-          )}
-        </Link>
+          <Link
+            to={item.url}
+            className={`sidebar-menu-btn-trainer ${
+              active ? "sidebar-menu-btn-trainer--active" : ""
+            }`}
+            onClick={handleNavClick}
+          >
+            <item.icon size={18} className="sidebar-icon-trainer" />
+            {(!collapsed || mobileOpen) && (
+              <span className="sidebar-label-trainer">{item.title}</span>
+            )}
+          </Link>
+        </AppTooltip>
       </li>
     );
   };

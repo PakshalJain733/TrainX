@@ -19,6 +19,12 @@ import {
   Check,
   X,
   FileSpreadsheet,
+  GraduationCap,
+  CreditCard,
+  ShieldCheck,
+  RotateCcw,
+  Building2,
+  Filter,
 } from "lucide-react";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
@@ -633,15 +639,30 @@ export default function AdminTrainings() {
               <CustomSelect
                 value={programStatusFilter}
                 onChange={(val) => setProgramStatusFilter(val)}
+                icon={Filter}
                 options={[
-                  { value: "all", label: "All Statuses" },
-                  { value: "Open", label: "Open" },
-                  { value: "Draft", label: "Draft" },
-                  { value: "Closed", label: "Closed" },
-                  { value: "Completed", label: "Completed" },
+                  { value: "all", label: "All Statuses", icon: Filter },
+                  { value: "Open", label: "Open", icon: CheckCircle2 },
+                  { value: "Draft", label: "Draft", icon: Clock },
+                  { value: "Closed", label: "Closed", icon: XCircle },
+                  { value: "Completed", label: "Completed", icon: CheckCircle2 },
                 ]}
-                className="c2c-custom-select"
+                className={`trainings-filter-select ${programStatusFilter !== "all" ? "trainings-filter-select--active" : ""}`}
               />
+              {(programStatusFilter !== "all" || programSearch) && (
+                <button
+                  type="button"
+                  className="trainings-filter-reset-btn"
+                  onClick={() => {
+                    setProgramStatusFilter("all");
+                    setProgramSearch("");
+                  }}
+                  title="Reset filters"
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -878,35 +899,54 @@ export default function AdminTrainings() {
               <CustomSelect
                 value={branchFilter}
                 onChange={(val) => setBranchFilter(val)}
+                icon={GraduationCap}
                 options={[
-                  { value: "all", label: "All Branches" },
-                  ...branchOptions.map((b) => ({ value: b, label: b })),
+                  { value: "all", label: "All Branches", icon: GraduationCap },
+                  ...branchOptions.map((b) => ({ value: b, label: b, icon: Building2 })),
                 ]}
-                className="c2c-custom-select"
+                className={`trainings-filter-select ${branchFilter !== "all" ? "trainings-filter-select--active" : ""}`}
               />
               <CustomSelect
                 value={paymentFilter}
                 onChange={(val) => setPaymentFilter(val)}
+                icon={CreditCard}
                 options={[
-                  { value: "all", label: "Payment: All" },
-                  { value: "Pending", label: "Payment: Pending" },
-                  { value: "Part Payment", label: "Payment: Part Payment" },
-                  { value: "Completed", label: "Payment: Completed" },
-                  { value: "Cancelled", label: "Payment: Cancelled" },
+                  { value: "all", label: "Payment: All", icon: CreditCard },
+                  { value: "Pending", label: "Payment: Pending", icon: Clock },
+                  { value: "Part Payment", label: "Payment: Part Payment", icon: AlertCircle },
+                  { value: "Completed", label: "Payment: Completed", icon: CheckCircle2 },
+                  { value: "Cancelled", label: "Payment: Cancelled", icon: XCircle },
                 ]}
-                className="c2c-custom-select"
+                className={`trainings-filter-select ${paymentFilter !== "all" ? "trainings-filter-select--active" : ""}`}
               />
               <CustomSelect
                 value={approvalFilter}
                 onChange={(val) => setApprovalFilter(val)}
+                icon={ShieldCheck}
                 options={[
-                  { value: "all", label: "Approval: All" },
-                  { value: "Approved", label: "Approval: Approved" },
-                  { value: "Pending", label: "Approval: Pending" },
-                  { value: "Rejected", label: "Approval: Rejected" },
+                  { value: "all", label: "Approval: All", icon: ShieldCheck },
+                  { value: "Approved", label: "Approval: Approved", icon: CheckCircle2 },
+                  { value: "Pending", label: "Approval: Pending", icon: Clock },
+                  { value: "Rejected", label: "Approval: Rejected", icon: XCircle },
                 ]}
-                className="c2c-custom-select"
+                className={`trainings-filter-select ${approvalFilter !== "all" ? "trainings-filter-select--active" : ""}`}
               />
+              {(branchFilter !== "all" || paymentFilter !== "all" || approvalFilter !== "all" || studentSearch) && (
+                <button
+                  type="button"
+                  className="trainings-filter-reset-btn"
+                  onClick={() => {
+                    setBranchFilter("all");
+                    setPaymentFilter("all");
+                    setApprovalFilter("all");
+                    setStudentSearch("");
+                  }}
+                  title="Reset all filters"
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
           </div>
 

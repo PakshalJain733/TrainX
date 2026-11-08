@@ -6,6 +6,7 @@ import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/SA_Layout.css";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 
@@ -536,14 +537,15 @@ export default function SuperAdminLayout() {
             {/* Integrated Header Bar Inside the Card */}
             <header className="sa-header">
               <div className="sa-header__left">
-                <button
-                  className="sa-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="sa-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 <GlobalHeaderSearch role="superadmin" />
               </div>

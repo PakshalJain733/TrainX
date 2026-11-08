@@ -10,6 +10,7 @@ import {
   getCollegeForUser,
 } from '../models/user.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { getUserNotifications } from '../services/notification.service.js';
 import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
 import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
@@ -209,6 +210,33 @@ export const updateStudentProfile = async (req, res, next) => {
       if (req.body[key] !== undefined) safeData[key] = req.body[key];
     }
     const updated = await updateUserModel(userId, safeData);
+
+    // Save notification preferences directly to students table
+    if (
+      req.body.notif_milestones !== undefined ||
+      req.body.notif_weekly_report !== undefined ||
+      req.body.notif_interview !== undefined
+    ) {
+      const updates = [];
+      const params = [];
+      if (req.body.notif_milestones !== undefined) {
+        updates.push('notif_milestones = ?');
+        params.push(req.body.notif_milestones ? 1 : 0);
+      }
+      if (req.body.notif_weekly_report !== undefined) {
+        updates.push('notif_weekly_report = ?');
+        params.push(req.body.notif_weekly_report ? 1 : 0);
+      }
+      if (req.body.notif_interview !== undefined) {
+        updates.push('notif_interview = ?');
+        params.push(req.body.notif_interview ? 1 : 0);
+      }
+      if (updates.length > 0) {
+        params.push(userId);
+        await query(`UPDATE students SET ${updates.join(', ')} WHERE user_id = ?`, params).catch(() => {});
+      }
+    }
+
     return sendSuccess(res, 'Student profile updated successfully', updated);
   } catch (error) {
     next(error);
@@ -894,226 +922,9 @@ export const applyStudentLeave = async (req, res, next) => {
 
 export const getStudentNotifications = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id;
-    let collegeId = req.user?.collegeId || req.user?.college_id;
-
-    if (!collegeId && userId) {
-      const col = await getCollegeForUser(userId);
-      collegeId = col?.id || 1;
-    }
-
-    if (!collegeId) {
-      return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
-    }
-
-    // 1. Fetch student & user details to determine batches, department, mentor, and alert preferences
-    const [userRows, studentRows] = await Promise.all([
-      query('SELECT id, name, email, department, department_id, notif_milestones, notif_weekly_report, notif_interview FROM users WHERE id = ?', [userId]),
-      query('SELECT user_id, batch_id, roll_number, department, department_id, notif_milestones, notif_weekly_report, notif_interview FROM students WHERE user_id = ?', [userId]),
-    ]);
-
-    const userObj = userRows?.[0] || {};
-    const studentObj = studentRows?.[0] || {};
-
-    const studentBatchIds = new Set();
-    const studentBatchNames = new Set();
-    const studentTrainerNames = new Set();
-
-    if (studentObj.batch_id) {
-      studentBatchIds.add(Number(studentObj.batch_id));
-    }
-
-    // Check training_enrollments for active batch enrollment & batch trainer
-    try {
-      const enrollments = await query(
-        `SELECT te.batch_id, b.name AS batch_name, b.code AS batch_code, b.trainer
-         FROM training_enrollments te
-         LEFT JOIN batches b ON b.id = te.batch_id
-         WHERE te.student_user_id = ?`,
-        [userId]
-      );
-      if (enrollments && enrollments.length > 0) {
-        for (const e of enrollments) {
-          if (e.batch_id) studentBatchIds.add(Number(e.batch_id));
-          if (e.batch_name) studentBatchNames.add(String(e.batch_name).toLowerCase().trim());
-          if (e.batch_code) studentBatchNames.add(String(e.batch_code).toLowerCase().trim());
-          if (e.trainer) studentTrainerNames.add(String(e.trainer).toLowerCase().trim());
-        }
-      }
-    } catch (_) {}
-
-    // If batch_id was on student, fetch batch details directly
-    if (studentObj.batch_id && studentBatchNames.size === 0) {
-      try {
-        const bInfo = await query('SELECT name, code, trainer FROM batches WHERE id = ?', [studentObj.batch_id]);
-        if (bInfo && bInfo.length > 0) {
-          if (bInfo[0].name) studentBatchNames.add(String(bInfo[0].name).toLowerCase().trim());
-          if (bInfo[0].code) studentBatchNames.add(String(bInfo[0].code).toLowerCase().trim());
-          if (bInfo[0].trainer) studentTrainerNames.add(String(bInfo[0].trainer).toLowerCase().trim());
-        }
-      } catch (_) {}
-    }
-
-    // 2. Fetch assigned mentor(s)
-    const assignedMentorIds = new Set();
-    const assignedMentorNames = new Set();
-    try {
-      const mentorAssignments = await query(
-        `SELECT msa.mentor_id, u.name AS mentor_name, u.email AS mentor_email
-         FROM mentor_student_assignments msa
-         JOIN users u ON u.id = msa.mentor_id
-         WHERE msa.student_id = ?`,
-        [userId]
-      );
-      if (mentorAssignments && mentorAssignments.length > 0) {
-        for (const m of mentorAssignments) {
-          assignedMentorIds.add(Number(m.mentor_id));
-          if (m.mentor_name) assignedMentorNames.add(String(m.mentor_name).toLowerCase().trim());
-        }
-      }
-    } catch (_) {}
-
-    // 3. Notification preferences: defaults to true if not explicitly set to false/0
-    const notifMilestones = studentObj.notif_milestones !== undefined && studentObj.notif_milestones !== null
-      ? Boolean(Number(studentObj.notif_milestones))
-      : (userObj.notif_milestones !== undefined && userObj.notif_milestones !== null ? Boolean(Number(userObj.notif_milestones)) : true);
-
-    const notifWeeklyReport = studentObj.notif_weekly_report !== undefined && studentObj.notif_weekly_report !== null
-      ? Boolean(Number(studentObj.notif_weekly_report))
-      : (userObj.notif_weekly_report !== undefined && userObj.notif_weekly_report !== null ? Boolean(Number(userObj.notif_weekly_report)) : true);
-
-    const notifInterview = studentObj.notif_interview !== undefined && studentObj.notif_interview !== null
-      ? Boolean(Number(studentObj.notif_interview))
-      : (userObj.notif_interview !== undefined && userObj.notif_interview !== null ? Boolean(Number(userObj.notif_interview)) : true);
-
-    const studentDept = String(studentObj.department || userObj.department || '').toLowerCase().trim();
-    const studentRoll = String(studentObj.roll_number || '').toLowerCase().trim();
-    const studentName = String(userObj.name || '').toLowerCase().trim();
-
-    // 4. Fetch broadcasts for this college with creator info
-    const rawBroadcasts = await query(
-      `SELECT b.*, u.role AS creator_role, u.name AS creator_name
-       FROM broadcasts b
-       LEFT JOIN users u ON b.created_by = u.id
-       WHERE (b.college_id = ? OR b.college_id IS NULL)
-       ORDER BY b.id DESC`,
-      [collegeId]
-    );
-
-    // 5. Strict filtering: ONLY Admin, Mentor, Coordinator, and Trainer notifications required by this student
-    const filteredBroadcasts = (rawBroadcasts || []).filter((b) => {
-      // Normalize sender role
-      const rawRole = String(b.sender_role || b.creator_role || 'Admin').toLowerCase().trim();
-      let senderCategory = null;
-      if (rawRole.includes('admin') || rawRole.includes('super')) {
-        senderCategory = 'admin';
-      } else if (rawRole.includes('mentor') || rawRole.includes('faculty')) {
-        senderCategory = 'mentor';
-      } else if (rawRole.includes('coord')) {
-        senderCategory = 'coordinator';
-      } else if (rawRole.includes('trainer')) {
-        senderCategory = 'trainer';
-      }
-
-      // Enforce: Student only receives notifications from Admin, Mentor, Coordinator, or Trainer
-      if (!senderCategory) {
-        return false;
-      }
-
-      // Student Preferences: if student turned off specific notification categories, do not send
-      const combinedText = `${b.title || ''} ${b.message || ''} ${b.priority || ''} ${b.target || ''}`.toLowerCase();
-      if (!notifMilestones && (combinedText.includes('milestone') || combinedText.includes('progress alert'))) {
-        return false;
-      }
-      if (!notifWeeklyReport && (combinedText.includes('weekly') || combinedText.includes('digest') || combinedText.includes('scorecard'))) {
-        return false;
-      }
-      if (!notifInterview && (combinedText.includes('mock') || combinedText.includes('drill') || combinedText.includes('interview'))) {
-        return false;
-      }
-
-      // Relevance / Required Checking
-      const targetLower = String(b.target || 'All Batches').toLowerCase().trim();
-      const isGlobalTarget = (
-        targetLower === 'all' ||
-        targetLower === 'all batches' ||
-        targetLower === 'all students' ||
-        targetLower === 'everyone' ||
-        targetLower === 'general' ||
-        targetLower.includes('general announcement') ||
-        targetLower.includes('campus')
-      );
-
-      // Direct recipient match
-      if (studentRoll && targetLower.includes(studentRoll)) return true;
-      if (studentName && targetLower.includes(studentName)) return true;
-
-      // Department match
-      const matchesDept = studentDept && (
-        targetLower.includes(studentDept) ||
-        (studentDept.length >= 2 && targetLower.split(/[\s,/-]+/).some((token) => token === studentDept))
-      );
-
-      // Batch match
-      let matchesBatch = false;
-      for (const bName of studentBatchNames) {
-        if (bName && targetLower.includes(bName)) {
-          matchesBatch = true;
-          break;
-        }
-      }
-
-      if (senderCategory === 'admin') {
-        // Admin broadcasts: global, all students, student's department, or student's batch
-        if (isGlobalTarget) return true;
-        if (targetLower.includes('student')) return true;
-        if (matchesDept || matchesBatch) return true;
-        return false;
-      }
-
-      if (senderCategory === 'coordinator') {
-        // Coordinator announcements: department students, global, or student's batch
-        if (isGlobalTarget) return true;
-        if (matchesDept || matchesBatch) return true;
-        if (targetLower.includes('student') && (!targetLower.includes('batch') || matchesBatch)) return true;
-        return false;
-      }
-
-      if (senderCategory === 'mentor') {
-        // Mentor announcements: student only requires if created by their assigned mentor
-        const creatorId = Number(b.created_by);
-        const creatorNameLower = String(b.created_by_name || b.creator_name || '').toLowerCase().trim();
-        const isMyMentor = assignedMentorIds.has(creatorId) || (creatorNameLower && assignedMentorNames.has(creatorNameLower));
-
-        if (!isMyMentor) {
-          return false;
-        }
-
-        if (isGlobalTarget || targetLower.includes('my students') || targetLower.includes('mentee') || targetLower.includes('student')) {
-          return true;
-        }
-        if (matchesBatch || matchesDept) return true;
-        return true;
-      }
-
-      if (senderCategory === 'trainer') {
-        // Trainer announcements: student only requires if trainer is for their batch or target matches batch
-        const creatorNameLower = String(b.created_by_name || b.creator_name || '').toLowerCase().trim();
-        const isMyTrainer = creatorNameLower && Array.from(studentTrainerNames).some((tName) => tName.includes(creatorNameLower) || creatorNameLower.includes(tName));
-
-        if (isMyTrainer || matchesBatch) {
-          return true;
-        }
-        if (isGlobalTarget && studentBatchIds.size > 0) {
-          return true;
-        }
-        return false;
-      }
-
-      return false;
-    });
-
-    return sendSuccess(res, 'Student notifications retrieved', filteredBroadcasts);
+    const user = req.user || {};
+    const notifs = await getUserNotifications(user);
+    return sendSuccess(res, 'Student notifications retrieved', notifs);
   } catch (error) {
     next(error);
   }

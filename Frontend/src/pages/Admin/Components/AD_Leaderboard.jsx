@@ -69,7 +69,12 @@ export default function AdminLeaderboard() {
   const fetchLeaderboard = () => {
     setLoading(true);
 
-    apiFetch("/leaderboards")
+    const params = new URLSearchParams();
+    if (selectedCollege) params.append("college_id", selectedCollege);
+    if (selectedDept) params.append("department_id", selectedDept);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+
+    apiFetch(`/leaderboards${queryString}`)
       .then((res) => {
         if (res && res.data) {
           const overallList = (res.data.overall || []).filter(isApprovedActiveStudent);
@@ -140,7 +145,48 @@ export default function AdminLeaderboard() {
     }
     currentList = rawList.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
   } else if (activeTab === "department") {
-    let deptList = [...(data.department || [])];
+    // Combine data.department and data.overall to ensure full student coverage across queries
+    const studentMap = new Map();
+    (data.department || []).forEach((s) => studentMap.set(s.id || s.user_id, s));
+    (data.overall || []).forEach((s) => {
+      const id = s.id || s.user_id;
+      if (!studentMap.has(id)) studentMap.set(id, s);
+    });
+    let deptList = Array.from(studentMap.values());
+
+    if (selectedDept) {
+      const activeDeptObj = departments.find(
+        (d) => String(d.id) === String(selectedDept) || String(d.name).toLowerCase() === String(selectedDept).toLowerCase()
+      );
+
+      deptList = deptList.filter((item) => {
+        // 1. Direct department_id match
+        if (item.department_id !== undefined && item.department_id !== null && String(item.department_id) !== "") {
+          if (String(item.department_id) === String(selectedDept)) return true;
+        }
+
+        const studentDept = String(item.department || item.sub || "").trim().toLowerCase();
+        if (!studentDept) return false;
+
+        // 2. Department object name / code matching
+        if (activeDeptObj) {
+          const targetName = String(activeDeptObj.name || "").trim().toLowerCase();
+          const targetCode = String(activeDeptObj.code || "").trim().toLowerCase();
+
+          if (studentDept === targetName) return true;
+          if (targetCode && studentDept === targetCode) return true;
+          if (targetCode && (studentDept.includes(`(${targetCode})`) || studentDept.includes(` ${targetCode}`))) return true;
+          if (targetName && targetName.length > 3 && (studentDept.includes(targetName) || targetName.includes(studentDept))) {
+            return true;
+          }
+        }
+
+        // 3. Fallback direct match against selectedDept value
+        const selStr = String(selectedDept).trim().toLowerCase();
+        return studentDept === selStr;
+      });
+    }
+
     deptList.sort((a, b) => {
       const aScore = a.total_points !== undefined ? a.total_points : (a.score || 0);
       const bScore = b.total_points !== undefined ? b.total_points : (b.score || 0);
@@ -259,7 +305,11 @@ export default function AdminLeaderboard() {
               {activeTab === 'moduleWise' && moduleFilter === 'coding' && 'Practice Coding Problem Leaderboard'}
               {activeTab === 'moduleWise' && moduleFilter === 'tasks' && 'Coursework Task Submissions Leaderboard'}
               {activeTab === 'moduleWise' && moduleFilter === 'interview' && 'AI Mock Interview Performance'}
-              {activeTab === 'department' && 'Department Rankings & Standings'}
+              {activeTab === 'department' && (
+                selectedDept && departments.find(d => String(d.id) === String(selectedDept))
+                  ? `Department Rankings — ${departments.find(d => String(d.id) === String(selectedDept)).name} ${departments.find(d => String(d.id) === String(selectedDept)).code ? `(${departments.find(d => String(d.id) === String(selectedDept)).code})` : ''}`
+                  : 'Department Rankings & Standings'
+              )}
             </CardTitle>
             <CardDescription>
               {activeTab === 'moduleWise' && moduleFilter === 'all' && 'Ranked by true student progress points earned from quizzes, coding problems, and coursework tasks, with total solve duration as tie-breaker.'}
@@ -267,7 +317,11 @@ export default function AdminLeaderboard() {
               {activeTab === 'moduleWise' && moduleFilter === 'coding' && 'Ranked by Practice Coding Points and Problems Solved, with Execution & Solve Time as tie-breaker.'}
               {activeTab === 'moduleWise' && moduleFilter === 'tasks' && 'Ranked by Coursework Task Points and Completed Tasks, with Completion Duration as tie-breaker.'}
               {activeTab === 'moduleWise' && moduleFilter === 'interview' && 'Ranked by AI mock technical and HR interview performance ratings.'}
-              {activeTab === 'department' && 'Ranked by department-level performance, points earned, and overall speed.'}
+              {activeTab === 'department' && (
+                selectedDept && departments.find(d => String(d.id) === String(selectedDept))
+                  ? `Ranked performance, points earned, and solve speed for students in ${departments.find(d => String(d.id) === String(selectedDept)).name}.`
+                  : 'Ranked by department-level performance, points earned, and overall speed across all departments.'
+              )}
             </CardDescription>
           </div>
         </CardHeader>
@@ -282,7 +336,11 @@ export default function AdminLeaderboard() {
               <div className="admin-empty-state-icon-wrap">
                 <Trophy size={32} />
               </div>
-              <p className="admin-empty-state-title">No leaderboard entries found for this selection</p>
+              <p className="admin-empty-state-title">
+                {activeTab === "department" && selectedDept
+                  ? `No leaderboard entries found for ${departments.find(d => String(d.id) === String(selectedDept))?.name || "this department"}`
+                  : "No leaderboard entries found for this selection"}
+              </p>
               <p className="admin-empty-state-sub">Rankings will update dynamically as students in this batch complete quizzes, coding challenges, or coursework tasks.</p>
             </div>
           ) : (

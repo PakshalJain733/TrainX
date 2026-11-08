@@ -803,7 +803,7 @@ export default function AdminAttendance() {
               />
             </div>
 
-            <div className="qr-config-field" title="Type how many times the QR will refresh">
+            <div className="qr-config-field qr-config-field--times" title="Type how many times the QR will refresh">
               <label className="qr-config-label">
                 <RefreshCw size={13} />
                 <span>Times:</span>
@@ -812,7 +812,7 @@ export default function AdminAttendance() {
                 type="number"
                 min={1}
                 max={100}
-                className="qr-config-input"
+                className="qr-config-input qr-config-input--times"
                 placeholder="Times"
                 value={maxRefreshCycles}
                 onChange={(e) => setMaxRefreshCycles(Math.max(1, parseInt(e.target.value, 10) || 1))}

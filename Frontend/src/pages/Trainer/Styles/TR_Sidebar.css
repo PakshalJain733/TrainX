@@ -20,7 +20,11 @@
 .trainer-sidebar {
   display: flex;
   flex-direction: column;
-  width: var(--tr-sidebar-width);
+  width: var(--tr-sidebar-width) !important;
+  min-width: var(--tr-sidebar-width) !important;
+  max-width: var(--tr-sidebar-width) !important;
+  flex: 0 0 var(--tr-sidebar-width) !important;
+  flex-shrink: 0 !important;
   min-height: 100vh;
   height: 100vh;
   background: var(--tr-sidebar-bg);
@@ -35,7 +39,10 @@
 }
 
 .trainer-sidebar.sidebar--collapsed {
-  width: var(--tr-sidebar-width-icon);
+  width: var(--tr-sidebar-width-icon) !important;
+  min-width: var(--tr-sidebar-width-icon) !important;
+  max-width: var(--tr-sidebar-width-icon) !important;
+  flex: 0 0 var(--tr-sidebar-width-icon) !important;
 }
 
 /* Mobile drawer mode */

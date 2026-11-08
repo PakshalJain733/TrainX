@@ -2075,3 +2075,30 @@ body {
   opacity: 0.5;
   cursor: default !important;
 }
+
+/* Zoom & High-DPI Adaptation */
+@media (max-width: 1280px) {
+  .grid-4,
+  .overview-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .overview-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-5,
+  .overview-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+}

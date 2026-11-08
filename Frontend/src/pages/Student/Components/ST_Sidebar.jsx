@@ -3,29 +3,31 @@ import { LayoutDashboard, Sparkles, BookOpenCheck, Bot, LineChart, Trophy, Calen
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/ST_Sidebar.css";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
-    <Link
-      to="/student"
-      className="sidebar-brand"
-      title="Go to Overview"
-      style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
-    >
-      <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
-      </div>
-      {!collapsed && (
-        <div className="sidebar-brand-text">
-          <div className="brand-row">
-            <span className="brand-name1">Train</span>
-            <img src={trainXImg} alt="X" className="brand-x-img-student" />
-          </div>
-          <span className="sidebar-brand-sub">{subtitle || "Student"}</span>
+    <AppTooltip text="TrainX Overview" show={collapsed} position="right">
+      <Link
+        to="/student"
+        className="sidebar-brand"
+        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+      >
+        <div className="sidebar-brand-logo-container">
+          <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-      )}
-    </Link>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <div className="brand-row">
+              <span className="brand-name1">Train</span>
+              <img src={trainXImg} alt="X" className="brand-x-img-student" />
+            </div>
+            <span className="sidebar-brand-sub">{subtitle || "Student"}</span>
+          </div>
+        )}
+      </Link>
+    </AppTooltip>
   );
 }
 
@@ -71,15 +73,21 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
     const active = isActive(item.url, item.exact);
     return (
       <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn-student ${active ? "sidebar-menu-btn-student--active" : ""}`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
+        <AppTooltip
+          text={item.title}
+          show={collapsed && !mobileOpen}
+          position="right"
+          isActive={active}
         >
-          <item.icon size={18} className="sidebar-icon-student" />
-          {(!collapsed || mobileOpen) && <span className="sidebar-label-student">{item.title}</span>}
-        </Link>
+          <Link
+            to={item.url}
+            className={`sidebar-menu-btn-student ${active ? "sidebar-menu-btn-student--active" : ""}`}
+            onClick={handleNavClick}
+          >
+            <item.icon size={18} className="sidebar-icon-student" />
+            {(!collapsed || mobileOpen) && <span className="sidebar-label-student">{item.title}</span>}
+          </Link>
+        </AppTooltip>
       </li>
     );
   };

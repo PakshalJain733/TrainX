@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus, Plus } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -1252,20 +1252,6 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                       Try adjusting your filter or search query.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStudentSearch("");
-                      setStatusFilter("all");
-                      setDeptFilter("all");
-                      setYearFilter("all");
-                      setDivFilter("all");
-                    }}
-                    className="btn-portal-submit"
-                    style={{ width: "auto", padding: "8px 18px", fontSize: "12.5px" }}
-                  >
-                    Reset Filters & Roster
-                  </button>
                 </div>
               ) : (
                 <table className="fs-portal-table">
@@ -1431,9 +1417,23 @@ function AssignMentorModal({ isOpen, onClose, onSuccess, users = [] }) {
                                 </button>
                               </div>
                             ) : isChecked ? (
-                              <span className="fs-portal-status-pill fs-portal-status-pill--selected">Selected</span>
+                              <button
+                                type="button"
+                                className="btn-portal-select btn-portal-select--checked"
+                                onClick={() => toggleStudentSelect(student)}
+                                title="Click to deselect student"
+                              >
+                                <Check size={12} strokeWidth={2.5} /> Selected
+                              </button>
                             ) : (
-                              <span className="fs-portal-status-pill fs-portal-status-pill--idle">Available</span>
+                              <button
+                                type="button"
+                                className="btn-portal-select"
+                                onClick={() => toggleStudentSelect(student)}
+                                title="Click to select student"
+                              >
+                                <Plus size={12} strokeWidth={2.5} /> Select
+                              </button>
                             )}
                           </td>
                         </tr>

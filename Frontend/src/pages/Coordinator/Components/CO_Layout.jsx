@@ -9,6 +9,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/CO_Layout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
@@ -44,23 +45,31 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
     }
   }, [unreadCount, onUnreadChange]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const handleDeleteItem = (e, id) => {
+  const handleDeleteItem = async (e, id) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id);
     setNotifications([]);
+    await apiFetch("/notifications/clear-all", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
   };
 
-  const toggleSingleRead = (id) => {
+  const toggleSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const visibleNotifications = notifications.filter((n) => {
@@ -501,14 +510,15 @@ export default function CoordinatorLayout() {
             {/* Header */}
             <header className="coordinator-header">
               <div className="coordinator-header__left">
-                <button
-                  className="coordinator-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="coordinator-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 <GlobalHeaderSearch role="coordinator" />
               </div>
@@ -632,8 +642,14 @@ export default function CoordinatorLayout() {
       <NotificationDetailModal
         notification={selectedNotifModal}
         onClose={() => setSelectedNotifModal(null)}
-        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
-        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onMarkRead={async (id) => {
+          setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n));
+          await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
+        }}
+        onDelete={async (id) => {
+          setNotifications((prev) => prev.filter((n) => n.id !== id));
+          await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
+        }}
         onNavigate={(path) => navigate(path)}
       />
       <BroadcastToast />

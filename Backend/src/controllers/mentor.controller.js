@@ -6,6 +6,7 @@ import { uploadFileToS3, deleteFileFromStorage } from '../utils/s3Upload.js';
 import { ROLES } from '../utils/constants.js';
 import { createSharedContent, deleteSharedContent } from '../models/sharedContent.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { getUserNotifications } from '../services/notification.service.js';
 import { generateRealGoogleMeetLink } from '../utils/googleMeet.js';
 import { filterContentByMentorAssignment, getStudentMentorIds } from '../utils/mentorStudentHelper.js';
 import { updateUserModel } from '../models/user.model.js';
@@ -2212,9 +2213,9 @@ export const deleteStudyMaterial = async (req, res, next) => {
 
 export const getMentorNotifications = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const broadcasts = await getBroadcastsModel(collegeId);
-    return sendSuccess(res, 'Notifications retrieved successfully', broadcasts);
+    const user = req.user || {};
+    const notifs = await getUserNotifications(user);
+    return sendSuccess(res, 'Notifications retrieved successfully', notifs);
   } catch (error) {
     next(error);
   }

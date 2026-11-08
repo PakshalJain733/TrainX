@@ -26,8 +26,8 @@
 }
 
 .attendance-filters .custom-select-wrap {
-  width: 220px !important;
-  min-width: 180px !important;
+  width: 170px !important;
+  min-width: 145px !important;
   flex-shrink: 0;
 }
 
@@ -1041,7 +1041,7 @@
 }
 
 .qr-config-input {
-  width: 28px;
+  width: 36px;
   height: 100%;
   border: none;
   background: transparent;
@@ -1049,6 +1049,18 @@
   font-weight: 700;
   color: #0f172a;
   outline: none;
-  padding: 0;
-  text-align: left;
+  padding: 0 2px;
+  text-align: center;
+}
+
+.qr-config-field--times {
+  min-width: 118px;
+  padding: 0 12px;
+}
+
+.qr-config-input--times,
+.qr-config-field--times .qr-config-input {
+  width: 46px;
+  min-width: 40px;
+  text-align: center;
 }

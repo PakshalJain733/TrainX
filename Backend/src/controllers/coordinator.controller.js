@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { createNotification, getUserNotifications } from '../services/notification.service.js';
 import { getShortDept, isSameDepartment } from '../utils/departmentHelper.js';
 
 /**
@@ -721,9 +722,9 @@ export const updateCoordinatorRequestStatus = async (req, res, next) => {
  */
 export const getCoordinatorNotifications = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const broadcasts = await getBroadcastsModel(collegeId);
-    return sendSuccess(res, 'Notifications retrieved successfully', broadcasts);
+    const user = req.user || {};
+    const notifs = await getUserNotifications(user);
+    return sendSuccess(res, 'Notifications retrieved successfully', notifs);
   } catch (error) {
     next(error);
   }
@@ -742,14 +743,20 @@ export const createCoordinatorBroadcast = async (req, res, next) => {
       return sendError(res, 'Title and message are required', 400);
     }
 
-    const senderName = req.user?.name || req.user?.username || 'Coordinator';
-    const result = await query(
-      `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by, created_by_name, sender_role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [collegeId, title, message, message, target || 'Department Students', priority || 'General Announcement', userId, senderName, 'Coordinator']
-    );
+    const senderName = req.user?.name || req.user?.username || (req.user?.role === 'mentor' ? 'Mentor' : 'Coordinator');
+    const senderRole = req.user?.role || 'Coordinator';
+    const created = await createNotification({
+      college_id: collegeId,
+      title: title.trim(),
+      message: message.trim(),
+      target: target || 'Department Students',
+      priority: priority || 'General Announcement',
+      created_by: userId,
+      created_by_name: senderName,
+      sender_role: senderRole,
+    });
 
-    return sendSuccess(res, 'Broadcast announcement sent successfully', { id: result.insertId }, 201);
+    return sendSuccess(res, 'Broadcast announcement sent and saved in database successfully', created, 201);
   } catch (error) {
     next(error);
   }

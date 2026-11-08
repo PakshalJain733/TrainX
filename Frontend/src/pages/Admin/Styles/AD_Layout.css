@@ -259,6 +259,7 @@ body {
 
 .admin-layout {
   display: flex;
+  flex-direction: row;
   width: 100%;
   height: 100vh;
   height: 100dvh;
@@ -683,7 +684,8 @@ body {
 
 /* Right side: header + main */
 .admin-content {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -2643,4 +2645,32 @@ button:active:not(:disabled),
 .admin-empty-state-cta-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35) !important;
+}
+
+
+/* Responsive Grid Breakpoints for Zoom & High DPI Display Scaling */
+@media (max-width: 1280px) {
+  .grid-4,
+  .overview-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .overview-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-5,
+  .overview-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
 }

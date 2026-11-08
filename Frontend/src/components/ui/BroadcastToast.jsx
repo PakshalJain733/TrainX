@@ -9,8 +9,34 @@ export default function BroadcastToast() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const shouldShow = (notif) => {
+      if (!notif) return false;
+      if (notif.is_self_sent) return false;
+
+      let curRole = "";
+      let curUserId = null;
+      try {
+        curRole = String(sessionStorage.getItem("role") || "").toLowerCase();
+        const curUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+        curUserId = curUser.id || curUser.userId;
+      } catch (_) {}
+
+      // Do not display if the logged-in user sent this notification
+      if (curUserId && notif.created_by && String(curUserId) === String(notif.created_by)) {
+        return false;
+      }
+
+      const sender = String(notif.sender_role || notif.author || notif.created_by_name || "").toLowerCase();
+      // If current user is Admin and the sender is Admin, do not pop up toast to the sender
+      if (curRole.includes("admin") && sender.includes("admin")) {
+        return false;
+      }
+
+      return true;
+    };
+
     const handleNewBroadcast = (event) => {
-      if (event && event.detail) {
+      if (event && event.detail && shouldShow(event.detail)) {
         setToast(event.detail);
       }
     };
@@ -19,7 +45,7 @@ export default function BroadcastToast() {
       if (e.key === "app_broadcast_notifications" && e.newValue) {
         try {
           const list = JSON.parse(e.newValue);
-          if (list.length > 0) {
+          if (Array.isArray(list) && list.length > 0 && shouldShow(list[0])) {
             setToast(list[0]);
           }
         } catch (err) {}

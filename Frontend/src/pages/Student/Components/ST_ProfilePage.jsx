@@ -939,64 +939,79 @@ export default function ProfilePage() {
                     </div>
                     
                     <span className="profile-skills-count-badge">
-                      {currentSkillsList.length} Skills Selected
+                      {currentSkillsList.length} {currentSkillsList.length === 1 ? "Skill" : "Skills"} Selected
                     </span>
                   </div>
 
-                  {/* Skill Search, Select & Add */}
-                  <div className="mb-4">
-                    <StudentSkillSelect
-                      disabled={!isEditing}
-                      placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
-                      options={PREDEFINED_SKILLS.map((skill) => ({
-                        value: skill,
-                        label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
-                      }))}
-                      onAdd={(val) => {
-                        if (val && isEditing) {
-                          const trimmed = val.trim();
-                          if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
-                            setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  {/* Mode-Dependent View: Edit Mode shows search & active box; View Mode shows clean pills directly */}
+                  {isEditing ? (
+                    <>
+                      {/* Skill Search, Select & Add Input */}
+                      <div className="profile-skills-input-wrapper">
+                        <StudentSkillSelect
+                          disabled={false}
+                          placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
+                          options={PREDEFINED_SKILLS.map((skill) => ({
+                            value: skill,
+                            label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill,
+                          }))}
+                          onAdd={(val) => {
+                            const trimmed = val ? val.trim() : "";
+                            if (trimmed && !currentSkillsList.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+                              setForm((p) => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
+                            }
+                          }}
+                        />
+                      </div>
 
-                  {/* Selected Skills Container */}
-                  <div className="profile-skills-active-box">
-                    <div className="profile-skills-active-title">
-                      <CheckCircle2 size={14} color="#16a34a" />
-                      <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                      {/* Selected Skills Container with Remove buttons */}
+                      <div className="profile-skills-active-box">
+                        <div className="profile-skills-active-title">
+                          <CheckCircle2 size={14} color="#16a34a" />
+                          <span>Active Skills on Profile ({currentSkillsList.length}) — Click ✕ to remove</span>
+                        </div>
+
+                        {currentSkillsList.length === 0 ? (
+                          <div className="profile-no-skills-msg">
+                            No skills added yet. Search or type above to add skills.
+                          </div>
+                        ) : (
+                          <div className="profile-skill-pills-wrap">
+                            {currentSkillsList.map((skill) => (
+                              <span key={skill} className="profile-skill-pill">
+                                <span>{skill}</span>
+                                <button
+                                  type="button"
+                                  className="profile-skill-badge-btn"
+                                  onClick={() => handleRemoveSkill(skill)}
+                                  title={`Remove ${skill}`}
+                                >
+                                  <X size={12} strokeWidth={2.5} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Clean Direct View Mode without redundant disabled search box or double nested borders */
+                    <div className="profile-skills-view-wrap">
+                      {currentSkillsList.length === 0 ? (
+                        <div className="profile-no-skills-msg">
+                          No skills added yet. Click <strong>Edit Profile</strong> at the top to add your skills.
+                        </div>
+                      ) : (
+                        <div className="profile-skill-pills-wrap">
+                          {currentSkillsList.map((skill) => (
+                            <span key={skill} className="profile-skill-pill">
+                              <span>{skill}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-
-                    {currentSkillsList.length === 0 ? (
-                      <div className="profile-no-skills-msg">
-                        No skills added yet. Click Edit Profile above to manage skills.
-                      </div>
-                    ) : (
-                      <div className="profile-skill-pills-wrap">
-                        {currentSkillsList.map((skill) => (
-                          <span
-                            key={skill}
-                            className="profile-skill-pill"
-                          >
-                            <span>{skill}</span>
-                            {isEditing && (
-                              <button
-                                type="button"
-                                className="profile-skill-badge-btn"
-                                onClick={() => handleRemoveSkill(skill)}
-                                title={`Remove ${skill}`}
-                              >
-                                <X size={12} strokeWidth={2.5} />
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import { getShortDept } from "../../../utils/departmentHelper";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
@@ -627,14 +628,15 @@ export default function StudentLayout() {
             {!isFullScreenApp && (
               <header className="student-header">
                 <div className="student-header__left">
-                  <button
-                    className="student-header__sidebar-toggle"
-                    onClick={toggleSidebar}
-                    aria-label="Toggle sidebar"
-                    title="Toggle sidebar"
-                  >
-                    <PanelLeft size={20} />
-                  </button>
+                  <AppTooltip text="Toggle sidebar" position="bottom">
+                    <button
+                      className="student-header__sidebar-toggle"
+                      onClick={toggleSidebar}
+                      aria-label="Toggle sidebar"
+                    >
+                      <PanelLeft size={20} />
+                    </button>
+                  </AppTooltip>
 
                   <GlobalHeaderSearch role="student" />
                 </div>

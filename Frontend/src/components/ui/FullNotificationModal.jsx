@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { Bell, X, Search, Check, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Filter } from "lucide-react";
+import { apiFetch } from "../../utils/api";
 import "./FullNotificationModal.css";
 
 export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications, onNavigate }) {
@@ -12,30 +13,38 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
   const unreadCount = notifications.filter((n) => n.unread).length;
   const totalCount = notifications.length;
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     if (setNotifications) {
       setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
     }
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id);
     if (setNotifications) {
       setNotifications([]);
     }
+    await apiFetch("/notifications/clear-all", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
   };
 
-  const handleDeleteItem = (id) => {
+  const handleDeleteItem = async (id) => {
     if (setNotifications) {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const toggleSingleRead = (id) => {
+  const toggleSingleRead = async (id) => {
     if (setNotifications) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
       );
     }
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const getIcon = (type) => {
