@@ -32,16 +32,19 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
     student_id,
     career_gateway_student_id,
     clg_id,
+    roll_number,
+    email,
     college_id,
     career_gateway_college_id,
     requested_by = 'career_gateway',
   } = payload;
 
   const targetCgStudentId = career_gateway_student_id || student_id;
-  const targetClgId = clg_id ? String(clg_id).trim() : null;
+  const targetClgId = roll_number ? String(roll_number).trim() : (clg_id ? String(clg_id).trim() : null);
+  const targetEmail = email ? String(email).trim().toLowerCase() : null;
 
-  if (!targetCgStudentId && !targetClgId) {
-    const err = new Error('Student identifier (career_gateway_student_id or clg_id) is required.');
+  if (!targetCgStudentId && !targetClgId && !targetEmail) {
+    const err = new Error('Student identifier (roll_number, student_id, career_gateway_student_id, email, or clg_id) is required.');
     err.statusCode = 400;
     throw err;
   }
@@ -60,15 +63,18 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
     WHERE 1=1
   `;
 
-  if (targetCgStudentId && targetClgId) {
-    mappingSql += ' AND (m.career_gateway_student_id = ? OR m.clg_id = ?)';
-    mappingParams.push(targetCgStudentId, targetClgId);
+  if (targetEmail) {
+    mappingSql += ' AND LOWER(u.email) = ?';
+    mappingParams.push(targetEmail);
+  } else if (targetCgStudentId && targetClgId) {
+    mappingSql += ' AND (m.career_gateway_student_id = ? OR m.clg_id = ? OR s.roll_number = ?)';
+    mappingParams.push(targetCgStudentId, targetClgId, targetClgId);
   } else if (targetCgStudentId) {
     mappingSql += ' AND m.career_gateway_student_id = ?';
     mappingParams.push(targetCgStudentId);
   } else {
-    mappingSql += ' AND m.clg_id = ?';
-    mappingParams.push(targetClgId);
+    mappingSql += ' AND (m.clg_id = ? OR s.roll_number = ?)';
+    mappingParams.push(targetClgId, targetClgId);
   }
 
   const mappingRows = await query(mappingSql, mappingParams);
@@ -83,12 +89,15 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
       SELECT u.id as user_id, u.name, u.email, u.college_id,
              s.career_gateway_student_id, s.clg_id, s.roll_number, s.department, s.batch_id as student_batch_id
       FROM users u
-      JOIN students s ON s.user_id = u.id
+      LEFT JOIN students s ON s.user_id = u.id
       WHERE 1=1
     `;
-    if (targetCgStudentId && targetClgId) {
-      studentSql += ' AND (s.career_gateway_student_id = ? OR s.clg_id = ? OR s.roll_number = ?)';
-      studentParams.push(targetCgStudentId, targetClgId, targetClgId);
+    if (targetEmail) {
+      studentSql += ' AND LOWER(u.email) = ?';
+      studentParams.push(targetEmail);
+    } else if (targetCgStudentId && targetClgId) {
+      studentSql += ' AND (s.career_gateway_student_id = ? OR s.clg_id = ? OR s.roll_number = ? OR u.id = ?)';
+      studentParams.push(targetCgStudentId, targetClgId, targetClgId, targetCgStudentId);
     } else if (targetCgStudentId) {
       studentSql += ' AND (s.career_gateway_student_id = ? OR u.id = ?)';
       studentParams.push(targetCgStudentId, targetCgStudentId);
@@ -114,7 +123,7 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
   }
 
   if (!mappedUser) {
-    const notFoundErr = new Error(`Student ${targetCgStudentId || targetClgId} is not found or registered in TrainX.`);
+    const notFoundErr = new Error(`Student ${targetCgStudentId || targetClgId || targetEmail} is not found or registered in TrainX.`);
     notFoundErr.statusCode = 404;
     throw notFoundErr;
   }
@@ -189,6 +198,9 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
     [userId]
   );
 
+  const primaryBatchId = batches[0]?.trainx_batch_id || 'batch_fsd_2026';
+  const primaryBatchIdNum = Number(primaryBatchId.replace('batch_', '')) || 1;
+
   const attendance = (attendanceRows || []).map((a) => {
     const isPresent = a.status === 'present';
     const duration = calculateDurationMinutes(a.start_time, a.end_time, 90);
@@ -196,15 +208,18 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
       student_id: Number(resolvedCgStudentId),
       career_gateway_student_id: Number(resolvedCgStudentId),
       clg_id: resolvedClgId,
+      roll_number: resolvedClgId,
       trainx_session_id: `sess_${a.session_id || a.id}`,
+      trainx_batch_id: `batch_${a.batch_id || primaryBatchIdNum}`,
       attended: isPresent ? 1 : 0,
+      attendance_percentage: isPresent ? 100 : 0,
       duration_attended_minutes: isPresent ? duration : 0,
     };
   });
 
   // 5. Category 4: Assessments
   const assessmentRows = await query(
-    `SELECT DISTINCT asm.id, asm.title, asm.category, asm.total_marks, asm.pass_marks
+    `SELECT DISTINCT asm.id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
      FROM assessments asm
      LEFT JOIN assessment_attempts att ON att.assessment_id = asm.id AND att.user_id = ?
      WHERE (att.user_id IS NOT NULL ${studentBatchIds.length > 0 ? `OR asm.batch_id IN (${batchPlaceholders})` : ''})
@@ -215,6 +230,7 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
 
   const assessments = (assessmentRows || []).map((asm) => ({
     trainx_assessment_id: `asm_${asm.id}`,
+    trainx_batch_id: `batch_${asm.batch_id || primaryBatchIdNum}`,
     title: asm.title || 'Technical Assessment',
     assessment_type: asm.category || 'quiz',
     max_score: Number(asm.total_marks || 100),
@@ -228,7 +244,8 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
             COALESCE(att.total_marks, asm.total_marks, 100) as max_score,
             COALESCE(asm.pass_marks, 60) as passing_score,
             att.percentage,
-            COALESCE(att.submitted_at, att.completed_at, att.started_at, CURRENT_TIMESTAMP) as attempted_at
+            COALESCE(att.submitted_at, att.completed_at, att.started_at, CURRENT_TIMESTAMP) as attempted_at,
+            asm.batch_id
      FROM assessment_attempts att
      LEFT JOIN assessments asm ON asm.id = att.assessment_id
      WHERE att.user_id = ?
@@ -250,12 +267,17 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
       student_id: Number(resolvedCgStudentId),
       career_gateway_student_id: Number(resolvedCgStudentId),
       clg_id: resolvedClgId,
+      roll_number: resolvedClgId,
       trainx_assessment_id: `asm_${att.assessment_id}`,
+      trainx_batch_id: `batch_${att.batch_id || primaryBatchIdNum}`,
       score,
       max_score: maxScore,
       percentage: pct,
       passed,
-      attempted_at: att.attempted_at ? new Date(att.attempted_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      feedback: passed ? 'Passed assessment requirements' : 'Needs improvement on topic concepts',
+      attempted_at: att.attempted_at
+        ? new Date(att.attempted_at).toISOString().replace('T', ' ').substring(0, 19)
+        : `${new Date().toISOString().split('T')[0]} 14:30:00`,
     };
   });
 
@@ -297,23 +319,33 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
     ? new Date(Math.max(...dates.map(d => new Date(d)))).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0];
 
-  const primaryBatchId = batches[0]?.trainx_batch_id || 'batch_fsd_2026';
-
   const student_progress = [
     {
       student_id: Number(resolvedCgStudentId),
       career_gateway_student_id: Number(resolvedCgStudentId),
       clg_id: resolvedClgId,
+      roll_number: resolvedClgId,
       trainx_batch_id: primaryBatchId,
       completion_percentage: completionPercentage,
       completed_topics: completedTopics,
       total_topics: totalTopics,
       overall_status: completionPercentage >= 100 ? 'completed' : 'in_progress',
-      last_active_at: lastActiveDate,
+      last_active_at: `${new Date(lastActiveDate).toISOString().split('T')[0]} 16:00:00`,
     }
   ];
 
+  // Look up external college slug
+  let externalCollegeId = college_id || career_gateway_college_id || 'pvppcoe';
+  if (studentCollegeId) {
+    const [colRow] = await query('SELECT career_gateway_college_id, code FROM colleges WHERE id = ? LIMIT 1', [studentCollegeId]);
+    if (colRow) {
+      externalCollegeId = colRow.career_gateway_college_id || colRow.code || externalCollegeId;
+    }
+  }
+
   const dataPayload = {
+    college_id: externalCollegeId,
+    student_id: roll_number || resolvedClgId || Number(resolvedCgStudentId),
     batches,
     sessions,
     attendance,

@@ -5,6 +5,7 @@ import {
   retrySyncExecution,
 } from '../services/onDemandSync.service.js';
 import { fetchStudentTrainingSyncData } from '../services/onDemandStudentSync.service.js';
+import { fetchCollegeTrainingSyncData } from '../services/onDemandCollegeSync.service.js';
 import { sendSuccess, sendError } from '../../../../utils/response.js';
 import { ROLES } from '../../../../utils/constants.js';
 
@@ -88,6 +89,48 @@ export async function handleInboundSyncRequest(req, res, next) {
 }
 
 /**
+ * POST /api/v1/integrations/career-gateway/sync/college
+ * Mode A: Career Gateway requests training records and analytics for an entire college tenant.
+ * TrainX extracts all batches, sessions, attendance, assessments, results, and progress synchronously.
+ */
+export async function handleInboundCollegeSync(req, res, next) {
+  try {
+    const {
+      college_id,
+      career_gateway_college_id,
+      requested_by,
+    } = req.body || {};
+
+    const callerRequestedBy = requested_by || req.serviceAuth?.sub || 'career_gateway';
+
+    const data = await fetchCollegeTrainingSyncData({
+      college_id,
+      career_gateway_college_id,
+      requested_by: callerRequestedBy,
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: 'completed',
+      message: 'College training records retrieved successfully',
+      college_id: college_id || career_gateway_college_id || data.college_id || 'pvppcoe',
+      timestamp: new Date().toISOString(),
+      data: {
+        batches: data.batches,
+        sessions: data.sessions,
+        attendance: data.attendance,
+        assessments: data.assessments,
+        assessment_results: data.assessment_results,
+        student_progress: data.student_progress,
+      },
+    });
+  } catch (err) {
+    const statusCode = err.statusCode || (err.message?.includes('not found') ? 404 : 500);
+    return sendError(res, err.message, statusCode);
+  }
+}
+
+/**
  * POST /api/v1/integrations/career-gateway/sync/student
  * Mode A (Synchronous RPC Contract): Career Gateway requests 6 training categories for a student.
  * TrainX queries the categories and returns them directly in the HTTP 200 response body.
@@ -98,6 +141,8 @@ export async function handleInboundStudentSync(req, res, next) {
       student_id,
       career_gateway_student_id,
       clg_id,
+      roll_number,
+      email,
       career_gateway_college_id,
       college_id,
       requested_by,
@@ -105,12 +150,13 @@ export async function handleInboundStudentSync(req, res, next) {
     } = req.body || {};
 
     const targetStudentId = career_gateway_student_id || student_id;
-    const targetClgId = clg_id ? String(clg_id).trim() : null;
+    const targetClgId = roll_number ? String(roll_number).trim() : (clg_id ? String(clg_id).trim() : null);
+    const targetEmail = email ? String(email).trim().toLowerCase() : null;
 
-    if (!targetStudentId && !targetClgId) {
+    if (!targetStudentId && !targetClgId && !targetEmail) {
       return sendError(
         res,
-        'student_id, career_gateway_student_id, or clg_id is required.',
+        'student_id, career_gateway_student_id, roll_number, email, or clg_id is required.',
         400
       );
     }
@@ -121,6 +167,8 @@ export async function handleInboundStudentSync(req, res, next) {
       student_id: targetStudentId ? Number(targetStudentId) : null,
       career_gateway_student_id: targetStudentId ? Number(targetStudentId) : null,
       clg_id: targetClgId,
+      roll_number: targetClgId,
+      email: targetEmail,
       college_id,
       career_gateway_college_id,
       requested_by: callerRequestedBy,
@@ -129,8 +177,19 @@ export async function handleInboundStudentSync(req, res, next) {
 
     return res.status(200).json({
       success: true,
+      status: 'completed',
       message: 'Student training records retrieved successfully',
-      data,
+      college_id: college_id || career_gateway_college_id || data.college_id || 'pvppcoe',
+      student_id: targetClgId || targetStudentId || data.student_id,
+      timestamp: new Date().toISOString(),
+      data: {
+        batches: data.batches,
+        sessions: data.sessions,
+        attendance: data.attendance,
+        assessments: data.assessments,
+        assessment_results: data.assessment_results,
+        student_progress: data.student_progress,
+      },
     });
   } catch (err) {
     const statusCode = err.statusCode || (err.message?.includes('not found') ? 404 : (err.message?.includes('mismatch') ? 422 : 500));

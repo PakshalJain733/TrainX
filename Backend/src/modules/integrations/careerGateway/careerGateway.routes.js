@@ -20,6 +20,7 @@ import {
 } from './controllers/careerGatewayMonitoring.controller.js';
 import {
   handleInboundSyncRequest,
+  handleInboundCollegeSync,
   handleInboundStudentSync,
   handleAdminTriggerSync,
   handleGetSyncExecutions,
@@ -46,6 +47,8 @@ router.get('/', (req, res) => {
       provisioning: 'POST /students',
       eligibility: 'PATCH /students/:studentId/eligibility',
       activation: 'POST /activate-account',
+      college_sync: 'POST /sync/college',
+      student_sync: 'POST /sync/student',
     },
   });
 });
@@ -71,6 +74,10 @@ router.post('/students/deactivate', m2mProvisioningRateLimiter, authenticateCare
 
 // Update or revoke student eligibility (SEC-05: burst-tolerant rate limiter)
 router.patch('/students/:studentId/eligibility', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleUpdateEligibility);
+
+// Mode A: On-Demand College-wide Training Data Synchronization triggered by Career Gateway
+router.post('/sync/college', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundCollegeSync);
+router.post('/sync-college', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundCollegeSync);
 
 // Mode A: On-Demand Student Training Data Synchronization triggered by Career Gateway
 // Synchronous 6-category RPC contract:

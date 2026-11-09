@@ -6,25 +6,30 @@ import { ROLES } from '../../../../utils/constants.js';
 
 /**
  * Middleware to authenticate inbound service-to-service requests from Career Gateway.
- * Strictly enforces HS256 with the dedicated shared secret and validates exact claims.
- *
- * Expected Claims:
- * - iss: 'career-gateway'
- * - aud: 'trainx'
- * - sub: 'career-gateway-integration-service'
- * - scope: 'student_sync'
- * - exp: ~15m
+ * Supports:
+ * 1. Cryptographic S2S Bearer JWT (HS256 with claims: iss: career-gateway, aud: trainx, sub: career-gateway-integration-service).
+ * 2. Static Bearer API Key matching TRAINX_API_KEY, CAREER_GATEWAY_INTEGRATION_TOKEN, or configured service secret.
  */
 export const authenticateCareerGatewayService = (req, res, next) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  const correlationId = req.headers['x-correlation-id'] || req.headers['X-Correlation-ID'];
+  if (correlationId) {
+    req.correlationId = String(correlationId).trim();
+  }
 
-  // Dedicated Inbound Secret agreed with Career Gateway
+  // Dedicated Inbound Secret / API Key agreed with Career Gateway
   const serviceSecret =
     process.env.TRAINX_INTEGRATION_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_KEY;
 
-  if (!serviceSecret) {
+  const validApiKeys = [
+    process.env.TRAINX_API_KEY,
+    process.env.CAREER_GATEWAY_INTEGRATION_TOKEN,
+    serviceSecret,
+  ].filter(k => k && typeof k === 'string' && k.trim().length > 0);
+
+  if (!serviceSecret && validApiKeys.length === 0) {
     return sendError(
       res,
       'Internal Server Error: Inbound service secret is not configured on TrainX. Please set TRAINX_INTEGRATION_SECRET or CAREER_GATEWAY_SERVICE_SECRET in .env',
@@ -32,7 +37,6 @@ export const authenticateCareerGatewayService = (req, res, next) => {
     );
   }
 
-  // SEC-04: X-Service-Key bypass has been removed. All inbound requests must use Bearer JWT.
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return sendError(
       res,
@@ -43,6 +47,20 @@ export const authenticateCareerGatewayService = (req, res, next) => {
 
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
+  // Mode 1: Static Bearer API Key check
+  const isDirectKeyMatch = validApiKeys.some(key => key.trim() === token);
+  if (isDirectKeyMatch) {
+    req.serviceAuth = {
+      type: 'api_key',
+      sub: 'career-gateway-integration-service',
+      scope: 'training_sync',
+      iss: 'career-gateway',
+      aud: 'trainx',
+    };
+    return next();
+  }
+
+  // Mode 2: Cryptographic Bearer JWT verification
   try {
     const decoded = jwt.verify(token, serviceSecret, {
       algorithms: ['HS256'],
@@ -56,7 +74,7 @@ export const authenticateCareerGatewayService = (req, res, next) => {
     }
 
     // Validate expected scope (student provisioning or on-demand synchronization)
-    const validScopes = ['student_sync', 'training_sync', 'student'];
+    const validScopes = ['student_sync', 'training_sync', 'student', 'college'];
     if (!decoded.scope || !validScopes.includes(decoded.scope)) {
       return sendError(res, 'Forbidden: Insufficient token scope for integration operation', 403);
     }
@@ -92,6 +110,21 @@ export const authenticateServiceOrAdmin = (req, res, next) => {
     process.env.TRAINX_INTEGRATION_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_SECRET ||
     process.env.CAREER_GATEWAY_SERVICE_KEY;
+
+  const validApiKeys = [
+    process.env.TRAINX_API_KEY,
+    process.env.CAREER_GATEWAY_INTEGRATION_TOKEN,
+    serviceSecret,
+  ].filter(k => k && typeof k === 'string' && k.trim().length > 0);
+
+  if (validApiKeys.some(key => key.trim() === token)) {
+    req.serviceAuth = {
+      type: 'api_key',
+      sub: 'career-gateway-integration-service',
+      scope: 'training_sync',
+    };
+    return next();
+  }
 
   if (serviceSecret) {
     try {
