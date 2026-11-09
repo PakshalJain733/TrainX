@@ -252,6 +252,9 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE students ADD COLUMN portfolio_link VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN resume_url VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_milestones TINYINT(1) DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_weekly_report TINYINT(1) DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_interview TINYINT(1) DEFAULT 1`); } catch (_) { }
 
     // 6. Ensure Assessments Table
     await conn.query(`
@@ -472,6 +475,43 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN priority VARCHAR(100) DEFAULT 'General Announcement'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN created_by_name VARCHAR(255) DEFAULT 'Admin'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN sender_role VARCHAR(100) DEFAULT 'Admin'`); } catch (_) { }
+
+    // 10b. Ensure Notifications & Per-User Notification State Tracking Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT NULL,
+        college_id INT DEFAULT 1,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'alert',
+        category VARCHAR(50) DEFAULT 'general',
+        priority VARCHAR(50) DEFAULT 'General Announcement',
+        target VARCHAR(100) DEFAULT 'All Batches',
+        created_by INT DEFAULT NULL,
+        created_by_name VARCHAR(100) DEFAULT NULL,
+        sender_role VARCHAR(50) DEFAULT NULL,
+        action_url VARCHAR(255) DEFAULT NULL,
+        action_label VARCHAR(100) DEFAULT NULL,
+        action_color VARCHAR(50) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_notif_user (user_id),
+        INDEX idx_notif_college (college_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notification_user_states (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        notification_id VARCHAR(100) NOT NULL,
+        is_read TINYINT(1) DEFAULT 1,
+        is_deleted TINYINT(1) DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_user_notif (user_id, notification_id),
+        INDEX idx_user_notif_state (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
     // 11. Ensure Live Sessions Table
     await conn.query(`
