@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
  */
 export class CareerGatewayClient {
   constructor(options = {}) {
-    this.baseUrl = (options.baseUrl || process.env.CAREER_GATEWAY_API_URL || 'https://api.careergateway.edu').replace(/\/+$/, '');
+    this.baseUrl = (options.baseUrl || process.env.CAREER_GATEWAY_API_URL || 'http://localhost:5011/').replace(/\/+$/, '');
     // Dedicated outbound secret agreed with Career Gateway for TrainX -> Career Gateway requests
     // SEC-02: Strict validation - no hardcoded fallback allowed
     this.serviceSecret = options.serviceSecret || process.env.TRAINX_TO_CAREER_GATEWAY_SECRET || process.env.CAREER_GATEWAY_OUTBOUND_SECRET || process.env.TRAINX_INTEGRATION_SERVICE_KEY || null;

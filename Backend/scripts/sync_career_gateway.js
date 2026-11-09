@@ -12,7 +12,7 @@ import { executeDailyTrainingSync } from '../src/modules/integrations/careerGate
 async function run() {
   console.log('========================================================');
   console.log('⚡ [TrainX -> Career Gateway Training Data Export]');
-  console.log('   Target API URL: ', process.env.CAREER_GATEWAY_API_URL || 'https://api.careergateway.edu');
+  console.log('   Target API URL: ', process.env.CAREER_GATEWAY_API_URL || 'http://localhost:5011/');
   console.log('   Schedule:        Daily at 02:00 AM Asia/Kolkata');
   console.log('   Distributed Lock: MySQL GET_LOCK');
   console.log('========================================================');
