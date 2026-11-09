@@ -17,6 +17,7 @@ import {
 } from './controllers/careerGatewayMonitoring.controller.js';
 import {
   handleInboundSyncRequest,
+  handleInboundStudentSync,
   handleAdminTriggerSync,
   handleGetSyncExecutions,
   handleGetSyncExecutionStatus,
@@ -68,7 +69,12 @@ router.post('/students/deactivate', m2mProvisioningRateLimiter, authenticateCare
 // Update or revoke student eligibility (SEC-05: burst-tolerant rate limiter)
 router.patch('/students/:studentId/eligibility', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleUpdateEligibility);
 
-// Mode A: On-Demand Student / College Synchronization triggered by Career Gateway
+// Mode A: On-Demand Student Training Data Synchronization triggered by Career Gateway
+// Synchronous 6-category RPC contract:
+router.post('/sync/student', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundStudentSync);
+router.post('/sync-student', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundStudentSync);
+
+// Mode A: Reverse-export trigger (if Career Gateway triggers a reverse export batch)
 router.post('/sync', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundSyncRequest);
 router.get('/sync/:syncId', authenticateCareerGatewayService, handleGetSyncExecutionStatus);
 

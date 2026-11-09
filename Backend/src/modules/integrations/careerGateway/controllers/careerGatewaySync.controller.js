@@ -4,6 +4,7 @@ import {
   getSyncExecutionById,
   retrySyncExecution,
 } from '../services/onDemandSync.service.js';
+import { fetchStudentTrainingSyncData } from '../services/onDemandStudentSync.service.js';
 import { sendSuccess, sendError } from '../../../../utils/response.js';
 import { ROLES } from '../../../../utils/constants.js';
 
@@ -82,6 +83,57 @@ export async function handleInboundSyncRequest(req, res, next) {
     return sendSuccess(res, result.message || 'Synchronization request received', result, 200);
   } catch (err) {
     const statusCode = err.statusCode || (err.message?.includes('not found') ? 404 : (err.message?.includes('mismatch') || err.message?.includes('Tenant') ? 422 : 500));
+    return sendError(res, err.message, statusCode);
+  }
+}
+
+/**
+ * POST /api/v1/integrations/career-gateway/sync/student
+ * Mode A (Synchronous RPC Contract): Career Gateway requests 6 training categories for a student.
+ * TrainX queries the categories and returns them directly in the HTTP 200 response body.
+ */
+export async function handleInboundStudentSync(req, res, next) {
+  try {
+    const {
+      student_id,
+      career_gateway_student_id,
+      clg_id,
+      career_gateway_college_id,
+      college_id,
+      requested_by,
+      request_id,
+    } = req.body || {};
+
+    const targetStudentId = career_gateway_student_id || student_id;
+    const targetClgId = clg_id ? String(clg_id).trim() : null;
+
+    if (!targetStudentId && !targetClgId) {
+      return sendError(
+        res,
+        'student_id, career_gateway_student_id, or clg_id is required.',
+        400
+      );
+    }
+
+    const callerRequestedBy = requested_by || req.serviceAuth?.sub || 'career_gateway';
+
+    const data = await fetchStudentTrainingSyncData({
+      student_id: targetStudentId ? Number(targetStudentId) : null,
+      career_gateway_student_id: targetStudentId ? Number(targetStudentId) : null,
+      clg_id: targetClgId,
+      college_id,
+      career_gateway_college_id,
+      requested_by: callerRequestedBy,
+      request_id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Student training records retrieved successfully',
+      data,
+    });
+  } catch (err) {
+    const statusCode = err.statusCode || (err.message?.includes('not found') ? 404 : (err.message?.includes('mismatch') ? 422 : 500));
     return sendError(res, err.message, statusCode);
   }
 }

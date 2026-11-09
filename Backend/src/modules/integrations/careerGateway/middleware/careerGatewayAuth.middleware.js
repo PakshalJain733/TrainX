@@ -53,7 +53,7 @@ export const authenticateCareerGatewayService = (req, res, next) => {
     }
 
     // Validate expected scope (student provisioning or on-demand synchronization)
-    const validScopes = ['student_sync', 'training_sync'];
+    const validScopes = ['student_sync', 'training_sync', 'student'];
     if (!decoded.scope || !validScopes.includes(decoded.scope)) {
       return sendError(res, 'Forbidden: Insufficient token scope for integration operation', 403);
     }
