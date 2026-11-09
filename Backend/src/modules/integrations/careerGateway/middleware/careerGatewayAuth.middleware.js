@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { sendError } from '../../../../utils/response.js';
+import { authenticateToken } from '../../../../middleware/auth.middleware.js';
+import { authorizeRoles } from '../../../../middleware/role.middleware.js';
+import { ROLES } from '../../../../utils/constants.js';
 
 /**
  * Middleware to authenticate inbound service-to-service requests from Career Gateway.
@@ -69,4 +72,47 @@ export const authenticateCareerGatewayService = (req, res, next) => {
     }
     return sendError(res, `Unauthorized: Invalid service token (${err.message})`, 401);
   }
+};
+
+/**
+ * Composite middleware for endpoints that can be accessed by either:
+ * 1. Career Gateway Machine-to-Machine service token
+ * 2. Authenticated TrainX administrator session (Super Admin or College Admin)
+ */
+export const authenticateServiceOrAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return sendError(res, 'Unauthorized: Missing authorization Bearer token', 401);
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  // Try service token authentication first
+  const serviceSecret =
+    process.env.TRAINX_INTEGRATION_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_KEY;
+
+  if (serviceSecret) {
+    try {
+      const decoded = jwt.verify(token, serviceSecret, {
+        algorithms: ['HS256'],
+        issuer: 'career-gateway',
+        audience: 'trainx',
+      });
+
+      if (decoded.sub === 'career-gateway-integration-service') {
+        req.serviceAuth = { type: 'jwt', ...decoded };
+        return next();
+      }
+    } catch (_) {
+      // Not a valid service token; fall through to test user authentication
+    }
+  }
+
+  // Fallback to Admin User authentication
+  return authenticateToken(req, res, (err) => {
+    if (err) return next(err);
+    return authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN)(req, res, next);
+  });
 };

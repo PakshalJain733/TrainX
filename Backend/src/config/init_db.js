@@ -352,10 +352,15 @@ export async function initializeDatabase() {
         marked_by INT NULL,
         remarks VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    try {
+      await conn.query(`ALTER TABLE attendance ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`);
+    } catch (_) { }
 
     try {
       await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);

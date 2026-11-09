@@ -395,7 +395,7 @@ async function processSyncExecutionTask({
  */
 export async function recoverAbandonedSyncExecutions(timeoutMinutes = 15) {
   try {
-    const [result] = await query(
+    const result = await query(
       `UPDATE career_gateway_sync_executions
        SET status = 'failed',
            error_summary = CONCAT('Execution timed out or worker process terminated after ', ?, ' minutes in pending state'),

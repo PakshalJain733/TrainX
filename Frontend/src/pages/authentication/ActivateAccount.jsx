@@ -66,8 +66,11 @@ export default function ActivateAccount() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const tokenParam = (searchParams.get("token") || "").trim();
+  const tokenParam = (searchParams.get("token") || "").trim().replace(/[.,;!?#]+$/, "");
   const emailParam = (searchParams.get("email") || "").trim();
+
+  const [manualEmail, setManualEmail] = useState("");
+  const activeEmail = emailParam || manualEmail;
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -88,7 +91,8 @@ export default function ActivateAccount() {
   // Validate presence of token on mount
   useEffect(() => {
     if (!tokenParam) {
-      setErrorMsg("Missing or invalid activation token. Please use the exact link sent to your registered email.");
+      setErrorMsg("Missing or invalid activation token. If you received an invitation, please check your email or request a fresh link below.");
+      setIsExpired(true);
     }
   }, [tokenParam]);
 
@@ -121,7 +125,8 @@ export default function ActivateAccount() {
     setIsAlreadyConsumed(false);
 
     if (!tokenParam) {
-      setErrorMsg("Activation token is missing. Please check your email link.");
+      setErrorMsg("Activation token is missing. Please check your email link or request a fresh link below.");
+      setIsExpired(true);
       return;
     }
 
@@ -145,6 +150,7 @@ export default function ActivateAccount() {
         body: JSON.stringify({
           token: tokenParam,
           password: password,
+          email: activeEmail || undefined,
         }),
       });
 
@@ -152,10 +158,11 @@ export default function ActivateAccount() {
 
       if (!res.ok || !data.success) {
         const message = data.message || "Failed to activate account.";
-        if (message.toLowerCase().includes("expired")) {
-          setIsExpired(true);
-        } else if (message.toLowerCase().includes("already been used") || message.toLowerCase().includes("already active")) {
+        if (message.toLowerCase().includes("already") || message.toLowerCase().includes("sign in")) {
           setIsAlreadyConsumed(true);
+        } else {
+          // Token is invalid, expired, or superseded; always permit requesting fresh link
+          setIsExpired(true);
         }
         setErrorMsg(message);
         return;
@@ -164,14 +171,16 @@ export default function ActivateAccount() {
       setIsSuccess(true);
     } catch (err) {
       setErrorMsg("Network error connecting to activation service. Please verify your internet connection and try again.");
+      setIsExpired(true);
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
-    if (!emailParam) {
-      setResendStatus("Email address is missing. Please enter your email to receive a new link.");
+    const emailToSend = activeEmail.trim();
+    if (!emailToSend || !emailToSend.includes("@")) {
+      setResendStatus("Please enter your registered student email above to receive a new link.");
       return;
     }
 
@@ -183,12 +192,12 @@ export default function ActivateAccount() {
       const res = await fetch(`${baseUrl}/integrations/career-gateway/resend-activation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailParam }),
+        body: JSON.stringify({ email: emailToSend }),
       });
       const data = await res.json().catch(() => ({}));
-      setResendStatus(data.message || "If an eligible pending account exists, a new activation email has been dispatched.");
+      setResendStatus(data.message || `If an eligible account exists for ${emailToSend}, a fresh activation email has been dispatched.`);
     } catch (_) {
-      setResendStatus("Failed to send activation email. Please contact your administrator.");
+      setResendStatus("Failed to send activation email. Please contact your placement coordinator or administrator.");
     } finally {
       setResending(false);
     }
@@ -250,25 +259,23 @@ export default function ActivateAccount() {
                 <div className="activate-alert-content">
                   <span className="activate-alert-title">Activation Notice</span>
                   <span className="activate-alert-desc">{errorMsg}</span>
-                  {isExpired && (
-                    <div className="activate-resend-prompt">
-                      <button
-                        type="button"
-                        onClick={handleResend}
-                        disabled={resending}
-                        className="activate-resend-link"
-                      >
-                        {resending ? "Sending New Link..." : "Request a Fresh Activation Link"}
-                      </button>
-                      {resendStatus && <div className="activate-resend-status">{resendStatus}</div>}
-                    </div>
-                  )}
+                  <div className="activate-resend-prompt">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resending}
+                      className="activate-resend-link"
+                    >
+                      {resending ? "Sending New Link..." : "Request a Fresh Activation Link"}
+                    </button>
+                    {resendStatus && <div className="activate-resend-status">{resendStatus}</div>}
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Read-Only Email Field */}
-            {emailParam && (
+            {/* Email Field */}
+            {emailParam ? (
               <div className="activate-input-group">
                 <label className="activate-label" htmlFor="student-email">
                   {Icons.email} Registered Student Email
@@ -283,6 +290,24 @@ export default function ActivateAccount() {
                     className="activate-input"
                   />
                   <span className="activate-readonly-badge">Verified</span>
+                </div>
+              </div>
+            ) : (
+              <div className="activate-input-group">
+                <label className="activate-label" htmlFor="manual-email">
+                  {Icons.email} Registered Student Email *
+                </label>
+                <div className="activate-input-wrapper">
+                  <input
+                    id="manual-email"
+                    type="email"
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    placeholder="e.g. rollnumber@pvppcoe.ac.in"
+                    required
+                    disabled={loading}
+                    className="activate-input"
+                  />
                 </div>
               </div>
             )}

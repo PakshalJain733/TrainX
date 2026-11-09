@@ -119,12 +119,12 @@ export async function handleDeactivateStudent(req, res, next) {
  */
 export async function handleActivateAccount(req, res, next) {
   try {
-    const { token, password } = req.body;
+    const { token, password, email } = req.body;
     if (!token || !password) {
       return sendError(res, 'Activation token and new password are required', 400);
     }
 
-    const result = await consumeAccountActivation(token, password);
+    const result = await consumeAccountActivation(token, password, email);
     return sendSuccess(res, result.message, {
       userId: result.userId,
       email: result.email,

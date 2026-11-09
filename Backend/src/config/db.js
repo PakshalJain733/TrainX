@@ -64,6 +64,20 @@ export const checkDatabaseConnection = async () => {
       console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
     }
 
+    // Ensure updated_at exists on attendance table
+    try {
+      const attCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'attendance'"
+      );
+      const attColSet = new Set((attCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      if (!attColSet.has('updated_at')) {
+        await query(`ALTER TABLE attendance ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`);
+        console.log(`[Database Migration] Added column updated_at to attendance table.`);
+      }
+    } catch (attMigErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply attendance schema extensions: ${attMigErr.message}`);
+    }
+
     // Auto-normalize student semesters according to academic year (FE -> 1, SE -> 3, TE -> 5, BE -> 7)
     try {
       await query(`

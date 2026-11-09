@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { authenticateCareerGatewayService } from './middleware/careerGatewayAuth.middleware.js';
+import {
+  authenticateCareerGatewayService,
+  authenticateServiceOrAdmin,
+} from './middleware/careerGatewayAuth.middleware.js';
 import {
   activationRateLimiter,
   m2mProvisioningRateLimiter,
@@ -76,7 +79,6 @@ router.post('/sync-student', m2mProvisioningRateLimiter, authenticateCareerGatew
 
 // Mode A: Reverse-export trigger (if Career Gateway triggers a reverse export batch)
 router.post('/sync', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundSyncRequest);
-router.get('/sync/:syncId', authenticateCareerGatewayService, handleGetSyncExecutionStatus);
 
 // ============================================================================
 // 2. Student Self-Service Account Activation (Public with Activation Token & Strict Rate Limit)
@@ -104,7 +106,14 @@ router.post(
   handleManualExportTrigger
 );
 
-// Mode B: On-Demand Manual Synchronization triggered by TrainX Administrator
+// Admin sync actions & history (LITERAL PATHS MUST PRECEDE PARAMETERIZED :syncId PATHS)
+router.get(
+  '/sync/executions',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  handleGetSyncExecutions
+);
+
 router.post(
   '/sync/on-demand',
   authenticateToken,
@@ -112,11 +121,11 @@ router.post(
   handleAdminTriggerSync
 );
 
-router.get(
-  '/sync/executions',
+router.post(
+  '/sync/:syncId/retry',
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
-  handleGetSyncExecutions
+  handleRetrySyncExecution
 );
 
 router.get(
@@ -126,11 +135,7 @@ router.get(
   handleGetSyncExecutionStatus
 );
 
-router.post(
-  '/sync/:syncId/retry',
-  authenticateToken,
-  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
-  handleRetrySyncExecution
-);
+// Parameterized sync ID endpoint (supports Career Gateway service token OR Admin user token)
+router.get('/sync/:syncId', authenticateServiceOrAdmin, handleGetSyncExecutionStatus);
 
 export default router;

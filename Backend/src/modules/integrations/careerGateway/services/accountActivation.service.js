@@ -88,8 +88,9 @@ export async function sendActivationEmail({ to, name, rawToken }) {
 
 /**
  * Validates a raw activation token and activates the account by setting the password.
+ * Accepts optional student email for fallback diagnostic validation and user guidance.
  */
-export async function consumeAccountActivation(rawToken, newPassword) {
+export async function consumeAccountActivation(rawToken, newPassword, email = null) {
   if (!rawToken || typeof rawToken !== 'string') {
     throw new Error('Activation token is required.');
   }
@@ -97,10 +98,11 @@ export async function consumeAccountActivation(rawToken, newPassword) {
     throw new Error('New password must be at least 6 characters long.');
   }
 
-  const tokenHash = crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
+  const cleanedToken = rawToken.trim().replace(/[.,;!?#]+$/, '');
+  const tokenHash = crypto.createHash('sha256').update(cleanedToken).digest('hex');
 
   const [record] = await query(
-    `SELECT a.id, a.user_id, a.expires_at, a.consumed_at, u.email, u.name
+    `SELECT a.id, a.user_id, a.expires_at, a.consumed_at, u.email, u.name, u.is_active, u.password_hash
      FROM account_activations a
      JOIN users u ON u.id = a.user_id
      WHERE a.token_hash = ?
@@ -109,7 +111,40 @@ export async function consumeAccountActivation(rawToken, newPassword) {
   );
 
   if (!record) {
-    throw new Error('Invalid or unknown activation token.');
+    // If student email is provided, check database state to provide specific actionable guidance
+    if (email && typeof email === 'string' && email.includes('@')) {
+      const cleanEmail = email.trim().toLowerCase();
+      const [userRecord] = await query(
+        `SELECT id, email, is_active, password_hash FROM users WHERE LOWER(email) = ? LIMIT 1`,
+        [cleanEmail]
+      );
+
+      if (userRecord) {
+        if (userRecord.is_active === 1 && userRecord.password_hash && userRecord.password_hash.trim().length > 0) {
+          throw new Error('Your account is already activated. Please sign in directly with your password.');
+        }
+
+        const activations = await query(
+          `SELECT id, expires_at, consumed_at, created_at 
+           FROM account_activations 
+           WHERE user_id = ? 
+           ORDER BY id DESC LIMIT 1`,
+          [userRecord.id]
+        );
+
+        if (activations && activations.length > 0) {
+          const latest = activations[0];
+          if (latest.consumed_at) {
+            throw new Error('This activation token has already been used or superseded. Please request a fresh activation link below.');
+          }
+          if (new Date(latest.expires_at) < new Date()) {
+            throw new Error('This activation token has expired. Please request a fresh activation link below.');
+          }
+          throw new Error('This activation link is invalid or has been superseded. Please request a fresh activation link below.');
+        }
+      }
+    }
+    throw new Error('Invalid or unknown activation token. Please request a fresh activation link below.');
   }
 
   if (record.consumed_at) {
@@ -117,7 +152,7 @@ export async function consumeAccountActivation(rawToken, newPassword) {
   }
 
   if (new Date(record.expires_at) < new Date()) {
-    throw new Error('This activation token has expired. Please contact support or your administrator.');
+    throw new Error('This activation token has expired. Please request a fresh activation link below.');
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
