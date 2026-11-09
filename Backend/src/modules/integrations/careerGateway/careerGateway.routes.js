@@ -15,6 +15,13 @@ import {
   getIntegrationStatus,
   handleManualExportTrigger,
 } from './controllers/careerGatewayMonitoring.controller.js';
+import {
+  handleInboundSyncRequest,
+  handleAdminTriggerSync,
+  handleGetSyncExecutions,
+  handleGetSyncExecutionStatus,
+  handleRetrySyncExecution,
+} from './controllers/careerGatewaySync.controller.js';
 import { authenticateToken } from '../../../middleware/auth.middleware.js';
 import { authorizeRoles } from '../../../middleware/role.middleware.js';
 import { ROLES } from '../../../utils/constants.js';
@@ -61,6 +68,10 @@ router.post('/students/deactivate', m2mProvisioningRateLimiter, authenticateCare
 // Update or revoke student eligibility (SEC-05: burst-tolerant rate limiter)
 router.patch('/students/:studentId/eligibility', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleUpdateEligibility);
 
+// Mode A: On-Demand Student / College Synchronization triggered by Career Gateway
+router.post('/sync', m2mProvisioningRateLimiter, authenticateCareerGatewayService, handleInboundSyncRequest);
+router.get('/sync/:syncId', authenticateCareerGatewayService, handleGetSyncExecutionStatus);
+
 // ============================================================================
 // 2. Student Self-Service Account Activation (Public with Activation Token & Strict Rate Limit)
 // ============================================================================
@@ -70,7 +81,7 @@ router.post('/activate-account', activationRateLimiter, handleActivateAccount);
 router.post('/resend-activation', activationRateLimiter, handleResendActivation);
 
 // ============================================================================
-// 3. Admin Integration Monitoring & Manual Trigger
+// 3. Admin Integration Monitoring & Manual Trigger (Mode B)
 // ============================================================================
 
 router.get(
@@ -85,6 +96,35 @@ router.post(
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
   handleManualExportTrigger
+);
+
+// Mode B: On-Demand Manual Synchronization triggered by TrainX Administrator
+router.post(
+  '/sync/on-demand',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  handleAdminTriggerSync
+);
+
+router.get(
+  '/sync/executions',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  handleGetSyncExecutions
+);
+
+router.get(
+  '/sync/status/:syncId',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  handleGetSyncExecutionStatus
+);
+
+router.post(
+  '/sync/:syncId/retry',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  handleRetrySyncExecution
 );
 
 export default router;

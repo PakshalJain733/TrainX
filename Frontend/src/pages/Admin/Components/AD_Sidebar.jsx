@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, UserCog, UserCheck, UserPlus, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, HelpCircle, Megaphone, Code2, AlertTriangle, AlertCircle, Briefcase, Award } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, UserCheck, UserPlus, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, HelpCircle, Megaphone, Code2, AlertTriangle, AlertCircle, Briefcase, Award, Zap } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
@@ -46,6 +46,7 @@ const primaryNavItems = [
   { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck, moduleKey: "adminAttendance" },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2, moduleKey: "adminWeeklyReports" },
   { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle, moduleKey: "defaulters" },
+  { title: "Career Gateway Sync", url: "/admin/career-gateway", icon: Zap },
 ];
 
 const footerNavItems = [

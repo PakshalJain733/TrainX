@@ -53,6 +53,7 @@ const AdminWeeklyReports = lazy(() => import('./pages/Admin/Components/AD_Weekly
 const AdminTrainings = lazy(() => import('./pages/Admin/Components/AD_Trainings'));
 const AdminApproveUsers = lazy(() => import('./pages/Admin/Components/AD_ApproveUsers'));
 const AdminDepartmentsPage = lazy(() => import('./pages/Admin/Components/AD_Departments'));
+const AdminCareerGatewaySync = lazy(() => import('./pages/Admin/Components/AD_CareerGatewaySync'));
 
 // ── Super Admin Workspace Pages (Lazy Loaded) ──
 const SuperAdminLayout = lazy(() => import('./pages/SuperAdmin/Components/SA_Layout'));
@@ -194,6 +195,7 @@ function App() {
               <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="adminWeeklyReports"><AdminWeeklyReports /></MaintenanceGuard>} />
               <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
               <Route path="help" element={<MaintenanceGuard moduleKey="adminHelp"><AdminHelp /></MaintenanceGuard>} />
+              <Route path="career-gateway" element={<AdminCareerGatewaySync />} />
               <Route path="profile" element={<MaintenanceGuard moduleKey="adminProfile"><AdminProfile /></MaintenanceGuard>} />
             </Route>
 

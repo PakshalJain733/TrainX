@@ -20,6 +20,11 @@ export const getApiBaseUrl = () => {
     if (host.includes("trainingportal.getflytechnologies.com")) {
       return "https://api.trainingportal.getflytechnologies.com/api/v1";
     }
+
+    // Production Custom Domains & Vercel Deployments (proxied via /api/v1 rewrite)
+    if (host.includes("trainx-vppcoe.tech") || host.endsWith(".vercel.app")) {
+      return "/api/v1";
+    }
   }
 
   // Deployed production API (Render live backend fallback)

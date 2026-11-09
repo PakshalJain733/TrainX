@@ -1,6 +1,6 @@
 import { pool, query } from '../../../../config/db.js';
 import { createAccountActivation, sendActivationEmail } from './accountActivation.service.js';
-import { invalidateUserAuthCache } from '../../../../middleware/auth.middleware.js';
+import { invalidateUserAuthCache, revokeUserAuthInCache } from '../../../../middleware/auth.middleware.js';
 import { disconnectUserSockets } from '../../../../socket/interview.socket.js';
 
 /**
@@ -279,13 +279,30 @@ export async function provisionStudentFromCareerGateway(studentData, options = {
         [newEligibility, targetClgId, requestedBatch, isEligible ? null : new Date(), existingMapping.id]
       );
 
+      // Check if existing user account has never completed password activation
+      const userRows = await executeQuery('SELECT password_hash, is_active FROM users WHERE id = ? LIMIT 1', [userId]);
+      const currentTargetUser = userRows[0] || null;
+      const isUnactivated = !currentTargetUser || !currentTargetUser.password_hash || String(currentTargetUser.password_hash).trim().length === 0;
+
       // Update User record (PRESERVES EXISTING password_hash and role)
       await executeQuery(
         `UPDATE users
          SET name = ?, mobile_number = COALESCE(?, mobile_number), is_active = ?, updated_at = NOW()
          WHERE id = ?`,
-        [name, mobile, isEligible ? 1 : 0, userId]
+        [name, mobile, isEligible ? (isUnactivated ? 0 : 1) : 0, userId]
       );
+
+      // If existing user account is still unactivated, generate fresh activation token
+      if (isUnactivated && isEligible) {
+        const { rawToken } = await createAccountActivation(userId, {}, connection);
+        if (triggerEmail) {
+          pendingPostCommitActions.push(() => {
+            sendActivationEmail({ to: email, name, rawToken }).catch((err) => {
+              console.warn(`[Activation] Async email trigger failed for ${email}: ${err.message}`);
+            });
+          });
+        }
+      }
 
       // Update Student Profile with preserved roll_number and independent clg_id
       await executeQuery(
@@ -310,10 +327,10 @@ export async function provisionStudentFromCareerGateway(studentData, options = {
         }
       }
 
-      // If user was revoked, immediately invalidate cache and terminate live sockets
+      // If user was revoked, immediately revoke cache and terminate live sockets
       if (!isEligible) {
         pendingPostCommitActions.push(() => {
-          invalidateUserAuthCache(userId);
+          revokeUserAuthInCache(userId);
           disconnectUserSockets(userId, 'Student eligibility revoked by Career Gateway');
         });
       } else if (isReactivating) {
@@ -420,9 +437,22 @@ export async function provisionStudentFromCareerGateway(studentData, options = {
           }
         }
 
+        // If existing user account has never completed password activation, generate activation token
+        const isEmailUserUnactivated = !existingUserByEmail.password_hash || String(existingUserByEmail.password_hash).trim().length === 0;
+        if (isEmailUserUnactivated && isEligible) {
+          const { rawToken } = await createAccountActivation(userId, {}, connection);
+          if (triggerEmail) {
+            pendingPostCommitActions.push(() => {
+              sendActivationEmail({ to: email, name, rawToken }).catch((err) => {
+                console.warn(`[Activation] Async email trigger failed for ${email}: ${err.message}`);
+              });
+            });
+          }
+        }
+
         if (!isEligible) {
           pendingPostCommitActions.push(() => {
-            invalidateUserAuthCache(userId);
+            revokeUserAuthInCache(userId);
             disconnectUserSockets(userId, 'Student eligibility revoked by Career Gateway');
           });
         }
@@ -620,8 +650,8 @@ export async function revokeStudentEligibility(externalStudentId, reason = 'Revo
 
     await connection.commit();
 
-    // SEC-01: Immediately invalidate token cache and disconnect live sockets
-    invalidateUserAuthCache(userId);
+    // SEC-01: Immediately revoke token cache and disconnect live sockets
+    revokeUserAuthInCache(userId);
     disconnectUserSockets(userId, reason);
 
     return {

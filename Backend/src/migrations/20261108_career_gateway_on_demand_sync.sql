@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS career_gateway_sync_executions (
   started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP NULL,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_sync_tenant_req (college_id, trigger_source, request_id),
   INDEX idx_cg_sync_request_id (request_id),
   INDEX idx_cg_sync_status (status),
   INDEX idx_cg_sync_college_id (college_id),

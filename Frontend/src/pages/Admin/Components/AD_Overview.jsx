@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone } from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
@@ -271,6 +271,19 @@ export default function AdminOverview() {
                   </div>
                 </div>
                 <span className="admin-quick-action-arrow admin-quick-action-arrow--amber">Open &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/career-gateway" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <Zap size={18} color="#2563eb" />
+                  <div>
+                    <span className="admin-quick-action-title">Career Gateway Sync</span>
+                    <span className="admin-quick-action-sub">On-demand synchronization & audit</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--blue">Open &rarr;</span>
               </div>
             </Link>
           </CardContent>

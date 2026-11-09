@@ -52,9 +52,10 @@ export const authenticateCareerGatewayService = (req, res, next) => {
       return sendError(res, 'Forbidden: Invalid or missing service token subject', 403);
     }
 
-    // Validate expected scope
-    if (decoded.scope !== 'student_sync') {
-      return sendError(res, 'Forbidden: Insufficient token scope for student provisioning', 403);
+    // Validate expected scope (student provisioning or on-demand synchronization)
+    const validScopes = ['student_sync', 'training_sync'];
+    if (!decoded.scope || !validScopes.includes(decoded.scope)) {
+      return sendError(res, 'Forbidden: Insufficient token scope for integration operation', 403);
     }
 
     req.serviceAuth = {

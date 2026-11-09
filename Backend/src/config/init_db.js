@@ -1019,6 +1019,77 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
 
+    // 30b. Ensure Career Gateway On-Demand Sync Executions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_sync_executions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sync_id VARCHAR(100) NOT NULL UNIQUE,
+        request_id VARCHAR(100) NULL,
+        sync_type ENUM('manual_student', 'manual_college', 'scheduled_daily') NOT NULL DEFAULT 'manual_student',
+        trigger_source ENUM('career_gateway', 'trainx_admin', 'scheduler') NOT NULL DEFAULT 'career_gateway',
+        requested_by VARCHAR(150) NULL,
+        college_id INT NULL,
+        career_gateway_college_id VARCHAR(100) NULL,
+        career_gateway_student_id INT NULL,
+        trainx_user_id INT NULL,
+        export_id VARCHAR(100) NULL,
+        status ENUM('queued', 'processing', 'completed', 'partial', 'failed') NOT NULL DEFAULT 'queued',
+        records_processed INT NOT NULL DEFAULT 0,
+        records_failed INT NOT NULL DEFAULT 0,
+        payload_summary JSON NULL,
+        error_summary TEXT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_sync_tenant_req (college_id, trigger_source, request_id),
+        INDEX idx_cg_sync_request_id (request_id),
+        INDEX idx_cg_sync_status (status),
+        INDEX idx_cg_sync_college_id (college_id),
+        INDEX idx_cg_sync_student_id (career_gateway_student_id),
+        INDEX idx_cg_sync_started (started_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    try {
+      await conn.query(`ALTER TABLE career_gateway_sync_executions ADD UNIQUE KEY uq_sync_tenant_req (college_id, trigger_source, request_id)`);
+    } catch (_) {}
+
+    // 30c. Ensure Career Gateway Student Mappings Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_student_mappings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        trainx_user_id INT NOT NULL,
+        career_gateway_student_id INT NOT NULL,
+        clg_id VARCHAR(100) NULL,
+        assigned_batch VARCHAR(100) NULL,
+        source_system VARCHAR(50) NOT NULL DEFAULT 'career_gateway',
+        eligibility_status ENUM('eligible', 'revoked', 'pending') NOT NULL DEFAULT 'eligible',
+        provisioned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_synced_at TIMESTAMP NULL DEFAULT NULL,
+        revoked_at TIMESTAMP NULL DEFAULT NULL,
+        metadata JSON NULL,
+        UNIQUE KEY unique_cg_student (career_gateway_student_id),
+        UNIQUE KEY unique_tx_user (trainx_user_id),
+        FOREIGN KEY (trainx_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_mapping_status (eligibility_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 30d. Ensure Account Activations Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS account_activations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        consumed_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_activation_user (user_id),
+        INDEX idx_activation_token (token_hash)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     try { await conn.query("ALTER TABLE batches ADD COLUMN mentor VARCHAR(255) NULL"); } catch (e) {}
     try { await conn.query("ALTER TABLE batches ADD COLUMN mentor_id INT NULL"); } catch (e) {}
     try { await conn.query("ALTER TABLE batches ADD COLUMN trainer_id INT NULL"); } catch (e) {}

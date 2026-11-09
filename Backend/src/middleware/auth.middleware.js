@@ -9,10 +9,22 @@ const userActiveCache = new Map();
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds bounded window
 
 /**
- * Immediately invalidates cached authentication status for a user.
- * Explicitly marks as inactive for 10 minutes to prevent race conditions during revocation.
+ * Immediately invalidates cached authentication status for a user by evicting
+ * the user entry from the cache. The next authenticated request will query MySQL
+ * directly to obtain the fresh active status and role (SEC-01).
  */
 export function invalidateUserAuthCache(userId) {
+  if (!userId) return;
+  const numId = Number(userId);
+  userActiveCache.delete(numId);
+}
+
+/**
+ * Explicitly marks a user as inactive/revoked in the cache for 10 minutes.
+ * Used exclusively for administrative revoking or deactivation to prevent
+ * in-flight race conditions during revocation.
+ */
+export function revokeUserAuthInCache(userId) {
   if (!userId) return;
   const numId = Number(userId);
   userActiveCache.delete(numId);

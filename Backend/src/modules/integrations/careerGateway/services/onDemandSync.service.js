@@ -17,15 +17,15 @@ import { CareerGatewayClient } from '../client/careerGatewayClient.js';
  * Helper to get college external slug for payload envelope
  */
 async function getCollegeExternalSlug(collegeId) {
-  if (!collegeId) return null;
+  if (!collegeId) return process.env.CAREER_GATEWAY_COLLEGE_ID || process.env.TRAINX_COLLEGE_ID || null;
   const colRows = await query(
     'SELECT id, code, career_gateway_college_id FROM colleges WHERE id = ? OR career_gateway_college_id = ? OR code = ? LIMIT 1',
     [isNaN(Number(collegeId)) ? -1 : Number(collegeId), String(collegeId), String(collegeId)]
   );
   if (colRows && colRows.length > 0) {
-    return colRows[0].career_gateway_college_id || colRows[0].code || String(colRows[0].id);
+    return colRows[0].career_gateway_college_id || process.env.CAREER_GATEWAY_COLLEGE_ID || process.env.TRAINX_COLLEGE_ID || colRows[0].code || String(colRows[0].id);
   }
-  return String(collegeId);
+  return process.env.CAREER_GATEWAY_COLLEGE_ID || process.env.TRAINX_COLLEGE_ID || String(collegeId);
 }
 
 /**
@@ -42,6 +42,7 @@ export async function executeOnDemandSync(options = {}) {
     careerGatewayCollegeId = null,
     requestId = null,
     isAsync = false,
+    client = null,
   } = options;
 
   // 1. Idempotency check: if requestId provided, check for existing execution
@@ -143,29 +144,54 @@ export async function executeOnDemandSync(options = {}) {
     resolvedCollegeId = mappedStudent.college_id;
   }
 
-  // 4. Create sync execution tracking record
+  // 4. Create sync execution tracking record with race-condition handling
   const syncId = `SYNC-MAN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const cleanRequestId = requestId ? String(requestId).trim() : null;
   const initialStatus = isAsync ? 'queued' : 'processing';
 
-  await query(
-    `INSERT INTO career_gateway_sync_executions
-     (sync_id, request_id, sync_type, trigger_source, requested_by, college_id, career_gateway_college_id,
-      career_gateway_student_id, trainx_user_id, status, started_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [
-      syncId,
-      cleanRequestId,
-      syncType,
-      triggerSource,
-      requestedBy,
-      resolvedCollegeId,
-      externalCollegeSlug,
-      targetCgStudentId,
-      targetTrainxUserId,
-      initialStatus,
-    ]
-  );
+  try {
+    await query(
+      `INSERT INTO career_gateway_sync_executions
+       (sync_id, request_id, sync_type, trigger_source, requested_by, college_id, career_gateway_college_id,
+        career_gateway_student_id, trainx_user_id, status, started_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        syncId,
+        cleanRequestId,
+        syncType,
+        triggerSource,
+        requestedBy,
+        resolvedCollegeId,
+        externalCollegeSlug,
+        targetCgStudentId,
+        targetTrainxUserId,
+        initialStatus,
+      ]
+    );
+  } catch (insertErr) {
+    if (insertErr.code === 'ER_DUP_ENTRY' && cleanRequestId) {
+      // Race condition handled: another request inserted this request_id concurrently
+      const [existingAfterRace] = await query(
+        'SELECT * FROM career_gateway_sync_executions WHERE request_id = ? LIMIT 1',
+        [cleanRequestId]
+      );
+      if (existingAfterRace) {
+        return {
+          idempotent: true,
+          sync_id: existingAfterRace.sync_id,
+          request_id: existingAfterRace.request_id,
+          status: existingAfterRace.status,
+          sync_type: existingAfterRace.sync_type,
+          records_processed: existingAfterRace.records_processed,
+          records_failed: existingAfterRace.records_failed,
+          message: `Concurrent duplicate request detected: Request ${cleanRequestId} already recorded with status ${existingAfterRace.status}`,
+          created_at: existingAfterRace.started_at,
+          completed_at: existingAfterRace.completed_at,
+        };
+      }
+    }
+    throw insertErr;
+  }
 
   // 5. If asynchronous requested (e.g. for large college-wide jobs), fire background runner
   if (isAsync) {
@@ -180,6 +206,7 @@ export async function executeOnDemandSync(options = {}) {
           targetTrainxUserId,
           triggerSource,
           requestedBy,
+          client,
         });
       } catch (bgErr) {
         console.error(`[OnDemandSync Background Error] ${syncId}:`, bgErr.message);
@@ -207,6 +234,7 @@ export async function executeOnDemandSync(options = {}) {
     targetTrainxUserId,
     triggerSource,
     requestedBy,
+    client,
   });
 }
 
@@ -222,6 +250,7 @@ async function processSyncExecutionTask({
   targetTrainxUserId,
   triggerSource,
   requestedBy,
+  client = null,
 }) {
   const exportId = `EXP-MAN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -248,6 +277,7 @@ async function processSyncExecutionTask({
       generated_at: new Date().toISOString(),
       since: null, // Zero effect on daily scheduled sync cursor
       college_id: externalCollegeSlug,
+      career_gateway_college_id: externalCollegeSlug,
       students_count: studentsCount,
       records_count: total,
       data: {
@@ -270,13 +300,13 @@ async function processSyncExecutionTask({
       total_records: total,
     };
 
-    // Dispatch to Career Gateway receiver using established client
-    const client = new CareerGatewayClient();
+    // Dispatch to Career Gateway receiver using established client (or injected mock)
+    const cgClient = client || new CareerGatewayClient();
     let cgResponse = null;
     let dispatchError = null;
 
     try {
-      cgResponse = await client.sendTrainingRecords(payload);
+      cgResponse = await cgClient.sendTrainingRecords(payload);
     } catch (err) {
       dispatchError = err;
       console.warn(`[OnDemandSync] Receiver call warning for ${syncId}:`, err.message);
@@ -359,9 +389,38 @@ async function processSyncExecutionTask({
 }
 
 /**
+ * Background Job Reliability: Recovers abandoned or stuck synchronization executions.
+ * If a background worker crashed or restarted while a job was in 'processing' or 'queued' state
+ * for longer than timeoutMinutes, mark it as 'failed' with an explanatory error summary.
+ */
+export async function recoverAbandonedSyncExecutions(timeoutMinutes = 15) {
+  try {
+    const [result] = await query(
+      `UPDATE career_gateway_sync_executions
+       SET status = 'failed',
+           error_summary = CONCAT('Execution timed out or worker process terminated after ', ?, ' minutes in pending state'),
+           completed_at = NOW()
+       WHERE status IN ('processing', 'queued')
+         AND started_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)`,
+      [timeoutMinutes, timeoutMinutes]
+    );
+    if (result && result.affectedRows > 0) {
+      console.warn(`[OnDemandSync] Recovered ${result.affectedRows} abandoned sync execution(s) older than ${timeoutMinutes}m.`);
+    }
+    return result?.affectedRows || 0;
+  } catch (err) {
+    console.error('[OnDemandSync] Error recovering abandoned executions:', err.message);
+    return 0;
+  }
+}
+
+/**
  * Retrieves paginated synchronization history, strictly scoped by tenant.
  */
 export async function getSyncExecutions(options = {}) {
+  // Proactively sweep any abandoned executions before returning history
+  await recoverAbandonedSyncExecutions(15).catch(() => {});
+
   const { collegeId = null, syncType = null, status = null, page = 1, limit = 20 } = options;
   const offset = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
 
