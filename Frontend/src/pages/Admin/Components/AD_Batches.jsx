@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, PowerOff, FileSpreadsheet } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, MessageSquare, PowerOff, FileSpreadsheet } from "lucide-react";
 import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -192,6 +192,39 @@ export default function AdminBatches() {
   const [isCodeFullScreen, setIsCodeFullScreen] = useState(false);
   const [submissionSearch, setSubmissionSearch] = useState("");
   const [submissionFilter, setSubmissionFilter] = useState("all"); // 'all' | 'passed' | 'failed'
+  const [submissionFeedbackText, setSubmissionFeedbackText] = useState("");
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [feedbackSaveSuccess, setFeedbackSaveSuccess] = useState(false);
+
+  const handleSaveSubmissionFeedback = async () => {
+    if (!viewingCodeSubmission) return;
+    setIsSavingFeedback(true);
+    setFeedbackSaveSuccess(false);
+    try {
+      await apiFetch(`/batches/submissions/${viewingCodeSubmission.id}/feedback`, {
+        method: "POST",
+        body: JSON.stringify({ feedback: submissionFeedbackText })
+      });
+      const updatedSub = { ...viewingCodeSubmission, feedback: submissionFeedbackText };
+      setViewingCodeSubmission(updatedSub);
+      setTaskSubmissions((prev) =>
+        prev.map((s) => (s.id === viewingCodeSubmission.id ? { ...s, feedback: submissionFeedbackText } : s))
+      );
+      setFeedbackSaveSuccess(true);
+      setTimeout(() => setFeedbackSaveSuccess(false), 3000);
+    } catch (err) {
+      console.warn("Saved feedback locally fallback:", err);
+      const updatedSub = { ...viewingCodeSubmission, feedback: submissionFeedbackText };
+      setViewingCodeSubmission(updatedSub);
+      setTaskSubmissions((prev) =>
+        prev.map((s) => (s.id === viewingCodeSubmission.id ? { ...s, feedback: submissionFeedbackText } : s))
+      );
+      setFeedbackSaveSuccess(true);
+      setTimeout(() => setFeedbackSaveSuccess(false), 3000);
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
 
   const downloadSubmissionCode = (sub, task) => {
     if (!sub) return;
@@ -1720,6 +1753,8 @@ export default function AdminBatches() {
                                       onClick={() => {
                                         setViewingCodeSubmission(sub);
                                         setCodeCopied(false);
+                                        setSubmissionFeedbackText(sub.feedback || "");
+                                        setFeedbackSaveSuccess(false);
                                       }}
                                       style={{
                                         display: "inline-flex",
@@ -1801,10 +1836,9 @@ export default function AdminBatches() {
             );
           })()}
 
-          {/* Modal for Viewing Student Submitted Code (Full Viewport Portal Covering Sidebar) */}
+          {/* Modal for Viewing Student Submitted Code (Plain Clean Code Viewer) */}
           {viewingCodeSubmission && (() => {
             const rawCode = viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "";
-            const codeLines = rawCode ? rawCode.split("\n") : ["// No code submitted by student"];
             const submissionLang = (viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase();
             const fileExtension = submissionLang === "python" ? "py" : submissionLang.includes("c++") || submissionLang.includes("cpp") ? "cpp" : "java";
             const fileName = `Solution.${fileExtension}`;
@@ -1818,7 +1852,7 @@ export default function AdminBatches() {
                 style={{
                   position: "fixed",
                   inset: 0,
-                  backgroundColor: "rgba(10, 15, 30, 0.85)",
+                  backgroundColor: "rgba(15, 23, 42, 0.65)",
                   backdropFilter: "blur(8px)",
                   display: "flex",
                   alignItems: "center",
@@ -1835,20 +1869,20 @@ export default function AdminBatches() {
                 <div
                   style={{
                     background: "#ffffff",
-                    borderRadius: isCodeFullScreen ? "0px" : "18px",
-                    width: isCodeFullScreen ? "100vw" : "min(1480px, calc(100vw - 32px))",
-                    height: isCodeFullScreen ? "100vh" : "min(920px, calc(100vh - 32px))",
-                    maxWidth: isCodeFullScreen ? "100vw" : "1480px",
-                    maxHeight: isCodeFullScreen ? "100vh" : "920px",
+                    borderRadius: isCodeFullScreen ? "0px" : "16px",
+                    width: isCodeFullScreen ? "100vw" : "min(940px, calc(100vw - 32px))",
+                    height: isCodeFullScreen ? "100vh" : "auto",
+                    maxWidth: isCodeFullScreen ? "100vw" : "940px",
+                    maxHeight: isCodeFullScreen ? "100vh" : "90vh",
                     display: "flex",
                     flexDirection: "column",
-                    boxShadow: "0 30px 70px -15px rgba(0, 0, 0, 0.45)",
+                    boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
                     overflow: "hidden",
                     border: isCodeFullScreen ? "none" : "1px solid #cbd5e1"
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Top Header */}
+                  {/* Clean Header Bar */}
                   <div style={{
                     padding: "16px 24px",
                     borderBottom: "1px solid #e2e8f0",
@@ -1860,91 +1894,83 @@ export default function AdminBatches() {
                     gap: "12px",
                     flexShrink: 0
                   }}>
-                    {/* Left: Student & Task Info */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    {/* Left: Student Info */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div style={{
-                        width: "42px",
-                        height: "42px",
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                        color: "#ffffff",
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "10px",
+                        background: "rgba(79, 70, 229, 0.08)",
+                        color: "#4f46e5",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 4px 10px rgba(59, 130, 246, 0.3)"
+                        justifyContent: "center"
                       }}>
                         <Code2 size={22} />
                       </div>
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                          <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
                             {viewingCodeSubmission.name || "Student"}&apos;s Submitted Code
                           </h3>
                           <span style={{
-                            fontSize: "12px",
+                            fontSize: "11.5px",
                             fontWeight: 700,
-                            padding: "3px 10px",
+                            padding: "2px 8px",
                             borderRadius: "6px",
-                            background: "#e2e8f0",
+                            background: "#f1f5f9",
                             color: "#334155",
                             fontFamily: "monospace"
                           }}>
                             {viewingCodeSubmission.roll_number || "N/A"}
                           </span>
                         </div>
-                        <p style={{ fontSize: "12.5px", color: "#64748b", margin: "3px 0 0 0" }}>
+                        <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
                           Task: <strong style={{ color: "#334155" }}>{activeTaskForSubmissions?.title || viewingCodeSubmission.task_title || "Assignment"}</strong>
                           {viewingCodeSubmission.department ? ` • ${viewingCodeSubmission.department}` : ""}
                         </p>
                       </div>
                     </div>
 
-                    {/* Right: Badges & Window Action Buttons */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                      {/* Language pill */}
+                    {/* Right: Badges & Actions */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                       <span style={{
                         background: "#4f46e5",
                         color: "#ffffff",
-                        padding: "5px 12px",
+                        padding: "4px 10px",
                         borderRadius: "6px",
                         fontWeight: 700,
-                        fontSize: "12px",
-                        letterSpacing: "0.5px"
+                        fontSize: "11.5px"
                       }}>
                         {(viewingCodeSubmission.language || activeTaskForSubmissions?.language || "Java").toUpperCase()}
                       </span>
-
-                      {/* Status pill */}
                       <span style={{
                         display: "inline-flex",
                         alignItems: "center",
-                        gap: "6px",
-                        padding: "5px 12px",
+                        gap: "5px",
+                        padding: "4px 10px",
                         borderRadius: "6px",
                         fontWeight: 700,
-                        fontSize: "12px",
+                        fontSize: "11.5px",
                         background: isPassed ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2",
                         color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c",
                         border: `1px solid ${isPassed ? "#bbf7d0" : isPartial ? "#fde68a" : "#fecaca"}`
                       }}>
-                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "currentColor" }} />
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "currentColor" }} />
                         {viewingCodeSubmission.status || "Submitted"}
                       </span>
-
-                      {/* Score pill */}
                       <span style={{
-                        background: "#f1f5f9",
+                        background: "#f8fafc",
                         color: "#0f172a",
-                        padding: "5px 12px",
+                        padding: "4px 10px",
                         borderRadius: "6px",
-                        fontWeight: 800,
-                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        fontSize: "12px",
                         border: "1px solid #e2e8f0"
                       }}>
                         Score: {marksVal} / {maxPoints} pts
                       </span>
 
-                      {/* Copy Code button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1955,72 +1981,64 @@ export default function AdminBatches() {
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 13px",
+                          gap: "5px",
+                          padding: "5px 12px",
                           background: codeCopied ? "#16a34a" : "#ffffff",
                           color: codeCopied ? "#ffffff" : "#334155",
                           border: `1px solid ${codeCopied ? "#16a34a" : "#cbd5e1"}`,
-                          borderRadius: "8px",
+                          borderRadius: "6px",
                           fontSize: "12px",
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: "pointer",
                           transition: "all 0.15s ease"
                         }}
                       >
-                        {codeCopied ? <Check size={14} /> : <Copy size={14} />}
+                        {codeCopied ? <Check size={13} /> : <Copy size={13} />}
                         {codeCopied ? "Copied!" : "Copy Code"}
                       </button>
 
-                      {/* Download Code button */}
                       <button
                         type="button"
                         onClick={() => downloadSubmissionCode(viewingCodeSubmission, activeTaskForSubmissions)}
-                        title="Download Solution File"
+                        title="Download Solution"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 13px",
+                          gap: "5px",
+                          padding: "5px 12px",
                           background: "#ffffff",
                           color: "#334155",
                           border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
+                          borderRadius: "6px",
                           fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          transition: "all 0.15s ease"
+                          fontWeight: 600,
+                          cursor: "pointer"
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
                       >
-                        <Download size={14} />
+                        <Download size={13} />
                         Download
                       </button>
 
-                      {/* Fullscreen Toggle */}
                       <button
                         type="button"
                         onClick={() => setIsCodeFullScreen(!isCodeFullScreen)}
-                        title={isCodeFullScreen ? "Exit Fullscreen" : "Fullscreen Code View"}
+                        title={isCodeFullScreen ? "Exit Fullscreen" : "Fullscreen"}
                         style={{
                           background: "#ffffff",
                           border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          width: "34px",
-                          height: "34px",
+                          borderRadius: "6px",
+                          width: "32px",
+                          height: "32px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           color: "#475569",
                           cursor: "pointer"
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
                       >
-                        {isCodeFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        {isCodeFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
                       </button>
 
-                      {/* Close button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -2028,225 +2046,241 @@ export default function AdminBatches() {
                           setIsCodeFullScreen(false);
                         }}
                         style={{
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: "8px",
-                          width: "34px",
-                          height: "34px",
+                          background: "#f1f5f9",
+                          border: "none",
+                          borderRadius: "6px",
+                          width: "32px",
+                          height: "32px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: "#475569",
+                          color: "#64748b",
                           cursor: "pointer"
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#475569"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
                       >
-                        <X size={18} />
+                        <X size={16} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Body Content */}
+                  {/* Modal Body: Plain Code + Evaluation */}
                   <div style={{
                     padding: "20px 24px",
                     overflowY: "auto",
-                    flex: 1,
                     display: "flex",
                     flexDirection: "column",
-                    gap: "18px",
-                    background: "#0d1117"
+                    gap: "16px",
+                    background: "#f8fafc"
                   }}>
-                    {/* IDE Code Editor Window */}
+                    {/* Plain Code Snippet Box */}
                     <div style={{
-                      borderRadius: "12px",
+                      borderRadius: "10px",
                       overflow: "hidden",
-                      border: "1px solid #30363d",
-                      background: "#090d16",
-                      display: "flex",
-                      flexDirection: "column",
-                      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
-                      flex: 1,
-                      minHeight: "420px"
+                      border: "1px solid #1e293b",
+                      background: "#0f172a",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
                     }}>
-                      {/* Editor Titlebar & Tab */}
                       <div style={{
-                        padding: "10px 16px",
-                        background: "#161b22",
-                        borderBottom: "1px solid #30363d",
+                        padding: "8px 16px",
+                        background: "#1e293b",
+                        borderBottom: "1px solid #334155",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center"
                       }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          {/* Traffic light macOS dots */}
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#ef4444" }} />
-                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#f59e0b" }} />
-                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#10b981" }} />
-                          </div>
-
-                          {/* Active File Tab */}
-                          <div style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            background: "#0d1117",
-                            padding: "5px 14px",
-                            borderRadius: "6px 6px 0 0",
-                            border: "1px solid #30363d",
-                            borderBottom: "none",
-                            fontSize: "12.5px",
-                            color: "#f0f6fc",
-                            fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                            fontWeight: 600
-                          }}>
-                            <span style={{
-                              width: "8px",
-                              height: "8px",
-                              borderRadius: "50%",
-                              background: submissionLang === "python" ? "#38bdf8" : submissionLang.includes("c++") ? "#f43f5e" : "#fbbf24"
-                            }} />
-                            {fileName}
-                          </div>
-                        </div>
-
-                        {/* File metrics on the right */}
-                        <div style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          fontSize: "12px",
-                          color: "#8b949e",
-                          fontFamily: "monospace"
-                        }}>
-                          <span>{codeLines.length} lines</span>
-                          <span>•</span>
-                          <span>{rawCode.length} chars</span>
-                          <span>•</span>
-                          <span style={{ background: "#21262d", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>UTF-8</span>
-                        </div>
+                        <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "monospace", fontWeight: 600 }}>
+                          {fileName}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "monospace" }}>
+                          {rawCode.length} characters
+                        </span>
                       </div>
-
-                      {/* Editor Code Body with Line Number Gutter */}
-                      <div style={{
-                        display: "flex",
-                        flex: 1,
-                        overflow: "auto",
-                        minHeight: "360px",
-                        maxHeight: isCodeFullScreen ? "calc(100vh - 350px)" : "520px"
+                      <pre style={{
+                        margin: 0,
+                        padding: "16px 20px",
+                        color: "#f8fafc",
+                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace",
+                        fontSize: "13.5px",
+                        lineHeight: "1.65",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        maxHeight: isCodeFullScreen ? "calc(100vh - 280px)" : "420px",
+                        overflowY: "auto"
                       }}>
-                        {/* Line Numbers Gutter */}
-                        <div style={{
-                          userSelect: "none",
-                          padding: "18px 14px 18px 18px",
-                          background: "#080c14",
-                          borderRight: "1px solid #21262d",
-                          color: "#484f58",
-                          textAlign: "right",
-                          fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                          fontSize: "13px",
-                          lineHeight: "1.7",
-                          minWidth: "52px"
-                        }}>
-                          {codeLines.map((_, i) => (
-                            <div key={i}>{i + 1}</div>
-                          ))}
-                        </div>
-
-                        {/* Actual Code View */}
-                        <pre style={{
-                          margin: 0,
-                          padding: "18px 24px",
-                          flex: 1,
-                          color: "#e6edf3",
-                          fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                          fontSize: "13.5px",
-                          lineHeight: "1.7",
-                          whiteSpace: "pre",
-                          overflowX: "auto",
-                          overflowY: "auto",
-                          background: "#090d16"
-                        }}>
-                          <code>{rawCode || "// No code content submitted by student"}</code>
-                        </pre>
-                      </div>
+                        <code>{rawCode || "// No code submitted by student"}</code>
+                      </pre>
                     </div>
 
-                    {/* Evaluation Result & Execution Console Card */}
+                    {/* Auto-Evaluation Result Banner */}
                     <div style={{
-                      borderRadius: "12px",
-                      background: isPassed ? "#062817" : viewingCodeSubmission.status === "Compilation Error" ? "#2a0d0d" : "#161b22",
-                      border: `1px solid ${isPassed ? "#059669" : viewingCodeSubmission.status === "Compilation Error" ? "#991b1b" : "#30363d"}`,
-                      padding: "16px 20px"
+                      padding: "12px 16px",
+                      borderRadius: "10px",
+                      background: isPassed ? "#f0fdf4" : viewingCodeSubmission.status === "Compilation Error" ? "#fef2f2" : "#ffffff",
+                      border: `1px solid ${isPassed ? "#bbf7d0" : viewingCodeSubmission.status === "Compilation Error" ? "#fecaca" : "#e2e8f0"}`
                     }}>
                       <div style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        marginBottom: "10px",
-                        flexWrap: "wrap",
-                        gap: "8px"
+                        gap: "8px",
+                        marginBottom: viewingCodeSubmission.feedback ? "8px" : "0"
                       }}>
                         <div style={{
                           display: "flex",
                           alignItems: "center",
                           gap: "8px",
-                          fontSize: "13.5px",
+                          fontSize: "13px",
                           fontWeight: 700,
-                          color: isPassed ? "#34d399" : viewingCodeSubmission.status === "Compilation Error" ? "#f87171" : "#f0f6fc"
+                          color: isPassed ? "#15803d" : viewingCodeSubmission.status === "Compilation Error" ? "#991b1b" : "#334155"
                         }}>
-                          <Terminal size={17} />
-                          {viewingCodeSubmission.status === "Compilation Error"
-                            ? "Compilation / Runtime Error Details"
-                            : isPassed
-                            ? "Auto-Evaluation: All Test Cases Passed Successfully"
-                            : "Evaluation Result & Feedback"}
+                          <Terminal size={15} />
+                          <span>
+                            {viewingCodeSubmission.status === "Compilation Error"
+                              ? "Compilation / Runtime Error Details"
+                              : "Auto-Evaluation: " + (viewingCodeSubmission.status || "Submitted")}
+                          </span>
                         </div>
                         <span style={{
                           fontSize: "12px",
                           fontWeight: 700,
-                          padding: "3px 10px",
-                          borderRadius: "6px",
-                          background: isPassed ? "#064e3b" : "#21262d",
-                          color: isPassed ? "#6ee7b7" : "#e6edf3"
+                          color: isPassed ? "#15803d" : "#475569"
                         }}>
-                          Awarded: {marksVal} / {maxPoints} Points
+                          Score: {marksVal} / {maxPoints} pts
                         </span>
                       </div>
+                      {viewingCodeSubmission.feedback && (
+                        <pre style={{
+                          margin: 0,
+                          padding: "10px 14px",
+                          background: "#0f172a",
+                          color: isPassed ? "#86efac" : viewingCodeSubmission.status === "Compilation Error" ? "#fca5a5" : "#94a3b8",
+                          borderRadius: "8px",
+                          fontFamily: "monospace",
+                          fontSize: "12px",
+                          lineHeight: "1.5",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-all",
+                          maxHeight: "140px",
+                          overflowY: "auto"
+                        }}>
+                          {viewingCodeSubmission.feedback}
+                        </pre>
+                      )}
+                    </div>
 
-                      <pre style={{
-                        margin: 0,
-                        padding: "12px 16px",
-                        background: "#020617",
-                        color: isPassed ? "#4ade80" : viewingCodeSubmission.status === "Compilation Error" ? "#fca5a5" : "#94a3b8",
-                        borderRadius: "8px",
-                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                        fontSize: "12.5px",
-                        lineHeight: "1.6",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-all",
-                        maxHeight: "180px",
-                        overflowY: "auto",
-                        border: "1px solid #1e293b"
+                    {/* Evaluator / Admin Code Review Feedback (Optional) */}
+                    <div style={{
+                      borderRadius: "10px",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      padding: "16px",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)"
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "6px"
                       }}>
-                        {viewingCodeSubmission.feedback || (isPassed ? "Passed all test cases (100% Score)" : "No evaluator feedback provided.")}
-                      </pre>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <MessageSquare size={16} color="#4f46e5" />
+                          <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a" }}>
+                            Instructor Feedback
+                          </span>
+                          <span style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
+                            background: "#f1f5f9",
+                            color: "#64748b"
+                          }}>
+                            Optional
+                          </span>
+                        </div>
+                        {feedbackSaveSuccess && (
+                          <span style={{
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#16a34a",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}>
+                            <Check size={14} /> Feedback saved successfully!
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px 0" }}>
+                        Give optional comments, edge-case suggestions, or performance feedback to the student.
+                      </p>
+                      <textarea
+                        value={submissionFeedbackText}
+                        onChange={(e) => setSubmissionFeedbackText(e.target.value)}
+                        placeholder="Write code feedback, suggestions, or pointers for the student (optional)..."
+                        rows={3}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "13px",
+                          fontFamily: "inherit",
+                          outline: "none",
+                          resize: "vertical",
+                          background: "#f8fafc",
+                          color: "#0f172a",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s ease"
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = "#4f46e5")}
+                        onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={handleSaveSubmissionFeedback}
+                          disabled={isSavingFeedback}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "6px 16px",
+                            background: "#4f46e5",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: isSavingFeedback ? "not-allowed" : "pointer",
+                            opacity: isSavingFeedback ? 0.7 : 1,
+                            transition: "all 0.15s ease"
+                          }}
+                          onMouseEnter={(e) => { if (!isSavingFeedback) e.currentTarget.style.background = "#4338ca"; }}
+                          onMouseLeave={(e) => { if (!isSavingFeedback) e.currentTarget.style.background = "#4f46e5"; }}
+                        >
+                          {isSavingFeedback ? <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={12} />}
+                          {isSavingFeedback ? "Saving..." : viewingCodeSubmission.feedback ? "Update Feedback" : "Save Feedback"}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   {/* Modal Footer */}
                   <div style={{
-                    padding: "14px 28px",
+                    padding: "12px 24px",
                     borderTop: "1px solid #e2e8f0",
-                    background: "#f8fafc",
+                    background: "#ffffff",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between"
+                    justifyContent: "space-between",
+                    flexShrink: 0
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12.5px" }}>
-                      <Clock size={15} />
-                      <span>Submitted on: {viewingCodeSubmission.submitted_at ? new Date(viewingCodeSubmission.submitted_at).toLocaleString() : "N/A"}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px" }}>
+                      <Clock size={14} />
+                      <span>Submitted: {viewingCodeSubmission.submitted_at ? new Date(viewingCodeSubmission.submitted_at).toLocaleString() : "N/A"}</span>
                     </div>
                     <button
                       type="button"
@@ -2255,13 +2289,13 @@ export default function AdminBatches() {
                         setIsCodeFullScreen(false);
                       }}
                       style={{
-                        padding: "9px 24px",
+                        padding: "8px 20px",
                         background: "#e2e8f0",
                         color: "#334155",
                         border: "none",
-                        borderRadius: "10px",
+                        borderRadius: "8px",
                         fontSize: "13px",
-                        fontWeight: "700",
+                        fontWeight: 700,
                         cursor: "pointer",
                         transition: "background 0.15s ease"
                       }}

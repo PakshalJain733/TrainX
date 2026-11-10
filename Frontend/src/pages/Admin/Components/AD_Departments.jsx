@@ -431,7 +431,6 @@ export default function Departments() {
                 <div className="form-group-admin">
                   <label className="form-label-admin">
                     <span>College Institution</span>
-                    <span className="form-required">*</span>
                   </label>
                   <DeptSelect
                     value={deptForm.collegeId}
@@ -448,7 +447,6 @@ export default function Departments() {
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Name</span>
-                      <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -462,7 +460,6 @@ export default function Departments() {
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Code</span>
-                      <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -645,7 +642,6 @@ export default function Departments() {
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Name</span>
-                      <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -658,7 +654,6 @@ export default function Departments() {
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Code</span>
-                      <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
