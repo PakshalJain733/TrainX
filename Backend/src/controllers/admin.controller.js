@@ -17,7 +17,15 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
-import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail, sendStaffActivationEmail } from '../services/email.service.js';
+import {
+  sendWelcomeEmail,
+  sendAccountApprovedEmail,
+  sendAdminCredentialsEmail,
+  sendStudentCredentialsEmail,
+  sendStaffActivationEmail,
+  sendAdminDirectCreatedEmail,
+  sendAccountRejectionEmail,
+} from '../services/email.service.js';
 import { createAccountActivation } from '../modules/integrations/careerGateway/services/accountActivation.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 import { createNotification } from '../services/notification.service.js';
@@ -241,7 +249,13 @@ export const approveUserAdmin = async (req, res, next) => {
       }
     }
 
-    const updatePayload = { is_active: 1, is_approved: 1, is_verified: 1 };
+    const updatePayload = {
+      is_active: 1,
+      is_approved: 1,
+      is_verified: 1,
+      approval_status: 'approved',
+      activation_status: 'completed',
+    };
     const callerCollegeId = getCallerCollegeFilter(req);
     if (!user.college_id && callerCollegeId) {
       updatePayload.college_id = callerCollegeId;
@@ -258,11 +272,10 @@ export const approveUserAdmin = async (req, res, next) => {
     // Dispatch approval notification email to the user
     let emailSent = false;
     if (user.email && user.email.includes('@')) {
-      // Dispatch asynchronously in background without delaying HTTP response
-        sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role })
-          .then(() => console.log(`[Approval Email] Successfully dispatched to ${user.email}`))
-          .catch((mailErr) => console.error(`[Approval Email Error] Failed to send to ${user.email}:`, mailErr.message));
-        emailSent = true;
+      sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role })
+        .then(() => console.log(`[Approval Email] Successfully dispatched to ${user.email}`))
+        .catch((mailErr) => console.error(`[Approval Email Error] Failed to send to ${user.email}:`, mailErr.message));
+      emailSent = true;
     }
 
     // Insert in-app notification in broadcast_notifications
@@ -281,7 +294,15 @@ export const approveUserAdmin = async (req, res, next) => {
     }
 
     return sendSuccess(res, 'User registration approved successfully', {
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, is_approved: 1, is_active: 1 },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        is_approved: 1,
+        is_active: 1,
+        approval_status: 'approved',
+      },
       emailSent,
     });
   } catch (error) {
@@ -292,6 +313,7 @@ export const approveUserAdmin = async (req, res, next) => {
 export const rejectUserAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { reason = '' } = req.body || {};
     const user = await findUserById(id);
     if (!user) {
       return sendError(res, 'User not found', 404);
@@ -308,8 +330,25 @@ export const rejectUserAdmin = async (req, res, next) => {
       }
     }
 
-    await deleteUserModel(id);
-    return sendSuccess(res, 'User registration rejected and removed');
+    // Send rejection email if user has email
+    if (user.email && user.email.includes('@')) {
+      sendAccountRejectionEmail({
+        to: user.email,
+        name: user.name,
+        role: user.role,
+        reason,
+      }).catch((mailErr) => {
+        console.warn(`[Rejection Email Notice] ${mailErr.message}`);
+      });
+    }
+
+    await updateUserModel(id, {
+      approval_status: 'rejected',
+      is_active: 0,
+      is_approved: 0,
+    });
+
+    return sendSuccess(res, 'User registration has been rejected and status updated to Rejected');
   } catch (error) {
     next(error);
   }
@@ -495,22 +534,40 @@ export const createUserAdmin = async (req, res, next) => {
     if (!finalPassword) {
       if (canonicalRole === ROLES.STUDENT) {
         finalPassword = 'Student@' + Math.random().toString(36).slice(-6) + '!';
+      } else if (isSuperAdminAddingAdmin) {
+        finalPassword = 'Admin@' + Math.floor(1000 + Math.random() * 9000) + '!';
       }
     }
 
-    const isApprovedVal = isStaffRole || !isApprovalFeatureActive() ? 1 : 0;
-    const initialActive = isStaffRole ? 0 : 1;
-    const initialVerified = isStaffRole ? 0 : (isSuperAdminAddingAdmin ? 1 : 0);
+    const isApprovedVal = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : (!isApprovalFeatureActive() ? 1 : 0));
+    const initialActive = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : 1);
+    const initialVerified = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : 0);
+    const forcePasswordChangeVal = isSuperAdminAddingAdmin ? 1 : 0;
+    const activationStatusVal = isSuperAdminAddingAdmin ? 'completed' : (isStaffRole ? 'pending' : 'completed');
+    const approvalStatusVal = isSuperAdminAddingAdmin ? 'approved' : (isStaffRole ? 'pending' : 'pending');
 
     // Check if user already exists in DB (registered first on portal, or pre-added)
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanMobile = mobile_number ? String(mobile_number).trim() : null;
+
     let existing = null;
-    if (email) {
-      existing = await findUserByEmailOrMobile(email);
-    } else if (mobile_number) {
-      existing = await findUserByEmailOrMobile(mobile_number);
+    if (cleanEmail) {
+      existing = await findUserByEmailOrMobile(cleanEmail);
+    }
+    if (!existing && cleanMobile) {
+      existing = await findUserByEmailOrMobile(cleanMobile);
     }
 
     if (existing) {
+      // If user account is already active and has a configured password, block duplicate creation
+      if (existing.is_active === 1 && existing.password_hash && String(existing.password_hash).trim().length > 0) {
+        return sendError(
+          res,
+          `An active user account already exists with this email address (${existing.email || cleanEmail}).`,
+          409
+        );
+      }
+
       // Requirement: If user was pre-added or registers with updated name, sync details
       const trimmedName = (name || '').trim();
       const existingApproved = isStaffRole || !isApprovalFeatureActive() ? 1 : (existing.is_approved || 0);
@@ -603,19 +660,38 @@ export const createUserAdmin = async (req, res, next) => {
       }, msg);
     }
 
-    const newUser = await createUser({
-      name,
-      password: finalPassword || '',
-      email: email || '',
-      mobile_number: mobile_number || '',
-      role: canonicalRole,
-      college_id: targetCollegeId,
-      department: validatedDeptName,
-      department_id: validatedDeptId,
-      is_active: initialActive,
-      is_verified: initialVerified,
-      is_approved: isApprovedVal,
-    });
+    let newUser;
+    try {
+      newUser = await createUser({
+        name,
+        password: finalPassword || '',
+        email: cleanEmail || '',
+        mobile_number: cleanMobile || '',
+        role: canonicalRole,
+        college_id: targetCollegeId,
+        department: validatedDeptName,
+        department_id: validatedDeptId,
+        is_active: initialActive,
+        is_verified: initialVerified,
+        is_approved: isApprovedVal,
+        force_password_change: forcePasswordChangeVal,
+        activation_status: activationStatusVal,
+        approval_status: approvalStatusVal,
+      });
+    } catch (createErr) {
+      if (
+        createErr.code === 'ER_DUP_ENTRY' ||
+        createErr.errno === 1062 ||
+        (createErr.message && createErr.message.includes('Duplicate entry'))
+      ) {
+        return sendError(
+          res,
+          `An account with this email (${cleanEmail || cleanMobile}) already exists in the system.`,
+          409
+        );
+      }
+      throw createErr;
+    }
 
     let studentProfile = null;
     if (canonicalRole === ROLES.STUDENT) {
@@ -645,7 +721,31 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     if (newUser.email && newUser.email.includes('@')) {
-      if (isStaffRole) {
+      if (isSuperAdminAddingAdmin) {
+        // Part 5: Super Admin directly creates Admin account
+        try {
+          await sendAdminDirectCreatedEmail({
+            to: newUser.email,
+            name: newUser.name,
+            temporaryPassword: finalPassword,
+            collegeName: targetCollegeName,
+          });
+        } catch (adminMailErr) {
+          console.warn(`[Admin Direct Creation Email Error] ${adminMailErr.message}`);
+          if (req.user?.id) {
+            try {
+              await createNotification({
+                user_id: req.user.id,
+                title: 'Email Delivery Failed: Admin Account Credentials',
+                message: `Failed to deliver login credentials email to ${newUser.email}. Reason: ${adminMailErr.message}.`,
+                type: 'alert',
+                priority: 'Urgent',
+                category: 'Email Delivery Alert',
+              });
+            } catch (_) {}
+          }
+        }
+      } else if (isStaffRole) {
         try {
           const { rawToken } = await createAccountActivation(newUser.id);
           sendStaffActivationEmail({
@@ -678,7 +778,9 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    const successMessage = isStaffRole
+    const successMessage = isSuperAdminAddingAdmin
+      ? 'Admin account created successfully. Welcome email with temporary password has been dispatched.'
+      : isStaffRole
       ? 'Account created successfully. An activation email has been dispatched to the user to set their password.'
       : 'User created successfully. Registration invitation with secure access code dispatched.';
 

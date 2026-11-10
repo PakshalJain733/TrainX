@@ -1,5 +1,29 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, getMe, updateProfile, changePassword, resetPasswordWithOtp, getDepartmentsByEmail, getCollegeByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail, verifyInstitutionTokenHandler, completeInstitutionSetupHandler } from '../controllers/auth.controller.js';
+import {
+  sendRegisterOtp,
+  verifyRegisterEmailOtp,
+  verifyRegisterOtp,
+  checkRegistrationStatus,
+  sendOtp,
+  verifyOtpAndLogin,
+  passwordLogin,
+  getMe,
+  updateProfile,
+  changePassword,
+  resetPasswordWithOtp,
+  getDepartmentsByEmail,
+  getCollegeByEmail,
+  registerInstitution,
+  requestSecureCode,
+  getSecureCodeRequests,
+  resolveSecureCodeRequest,
+  deleteSecureCodeRequest,
+  deleteSecureCodeRequestByEmail,
+  verifyInstitutionTokenHandler,
+  completeInstitutionSetupHandler,
+  activateWithCodeHandler,
+  forceChangePasswordHandler,
+} from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -25,6 +49,12 @@ router.delete('/secure-code-requests/by-email/:email', authenticateToken, delete
 // Private Institution Setup (Option 1: Private Email Invitation Link)
 router.get('/verify-institution-token', verifyInstitutionTokenHandler);
 router.post('/complete-institution-setup', validateRequestBody(['token', 'name', 'email', 'password']), completeInstitutionSetupHandler);
+
+// Account Activation with Secure Code (Part 2 & Part 4)
+router.post('/activate-with-code', validateRequestBody(['email', 'code', 'password', 'confirmPassword']), activateWithCodeHandler);
+
+// Mandatory Force Password Change on First Login (Part 5)
+router.post('/force-change-password', authenticateToken, validateRequestBody(['currentPassword', 'newPassword', 'confirmPassword']), forceChangePasswordHandler);
 
 // OTP & Password Login flows
 router.post('/send-otp', sendOtp);

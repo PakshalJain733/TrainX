@@ -1,4 +1,17 @@
-import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, changeUserPassword, resetUserPasswordWithOtp, verifyInstitutionToken, completeInstitutionSetup } from '../services/auth.service.js';
+import {
+  sendRegistrationOtp,
+  checkRegistrationEmailOtp,
+  verifyRegistrationOtpAndRegister,
+  sendUserOtp,
+  verifyUserOtpAndLogin,
+  loginWithPassword,
+  changeUserPassword,
+  resetUserPasswordWithOtp,
+  verifyInstitutionToken,
+  completeInstitutionSetup,
+  activateWithSecureCode,
+  forceChangePassword,
+} from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
@@ -404,6 +417,35 @@ export const completeInstitutionSetupHandler = async (req, res, next) => {
       token: result.token,
       user: result.user,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Public endpoint: Set password and activate account using secure activation code
+ * POST /api/v1/auth/activate-with-code
+ */
+export const activateWithCodeHandler = async (req, res, next) => {
+  try {
+    const { email, code, password, confirmPassword, role } = req.body;
+    const result = await activateWithSecureCode({ email, code, password, confirmPassword, role });
+    return sendSuccess(res, result.message, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Authenticated endpoint: Force password change on first login
+ * POST /api/v1/auth/force-change-password
+ */
+export const forceChangePasswordHandler = async (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const result = await forceChangePassword({ userId, currentPassword, newPassword, confirmPassword });
+    return sendSuccess(res, result.message, result);
   } catch (error) {
     next(error);
   }

@@ -24,8 +24,8 @@ export const findUserByEmailOrMobile = async (identifier) => {
       cleanIdentifier.replace(/[^0-9]/g, ''),
     ].filter(Boolean))];
 
-  const conditions = ['(email IS NOT NULL AND LOWER(email) = ?)'];
-  const params = [emailIdentifier];
+  const conditions = ['(email IS NOT NULL AND (LOWER(TRIM(email)) = ? OR LOWER(email) = ? OR email = ?))'];
+  const params = [emailIdentifier, emailIdentifier, emailIdentifier];
 
   if (mobileIdentifiers.length > 0) {
     conditions.push(`mobile_number IN (${mobileIdentifiers.map(() => '?').join(', ')})`);
@@ -325,7 +325,7 @@ export const getCollegeForUser = async (userId, userObj = null, studentProfileOb
     }
 
     // 6. Fallback to active college in DB
-    const defCol = await query('SELECT id, name, code, domain, location FROM colleges WHERE LOWER(status) = "active" OR status IS NULL ORDER BY id ASC LIMIT 1');
+    const defCol = await query("SELECT id, name, code, domain, location FROM colleges WHERE LOWER(status) = 'active' OR status IS NULL ORDER BY id ASC LIMIT 1");
     if (defCol && defCol.length > 0) return defCol[0];
 
     return null;

@@ -77,16 +77,87 @@ export async function getAllSecureCodes() {
   return rows;
 }
 
-export async function createSecureCode({ code, role, college_name, description, max_uses = 1, expires_at }) {
+export async function createSecureCode({
+  code,
+  role,
+  college_name,
+  description,
+  max_uses = 1,
+  expires_at,
+  email = null,
+  email_delivery_status = 'pending',
+  invitation_id = null,
+  created_by = null,
+}) {
   const cleanCode = String(code).trim().toUpperCase();
   const usesLimit = parseInt(max_uses, 10) || 1;
+  const cleanEmail = email ? String(email).trim().toLowerCase() : null;
 
   const [result] = await pool.query(
-    `INSERT INTO secure_codes (code, role, college_name, description, max_uses, uses_count, expires_at, status)
-     VALUES (?, ?, ?, ?, ?, 0, ?, 'active')`,
-    [cleanCode, role || 'all', college_name || null, description || null, usesLimit, expires_at || null]
+    `INSERT INTO secure_codes 
+      (code, role, college_name, description, max_uses, uses_count, expires_at, status, email, email_delivery_status, invitation_id, created_by)
+     VALUES (?, ?, ?, ?, ?, 0, ?, 'active', ?, ?, ?, ?)`,
+    [
+      cleanCode,
+      role || 'all',
+      college_name || null,
+      description || null,
+      usesLimit,
+      expires_at || null,
+      cleanEmail,
+      email_delivery_status || 'pending',
+      invitation_id || null,
+      created_by || null,
+    ]
   );
-  return { id: result.insertId, code: cleanCode, role, college_name, description, max_uses: usesLimit, uses_count: 0, status: 'active', expires_at };
+  return {
+    id: result.insertId,
+    code: cleanCode,
+    role,
+    college_name,
+    description,
+    max_uses: usesLimit,
+    uses_count: 0,
+    status: 'active',
+    expires_at,
+    email: cleanEmail,
+    email_delivery_status,
+    invitation_id,
+    created_by,
+  };
+}
+
+export async function updateSecureCodeDeliveryStatus(id, status) {
+  if (!id) return;
+  await pool.query(
+    `UPDATE secure_codes SET email_delivery_status = ? WHERE id = ?`,
+    [status, id]
+  );
+}
+
+export async function findSecureCodeByEmailAndCode(code, email, role = null) {
+  if (!code) return null;
+  const cleanCode = String(code).trim().toUpperCase();
+  const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+
+  let queryStr = `
+    SELECT * FROM secure_codes 
+    WHERE UPPER(code) = ? 
+      AND status = 'active'
+      AND (expires_at IS NULL OR expires_at > NOW())
+      AND (max_uses IS NULL OR max_uses = 0 OR uses_count < max_uses)
+  `;
+  const params = [cleanCode];
+
+  if (cleanEmail) {
+    queryStr += ` AND (email IS NULL OR email = '' OR LOWER(TRIM(email)) = ?)`;
+    params.push(cleanEmail);
+  }
+
+  queryStr += ` ORDER BY id DESC LIMIT 1`;
+
+  const [rows] = await pool.query(queryStr, params);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 export async function deleteSecureCode(id) {

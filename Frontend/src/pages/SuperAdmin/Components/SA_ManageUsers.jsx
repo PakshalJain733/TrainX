@@ -1593,11 +1593,28 @@ export default function ManageUsers() {
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
   const [codeCollege, setCodeCollege] = useState('Partner Campus');
+  const [codeAdminEmail, setCodeAdminEmail] = useState('');
+  const [codeAdminName, setCodeAdminName] = useState('');
   const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
   const [generatedCodesList, setGeneratedCodesList] = useState([]);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  // Sync Admin Email whenever selected target college or collegesList changes
+  useEffect(() => {
+    if (codeCollege && collegesList.length > 0) {
+      const selectedCol = collegesList.find(
+        (c) => c.name === codeCollege || c.id === codeCollege || (c.code && c.code === codeCollege)
+      );
+      if (selectedCol) {
+        const foundEmail = selectedCol.adminEmail || selectedCol.contact_email || '';
+        const foundName = selectedCol.adminName || selectedCol.admin_name || '';
+        setCodeAdminEmail(foundEmail);
+        setCodeAdminName(foundName);
+      }
+    }
+  }, [codeCollege, collegesList]);
 
   const loadSecureCodes = async () => {
     try {
@@ -1696,14 +1713,17 @@ export default function ManageUsers() {
     const selectedCollegeObj = collegesList.find((c) => c.name === codeCollege || c.id === codeCollege || (c.code && c.code === codeCollege));
 
     try {
+      const targetAdminEmail = codeAdminEmail || selectedCollegeObj?.adminEmail || selectedCollegeObj?.contact_email || null;
+      const targetAdminName = codeAdminName || selectedCollegeObj?.adminName || selectedCollegeObj?.admin_name || null;
+
       const res = await apiFetch('/secure-codes/generate', {
         method: 'POST',
         body: JSON.stringify({
           code: generatedFallback,
           role: targetRole,
           college_name: codeCollege,
-          admin_email: selectedCollegeObj?.adminEmail || selectedCollegeObj?.contact_email || null,
-          admin_name: selectedCollegeObj?.adminName || selectedCollegeObj?.admin_name || null,
+          admin_email: targetAdminEmail,
+          admin_name: targetAdminName,
           max_uses: parseInt(codeMaxUses, 10) || 1,
           expiry_option: codeExpiry,
           description: `Generated for ${codeCollege} - Max Uses: ${codeMaxUses === '0' ? 'Unlimited' : codeMaxUses} - Expiry: ${codeExpiry}`,
@@ -2469,6 +2489,33 @@ export default function ManageUsers() {
                     onChange={(val) => setCodeCollege(val)}
                   />
                 </div>
+              </div>
+
+              {/* College Admin Email (Populated from college registration) */}
+              <div className="form-group-admin" style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span>College Admin Email (Registered with College) *</span>
+                  {codeAdminEmail ? (
+                    <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>
+                      ✓ Retrieved from college registration
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 600 }}>
+                      ⚠️ Enter college admin email
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="email"
+                  required
+                  className="form-input-admin"
+                  placeholder="e.g. admin@college.edu (registered when college was added)"
+                  value={codeAdminEmail}
+                  onChange={(e) => setCodeAdminEmail(e.target.value)}
+                />
+                <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  The activation link and secure authorization code will be delivered to this email.
+                </span>
               </div>
 
               {/* Row 2: Usage Limit (below role) & Expiry Duration (besides usage limit) */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { getApiBaseUrl } from "../../utils/api";
-import TrainXLogo from "../../assets/TrainX.png";
+import Logo2 from "../../assets/Logo2.png";
 import "./ActivateAccount.css";
 
 const Icons = {
@@ -68,10 +68,16 @@ export default function ActivateAccount() {
 
   const tokenParam = (searchParams.get("token") || "").trim().replace(/[.,;!?#]+$/, "");
   const emailParam = (searchParams.get("email") || "").trim();
+  const roleParam = (searchParams.get("role") || "").trim().toLowerCase();
+  const codeParam = (searchParams.get("code") || "").trim().toUpperCase();
+
+  // If role is specified and not student, or if code parameter is passed, use the Secure Code Activation flow
+  const isCodeFlow = Boolean(codeParam || (roleParam && roleParam !== "student"));
 
   const [manualEmail, setManualEmail] = useState("");
   const activeEmail = emailParam || manualEmail;
 
+  const [activationCode, setActivationCode] = useState(codeParam);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -82,32 +88,33 @@ export default function ActivateAccount() {
   const [isExpired, setIsExpired] = useState(false);
   const [isAlreadyConsumed, setIsAlreadyConsumed] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
   const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   // Resend activation link state
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState("");
 
-  // Validate presence of token on mount
+  // Validate presence of credentials on mount
   useEffect(() => {
-    if (!tokenParam) {
+    if (!isCodeFlow && !tokenParam) {
       setErrorMsg("Missing or invalid activation token. If you received an invitation, please check your email or request a fresh link below.");
       setIsExpired(true);
     }
-  }, [tokenParam]);
+  }, [isCodeFlow, tokenParam]);
 
-  // Handle auto-redirect countdown on success
+  // Handle auto-redirect countdown on immediate student success
   useEffect(() => {
     let timer;
-    if (isSuccess && redirectCountdown > 0) {
+    if (isSuccess && !isPendingApproval && redirectCountdown > 0) {
       timer = setTimeout(() => {
         setRedirectCountdown((prev) => prev - 1);
       }, 1000);
-    } else if (isSuccess && redirectCountdown === 0) {
+    } else if (isSuccess && !isPendingApproval && redirectCountdown === 0) {
       navigate("/");
     }
     return () => clearTimeout(timer);
-  }, [isSuccess, redirectCountdown, navigate]);
+  }, [isSuccess, isPendingApproval, redirectCountdown, navigate]);
 
   // Password policy criteria
   const hasMinLength = password.length >= 8;
@@ -124,14 +131,23 @@ export default function ActivateAccount() {
     setIsExpired(false);
     setIsAlreadyConsumed(false);
 
-    if (!tokenParam) {
+    if (isCodeFlow) {
+      if (!activationCode) {
+        setErrorMsg("Secure activation code is required. Please check your invitation email.");
+        return;
+      }
+      if (!activeEmail || !activeEmail.includes("@")) {
+        setErrorMsg("A valid registered email address is required.");
+        return;
+      }
+    } else if (!tokenParam) {
       setErrorMsg("Activation token is missing. Please check your email link or request a fresh link below.");
       setIsExpired(true);
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters long.");
+    if (password.length < 8) {
+      setErrorMsg("Password must be at least 8 characters long.");
       return;
     }
 
@@ -144,31 +160,60 @@ export default function ActivateAccount() {
 
     try {
       const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/integrations/career-gateway/activate-account`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: tokenParam,
-          password: password,
-          email: activeEmail || undefined,
-        }),
-      });
 
-      const data = await res.json().catch(() => ({}));
+      if (isCodeFlow) {
+        // Part 2 & Part 4: Activate staff / admin with secure code
+        const res = await fetch(`${baseUrl}/auth/activate-with-code`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: activeEmail,
+            code: activationCode,
+            password,
+            confirmPassword,
+            role: roleParam || undefined,
+          }),
+        });
 
-      if (!res.ok || !data.success) {
-        const message = data.message || "Failed to activate account.";
-        if (message.toLowerCase().includes("already") || message.toLowerCase().includes("sign in")) {
-          setIsAlreadyConsumed(true);
-        } else {
-          // Token is invalid, expired, or superseded; always permit requesting fresh link
-          setIsExpired(true);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          const message = data.message || "Failed to activate account.";
+          if (message.toLowerCase().includes("already") || message.toLowerCase().includes("sign in")) {
+            setIsAlreadyConsumed(true);
+          }
+          setErrorMsg(message);
+          return;
         }
-        setErrorMsg(message);
-        return;
-      }
 
-      setIsSuccess(true);
+        setIsSuccess(true);
+        setIsPendingApproval(true);
+      } else {
+        // Student Career Gateway token activation (Preserved Flow)
+        const res = await fetch(`${baseUrl}/integrations/career-gateway/activate-account`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: tokenParam,
+            password: password,
+            email: activeEmail || undefined,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.success) {
+          const message = data.message || "Failed to activate account.";
+          if (message.toLowerCase().includes("already") || message.toLowerCase().includes("sign in")) {
+            setIsAlreadyConsumed(true);
+          } else {
+            setIsExpired(true);
+          }
+          setErrorMsg(message);
+          return;
+        }
+
+        setIsSuccess(true);
+      }
     } catch (err) {
       setErrorMsg("Network error connecting to activation service. Please verify your internet connection and try again.");
       setIsExpired(true);
@@ -205,36 +250,70 @@ export default function ActivateAccount() {
 
   return (
     <div className="activate-account-page">
+      {/* Decorative Background Shapes matching registration page */}
+      <div className="bg-shape circle1"></div>
+      <div className="bg-shape circle2"></div>
+      <div className="bg-shape circle3"></div>
+      <div className="bg-shape circle4"></div>
+      <div className="bg-shape circle5"></div>
+      <div className="bg-shape circle6"></div>
+      <div className="bg-shape blob1"></div>
+      <div className="bg-shape blob2"></div>
+      <div className="bg-shape ring1"></div>
+      <div className="bg-shape ring2"></div>
+
       <div className="activate-account-card">
         {/* Header Branding */}
         <div className="activate-account-header">
-          <img src={TrainXLogo} alt="TrainX" className="activate-account-logo" />
+          <img src={Logo2} alt="TrainX" className="activate-account-logo" />
           <div className="activate-account-badge">
-            {Icons.shieldCheck} Career Gateway Verified
+            {Icons.shieldCheck} TrainX Verified
           </div>
           <h1 className="activate-account-title">Activate Your Account</h1>
           <p className="activate-account-subtitle">
-            Welcome to Career Gateway. Set your private password to activate your account.
+            Welcome to TrainX. Set your private password to activate your account.
           </p>
         </div>
 
-        {/* State 1: Success */}
+        {/* State 1: Success / Pending Approval */}
         {isSuccess ? (
-          <div className="activate-account-state activate-account-state--success">
-            <div className="activate-state-icon-box activate-state-icon-box--success">
-              {Icons.checkCircleLarge}
+          isPendingApproval ? (
+            <div className="activate-account-state activate-account-state--success">
+              <div className="activate-state-icon-box activate-state-icon-box--success">
+                {Icons.checkCircleLarge}
+              </div>
+              <h2>Account Activation Submitted! ⏳</h2>
+              <p style={{ lineHeight: '1.6', color: '#475569', fontSize: '15px' }}>
+                Your password has been successfully configured. Your TrainX account is now <strong>Pending Administrator Approval</strong>.
+              </p>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '16px', margin: '20px 0', textAlign: 'left', fontSize: '13.5px', color: '#334155' }}>
+                <div><strong>Registered Email:</strong> {activeEmail}</div>
+                <div style={{ marginTop: '6px' }}><strong>Status:</strong> <span style={{ color: '#d97706', fontWeight: 700 }}>Pending Approval</span></div>
+                <div style={{ marginTop: '6px', color: '#64748b', fontSize: '12.5px' }}>
+                  An administrator has been notified to review and approve your account. You will receive an email once your account is approved and ready for sign-in.
+                </div>
+              </div>
+              <Link to="/" className="activate-btn activate-btn--primary">
+                Back to Sign In
+              </Link>
             </div>
-            <h2>Account Activated Successfully!</h2>
-            <p>
-              Your account credentials have been created. You can now access your dashboard and workspace.
-            </p>
-            <div className="activate-countdown-badge">
-              Redirecting to login in <strong>{redirectCountdown}</strong> seconds...
+          ) : (
+            <div className="activate-account-state activate-account-state--success">
+              <div className="activate-state-icon-box activate-state-icon-box--success">
+                {Icons.checkCircleLarge}
+              </div>
+              <h2>Account Activated Successfully!</h2>
+              <p>
+                Your account credentials have been created. You can now access your dashboard and workspace.
+              </p>
+              <div className="activate-countdown-badge">
+                Redirecting to login in <strong>{redirectCountdown}</strong> seconds...
+              </div>
+              <Link to="/" className="activate-btn activate-btn--primary">
+                Proceed to Sign In Now
+              </Link>
             </div>
-            <Link to="/" className="activate-btn activate-btn--primary">
-              Proceed to Sign In Now
-            </Link>
-          </div>
+          )
         ) : isAlreadyConsumed ? (
           /* State 2: Already Activated */
           <div className="activate-account-state activate-account-state--info">
@@ -259,17 +338,19 @@ export default function ActivateAccount() {
                 <div className="activate-alert-content">
                   <span className="activate-alert-title">Activation Notice</span>
                   <span className="activate-alert-desc">{errorMsg}</span>
-                  <div className="activate-resend-prompt">
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={resending}
-                      className="activate-resend-link"
-                    >
-                      {resending ? "Sending New Link..." : "Request a Fresh Activation Link"}
-                    </button>
-                    {resendStatus && <div className="activate-resend-status">{resendStatus}</div>}
-                  </div>
+                  {!isCodeFlow && (
+                    <div className="activate-resend-prompt">
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        disabled={resending}
+                        className="activate-resend-link"
+                      >
+                        {resending ? "Sending New Link..." : "Request a Fresh Activation Link"}
+                      </button>
+                      {resendStatus && <div className="activate-resend-status">{resendStatus}</div>}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -303,12 +384,37 @@ export default function ActivateAccount() {
                     type="email"
                     value={manualEmail}
                     onChange={(e) => setManualEmail(e.target.value)}
-                    placeholder="e.g. rollnumber@pvppcoe.ac.in"
+                    placeholder="e.g. yourname@college.edu"
                     required
                     disabled={loading}
                     className="activate-input"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Secure Activation Code Field (Part 2 & Part 4) */}
+            {isCodeFlow && (
+              <div className="activate-input-group">
+                <label className="activate-label" htmlFor="secure-activation-code">
+                  {Icons.shieldCheck} Secure Activation Code *
+                </label>
+                <div className="activate-input-wrapper">
+                  <input
+                    id="secure-activation-code"
+                    type="text"
+                    value={activationCode}
+                    onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. ADM-2026-1234"
+                    required
+                    disabled={loading}
+                    className="activate-input"
+                    style={{ letterSpacing: '2px', fontWeight: 700, fontFamily: 'monospace' }}
+                  />
+                </div>
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Enter the activation code received in your invitation email.
+                </span>
               </div>
             )}
 
@@ -397,12 +503,12 @@ export default function ActivateAccount() {
             {/* Submit Action */}
             <button
               type="submit"
-              disabled={loading || !tokenParam || !isFormValid}
+              disabled={loading || (isCodeFlow ? (!activationCode || !isFormValid) : (!tokenParam || !isFormValid))}
               className={`activate-btn activate-btn--primary ${loading ? "is-loading" : ""}`}
             >
               {loading ? (
                 <>
-                  <span className="activate-spinner" /> Activating Workspace...
+                  <span className="activate-spinner" /> Submitting Activation...
                 </>
               ) : (
                 "Set Password & Activate Account"

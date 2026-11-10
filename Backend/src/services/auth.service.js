@@ -31,6 +31,7 @@ import { findSecureCode, findSecureCodeByCodeOnly, markCodeAsUsed } from '../mod
 import { findCollegeById } from '../models/college.model.js';
 import { pool } from '../config/db.js';
 import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
+import { createNotification } from './notification.service.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -111,6 +112,9 @@ const buildUserResponse = async (user) => {
     is_verified: Boolean(user.is_verified),
     is_approved: Boolean(user.is_approved === 1 || user.is_approved === true || String(user.is_approved) === '1'),
     is_active: user.is_active,
+    force_password_change: Boolean(user.force_password_change),
+    activation_status: user.activation_status || (user.is_active ? 'completed' : 'pending'),
+    approval_status: user.approval_status || (user.is_approved ? 'approved' : 'pending'),
     year: studentProfile?.year || '',
     division: studentProfile?.division || '',
     semester: studentProfile?.semester || '',
@@ -128,6 +132,7 @@ const generateFinalToken = (user) => generateToken({
   collegeId: user.college_id ?? null,
   department: user.department ?? null,
   departmentId: user.department_id ?? null,
+  forcePasswordChange: Boolean(user.force_password_change),
   tokenType: 'access',
 });
 
@@ -783,7 +788,10 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
         (user.is_profile_updated || studentProfile?.is_profile_updated) &&
         ((studentProfile?.gender && studentProfile?.city) || (user.gender && user.city) || (studentProfile?.skills && String(studentProfile.skills).trim().length > 0) || (studentProfile?.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) || (studentProfile?.target_track && String(studentProfile.target_track).trim().length > 0))
       ),
-      studentProfile: {
+      force_password_change: Boolean(user.force_password_change),
+    activation_status: user.activation_status || (user.is_active ? 'completed' : 'pending'),
+    approval_status: user.approval_status || (user.is_approved ? 'approved' : 'pending'),
+    studentProfile: {
         ...studentProfile,
         college: collegeName,
         college_name: collegeName,
@@ -842,6 +850,9 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
       studentProfile?.is_profile_updated ||
       (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
     ),
+    force_password_change: Boolean(user.force_password_change),
+    activation_status: user.activation_status || (user.is_active ? 'completed' : 'pending'),
+    approval_status: user.approval_status || (user.is_approved ? 'approved' : 'pending'),
     studentProfile: {
       ...studentProfile,
       college: collegeName,
@@ -1035,6 +1046,262 @@ export const completeInstitutionSetup = async (data) => {
     token: authToken,
     user: toSafeUser(finalUser),
     message: `Institutional setup completed successfully! Welcome, ${finalUser.name}.`,
+  };
+};
+
+/**
+ * Activate Account with Secure Code (Part 2 & Part 4)
+ * For Admin, Mentor, Coordinator, Trainer.
+ * Sets password, verifies email, updates status to pending approval, notifies creator.
+ */
+export const activateWithSecureCode = async ({ email, code, password, confirmPassword, role }) => {
+  if (isBlank(email) || !String(email).includes('@')) {
+    throw createAuthError('A valid email address is required.', 400);
+  }
+  if (isBlank(code)) {
+    throw createAuthError('Secure activation code is required.', 400);
+  }
+  if (isBlank(password) || password.length < 8) {
+    throw createAuthError('Password must be at least 8 characters long.', 400);
+  }
+  if (password !== confirmPassword) {
+    throw createAuthError('Passwords do not match. Please re-enter.', 400);
+  }
+
+  // Password complexity check
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+    throw createAuthError('Password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.', 400);
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanCode = String(code).trim().toUpperCase();
+
+  // Find code in secure_codes
+  const [codeRows] = await pool.query(
+    `SELECT * FROM secure_codes 
+     WHERE UPPER(code) = ? 
+       AND status = 'active'
+       AND (expires_at IS NULL OR expires_at > NOW())
+       AND (max_uses IS NULL OR max_uses = 0 OR uses_count < max_uses)
+     ORDER BY id DESC LIMIT 1`,
+    [cleanCode]
+  );
+
+  if (!codeRows || codeRows.length === 0) {
+    throw createAuthError('Invalid, expired, or already used activation code. Please check your code or contact your administrator.', 400);
+  }
+
+  const codeRecord = codeRows[0];
+
+  // If code was explicitly issued to an email, enforce email match
+  if (codeRecord.email && codeRecord.email.trim().length > 0) {
+    const issuedEmail = codeRecord.email.trim().toLowerCase();
+    if (issuedEmail !== cleanEmail) {
+      throw createAuthError(`This activation code was issued to ${issuedEmail}. Please activate using your assigned email address.`, 403);
+    }
+  }
+
+  // Determine user role
+  let targetRole = 'college_admin';
+  if (role) {
+    const rLower = String(role).toLowerCase();
+    if (rLower.includes('admin')) targetRole = 'college_admin';
+    else if (rLower.includes('coord')) targetRole = 'coordinator';
+    else if (rLower.includes('mentor')) targetRole = 'mentor';
+    else if (rLower.includes('trainer')) targetRole = 'trainer';
+  } else if (codeRecord.role && codeRecord.role !== 'all') {
+    targetRole = codeRecord.role;
+  }
+
+  // Determine college_id
+  let targetCollegeId = null;
+  let collegeName = codeRecord.college_name || '';
+  if (collegeName) {
+    const [cRows] = await pool.query(
+      `SELECT id, name FROM colleges WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) OR LOWER(TRIM(code)) = LOWER(TRIM(?)) LIMIT 1`,
+      [collegeName, collegeName]
+    );
+    if (cRows && cRows.length > 0) {
+      targetCollegeId = cRows[0].id;
+      collegeName = cRows[0].name;
+    }
+  }
+
+  // Hash password
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  // Check if user already exists
+  let existingUser = await findUserByEmailOrMobile(cleanEmail);
+  let finalUserId = null;
+  let finalUserName = '';
+
+  if (existingUser) {
+    if (existingUser.is_active === 1 && existingUser.is_approved === 1 && existingUser.password_hash) {
+      throw createAuthError('Your account is already activated and approved. Please sign in directly with your password.', 409);
+    }
+
+    finalUserName = existingUser.name || 'User';
+    finalUserId = existingUser.id;
+
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = ?,
+           is_verified = 1,
+           activation_status = 'completed',
+           is_approved = 0,
+           is_active = 0,
+           approval_status = 'pending',
+           force_password_change = 0,
+           role = COALESCE(?, role),
+           college_id = COALESCE(?, college_id),
+           updated_at = NOW()
+       WHERE id = ?`,
+      [passwordHash, targetRole, targetCollegeId, existingUser.id]
+    );
+  } else {
+    // Generate default name from email if not available
+    const derivedName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    finalUserName = derivedName;
+
+    const [insertResult] = await pool.query(
+      `INSERT INTO users 
+        (name, email, role, college_id, password_hash, is_verified, activation_status, is_approved, is_active, approval_status, force_password_change)
+       VALUES (?, ?, ?, ?, ?, 1, 'completed', 0, 0, 'pending', 0)`,
+      [derivedName, cleanEmail, targetRole, targetCollegeId, passwordHash]
+    );
+    finalUserId = insertResult.insertId;
+  }
+
+  // Invalidate activation code
+  await markCodeAsUsed(codeRecord.id, finalUserId);
+
+  // In-App Notification (Part 2 & Part 4)
+  const roleDisplay = targetRole === 'college_admin' ? 'Admin' : targetRole.charAt(0).toUpperCase() + targetRole.slice(1).replace(/_/g, ' ');
+  const formattedDateTime = new Date().toLocaleString();
+
+  if (targetRole === 'college_admin') {
+    // Notify Super Admins
+    try {
+      const [superAdmins] = await pool.query(
+        `SELECT id FROM users WHERE role = 'super_admin' AND is_active = 1`
+      );
+      for (const sa of (superAdmins || [])) {
+        await createNotification({
+          user_id: sa.id,
+          title: 'New Admin Account Approval Request',
+          message: `A new Admin (${finalUserName}, ${cleanEmail}) has successfully activated their TrainX account on ${formattedDateTime} and is waiting for your approval.`,
+          type: 'alert',
+          priority: 'Urgent',
+          category: 'Account Approval',
+          action_url: '/superadmin/users',
+          action_label: 'Review & Approve',
+        });
+      }
+    } catch (saNotifErr) {
+      console.warn('[Activation Notification Warning]', saNotifErr.message);
+    }
+  } else {
+    // Notify College Admin who created the code or College Admin of that college
+    try {
+      const creatorId = codeRecord.created_by;
+      if (creatorId) {
+        await createNotification({
+          user_id: creatorId,
+          title: `New ${roleDisplay} Account Approval Request`,
+          message: `A new ${roleDisplay} (${finalUserName}, ${cleanEmail}) has successfully activated their TrainX account on ${formattedDateTime} and is waiting for your approval.`,
+          type: 'alert',
+          priority: 'High',
+          category: 'Staff Approval',
+          action_url: '/admin/approve-users',
+          action_label: 'Review & Approve',
+        });
+      } else if (targetCollegeId) {
+        const [colAdmins] = await pool.query(
+          `SELECT id FROM users WHERE college_id = ? AND role = 'college_admin' AND is_active = 1`,
+          [targetCollegeId]
+        );
+        for (const ca of (colAdmins || [])) {
+          await createNotification({
+            user_id: ca.id,
+            title: `New ${roleDisplay} Account Approval Request`,
+            message: `A new ${roleDisplay} (${finalUserName}, ${cleanEmail}) has successfully activated their TrainX account on ${formattedDateTime} and is waiting for your approval.`,
+            type: 'alert',
+            priority: 'High',
+            category: 'Staff Approval',
+            action_url: '/admin/approve-users',
+            action_label: 'Review & Approve',
+          });
+        }
+      }
+    } catch (staffNotifErr) {
+      console.warn('[Staff Activation Notification Warning]', staffNotifErr.message);
+    }
+  }
+
+  return {
+    success: true,
+    message: 'Account activation submitted successfully! Your account is now pending administrator approval. You will receive an email once approved.',
+    user: {
+      id: finalUserId,
+      email: cleanEmail,
+      role: targetRole,
+      activation_status: 'completed',
+      approval_status: 'pending',
+    },
+  };
+};
+
+/**
+ * Force Password Change on First Login (Part 5)
+ */
+export const forceChangePassword = async ({ userId, currentPassword, newPassword, confirmPassword }) => {
+  if (!userId) {
+    throw createAuthError('Unauthorized request.', 401);
+  }
+  if (isBlank(currentPassword)) {
+    throw createAuthError('Current temporary password is required.', 400);
+  }
+  if (isBlank(newPassword) || newPassword.length < 8) {
+    throw createAuthError('New password must be at least 8 characters long.', 400);
+  }
+  if (newPassword !== confirmPassword) {
+    throw createAuthError('New password and confirmation do not match.', 400);
+  }
+  if (currentPassword === newPassword) {
+    throw createAuthError('New password must be different from your temporary password.', 400);
+  }
+
+  const hasUppercase = /[A-Z]/.test(newPassword);
+  const hasLowercase = /[a-z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+  if (!hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+    throw createAuthError('New password must contain at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character.', 400);
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    throw createAuthError('User account not found.', 404);
+  }
+
+  const isValidCurrent = await verifyStoredPassword(user, currentPassword);
+  if (!isValidCurrent) {
+    throw createAuthError('Invalid current temporary password. Please enter the temporary password received in your email.', 400);
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await pool.query(
+    `UPDATE users SET password_hash = ?, force_password_change = 0, updated_at = NOW() WHERE id = ?`,
+    [newHash, userId]
+  );
+
+  return {
+    success: true,
+    message: 'Your permanent password has been set successfully. You may now continue to your dashboard.',
   };
 };
 

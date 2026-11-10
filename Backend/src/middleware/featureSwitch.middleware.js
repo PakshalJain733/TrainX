@@ -107,10 +107,10 @@ export const isFeatureActive = async (featureKey) => {
 
 /**
  * Checks if the user registration approval requirement is currently active.
- * Approval workflow is completely disabled: accounts are instantly active and verified.
+ * Checks the feature switch table, defaulting to true for strict security.
  */
 export const isApprovalFeatureActive = async () => {
-  return false;
+  return await isFeatureActive('adminApproveUsers');
 };
 
 /**

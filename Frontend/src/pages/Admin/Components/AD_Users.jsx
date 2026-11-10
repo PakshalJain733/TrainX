@@ -2164,9 +2164,12 @@ export default function AdminUsers() {
         method: 'POST',
         body: JSON.stringify({
           role: roleParam,
+          email: formData.email || null,
+          name: formData.name || null,
+          college_name: collegeName || null,
           max_uses: 1,
           expiry_option: '7d',
-          description: `Generated for ${roleParam} registration`,
+          description: `Generated for ${roleParam} registration: ${formData.name || ''}`,
         }),
       });
       if (res && res.data && res.data.code) {
@@ -2969,6 +2972,11 @@ export default function AdminUsers() {
                             <span className="manageusers-token-tag">Newly Issued Token</span>
                           </div>
                           <div className="manageusers-token-code">{generatedCode}</div>
+                          {formData.email && (
+                            <div style={{ fontSize: '11px', color: '#a5b4fc', marginTop: '3px' }}>
+                              ✓ Invitation & activation link dispatched to: {formData.email}
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"

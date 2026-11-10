@@ -7,6 +7,7 @@ import DesktopNotificationListener from './components/Common/DesktopNotification
 import MeetingReminderBanner from './components/Common/MeetingReminderBanner';
 import GlobalTooltipManager from './components/Common/GlobalTooltipManager';
 import RouteLoadingFallback from './components/Common/RouteLoadingFallback';
+import ForcePasswordChangeModal from './components/Common/ForcePasswordChangeModal';
 
 // ── Auth & Registration Pages (Lazy Loaded) ──
 const Login = lazy(() => import('./pages/authentication/login'));
@@ -128,6 +129,7 @@ function App() {
         <DesktopNotificationListener />
         <MeetingReminderBanner />
         <GlobalTooltipManager />
+        <ForcePasswordChangeModal />
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
             {/* Auth & Public Routes */}

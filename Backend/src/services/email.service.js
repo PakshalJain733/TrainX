@@ -140,8 +140,10 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
   const hasSmtpConfig = Boolean(smtpUser && smtpPass);
   const isSmtpCircuitOpen = (Date.now() - lastSmtpFailureTime) < SMTP_CIRCUIT_BREAKER_TTL;
 
-  // SMTP is attempted when configured, not overridden to brevo, and circuit breaker is not currently tripped
-  if (provider !== 'brevo' && hasSmtpConfig && !isSmtpCircuitOpen) {
+  const nm = await getNodemailer();
+
+  // SMTP is attempted when configured, not overridden to brevo, circuit breaker is not tripped, and nodemailer is installed
+  if (provider !== 'brevo' && hasSmtpConfig && !isSmtpCircuitOpen && nm) {
     const senderEmail = (process.env.SMTP_FROM_EMAIL || smtpUser || 'admin@trainingportal.com').trim();
     const senderName = (process.env.SMTP_FROM_NAME || 'TrainX').trim();
     const mailPayload = {
@@ -1114,6 +1116,357 @@ export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawTo
     });
   } catch (error) {
     console.error(`[Email Service Error] sendStaffActivationEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Part 1: Send Admin Invitation with Secure Code (Super Admin -> Admin)
+ * Subject: Welcome to TrainX – Admin Account Activation
+ */
+export const sendAdminInvitationCodeEmail = async ({
+  to,
+  name = 'Admin',
+  code,
+  college_name = '',
+}) => {
+  try {
+    const frontendBase = getPrimaryFrontendUrl();
+    const activationLink = `${frontendBase}/activate-account?role=college_admin&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
+    const subject = 'Welcome to TrainX – Admin Account Activation';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to TrainX! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You have been invited to join TrainX as an Admin${college_name ? ` for <strong>${college_name}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To activate your account, please click the button below.
+      </p>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate Your Account
+        </a>
+      </div>
+
+      <!-- Secure Activation Code Box -->
+      <div style="background-color: #f1f5f9; border: 2px dashed #4f46e5; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+          🔑 Your Secure Activation Code
+        </div>
+        <div style="font-family: monospace; font-size: 28px; font-weight: 800; color: #1e1b4b; letter-spacing: 3px; margin: 8px 0;">
+          ${code}
+        </div>
+        <div style="font-size: 13px; color: #64748b;">
+          Registered Email: <strong style="color: #1e293b;">${to}</strong>
+        </div>
+      </div>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After clicking the button, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.
+      </p>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        We look forward to having you on board!
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 14px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: 'Admin Account Activation',
+      contentHtml,
+      footerNote: 'This secure code can only be used once to activate your administrator account.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYou have been invited to join TrainX as an Admin.\n\nTo activate your account, please click the link below:\n${activationLink}\n\nYour Secure Activation Code: ${code}\n\nAfter clicking the link, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.\n\nWe look forward to having you on board!\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminInvitationCodeEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Part 3: Send Staff Invitation with Secure Code (Admin -> Mentor, Coordinator, Trainer)
+ * Subject: Welcome to TrainX – Activate Your Account
+ */
+export const sendStaffInvitationCodeEmail = async ({
+  to,
+  name = 'User',
+  role = 'Staff',
+  code,
+  college_name = '',
+}) => {
+  try {
+    const frontendBase = getPrimaryFrontendUrl();
+    const roleCapitalized = String(role).charAt(0).toUpperCase() + String(role).slice(1).replace(/_/g, ' ');
+    const activationLink = `${frontendBase}/activate-account?role=${encodeURIComponent(role)}&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
+    const subject = 'Welcome to TrainX – Activate Your Account';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to TrainX! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You have been invited to join TrainX as a <strong>${roleCapitalized}</strong>${college_name ? ` for <strong>${college_name}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To activate your account, please click the button below.
+      </p>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate Your Account
+        </a>
+      </div>
+
+      <!-- Secure Activation Code Box -->
+      <div style="background-color: #f1f5f9; border: 2px dashed #4f46e5; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+          🔑 Your Secure Activation Code
+        </div>
+        <div style="font-family: monospace; font-size: 28px; font-weight: 800; color: #1e1b4b; letter-spacing: 3px; margin: 8px 0;">
+          ${code}
+        </div>
+        <div style="font-size: 13px; color: #64748b;">
+          Assigned Role: <strong style="color: #4f46e5;">${roleCapitalized}</strong> &bull; Registered Email: <strong style="color: #1e293b;">${to}</strong>
+        </div>
+      </div>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After clicking the button, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.
+      </p>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        We look forward to having you on board!
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 14px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: `${roleCapitalized} Account Activation`,
+      contentHtml,
+      footerNote: 'This secure code can only be used once to activate your account.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYou have been invited to join TrainX as a ${roleCapitalized}.\n\nTo activate your account, please click the link below:\n${activationLink}\n\nYour Secure Activation Code: ${code}\n\nAfter clicking the link, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.\n\nWe look forward to having you on board!\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStaffInvitationCodeEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Part 5: Send Direct Admin Creation Welcome Email (Super Admin -> Add User)
+ * Subject: Welcome to TrainX – Your Admin Account Has Been Created
+ */
+export const sendAdminDirectCreatedEmail = async ({
+  to,
+  name = 'Admin',
+  temporaryPassword,
+  collegeName = '',
+}) => {
+  try {
+    const frontendBase = getPrimaryFrontendUrl();
+    const loginUrl = `${frontendBase}/`;
+    const subject = 'Welcome to TrainX – Your Admin Account Has Been Created';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome ${name}! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your Admin account has been created by the Super Admin${collegeName ? ` for <strong>${collegeName}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You can log in to your account using the credentials below:
+      </p>
+
+      <!-- Credentials Box -->
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 22px; margin: 24px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-size: 12px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">
+          🔐 YOUR LOGIN CREDENTIALS
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 150px;">Email:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-family: monospace;">${to}</span>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Temporary Password:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-family: monospace;">${temporaryPassword}</span>
+            </td>
+          </tr>
+          ${collegeName ? `
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">College:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${collegeName}</td>
+          </tr>` : ''}
+        </table>
+      </div>
+
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #92400e; font-size: 13.5px; line-height: 1.5; font-weight: 600;">
+          ⚠️ For security reasons, you will be prompted to change your password immediately after your first login.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+          Login to TrainX &rarr;
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: 'Your Admin Account Has Been Created',
+      contentHtml,
+      footerNote: 'Please keep your credentials confidential. You will be prompted to set a permanent password upon login.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYour Admin account has been created by the Super Admin.\n\nYou can log in to your account using the credentials below:\nEmail: ${to}\nTemporary Password: ${temporaryPassword}\n\nFor security reasons, you will be prompted to change your password immediately after your first login.\n\nLogin to TrainX at: ${loginUrl}\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminDirectCreatedEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send Account Rejection Email
+ * Subject: TrainX Account Registration Update
+ */
+export const sendAccountRejectionEmail = async ({
+  to,
+  name = 'User',
+  role = 'User',
+  reason = '',
+}) => {
+  try {
+    const roleCapitalized = String(role).charAt(0).toUpperCase() + String(role).slice(1).replace(/_/g, ' ');
+    const subject = 'TrainX Account Registration Update';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        TrainX Registration Update
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Thank you for your interest in TrainX. Your registration request for the role of <strong>${roleCapitalized}</strong> was not approved at this time.
+      </p>
+
+      ${reason ? `
+      <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+        <div style="font-weight: 700; color: #991b1b; font-size: 13.5px; margin-bottom: 4px;">Reason:</div>
+        <div style="color: #b91c1c; font-size: 13.5px; line-height: 1.5;">${reason}</div>
+      </div>` : ''}
+
+      <p style="margin: 20px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.6;">
+        If you believe this was an error or require further assistance, please contact your institution's placement coordinator or administrator.
+      </p>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'TrainX',
+      subtitle: 'Registration Status Update',
+      contentHtml,
+      footerNote: 'Need assistance? Reach out to your institution administrator.',
+    });
+
+    const textContent = `Hello ${name},\n\nYour ${roleCapitalized} account request was not approved at this time.${reason ? `\n\nReason: ${reason}` : ''}\n\nIf you have questions, please reach out to your institution administrator.\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAccountRejectionEmail failed for ${to}:`, error.message);
     return null;
   }
 };

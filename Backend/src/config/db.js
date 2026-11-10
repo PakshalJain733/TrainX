@@ -50,9 +50,13 @@ export const checkDatabaseConnection = async () => {
       const colsToAdd = [
         { name: 'current_year', def: 'VARCHAR(50) DEFAULT NULL' },
         { name: 'area_of_expertise', def: 'VARCHAR(255) DEFAULT NULL' },
-                { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
         { name: 'avatar_url', def: 'LONGTEXT DEFAULT NULL' },
         { name: 'bio', def: 'TEXT DEFAULT NULL' },
+        { name: 'force_password_change', def: 'TINYINT(1) DEFAULT 0' },
+        { name: 'email_delivery_status', def: "ENUM('pending', 'sent', 'failed', 'bounced') DEFAULT 'pending'" },
+        { name: 'activation_status', def: "ENUM('pending', 'completed') DEFAULT 'pending'" },
+        { name: 'approval_status', def: "ENUM('pending', 'approved', 'rejected') DEFAULT 'pending'" },
       ];
       for (const col of colsToAdd) {
         if (!colSet.has(col.name.toLowerCase())) {
@@ -62,6 +66,27 @@ export const checkDatabaseConnection = async () => {
       }
     } catch (migErr) {
       console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
+    }
+
+    // Ensure email and delivery status columns exist on secure_codes table
+    try {
+      const existingScCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'secure_codes'"
+      );
+      const scColSet = new Set((existingScCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      const scColsToAdd = [
+        { name: 'email', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'email_delivery_status', def: "ENUM('pending', 'sent', 'failed', 'bounced') DEFAULT 'pending'" },
+        { name: 'invitation_id', def: 'VARCHAR(100) DEFAULT NULL' },
+      ];
+      for (const col of scColsToAdd) {
+        if (!scColSet.has(col.name.toLowerCase())) {
+          await query(`ALTER TABLE secure_codes ADD COLUMN ${col.name} ${col.def}`);
+          console.log(`[Database Migration] Added column ${col.name} to secure_codes table.`);
+        }
+      }
+    } catch (scErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply secure_codes schema extensions: ${scErr.message}`);
     }
 
     // Ensure updated_at exists on attendance table
@@ -90,16 +115,6 @@ export const checkDatabaseConnection = async () => {
           ELSE semester
         END
         WHERE semester IS NULL OR semester IN ('', '1', 'Semester 1', 'Semester 6')
-      `);
-    } catch (_) {}
-
-    // Approval workflow completely disabled: Auto-approve all registered accounts
-    try {
-      await query(`
-        UPDATE users 
-        SET is_approved = 1, is_active = 1 
-        WHERE (is_approved = 0 OR is_approved IS NULL) 
-          AND role != 'super_admin'
       `);
     } catch (_) {}
 
