@@ -1008,7 +1008,7 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-  margin-top: 8px;
+  /* margin-top: 8px; */
 }
 
 .quiz-empty-icon-wrap {

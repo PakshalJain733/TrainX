@@ -12,6 +12,7 @@ import {
   getUserStatsModel,
   findUserByEmailOrMobile,
   findUserById,
+  toSafeUser,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
@@ -1199,9 +1200,12 @@ export const generateAIPracticeProblemController = async (req, res, next) => {
 // -------------------------------------------------------------
 export const getAdminProfile = async (req, res, next) => {
   try {
-    const userId = req.user.userId || req.user.id || 1;
+    const userId = req.user?.userId || req.user?.id || req.user?.sub;
+    if (!userId) {
+      return sendError(res, 'User identity not found in authenticated session', 401);
+    }
     const user = await findUserById(userId);
-    return sendSuccess(res, 'Admin profile retrieved successfully', user || req.user);
+    return sendSuccess(res, 'Admin profile retrieved successfully', user ? toSafeUser(user) : req.user);
   } catch (error) {
     next(error);
   }
@@ -1209,14 +1213,17 @@ export const getAdminProfile = async (req, res, next) => {
 
 export const updateAdminProfile = async (req, res, next) => {
   try {
-    const userId = req.user.userId || req.user.id || 1;
+    const userId = req.user?.userId || req.user?.id || req.user?.sub;
+    if (!userId) {
+      return sendError(res, 'User identity not found in authenticated session', 401);
+    }
     // Self-service profile edits may never change role, college or activation state
     const updates = pickUserUpdateFields(req.body);
     delete updates.is_active;
     delete updates.batch_id;
     delete updates.roll_number;
     const updated = await updateUserModel(userId, updates);
-    return sendSuccess(res, 'Admin profile updated successfully', updated);
+    return sendSuccess(res, 'Admin profile updated successfully', updated ? toSafeUser(updated) : updated);
   } catch (error) {
     next(error);
   }

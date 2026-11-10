@@ -22,7 +22,7 @@ export const getApiBaseUrl = () => {
     }
 
     // Production Custom Domains & Vercel Deployments (proxied via /api/v1 rewrite)
-    if (host.includes("trainx-vppcoe.tech") || host.endsWith(".vercel.app")) {
+    if (host.includes("trainx.vppcoe.tech") || host.includes("trainx-vppcoe.tech") || host.endsWith(".vercel.app")) {
       return "/api/v1";
     }
   }

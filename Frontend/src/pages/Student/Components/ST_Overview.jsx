@@ -60,7 +60,7 @@ const formatStudentName = (name) => {
 
 const defaultDashboardData = {
   personalDetails: {
-    name: "Student",
+    name: "",
     department: "",
   },
   academicOverview: {
@@ -166,7 +166,7 @@ export default function Overview() {
                 personalDetails: {
                   ...prev.personalDetails,
                   ...resPersonal,
-                  name: (resPersonal.name && resPersonal.name !== "Student") ? resPersonal.name : prev.personalDetails.name,
+                  name: (resPersonal.name && resPersonal.name !== "Student") ? resPersonal.name : (prev.personalDetails.name && prev.personalDetails.name !== "Student" ? prev.personalDetails.name : ""),
                   department: resPersonal.department || prev.personalDetails.department,
                 },
                 academicOverview: {
@@ -285,7 +285,26 @@ export default function Overview() {
     } catch { return {}; }
   })();
 
-  const studentName = dashboard.personalDetails.name || storedUser.name || getStoredUserName() || "Student";
+  const studentName = (() => {
+    const rawDashName = dashboard.personalDetails?.name;
+    if (rawDashName && rawDashName !== "Student" && typeof rawDashName === "string" && rawDashName.trim()) {
+      return rawDashName.trim();
+    }
+    const rawStored = storedUser.name || storedUser.fullName || storedUser.full_name;
+    if (rawStored && rawStored !== "Student" && typeof rawStored === "string" && rawStored.trim()) {
+      return rawStored.trim();
+    }
+    const hName = getStoredUserName();
+    if (hName && hName !== "Student" && typeof hName === "string" && hName.trim()) {
+      return hName.trim();
+    }
+    const email = storedUser.email || "";
+    if (email && email.includes("@")) {
+      const derived = email.split("@")[0].replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      if (derived) return derived;
+    }
+    return "Student";
+  })();
   const dept = dashboard.personalDetails.department || storedUser.department || storedUser.dept || storedUser.studentProfile?.department || "";
   const sem = dashboard.academicOverview.semester || storedUser.semester || storedUser.sem || storedUser.current_semester || storedUser.studentProfile?.semester || "";
   const rollNum = dashboard.academicOverview.rollNumber || storedUser.rollNumber || storedUser.roll_number || storedUser.studentProfile?.roll_number || "";
@@ -336,7 +355,7 @@ export default function Overview() {
               <Sparkles size={13} /> STUDENT WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, {studentName && studentName !== "Student" ? studentName : "Student"}!
+              Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
               {[

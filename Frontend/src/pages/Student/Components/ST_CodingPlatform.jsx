@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert, User, LogOut, BookOpen, ExternalLink, Sparkles, HelpCircle, X, Award } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -208,6 +208,19 @@ export default function CodingPlatform() {
   const [terminationReason, setTerminationReason] = useState("");
   const [clipboardWarning, setClipboardWarning] = useState("");
   const proctorArmedRef = useRef(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   const isBatchCoursework = Boolean(
     location.state?.fromBatchCoursework ||
@@ -1114,15 +1127,126 @@ export default function CodingPlatform() {
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
 
-            {isFullscreen && user?.name && (
-              <div className="cp-user-profile-badge" title={user.email || user.name}>
-                <div className="cp-user-avatar">
-                  {getInitials(user.name)}
-                </div>
-                <div className="cp-user-meta">
-                  <span className="cp-user-name">{user.name}</span>
-                  <span className="cp-user-role">STUDENT</span>
-                </div>
+            {user?.name && (
+              <div className="cp-user-menu-wrap" ref={userMenuRef}>
+                <button
+                  type="button"
+                  className={`cp-user-profile-btn ${userMenuOpen ? "active" : ""}`}
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  title={`${user.name} • Student Account (${user.email || "TrainX"})`}
+                  aria-expanded={userMenuOpen}
+                >
+                  <div className="cp-user-avatar">
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="cp-user-meta">
+                    <span className="cp-user-name">{user.name}</span>
+                    <span className="cp-user-role">STUDENT</span>
+                  </div>
+                  <ChevronDown size={14} className={`cp-user-chevron ${userMenuOpen ? "rotated" : ""}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="cp-user-dropdown-popover">
+                    <div className="cp-user-popover-header">
+                      <div className="cp-popover-avatar">
+                        {getInitials(user.name)}
+                      </div>
+                      <div className="cp-popover-user-info">
+                        <div className="cp-popover-name">{user.name}</div>
+                        <div className="cp-popover-email">{user.email || "student@trainx.internal"}</div>
+                        <span className="cp-popover-role-pill">
+                          <CheckCircle2 size={11} /> Verified Student
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="cp-popover-divider" />
+
+                    <div className="cp-popover-meta-row">
+                      <div className="cp-popover-meta-item">
+                        <span className="cp-popover-meta-label">Session Mode</span>
+                        <span className="cp-popover-meta-value">
+                          {isBatchCoursework ? "Batch Proctored" : "Practice Arena"}
+                        </span>
+                      </div>
+                      <div className="cp-popover-meta-item">
+                        <span className="cp-popover-meta-label">Active Language</span>
+                        <span className="cp-popover-meta-value" style={{ textTransform: "capitalize" }}>
+                          {selectedLang || "Java"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="cp-popover-divider" />
+
+                    <div className="cp-popover-actions">
+                      <button
+                        type="button"
+                        className="cp-popover-action-item"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          if (isBatchCoursework && !hasSubmitted) {
+                            if (window.confirm("You are currently inside a proctored batch assignment. Navigating away may mark your attempt as finished. Are you sure you want to view profile?")) {
+                              navigate("/student/profile");
+                            }
+                          } else {
+                            navigate("/student/profile");
+                          }
+                        }}
+                      >
+                        <User size={15} />
+                        <span>View Student Profile</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="cp-popover-action-item"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setShowShortcutsModal(true);
+                        }}
+                      >
+                        <BookOpen size={15} />
+                        <span>Keyboard Shortcuts & Tips</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="cp-popover-action-item"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          handleToggleFullscreenClick();
+                        }}
+                      >
+                        {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                        <span>{isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}</span>
+                      </button>
+
+                      <div className="cp-popover-divider" />
+
+                      <button
+                        type="button"
+                        className="cp-popover-action-item cp-popover-action-item--danger"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          if (isBatchCoursework && !hasSubmitted) {
+                            if (!window.confirm("You have an active proctored task. Signing out will terminate the session. Proceed to sign out?")) {
+                              return;
+                            }
+                          }
+                          sessionStorage.clear();
+                          localStorage.removeItem("token");
+                          localStorage.removeItem("user");
+                          navigate("/login");
+                        }}
+                      >
+                        <LogOut size={15} />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1509,6 +1633,75 @@ export default function CodingPlatform() {
                   className="proctor-term-btn-exit"
                 >
                   Back to My Batches
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Keyboard Shortcuts Modal */}
+        {showShortcutsModal && (
+          <div className="cp-shortcuts-modal-overlay" onClick={() => setShowShortcutsModal(false)}>
+            <div className="cp-shortcuts-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="cp-shortcuts-header">
+                <div className="cp-shortcuts-header-title">
+                  <BookOpen size={20} color="#2563eb" />
+                  <h4>Coding Platform Shortcuts & Help</h4>
+                </div>
+                <button
+                  type="button"
+                  className="cp-shortcuts-close-btn"
+                  onClick={() => setShowShortcutsModal(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="cp-shortcuts-grid">
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Run Code against Sample Cases</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                  </div>
+                </div>
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Toggle Fullscreen Mode</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>F11</kbd>
+                  </div>
+                </div>
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Comment / Uncomment Code</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>Ctrl</kbd> + <kbd>/</kbd>
+                  </div>
+                </div>
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Indent Selection</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>Tab</kbd>
+                  </div>
+                </div>
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Outdent Selection</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>Shift</kbd> + <kbd>Tab</kbd>
+                  </div>
+                </div>
+                <div className="cp-shortcut-row">
+                  <span className="cp-shortcut-desc">Format Code</span>
+                  <div className="cp-shortcut-keys">
+                    <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cp-shortcuts-footer">
+                <button
+                  type="button"
+                  className="cp-shortcuts-done-btn"
+                  onClick={() => setShowShortcutsModal(false)}
+                >
+                  Got It
                 </button>
               </div>
             </div>

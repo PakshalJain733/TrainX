@@ -437,7 +437,16 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+  const getInitials = (name) => {
+    if (!name || typeof name !== "string") return "AD";
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0] ? parts[0].slice(0, 2).toUpperCase() : "AD";
+  };
+
+  const formatDisplayName = (rawName, email) => {
     if (typeof rawName === "string" && rawName.trim()) {
       const trimmed = rawName.trim();
       if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
@@ -455,57 +464,90 @@ export default function AdminLayout() {
           .join(" ");
       }
     }
-    return fallback;
+    return "Administrator";
   };
 
-  const loadProfile = () => {
+  const resolveAdminUser = (freshData = null) => {
     try {
-      const stored = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-      const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
-      const rawName = adminProf.name || stored.name || stored.fullName || stored.full_name;
-      const email = adminProf.email || stored.email || "admin@pvppcoe.ac.in";
-      const name = formatDisplayName(rawName, email, "Ganesh Shinde");
+      let stored = {};
+      try {
+        stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+      } catch (_) {}
+
+      // Clean up stale adminProfile if it doesn't match the active session user
+      let adminProf = {};
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem("adminProfile") || localStorage.getItem("adminProfile") || "{}");
+        if (parsed && ((stored.id && parsed.id === stored.id) || (stored.email && parsed.email === stored.email))) {
+          adminProf = parsed;
+        } else {
+          sessionStorage.removeItem("adminProfile");
+          localStorage.removeItem("adminProfile");
+        }
+      } catch (_) {}
+
+      const u = freshData || {};
+      const rawName = u.name || u.fullName || u.full_name || stored.name || stored.fullName || stored.full_name || adminProf.name;
+      const email = u.email || stored.email || adminProf.email || "";
+      const name = formatDisplayName(rawName, email);
+      const role = u.role || stored.role || adminProf.role || "College Administrator";
+      const avatar = u.avatar || u.avatar_url || u.profile_pic || stored.avatar || stored.avatar_url || stored.profile_pic || adminProf.avatar || null;
+
       return {
-        name: name,
-        email: email,
-        role: adminProf.role || stored.role || "College Administrator",
-        avatar: adminProf.avatar || stored.avatar || stored.avatarUrl || null,
+        ...stored,
+        ...u,
+        name,
+        email,
+        role,
+        avatar,
+        initials: getInitials(name),
       };
-    } catch (e) {
-      return { name: "Ganesh Shinde", email: "admin@pvppcoe.ac.in", role: "College Administrator", avatar: null };
+    } catch (_) {
+      return {
+        name: "Administrator",
+        email: "",
+        role: "College Administrator",
+        avatar: null,
+        initials: "AD",
+      };
     }
   };
 
-  const [user, setUser] = useState(loadProfile);
+  const [user, setUser] = useState(() => resolveAdminUser(null));
 
   const fetchUser = async () => {
     try {
       const token = getAuthToken();
       if (!token) return;
-      const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.data) {
-          const u = data.data;
-          const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
-          const rawName = adminProf.name || u.name || u.fullName || u.full_name;
-          const email = adminProf.email || u.email || "admin@pvppcoe.ac.in";
-          const name = formatDisplayName(rawName, email, "Ganesh Shinde");
-          const updated = {
-            name: name,
-            email: email,
-            role: adminProf.role || u.role || "College Administrator",
-            avatar: adminProf.avatar || u.avatarUrl || u.avatar || null,
-          };
-          setUser(updated);
-          let localUser = {};
-          try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
-          const merged = { ...localUser, ...updated };
-          sessionStorage.setItem("user", JSON.stringify(merged));
-          localStorage.setItem("user", JSON.stringify(merged));
+
+      let freshData = null;
+      try {
+        const meRes = await apiFetch("/auth/me");
+        if (meRes && (meRes.data || meRes.user)) {
+          freshData = meRes.data || meRes.user;
         }
+      } catch (_) {}
+
+      if (!freshData) {
+        try {
+          const profRes = await apiFetch("/admin/profile");
+          if (profRes && (profRes.data || profRes.user)) {
+            freshData = profRes.data || profRes.user;
+          }
+        } catch (_) {}
+      }
+
+      if (freshData) {
+        const resolved = resolveAdminUser(freshData);
+        setUser(resolved);
+        try {
+          const currentStored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+          const merged = { ...currentStored, ...freshData, name: resolved.name };
+          sessionStorage.setItem("user", JSON.stringify(merged));
+          if (localStorage.getItem("user")) {
+            localStorage.setItem("user", JSON.stringify(merged));
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.warn("Could not fetch admin profile for header:", err);
@@ -515,7 +557,7 @@ export default function AdminLayout() {
   useEffect(() => {
     fetchUser();
     const handleProfileUpdate = () => {
-      setUser(loadProfile());
+      setUser(resolveAdminUser(null));
       fetchUser();
     };
     window.addEventListener("userProfileUpdated", handleProfileUpdate);
@@ -622,14 +664,12 @@ export default function AdminLayout() {
                     <div className="admin-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                      ) : typeof user?.name === "string" && user.name.trim() ? (
-                        user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                       ) : (
-                        "AD"
+                        user.initials || getInitials(user.name)
                       )}
                     </div>
                     <div className="admin-header__user-info">
-                      <span className="admin-header__name">{user.name || "Admin User"}</span>
+                      <span className="admin-header__name">{user.name || "Administrator"}</span>
                     </div>
                   </button>
 
@@ -640,15 +680,13 @@ export default function AdminLayout() {
                           <div className="admin-header__profile-avatar">
                             {user.avatar ? (
                               <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                            ) : typeof user?.name === "string" && user.name.trim() ? (
-                              user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                             ) : (
-                              "AD"
+                              user.initials || getInitials(user.name)
                             )}
                           </div>
                           <div className="admin-header__profile-info">
                             <span className="admin-header__profile-name">{user.name}</span>
-                            <span className="admin-header__profile-sub">{user.email || user.role || "Admin"}</span>
+                            <span className="admin-header__profile-sub">{user.email || user.role || "College Administrator"}</span>
                           </div>
                         </div>
                         <div className="admin-header__profile-divider" />

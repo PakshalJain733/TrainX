@@ -870,9 +870,18 @@ export default function AdminBatches() {
           {/* TAB 2: Batch Leaderboard */}
           {batchTab === "leaderboard" && (
             <div className="batch-tab-section">
-              <div className="batch-tab-header" style={{ marginBottom: "16px" }}>
-                <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Batch Performance Leaderboard</h3>
-                <p className="batch-tab-sub">Rankings based on XP points, problem solving & quiz scores for {selectedBatch.name}</p>
+              <div className="batch-tab-header" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h3 className="batch-tab-title" style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>Batch Performance Leaderboard</h3>
+                  <p className="batch-tab-sub" style={{ fontSize: "13.5px", color: "#64748b", margin: 0 }}>
+                    Rankings based on XP points, problem solving & quiz scores for <strong style={{ color: "#334155" }}>{selectedBatch.name}</strong>
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#2563eb", background: "#eff6ff", padding: "6px 14px", borderRadius: "20px", border: "1px solid #bfdbfe", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <Sparkles size={13} /> Top Performers ({batchLeaderboard.length})
+                  </span>
+                </div>
               </div>
               <div className="batch-leaderboard-list">
                 {batchLeaderboard.length === 0 ? (
@@ -889,10 +898,12 @@ export default function AdminBatches() {
                       style={{ padding: "16px 20px" }}
                     >
                       <div className="leaderboard-rank-left">
-                        <span className="rank-badge" style={{ width: "36px", height: "36px", fontSize: "14px" }}>#{idx + 1}</span>
+                        <span className="rank-badge" style={{ width: "36px", height: "36px", fontSize: "14px" }}>
+                          {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
+                        </span>
                         <div>
                           <div className="rank-student-name" style={{ fontSize: "15px" }}>{item.name}</div>
-                          <div className="rank-student-dept">{item.department || "Enrolled Student"}</div>
+                          <div className="rank-student-dept">{item.department || "Enrolled Student"}{item.rollNo ? ` • ${item.rollNo}` : ""}</div>
                         </div>
                       </div>
                       <span className="rank-xp-pill" style={{ padding: "6px 16px", fontSize: "13px" }}>{item.xp || "0 XP"}</span>

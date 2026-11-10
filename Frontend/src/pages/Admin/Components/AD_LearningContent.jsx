@@ -548,13 +548,13 @@ export default function AdminLearningContent() {
 
       {/* Resource Cards Grid or Centered Empty State */}
       {loading ? (
-        <div className="learning-empty-card">
+        <div className="learning-empty-card-AD">
           <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
           <h3 className="learning-empty-title">Loading learning content...</h3>
           <p className="learning-empty-desc">Fetching published study guides, lecture notes, and curriculum documentation.</p>
         </div>
       ) : filteredResources.length === 0 ? (
-        <div className="learning-empty-card">
+        <div className="learning-empty-card-AD">
           <div className="learning-empty-icon-wrap">
             <BookOpen size={36} color="#4f46e5" />
           </div>

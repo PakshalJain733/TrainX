@@ -26,7 +26,7 @@ export default function AdminOverview() {
     }
   });
 
-  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+  const formatDisplayName = (rawName, email, fallback = "Administrator") => {
     if (typeof rawName === "string" && rawName.trim()) {
       const trimmed = rawName.trim();
       if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
@@ -54,10 +54,10 @@ export default function AdminOverview() {
   const dept = adminUser.department || adminUser.dept || "";
 
   const getInitials = (name) => {
-    if (!name) return "GS";
-    const parts = name.trim().split(" ");
+    if (!name || typeof name !== "string") return "AD";
+    const parts = name.trim().split(" ").filter(Boolean);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+    return parts[0] ? parts[0].slice(0, 2).toUpperCase() : "AD";
   };
 
   const adminInitials = getInitials(fullName);

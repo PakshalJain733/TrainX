@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   RefreshCw,
   Users,
@@ -19,7 +20,14 @@ import {
   Zap,
   Info,
   Check,
-  AlertCircle
+  AlertCircle,
+  Maximize2,
+  Minimize2,
+  X,
+  BookOpenCheck,
+  Code2,
+  GraduationCap,
+  Award
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_CareerGatewaySync.css";
@@ -35,6 +43,7 @@ export default function AD_CareerGatewaySync() {
 
   // Sync action states
   const [isCollegeSyncConfirmOpen, setIsCollegeSyncConfirmOpen] = useState(false);
+  const [isCollegeSyncFullScreen, setIsCollegeSyncFullScreen] = useState(true);
   const [isSubmittingSync, setIsSubmittingSync] = useState(false);
   const [individualStudentId, setIndividualStudentId] = useState("");
   const [activeSyncMessage, setActiveSyncMessage] = useState(null);
@@ -43,6 +52,18 @@ export default function AD_CareerGatewaySync() {
 
   // Active polling reference
   const pollingRef = useRef(null);
+
+  // Keyboard shortcut listener (Escape to close modals)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (isCollegeSyncConfirmOpen) setIsCollegeSyncConfirmOpen(false);
+        if (selectedDetailExecution) setSelectedDetailExecution(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isCollegeSyncConfirmOpen, selectedDetailExecution]);
 
   // Load Status and History
   const loadData = useCallback(async (isSilent = false) => {
@@ -345,7 +366,10 @@ export default function AD_CareerGatewaySync() {
             </div>
             <button
               className="cg-btn cg-btn--primary cg-btn--lg"
-              onClick={() => setIsCollegeSyncConfirmOpen(true)}
+              onClick={() => {
+                setIsCollegeSyncFullScreen(true);
+                setIsCollegeSyncConfirmOpen(true);
+              }}
               disabled={isSubmittingSync}
             >
               <RefreshCw size={16} className={isSubmittingSync ? "cg-spin" : ""} />
@@ -495,96 +519,278 @@ export default function AD_CareerGatewaySync() {
       </div>
 
       {/* Confirmation Modal for College-Wide Sync */}
-      {isCollegeSyncConfirmOpen && (
-        <div className="cg-modal-overlay" onClick={() => setIsCollegeSyncConfirmOpen(false)}>
-          <div className="cg-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="cg-modal__header">
-              <div className="cg-modal__icon-wrap cg-modal__icon-wrap--amber">
-                <AlertTriangle size={20} />
+      {isCollegeSyncConfirmOpen &&
+        createPortal(
+          <div
+            className={`cg-modal-overlay ${isCollegeSyncFullScreen ? "cg-modal-overlay--fullscreen" : ""}`}
+            onClick={() => setIsCollegeSyncConfirmOpen(false)}
+          >
+            <div
+              className={`cg-modal ${isCollegeSyncFullScreen ? "cg-modal--fullscreen" : ""}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="cg-modal__header cg-modal__header--interactive">
+                <div className="cg-modal__header-left">
+                  <div className="cg-modal__icon-wrap cg-modal__icon-wrap--amber">
+                    <AlertTriangle size={isCollegeSyncFullScreen ? 22 : 20} />
+                  </div>
+                  <div>
+                    <h3 className="cg-modal__title">Confirm College-Wide Synchronization</h3>
+                    {isCollegeSyncFullScreen && (
+                      <span className="cg-modal__subtitle">
+                        Tenant-Wide Background Batch Export &bull; Career Gateway Integration
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="cg-modal__header-actions">
+                  <button
+                    type="button"
+                    className="cg-modal__control-btn"
+                    onClick={() => setIsCollegeSyncFullScreen((prev) => !prev)}
+                    title={isCollegeSyncFullScreen ? "Restore Window Size" : "Full Screen"}
+                    aria-label={isCollegeSyncFullScreen ? "Restore Window Size" : "Full Screen"}
+                  >
+                    {isCollegeSyncFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                  </button>
+                  <button
+                    type="button"
+                    className="cg-modal__control-btn cg-modal__control-btn--close"
+                    onClick={() => setIsCollegeSyncConfirmOpen(false)}
+                    title="Close Dialog (Esc)"
+                    aria-label="Close Dialog"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
-              <h3 className="cg-modal__title">Confirm College-Wide Synchronization</h3>
-            </div>
-            <div className="cg-modal__body">
-              <p>
-                You are about to initiate an on-demand synchronization for your entire college tenant.
-              </p>
-              <div className="cg-callout">
-                <Shield size={16} className="cg-callout__icon" />
-                <div>
-                  <strong>Tenant Isolated & Asynchronous:</strong>
-                  <br />
-                  This export will run in the background without affecting your daily 02:00 AM scheduled sync cursor. Only students linked to Career Gateway will be processed.
+
+              {/* Modal Body */}
+              <div className={`cg-modal__body ${isCollegeSyncFullScreen ? "cg-modal__body--fullscreen" : ""}`}>
+                {isCollegeSyncFullScreen ? (
+                  <div className="cg-fullscreen-content">
+                    {/* Hero Banner */}
+                    <div className="cg-fs-hero">
+                      <div className="cg-fs-hero__badge">
+                        <Zap size={14} /> On-Demand Pipeline Trigger
+                      </div>
+                      <h2 className="cg-fs-hero__title">Initiate Full College Synchronization</h2>
+                      <p className="cg-fs-hero__desc">
+                        You are about to initiate an on-demand synchronization for your entire college tenant.
+                        All verified learning progress, classroom attendance, assessment benchmarks, and coding milestones
+                        will be compiled and transmitted asynchronously to Career Gateway.
+                      </p>
+
+                      {/* Highlighted Stat Cards */}
+                      <div className="cg-fs-metrics">
+                        <div className="cg-fs-metric-card">
+                          <span className="cg-fs-metric-card__label">Linked Students in Scope</span>
+                          <span className="cg-fs-metric-card__value">
+                            {statusData?.linked_students_count ?? statusData?.summary?.linked_students ?? "—"}
+                          </span>
+                          <span className="cg-fs-metric-card__sub">Mapped to Career Gateway IDs</span>
+                        </div>
+                        <div className="cg-fs-metric-card">
+                          <span className="cg-fs-metric-card__label">Active Eligible Candidates</span>
+                          <span className="cg-fs-metric-card__value">
+                            {statusData?.active_eligible_students ?? "—"}
+                          </span>
+                          <span className="cg-fs-metric-card__sub">Active in current academic cycle</span>
+                        </div>
+                        <div className="cg-fs-metric-card">
+                          <span className="cg-fs-metric-card__label">Sync Mode</span>
+                          <span className="cg-fs-metric-card__value cg-fs-metric-card__value--mode">Mode B</span>
+                          <span className="cg-fs-metric-card__sub">Asynchronous Background Worker</span>
+                        </div>
+                        <div className="cg-fs-metric-card">
+                          <span className="cg-fs-metric-card__label">Execution Route</span>
+                          <span className="cg-fs-metric-card__value cg-fs-metric-card__value--target">Gateway Bridge</span>
+                          <span className="cg-fs-metric-card__sub">Isolated College Tenant</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Scope Breakdown Grid */}
+                    <div className="cg-fs-section">
+                      <h4 className="cg-fs-section__title">
+                        <Database size={16} /> Data Categories Included in Synchronization
+                      </h4>
+                      <div className="cg-modal-scope-grid">
+                        <div className="cg-modal-scope-card">
+                          <div className="cg-modal-scope-card__icon cg-modal-scope-card__icon--blue">
+                            <Users size={18} />
+                          </div>
+                          <div>
+                            <div className="cg-modal-scope-card__title">Batches & Attendance</div>
+                            <div className="cg-modal-scope-card__text">
+                              Classroom presence logs, attendance percentages, batch schedules, and trainer sign-offs.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="cg-modal-scope-card">
+                          <div className="cg-modal-scope-card__icon cg-modal-scope-card__icon--amber">
+                            <GraduationCap size={18} />
+                          </div>
+                          <div>
+                            <div className="cg-modal-scope-card__title">Academic Quizzes</div>
+                            <div className="cg-modal-scope-card__text">
+                              Subject assessment scores, percentile distributions, topic proficiencies, and passing benchmarks.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="cg-modal-scope-card">
+                          <div className="cg-modal-scope-card__icon cg-modal-scope-card__icon--emerald">
+                            <Code2 size={18} />
+                          </div>
+                          <div>
+                            <div className="cg-modal-scope-card__title">Coding Milestones</div>
+                            <div className="cg-modal-scope-card__text">
+                              Problem solving submissions, test suite passes, language competencies, and streak records.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="cg-modal-scope-card">
+                          <div className="cg-modal-scope-card__icon cg-modal-scope-card__icon--purple">
+                            <Award size={18} />
+                          </div>
+                          <div>
+                            <div className="cg-modal-scope-card__title">Roadmaps & Certifications</div>
+                            <div className="cg-modal-scope-card__text">
+                              Learning journey checkpoints, completion ratios, validated skill credentials, and career readiness.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tenant Isolation Callout */}
+                    <div className="cg-callout cg-callout--fullscreen">
+                      <Shield size={20} className="cg-callout__icon" />
+                      <div>
+                        <strong>Strict Tenant Isolation & Asynchronous Execution:</strong>
+                        <p style={{ margin: "4px 0 0 0" }}>
+                          This export task runs safely in the background worker queue and will not interfere with active classroom
+                          operations or your daily 02:00 AM scheduled sync cursor. Only students actively linked with Career Gateway IDs
+                          will be transmitted.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p>
+                      You are about to initiate an on-demand synchronization for your entire college tenant.
+                    </p>
+                    <div className="cg-callout">
+                      <Shield size={16} className="cg-callout__icon" />
+                      <div>
+                        <strong>Tenant Isolated & Asynchronous:</strong>
+                        <br />
+                        This export will run in the background without affecting your daily 02:00 AM scheduled sync cursor. Only students linked to Career Gateway will be processed.
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="cg-modal__footer cg-modal__footer--interactive">
+                <div className="cg-modal__footer-hint">
+                  <span>Press <kbd>Esc</kbd> to close</span>
+                </div>
+                <div className="cg-modal__footer-btns">
+                  <button
+                    type="button"
+                    className="cg-btn cg-btn--secondary"
+                    onClick={() => setIsCollegeSyncConfirmOpen(false)}
+                    disabled={isSubmittingSync}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="cg-btn cg-btn--primary cg-btn--confirm-sync"
+                    onClick={handleConfirmCollegeSync}
+                    disabled={isSubmittingSync}
+                  >
+                    <RefreshCw size={16} className={isSubmittingSync ? "cg-spin" : ""} />
+                    {isSubmittingSync ? "Submitting..." : "Yes, Start Synchronization"}
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="cg-modal__footer">
-              <button
-                className="cg-btn cg-btn--secondary"
-                onClick={() => setIsCollegeSyncConfirmOpen(false)}
-                disabled={isSubmittingSync}
-              >
-                Cancel
-              </button>
-              <button
-                className="cg-btn cg-btn--primary"
-                onClick={handleConfirmCollegeSync}
-                disabled={isSubmittingSync}
-              >
-                {isSubmittingSync ? "Submitting..." : "Yes, Start Synchronization"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Detail / Payload Summary Modal */}
-      {selectedDetailExecution && (
-        <div className="cg-modal-overlay" onClick={() => setSelectedDetailExecution(null)}>
-          <div className="cg-modal cg-modal--lg" onClick={(e) => e.stopPropagation()}>
-            <div className="cg-modal__header">
-              <div className="cg-modal__icon-wrap cg-modal__icon-wrap--blue">
-                <Layers size={20} />
-              </div>
-              <h3 className="cg-modal__title">Synchronization Execution Details</h3>
-            </div>
-            <div className="cg-modal__body">
-              <div className="cg-detail-grid">
-                <div><strong>Sync ID:</strong> <code>{selectedDetailExecution.sync_id}</code></div>
-                <div><strong>Export ID:</strong> <code>{selectedDetailExecution.export_id || "N/A"}</code></div>
-                <div><strong>Type:</strong> {selectedDetailExecution.sync_type}</div>
-                <div><strong>Trigger:</strong> {selectedDetailExecution.trigger_source}</div>
-                <div><strong>Status:</strong> {selectedDetailExecution.status}</div>
-                <div><strong>Started:</strong> {formatDate(selectedDetailExecution.started_at)}</div>
-                <div><strong>Completed:</strong> {formatDate(selectedDetailExecution.completed_at)}</div>
-                <div><strong>Requested By:</strong> {selectedDetailExecution.requested_by || "System"}</div>
-              </div>
-
-              {selectedDetailExecution.error_summary && (
-                <div className="cg-error-box">
-                  <strong>Error Summary:</strong>
-                  <p>{selectedDetailExecution.error_summary}</p>
+      {selectedDetailExecution &&
+        createPortal(
+          <div className="cg-modal-overlay" onClick={() => setSelectedDetailExecution(null)}>
+            <div className="cg-modal cg-modal--lg" onClick={(e) => e.stopPropagation()}>
+              <div className="cg-modal__header cg-modal__header--interactive">
+                <div className="cg-modal__header-left">
+                  <div className="cg-modal__icon-wrap cg-modal__icon-wrap--blue">
+                    <Layers size={20} />
+                  </div>
+                  <h3 className="cg-modal__title">Synchronization Execution Details</h3>
                 </div>
-              )}
-
-              {selectedDetailExecution.payload_summary && (
-                <div className="cg-summary-section">
-                  <strong>Payload Breakdown (6 Categories):</strong>
-                  <pre className="cg-json-block">
-                    {typeof selectedDetailExecution.payload_summary === "string"
-                      ? selectedDetailExecution.payload_summary
-                      : JSON.stringify(selectedDetailExecution.payload_summary, null, 2)}
-                  </pre>
+                <div className="cg-modal__header-actions">
+                  <button
+                    type="button"
+                    className="cg-modal__control-btn cg-modal__control-btn--close"
+                    onClick={() => setSelectedDetailExecution(null)}
+                    title="Close Dialog"
+                    aria-label="Close Dialog"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
-              )}
+              </div>
+              <div className="cg-modal__body">
+                <div className="cg-detail-grid">
+                  <div><strong>Sync ID:</strong> <code>{selectedDetailExecution.sync_id}</code></div>
+                  <div><strong>Export ID:</strong> <code>{selectedDetailExecution.export_id || "N/A"}</code></div>
+                  <div><strong>Type:</strong> {selectedDetailExecution.sync_type}</div>
+                  <div><strong>Trigger:</strong> {selectedDetailExecution.trigger_source}</div>
+                  <div><strong>Status:</strong> {selectedDetailExecution.status}</div>
+                  <div><strong>Started:</strong> {formatDate(selectedDetailExecution.started_at)}</div>
+                  <div><strong>Completed:</strong> {formatDate(selectedDetailExecution.completed_at)}</div>
+                  <div><strong>Requested By:</strong> {selectedDetailExecution.requested_by || "System"}</div>
+                </div>
+
+                {selectedDetailExecution.error_summary && (
+                  <div className="cg-error-box">
+                    <strong>Error Summary:</strong>
+                    <p>{selectedDetailExecution.error_summary}</p>
+                  </div>
+                )}
+
+                {selectedDetailExecution.payload_summary && (
+                  <div className="cg-summary-section">
+                    <strong>Payload Breakdown (6 Categories):</strong>
+                    <pre className="cg-json-block">
+                      {typeof selectedDetailExecution.payload_summary === "string"
+                        ? selectedDetailExecution.payload_summary
+                        : JSON.stringify(selectedDetailExecution.payload_summary, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+              <div className="cg-modal__footer">
+                <button className="cg-btn cg-btn--secondary" onClick={() => setSelectedDetailExecution(null)}>
+                  Close
+                </button>
+              </div>
             </div>
-            <div className="cg-modal__footer">
-              <button className="cg-btn cg-btn--secondary" onClick={() => setSelectedDetailExecution(null)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

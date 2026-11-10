@@ -1008,7 +1008,7 @@ input[type="datetime-local"].form-input-admin {
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
   overflow: hidden !important;
-  margin-top: 14px !important;
+  /* margin-top: 14px !important; */
 }
 
 .admin-users-table {
@@ -1606,7 +1606,6 @@ input[type="datetime-local"].form-input-admin {
   background: transparent;
   padding: 0;
   border: none;
-  margin-bottom: 16px;
   width: fit-content;
   max-width: 100%;
   flex-wrap: wrap;

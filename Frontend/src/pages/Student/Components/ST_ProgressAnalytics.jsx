@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Brain, Sparkles, AlertTriangle, CheckCircle2, RefreshCw, Zap, Award, BarChart3, ListChecks, Search, BookOpen, TrendingDown, LineChart, X } from "lucide-react";
+import {
+  Brain,
+  Sparkles,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  Zap,
+  Award,
+  BarChart3,
+  ListChecks,
+  Search,
+  BookOpen,
+  TrendingDown,
+  LineChart,
+  X,
+  Check,
+  Clock,
+  Code2,
+  GraduationCap,
+  CalendarCheck,
+  BookOpenCheck,
+  TrendingUp,
+  ChevronRight,
+  Layers,
+  FileText,
+  AlertCircle,
+  ExternalLink,
+  Target,
+  Bot
+} from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_ProgressAnalytics.css";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -21,7 +50,7 @@ function DonutSegment({ cx, cy, r, strokeWidth, pct, color, offset }) {
       strokeDasharray={`${dash} ${gap}`}
       strokeLinecap="round"
       transform={`rotate(${rotation} ${cx} ${cy})`}
-      style={{ transition: "stroke-dasharray 0.6s ease" }}
+      className="donut-segment"
     />
   );
 }
@@ -92,13 +121,13 @@ function SkillGapAnalyticsSection({ onClose }) {
               <Sparkles className="spa-icon-sparkles" />
             </div>
             <h3 className="sg-title">AI Performance & Weak Area Detection</h3>
-            <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
+            <p className="sg-subtitle">
               Evaluated across your Coding Practice Sums, Coding Tasks, Quizzes & AI Technical Interviews.
             </p>
           </div>
         </div>
 
-        <div className="sg-actions-group" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="sg-actions-group">
           <button
             onClick={() => fetchLiveSkillGapData()}
             className="sg-refresh-btn"
@@ -111,20 +140,7 @@ function SkillGapAnalyticsSection({ onClose }) {
           {onClose && (
             <button
               onClick={onClose}
-              style={{
-                background: "#f1f5f9",
-                border: "none",
-                borderRadius: "8px",
-                padding: "6px 10px",
-                cursor: "pointer",
-                color: "#64748b",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                fontWeight: "600",
-                fontSize: "13px",
-                transition: "all 0.15s ease"
-              }}
+              className="sg-close-btn"
               title="Close Skill Gap Dashboard"
             >
               <X size={16} />
@@ -353,7 +369,25 @@ export default function ProgressAnalytics() {
     quizScore: 0,
     quizList: [],
     weeklyData: [],
+    taskDetails: { totalAssigned: 0, completedCount: 0, pendingCount: 0, meanScore: 0, completionRate: 0, tasks: [] },
+    quizDetails: { totalAttempted: 0, passedCount: 0, failedCount: 0, meanScore: 0, passRate: 0, attempts: [] },
+    codingDetails: { solvedCount: 0, totalProblems: 0, meanSolveRate: 0, recentSubmissions: [] },
+    attendanceDetails: { total: 0, present: 0, absent: 0, rate: 0, status: 'N/A', recent: [] },
+    interviewDetails: { completedCount: 0, meanScore: 0, interviews: [] },
+    tracksMean: {
+      taskMean: 0,
+      taskScoreMean: 0,
+      quizMean: 0,
+      codingMean: 0,
+      attendanceMean: 0,
+      interviewMean: 0,
+      roadmapMean: 0,
+      overallMean: 0,
+    },
   });
+
+  const [activeTrackTab, setActiveTrackTab] = useState("all"); // 'all' | 'tasks' | 'quizzes' | 'coding' | 'others'
+  const [trackSearch, setTrackSearch] = useState("");
 
   const fetchPerf = () => {
     apiFetch("/student/performance")
@@ -365,6 +399,21 @@ export default function ProgressAnalytics() {
             quizScore: res.data.quizScore || 0,
             quizList: res.data.quizList || [],
             weeklyData: res.data.weeklyData || res.data.weeklyProgress || [],
+            taskDetails: res.data.taskDetails || { totalAssigned: 0, completedCount: 0, pendingCount: 0, meanScore: 0, completionRate: 0, tasks: [] },
+            quizDetails: res.data.quizDetails || { totalAttempted: 0, passedCount: 0, failedCount: 0, meanScore: 0, passRate: 0, attempts: [] },
+            codingDetails: res.data.codingDetails || { solvedCount: res.data.solvedCount || 0, totalProblems: res.data.totalProblems || 0, meanSolveRate: res.data.codingScore || 0, recentSubmissions: [] },
+            attendanceDetails: res.data.attendanceDetails || { total: 0, present: 0, absent: 0, rate: res.data.attendanceScore || 0, status: 'N/A', recent: [] },
+            interviewDetails: res.data.interviewDetails || { completedCount: 0, meanScore: res.data.interviewScore || 0, interviews: [] },
+            tracksMean: res.data.tracksMean || {
+              taskMean: res.data.taskDetails?.completionRate || 0,
+              taskScoreMean: res.data.taskDetails?.meanScore || 0,
+              quizMean: res.data.quizDetails?.meanScore || res.data.quizScore || 0,
+              codingMean: res.data.codingScore || 0,
+              attendanceMean: res.data.attendanceScore || 0,
+              interviewMean: res.data.interviewScore || 0,
+              roadmapMean: res.data.learningProgress || 0,
+              overallMean: res.data.meanProgress || res.data.overallScore || 0,
+            },
           });
         }
       })
@@ -407,44 +456,48 @@ export default function ProgressAnalytics() {
       ];
   const avgQuiz = stats.quizScore;
 
+  // Filter track items by search query
+  const searchQ = trackSearch.trim().toLowerCase();
+
+  const filteredTasks = (stats.taskDetails?.tasks || []).filter((t) => {
+    if (!searchQ) return true;
+    return (t.title || "").toLowerCase().includes(searchQ) || (t.topic || "").toLowerCase().includes(searchQ) || (t.batchName || "").toLowerCase().includes(searchQ);
+  });
+
+  const filteredQuizzes = (stats.quizDetails?.attempts || []).filter((q) => {
+    if (!searchQ) return true;
+    return (q.title || "").toLowerCase().includes(searchQ) || (q.category || "").toLowerCase().includes(searchQ);
+  });
+
+  const filteredCoding = (stats.codingDetails?.recentSubmissions || []).filter((c) => {
+    if (!searchQ) return true;
+    return (c.title || "").toLowerCase().includes(searchQ) || (c.language || "").toLowerCase().includes(searchQ);
+  });
+
+  const filteredAttendance = (stats.attendanceDetails?.recent || []).filter((a) => {
+    if (!searchQ) return true;
+    return (a.batchName || "").toLowerCase().includes(searchQ) || (a.status || "").toLowerCase().includes(searchQ);
+  });
+
+  const filteredInterviews = (stats.interviewDetails?.interviews || []).filter((i) => {
+    if (!searchQ) return true;
+    return (i.role || "").toLowerCase().includes(searchQ) || (i.feedback || "").toLowerCase().includes(searchQ);
+  });
+
   return (
     <div className="progress-analytics-page stack-6">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+      <div className="spa-page-header-row">
         <div className="student-header-box">
           <h2 className="student-header-title">
-          <LineChart size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
-          <span>Student Progress Analytics</span>
+            <LineChart size={24} className="spa-header-icon" />
+            <span>Student Progress Analytics</span>
           </h2>
           <p className="student-header-desc">Track problem solving velocity, weekly milestones completion, accuracy trends, and quiz performance analytics.</p>
         </div>
         <button
           type="button"
           onClick={() => navigate("/student/skill-gaps")}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "11px 22px",
-            borderRadius: "12px",
-            background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
-            color: "#ffffff",
-            fontWeight: "700",
-            fontSize: "14px",
-            border: "none",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)",
-            transition: "all 0.2s ease",
-            whiteSpace: "nowrap",
-            outline: "none"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 18px rgba(37, 99, 235, 0.35)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 14px rgba(37, 99, 235, 0.25)";
-          }}
+          className="spa-skillgap-nav-btn"
         >
           <Brain size={18} strokeWidth={2.2} />
           <span>Skill Gap Analysis</span>
@@ -559,6 +612,600 @@ export default function ProgressAnalytics() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          COMPREHENSIVE PROGRESS TRACK SYSTEM (Tasks, Quizzes, Coding, Others)
+          ══════════════════════════════════════════════════════════════════ */}
+      <div className="spa-track-wrapper">
+        {/* Mean Progress Track Overview Banner */}
+        <div className="spa-mean-banner">
+          <div className="spa-mean-banner__header">
+            <div className="spa-mean-banner__left">
+              <div className="spa-mean-banner__icon-box">
+                <Layers size={22} />
+              </div>
+              <div>
+                <h3 className="spa-mean-banner__title">Complete Learning Progress Track</h3>
+                <p className="spa-mean-banner__desc">
+                  Real-time mean progress tracking across Coursework Tasks, Academic Quizzes, Coding Labs, and Classroom Attendance.
+                </p>
+              </div>
+            </div>
+            <div className="spa-mean-banner__badge">
+              <Sparkles size={14} />
+              <span>{stats.tracksMean?.overallMean || stats.learningProgress || 50}% Composite Mean Progress</span>
+            </div>
+          </div>
+
+          {/* 4 Track Performance Summary Cards */}
+          <div className="spa-mean-grid">
+            {/* 1. Tasks Track */}
+            <div className="spa-mean-card">
+              <div className="spa-mean-card__header">
+                <div className="spa-mean-card__icon spa-mean-card__icon--blue">
+                  <BookOpenCheck size={18} />
+                </div>
+                <span className="spa-mean-card__rate">{stats.taskDetails?.completionRate ?? 0}%</span>
+              </div>
+              <h4 className="spa-mean-card__title">Coursework Tasks</h4>
+              <p className="spa-mean-card__sub">
+                {stats.taskDetails?.completedCount ?? 0} of {stats.taskDetails?.totalAssigned ?? 0} Tasks Completed
+              </p>
+              <div className="spa-bar-track">
+                <div
+                  className="spa-bar-fill spa-bar-fill--blue"
+                  style={{ width: `${Math.min(100, stats.taskDetails?.completionRate ?? 0)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 2. Quizzes Track */}
+            <div className="spa-mean-card">
+              <div className="spa-mean-card__header">
+                <div className="spa-mean-card__icon spa-mean-card__icon--emerald">
+                  <GraduationCap size={18} />
+                </div>
+                <span className="spa-mean-card__rate">{stats.quizDetails?.meanScore ?? stats.quizScore ?? 0}%</span>
+              </div>
+              <h4 className="spa-mean-card__title">Academic Quizzes</h4>
+              <p className="spa-mean-card__sub">
+                {stats.quizDetails?.totalAttempted ?? 0} Attempts &bull; {stats.quizDetails?.passRate ?? 0}% Pass Rate
+              </p>
+              <div className="spa-bar-track">
+                <div
+                  className="spa-bar-fill spa-bar-fill--emerald"
+                  style={{ width: `${Math.min(100, stats.quizDetails?.meanScore ?? stats.quizScore ?? 0)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 3. Coding Track */}
+            <div className="spa-mean-card">
+              <div className="spa-mean-card__header">
+                <div className="spa-mean-card__icon spa-mean-card__icon--indigo">
+                  <Code2 size={18} />
+                </div>
+                <span className="spa-mean-card__rate">{stats.solvedCount} Solved</span>
+              </div>
+              <h4 className="spa-mean-card__title">Coding Practice</h4>
+              <p className="spa-mean-card__sub">
+                {stats.codingDetails?.meanSolveRate || (stats.solvedCount > 0 ? 50 : 0)}% Solve Velocity
+              </p>
+              <div className="spa-bar-track">
+                <div
+                  className="spa-bar-fill spa-bar-fill--indigo"
+                  style={{ width: `${Math.min(100, stats.codingDetails?.meanSolveRate || (stats.solvedCount > 0 ? 50 : 0))}%` }}
+                />
+              </div>
+            </div>
+
+            {/* 4. Classroom Attendance & AI */}
+            <div className="spa-mean-card">
+              <div className="spa-mean-card__header">
+                <div className="spa-mean-card__icon spa-mean-card__icon--purple">
+                  <CalendarCheck size={18} />
+                </div>
+                <span className="spa-mean-card__rate">{stats.attendanceDetails?.rate ?? 0}%</span>
+              </div>
+              <h4 className="spa-mean-card__title">Classroom & AI</h4>
+              <p className="spa-mean-card__sub">
+                {stats.attendanceDetails?.present ?? 0}/{stats.attendanceDetails?.total ?? 0} Present &bull; {stats.interviewDetails?.completedCount ?? 0} AI Interviews
+              </p>
+              <div className="spa-bar-track">
+                <div
+                  className="spa-bar-fill spa-bar-fill--purple"
+                  style={{ width: `${Math.min(100, stats.attendanceDetails?.rate ?? 0)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Track Detail Navigator Tabs & Search Filter */}
+        <div className="spa-track-controls">
+          <div className="spa-track-tabs">
+            <button
+              type="button"
+              className={`spa-track-tab ${activeTrackTab === "all" ? "spa-track-tab--active" : ""}`}
+              onClick={() => setActiveTrackTab("all")}
+            >
+              <Layers size={15} />
+              <span>All Tracks</span>
+            </button>
+            <button
+              type="button"
+              className={`spa-track-tab ${activeTrackTab === "tasks" ? "spa-track-tab--active" : ""}`}
+              onClick={() => setActiveTrackTab("tasks")}
+            >
+              <BookOpenCheck size={15} />
+              <span>Tasks ({stats.taskDetails?.tasks?.length || 0})</span>
+            </button>
+            <button
+              type="button"
+              className={`spa-track-tab ${activeTrackTab === "quizzes" ? "spa-track-tab--active" : ""}`}
+              onClick={() => setActiveTrackTab("quizzes")}
+            >
+              <GraduationCap size={15} />
+              <span>Quizzes ({stats.quizDetails?.attempts?.length || 0})</span>
+            </button>
+            <button
+              type="button"
+              className={`spa-track-tab ${activeTrackTab === "coding" ? "spa-track-tab--active" : ""}`}
+              onClick={() => setActiveTrackTab("coding")}
+            >
+              <Code2 size={15} />
+              <span>Coding ({stats.codingDetails?.recentSubmissions?.length || stats.solvedCount || 0})</span>
+            </button>
+            <button
+              type="button"
+              className={`spa-track-tab ${activeTrackTab === "others" ? "spa-track-tab--active" : ""}`}
+              onClick={() => setActiveTrackTab("others")}
+            >
+              <CalendarCheck size={15} />
+              <span>Attendance & AI</span>
+            </button>
+          </div>
+
+          <div className="spa-track-search">
+            <Search size={15} className="spa-track-search__icon" />
+            <input
+              type="text"
+              placeholder="Search by title, topic, or batch..."
+              value={trackSearch}
+              onChange={(e) => setTrackSearch(e.target.value)}
+              className="spa-track-search__input"
+            />
+            {trackSearch && (
+              <button
+                type="button"
+                className="spa-track-search__clear"
+                onClick={() => setTrackSearch("")}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── TRACK CONTENT AREA ── */}
+        <div className="spa-track-sections">
+          {/* SECTION 1: COURSEWORK TASKS */}
+          {(activeTrackTab === "all" || activeTrackTab === "tasks") && (
+            <div className="spa-section-card">
+              <div className="spa-section-card__header">
+                <div className="spa-section-card__title-box">
+                  <BookOpenCheck size={18} className="spa-section-card__icon--blue" />
+                  <div>
+                    <h4 className="spa-section-card__title">Assigned Coursework & Batch Tasks</h4>
+                    <span className="spa-section-card__sub">
+                      Track submissions, instructor sign-offs, and deadlines across your enrolled batches.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="spa-section-card__action"
+                  onClick={() => navigate("/student/batches")}
+                >
+                  Go to Batches <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {filteredTasks.length > 0 ? (
+                <div className="spa-table-responsive">
+                  <table className="spa-table">
+                    <thead>
+                      <tr>
+                        <th>Task Name & Topic</th>
+                        <th>Batch</th>
+                        <th>Difficulty</th>
+                        <th>Deadline</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTasks.map((t, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <div className="spa-task-name">
+                              <strong>{t.title}</strong>
+                              <span className="spa-task-topic">{t.topic}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="spa-badge-batch">{t.batchName}</span>
+                          </td>
+                          <td>
+                            <span className={`spa-badge-diff spa-badge-diff--${String(t.difficulty).toLowerCase()}`}>
+                              {t.difficulty}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="spa-task-date">
+                              <Clock size={12} /> {t.deadline}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{t.score ? `${t.score} pts` : "—"}</strong>
+                          </td>
+                          <td>
+                            <span
+                              className={`spa-status-pill spa-status-pill--${
+                                t.status === "Completed" ? "success" : (t.status === "Overdue" ? "danger" : "warning")
+                              }`}
+                            >
+                              {t.status === "Completed" && <Check size={12} />}
+                              {t.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="spa-empty-box">
+                  <BookOpenCheck size={36} className="spa-empty-box__icon" />
+                  <h5>No Coursework Tasks Found</h5>
+                  <p>You have submitted all pending batch assignments or no new tasks are assigned.</p>
+                  <button
+                    type="button"
+                    className="spa-btn spa-btn--outline"
+                    onClick={() => navigate("/student/batches")}
+                  >
+                    Explore Batches
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 2: ACADEMIC QUIZZES & ASSESSMENTS */}
+          {(activeTrackTab === "all" || activeTrackTab === "quizzes") && (
+            <div className="spa-section-card">
+              <div className="spa-section-card__header">
+                <div className="spa-section-card__title-box">
+                  <GraduationCap size={18} className="spa-section-card__icon--emerald" />
+                  <div>
+                    <h4 className="spa-section-card__title">Academic Quiz Attempts & Test Benchmarks</h4>
+                    <span className="spa-section-card__sub">
+                      Detailed accuracy records, scores, and completion timestamps from milestone evaluations.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="spa-section-card__action"
+                  onClick={() => navigate("/student/quiz")}
+                >
+                  Take Quizzes <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {filteredQuizzes.length > 0 ? (
+                <div className="spa-table-responsive">
+                  <table className="spa-table">
+                    <thead>
+                      <tr>
+                        <th>Assessment Title</th>
+                        <th>Category</th>
+                        <th>Score & Accuracy</th>
+                        <th>Marks</th>
+                        <th>Date Taken</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredQuizzes.map((q, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <strong>{q.title}</strong>
+                          </td>
+                          <td>
+                            <span className="spa-badge-batch">{q.category}</span>
+                          </td>
+                          <td>
+                            <div className="spa-quiz-score-wrap">
+                              <span className="spa-quiz-score-num">{q.score}%</span>
+                              <div className="spa-mini-bar">
+                                <div
+                                  className={`spa-mini-bar__fill ${
+                                    q.score >= 70
+                                      ? "spa-mini-bar__fill--high"
+                                      : q.score >= 50
+                                      ? "spa-mini-bar__fill--med"
+                                      : "spa-mini-bar__fill--low"
+                                  }`}
+                                  style={{ width: `${q.score}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="spa-task-date">
+                              {q.marksObtained} / {q.totalMarks}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="spa-task-date">{q.date}</span>
+                          </td>
+                          <td>
+                            <span
+                              className={`spa-status-pill spa-status-pill--${
+                                q.status === "Passed" ? "success" : "warning"
+                              }`}
+                            >
+                              {q.status === "Passed" && <Check size={12} />}
+                              {q.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="spa-empty-box">
+                  <GraduationCap size={36} className="spa-empty-box__icon" />
+                  <h5>No Quiz Attempts Recorded</h5>
+                  <p>Test your conceptual understanding by completing your active syllabus quizzes.</p>
+                  <button
+                    type="button"
+                    className="spa-btn spa-btn--outline"
+                    onClick={() => navigate("/student/quiz")}
+                  >
+                    Open Quizzes Hub
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 3: CODING PLATFORM SUBMISSIONS */}
+          {(activeTrackTab === "all" || activeTrackTab === "coding") && (
+            <div className="spa-section-card">
+              <div className="spa-section-card__header">
+                <div className="spa-section-card__title-box">
+                  <Code2 size={18} className="spa-section-card__icon--indigo" />
+                  <div>
+                    <h4 className="spa-section-card__title">Coding Practice & Problem Submissions</h4>
+                    <span className="spa-section-card__sub">
+                      Recent code executions, algorithm benchmarks, and automated test suite evaluations.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="spa-section-card__action"
+                  onClick={() => navigate("/student/practice")}
+                >
+                  Practice Coding <ChevronRight size={14} />
+                </button>
+              </div>
+
+              {filteredCoding.length > 0 ? (
+                <div className="spa-table-responsive">
+                  <table className="spa-table">
+                    <thead>
+                      <tr>
+                        <th>Problem Statement</th>
+                        <th>Difficulty</th>
+                        <th>Language</th>
+                        <th>Test Cases</th>
+                        <th>Submitted</th>
+                        <th>Result</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredCoding.map((c, idx) => (
+                        <tr key={idx}>
+                          <td>
+                            <strong>{c.title}</strong>
+                          </td>
+                          <td>
+                            <span className={`spa-badge-diff spa-badge-diff--${String(c.difficulty).toLowerCase()}`}>
+                              {c.difficulty}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="spa-badge-lang">{c.language}</span>
+                          </td>
+                          <td>
+                            <span className="spa-task-date">
+                              {c.passedTestCases > 0 ? `${c.passedTestCases}/${c.totalTestCases || c.passedTestCases} passed` : "All Cases"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="spa-task-date">{c.date}</span>
+                          </td>
+                          <td>
+                            <span
+                              className={`spa-status-pill spa-status-pill--${
+                                c.status === "Accepted" ? "success" : "warning"
+                              }`}
+                            >
+                              {c.status === "Accepted" && <Check size={12} />}
+                              {c.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="spa-empty-box">
+                  <Code2 size={36} className="spa-empty-box__icon" />
+                  <h5>No Recent Coding Submissions</h5>
+                  <p>Start solving algorithmic challenges to boost your technical competency score.</p>
+                  <button
+                    type="button"
+                    className="spa-btn spa-btn--outline"
+                    onClick={() => navigate("/student/practice")}
+                  >
+                    Solve Practice Problems
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 4: CLASSROOM ATTENDANCE & AI INTERVIEWS */}
+          {(activeTrackTab === "all" || activeTrackTab === "others") && (
+            <div className="spa-dual-grid">
+              {/* Left Column: Attendance History */}
+              <div className="spa-section-card">
+                <div className="spa-section-card__header">
+                  <div className="spa-section-card__title-box">
+                    <CalendarCheck size={18} className="spa-section-card__icon--purple" />
+                    <div>
+                      <h4 className="spa-section-card__title">Classroom Attendance Log</h4>
+                      <span className="spa-section-card__sub">
+                        {stats.attendanceDetails?.rate ?? 0}% Attendance &bull; {stats.attendanceDetails?.status || "Good Standing"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="spa-section-card__action"
+                    onClick={() => navigate("/student/attendance")}
+                  >
+                    Full Log <ChevronRight size={14} />
+                  </button>
+                </div>
+
+                {filteredAttendance.length > 0 ? (
+                  <div className="spa-table-responsive">
+                    <table className="spa-table">
+                      <thead>
+                        <tr>
+                          <th>Session Date</th>
+                          <th>Batch</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAttendance.slice(0, 6).map((a, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <span className="spa-task-date">{a.date}</span>
+                            </td>
+                            <td>
+                              <span className="spa-badge-batch">{a.batchName}</span>
+                            </td>
+                            <td>
+                              <span
+                                className={`spa-status-pill spa-status-pill--${
+                                  a.status === "Present" ? "success" : "danger"
+                                }`}
+                              >
+                                {a.status === "Present" ? <Check size={12} /> : <X size={12} />}
+                                {a.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="spa-empty-box spa-empty-box--sm">
+                    <CalendarCheck size={28} className="spa-empty-box__icon" />
+                    <p>No recent classroom attendance sessions recorded.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: AI Mock Interviews */}
+              <div className="spa-section-card">
+                <div className="spa-section-card__header">
+                  <div className="spa-section-card__title-box">
+                    <Bot size={18} className="spa-section-card__icon--blue" />
+                    <div>
+                      <h4 className="spa-section-card__title">AI Mock Interview History</h4>
+                      <span className="spa-section-card__sub">
+                        {stats.interviewDetails?.completedCount ?? 0} Interviews &bull; {stats.interviewDetails?.meanScore ?? stats.interviewScore ?? 0}% Readiness Rating
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="spa-section-card__action"
+                    onClick={() => navigate("/student/ai-interview")}
+                  >
+                    Start AI Prep <ChevronRight size={14} />
+                  </button>
+                </div>
+
+                {filteredInterviews.length > 0 ? (
+                  <div className="spa-table-responsive">
+                    <table className="spa-table">
+                      <thead>
+                        <tr>
+                          <th>Target Track</th>
+                          <th>Score</th>
+                          <th>Evaluation Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredInterviews.slice(0, 6).map((item, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <div className="spa-task-name">
+                                <strong>{item.role}</strong>
+                                <span className="spa-task-topic">{item.feedback}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="spa-interview-score">{item.score}%</span>
+                            </td>
+                            <td>
+                              <span className="spa-task-date">{item.date}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="spa-empty-box spa-empty-box--sm">
+                    <Brain size={28} className="spa-empty-box__icon" />
+                    <p>No AI mock interviews taken yet. Test your readiness with simulated voice interviews.</p>
+                    <button
+                      type="button"
+                      className="spa-btn spa-btn--outline"
+                      onClick={() => navigate("/student/ai-interview")}
+                    >
+                      Try AI Mock Interview
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

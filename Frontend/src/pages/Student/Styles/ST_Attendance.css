@@ -82,7 +82,7 @@
   border-radius: 20px;
   border: 1px solid #e2e8f0;
   padding: 24px;
-  margin-bottom: 10px;
+  /* margin-bottom: 10px; */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
@@ -1587,16 +1587,16 @@
 .student-att-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
 
 /* Batch-Wise Breakdown Tabs & Empty State */
-.attendance-main-tabs {
+/* .attendance-main-tabs {
   margin-top: 16px;
   width: 100%;
-}
+} */
 
 .attendance-nav-tabs-list {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   background: #f1f5f9;
   padding: 4px;
   border-radius: 24px;

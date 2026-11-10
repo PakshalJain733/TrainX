@@ -15,17 +15,35 @@ export default function AdminProfile() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
-  const [form, setForm] = useState({
-    name: "System Administrator",
-    email: "admin@pvppcoe.ac.in",
-    phone: "+91 98765 43210",
-    role: "College Administrator",
-    department: "",
-    college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-    location: "Mumbai, Maharashtra",
-    notifSystemAlerts: true,
-    notifWeeklyReport: true,
-    notifNewUsers: true,
+  const [form, setForm] = useState(() => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+      return {
+        name: stored.name || "",
+        email: stored.email || "",
+        phone: stored.mobile_number || stored.phone || "",
+        role: stored.role || "College Administrator",
+        department: stored.department || "",
+        college: stored.college_name || stored.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+        location: stored.city || "Mumbai, Maharashtra",
+        notifSystemAlerts: true,
+        notifWeeklyReport: true,
+        notifNewUsers: true,
+      };
+    } catch (_) {
+      return {
+        name: "",
+        email: "",
+        phone: "",
+        role: "College Administrator",
+        department: "",
+        college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+        location: "Mumbai, Maharashtra",
+        notifSystemAlerts: true,
+        notifWeeklyReport: true,
+        notifNewUsers: true,
+      };
+    }
   });
 
   const [deptOptions, setDeptOptions] = useState([]);
@@ -54,9 +72,24 @@ export default function AdminProfile() {
 
   const loadProfile = async () => {
     try {
-      const res = await apiFetch("/auth/me");
-      if (res && (res.user || res.data)) {
-        const u = res.user || res.data;
+      let u = null;
+      try {
+        const res = await apiFetch("/auth/me");
+        if (res && (res.user || res.data)) {
+          u = res.user || res.data;
+        }
+      } catch (_) {}
+
+      if (!u) {
+        try {
+          const res = await apiFetch("/admin/profile");
+          if (res && (res.data || res.user)) {
+            u = res.data || res.user;
+          }
+        } catch (_) {}
+      }
+
+      if (u) {
         setForm((prev) => ({
           ...prev,
           name: u.name || prev.name,
@@ -83,7 +116,7 @@ export default function AdminProfile() {
       setAvatarUrl(url);
     }
   };
-
+
 
   const handleSave = async (e) => {
     e.preventDefault();

@@ -218,13 +218,13 @@ export default function LearningContent() {
 
       {/* Resource Cards Grid or Centered Empty State */}
       {loading ? (
-        <div className="learning-empty-card">
+        <div className="learning-empty-card-ST">
           <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
           <h3 className="learning-empty-title">Loading study materials...</h3>
           <p className="learning-empty-desc">Fetching published lecture notes, reference guides, and curriculum resources.</p>
         </div>
       ) : filteredResources.length === 0 ? (
-        <div className="learning-empty-card">
+        <div className="learning-empty-card-ST">
           <div className="learning-empty-icon-wrap">
             <BookOpen size={36} color="#4f46e5" />
           </div>

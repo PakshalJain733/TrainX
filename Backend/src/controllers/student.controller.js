@@ -72,7 +72,7 @@ export const getStudentData = async (req, res, next) => {
           attendanceMap[r.user_id] = tot > 0 ? Math.round((pres / tot) * 100) : 0;
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const formatted = students.map((s) => {
       const studentId = s.id || s.user_id;
@@ -167,18 +167,21 @@ export const getStudentProfile = async (req, res, next) => {
 
     if (collegeId) {
       if (!user.college_id) {
-        query('UPDATE users SET college_id = ? WHERE id = ?', [collegeId, userId]).catch(() => {});
+        query('UPDATE users SET college_id = ? WHERE id = ?', [collegeId, userId]).catch(() => { });
         user.college_id = collegeId;
       }
       if (!studentProfile.college_id) {
-        query('UPDATE students SET college_id = ? WHERE user_id = ?', [collegeId, userId]).catch(() => {});
+        query('UPDATE students SET college_id = ? WHERE user_id = ?', [collegeId, userId]).catch(() => { });
         studentProfile.college_id = collegeId;
       }
     }
 
+    const resolvedProfileName = user.name || user.fullName || studentProfile.name || req.user?.name || req.user?.fullName || 'Student';
+
     return sendSuccess(res, 'Student profile retrieved successfully', {
       ...toSafeUser(user),
       ...studentProfile,
+      name: resolvedProfileName,
       college: collegeName,
       college_name: collegeName,
       college_id: collegeId,
@@ -233,7 +236,7 @@ export const updateStudentProfile = async (req, res, next) => {
       }
       if (updates.length > 0) {
         params.push(userId);
-        await query(`UPDATE students SET ${updates.join(', ')} WHERE user_id = ?`, params).catch(() => {});
+        await query(`UPDATE students SET ${updates.join(', ')} WHERE user_id = ?`, params).catch(() => { });
       }
     }
 
@@ -351,9 +354,9 @@ export const getStudentDashboard = async (req, res, next) => {
           batchTaskRows.forEach((t) => {
             const expired = isDeadlineExpired(t.deadline);
             const status = t.submission_status === 'submitted' || t.submission_status === 'completed' || t.submission_status === 'passed'
-              ? 'Completed' 
+              ? 'Completed'
               : (expired ? 'Expired' : 'Pending');
-            const formattedDeadline = t.deadline 
+            const formattedDeadline = t.deadline
               ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
               : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
             upcomingDeadlines.push({
@@ -385,8 +388,8 @@ export const getStudentDashboard = async (req, res, next) => {
       if (problemRows && problemRows.length > 0) {
         problemRows.forEach((p) => {
           const expired = isDeadlineExpired(p.due_date);
-          const formattedDue = p.due_date 
-            ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) 
+          const formattedDue = p.due_date
+            ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
             : 'Flexible Deadline';
           upcomingDeadlines.push({
             id: `problem-${p.id}`,
@@ -500,7 +503,7 @@ export const getStudentDashboard = async (req, res, next) => {
         totalMilestones = rmRows.length;
         milestonesCompleted = rmRows.filter(r => r.status === 'completed').length;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Calculate real Earned XP
     const earnedCodingXp = solvedCount * 100;
@@ -773,7 +776,7 @@ export const getStudentAttendance = async (req, res, next) => {
             userEmail = uRes[0].email || userEmail;
             userMobile = uRes[0].mobile_number || userMobile;
           }
-        } catch (e) {}
+        } catch (e) { }
 
         let rows = await query(
           `SELECT a.*, b.name AS batch_name, b.code AS batch_code
@@ -947,50 +950,185 @@ export const getStudentPerformance = async (req, res, next) => {
     let quizList = [];
     let weeklyProgress = [];
 
+    // Detailed Track Containers
+    let taskDetails = { totalAssigned: 0, completedCount: 0, pendingCount: 0, meanScore: 0, completionRate: 0, tasks: [] };
+    let quizDetails = { totalAttempted: 0, passedCount: 0, failedCount: 0, meanScore: 0, passRate: 0, attempts: [] };
+    let codingDetails = { solvedCount: 0, totalProblems: 0, easySolved: 0, mediumSolved: 0, hardSolved: 0, recentSubmissions: [] };
+    let attendanceDetails = { total: 0, present: 0, absent: 0, rate: 0, status: 'N/A', recent: [] };
+    let interviewDetails = { completedCount: 0, meanScore: 0, interviews: [] };
+
     if (userId) {
-      // 1. Attendance score
+      // 1. Attendance score & detailed attendance logs
       try {
-        const attRows = await query(`SELECT status FROM attendance WHERE user_id = ?`, [userId]);
+        const attRows = await query(
+          `SELECT a.id, a.session_date, a.status, a.remark, b.name as batch_name
+           FROM attendance a
+           LEFT JOIN batches b ON a.batch_id = b.id
+           WHERE a.user_id = ?
+           ORDER BY a.session_date DESC, a.id DESC LIMIT 20`,
+          [userId]
+        );
         if (attRows && attRows.length > 0) {
           const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
           attendanceScore = Math.round((present / attRows.length) * 100);
+          attendanceDetails = {
+            total: attRows.length,
+            present,
+            absent: attRows.length - present,
+            rate: attendanceScore,
+            status: attendanceScore >= 75 ? 'Good Standing' : 'Attendance Risk',
+            recent: attRows.map(r => ({
+              id: r.id,
+              date: r.session_date ? new Date(r.session_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+              status: String(r.status || 'present').toLowerCase() === 'present' ? 'Present' : 'Absent',
+              batchName: r.batch_name || 'Classroom Session',
+              remark: r.remark || '',
+            })),
+          };
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[getStudentPerformance attendance warning]', e.message);
+      }
 
       // 2. Quiz score & list from real assessment_attempts
       try {
         const qRows = await query(
-          `SELECT a.title, aa.marks_obtained, aa.total_marks, aa.score, aa.percentage 
+          `SELECT aa.id, aa.assessment_id, COALESCE(a.title, CONCAT('Quiz #', aa.assessment_id)) as title,
+                  COALESCE(a.category, 'Technical Quiz') as category,
+                  aa.marks_obtained, aa.total_marks, aa.score, aa.percentage, aa.status,
+                  COALESCE(aa.completed_at, aa.created_at) as attempt_date
            FROM assessment_attempts aa 
            LEFT JOIN assessments a ON aa.assessment_id = a.id 
-           WHERE aa.user_id = ? AND aa.status IN ('completed', 'finished', 'passed')
-           ORDER BY aa.id DESC LIMIT 10`,
+           WHERE aa.user_id = ?
+           ORDER BY aa.id DESC LIMIT 25`,
           [userId]
         );
         if (qRows && qRows.length > 0) {
-          const totalPct = qRows.reduce((acc, r) => {
+          const completedAttempts = qRows.filter(r => ['completed', 'finished', 'passed'].includes(String(r.status).toLowerCase()));
+          const totalPct = (completedAttempts.length > 0 ? completedAttempts : qRows).reduce((acc, r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
             return acc + sc;
           }, 0);
-          quizScore = Math.round(totalPct / qRows.length);
-          quizList = qRows.slice(0, 6).map((r, i) => {
+          const divisor = completedAttempts.length > 0 ? completedAttempts.length : qRows.length;
+          quizScore = Math.round(totalPct / divisor);
+
+          const attemptsList = qRows.map((r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
+            const isPassed = sc >= 50 || String(r.status).toLowerCase() === 'passed';
             return {
-              label: r.title || `Quiz ${i + 1}`,
+              id: r.id,
+              assessmentId: r.assessment_id,
+              title: r.title,
+              category: r.category,
               score: Math.min(100, Math.max(0, sc)),
-              color: ["#4f46e5", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"][i % 6]
+              marksObtained: r.marks_obtained || 0,
+              totalMarks: r.total_marks || 100,
+              status: isPassed ? 'Passed' : 'Needs Review',
+              date: r.attempt_date ? new Date(r.attempt_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently',
             };
           });
+
+          const passedAttempts = attemptsList.filter(a => a.status === 'Passed').length;
+          quizDetails = {
+            totalAttempted: qRows.length,
+            passedCount: passedAttempts,
+            failedCount: qRows.length - passedAttempts,
+            meanScore: quizScore,
+            passRate: Math.round((passedAttempts / qRows.length) * 100),
+            attempts: attemptsList,
+          };
+
+          quizList = attemptsList.slice(0, 6).map((r, i) => ({
+            label: r.title,
+            score: r.score,
+            color: ["#4f46e5", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"][i % 6]
+          }));
         }
       } catch (e) {
         console.warn('[getStudentPerformance quiz warning]', e.message);
       }
 
-      // 3. Coding score & solved count from coding_submissions and task_submissions
+      // 3. Batch Tasks Progress (Coursework tasks & submissions)
+      try {
+        const studentBatches = await query(
+          `SELECT DISTINCT batch_id FROM (
+             SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
+             UNION
+             SELECT batch_id FROM student_batches WHERE user_id = ? AND batch_id IS NOT NULL
+           ) as eb`,
+          [userId, userId]
+        );
+        const enrolledBatchIds = (studentBatches || []).map(r => r.batch_id).filter(Boolean);
+
+        let taskRows = [];
+        if (enrolledBatchIds.length > 0) {
+          const placeholders = enrolledBatchIds.map(() => '?').join(',');
+          taskRows = await query(
+            `SELECT bt.id, bt.title, bt.topic, bt.difficulty, bt.deadline, bt.task_date, bt.created_at,
+                    b.name as batch_name,
+                    ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.created_at as submitted_at
+             FROM batch_tasks bt
+             LEFT JOIN batches b ON bt.batch_id = b.id
+             LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ? AND ts.batch_id = bt.batch_id)
+             WHERE bt.batch_id IN (${placeholders})
+             ORDER BY bt.id DESC LIMIT 25`,
+            [userId, ...enrolledBatchIds]
+          );
+        }
+
+        if (!taskRows || taskRows.length === 0) {
+          taskRows = await query(
+            `SELECT ts.id, ts.task_id, ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.created_at as submitted_at,
+                    bt.title, bt.topic, bt.difficulty, bt.deadline, b.name as batch_name
+             FROM task_submissions ts
+             LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
+             LEFT JOIN batches b ON ts.batch_id = b.id
+             WHERE ts.user_id = ?
+             ORDER BY ts.id DESC LIMIT 25`,
+            [userId]
+          );
+        }
+
+        if (taskRows && taskRows.length > 0) {
+          const parsedTasks = taskRows.map((t) => {
+            const isCompleted = ['submitted', 'completed', 'passed'].includes(String(t.submission_status).toLowerCase());
+            const scoreVal = Number(t.marks_obtained) || Number(t.task_score) || (isCompleted ? 100 : 0);
+            return {
+              id: t.id || t.task_id,
+              title: t.title || 'Coursework Assignment',
+              topic: t.topic || 'Batch Milestone',
+              batchName: t.batch_name || 'Enrolled Batch',
+              difficulty: t.difficulty || 'Medium',
+              deadline: t.deadline || 'Flexible',
+              status: isCompleted ? 'Completed' : (isDeadlineExpired(t.deadline) ? 'Overdue' : 'Pending'),
+              score: isCompleted ? scoreVal : 0,
+              submittedAt: t.submitted_at ? new Date(t.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (isCompleted ? 'Submitted' : '—'),
+            };
+          });
+
+          const completed = parsedTasks.filter(t => t.status === 'Completed').length;
+          const scores = parsedTasks.filter(t => t.status === 'Completed').map(t => t.score);
+          const meanScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+          const completionRate = Math.round((completed / parsedTasks.length) * 100);
+
+          taskDetails = {
+            totalAssigned: parsedTasks.length,
+            completedCount: completed,
+            pendingCount: parsedTasks.length - completed,
+            meanScore,
+            completionRate,
+            tasks: parsedTasks,
+          };
+        }
+      } catch (taskErr) {
+        console.warn('[getStudentPerformance tasks query notice]', taskErr.message);
+      }
+
+      // 4. Coding score & solved count from coding_submissions and task_submissions
       try {
         const cTotal = await query(`SELECT COUNT(*) as count FROM practice_problems`);
         totalProblems = cTotal && cTotal[0] ? Number(cTotal[0].count) : 0;
-        
+
         const cSolved = await query(
           `SELECT COUNT(DISTINCT problem_id) as count FROM coding_submissions 
            WHERE student_id = ? AND (LOWER(status) IN ('passed', 'accepted') OR (passed_test_cases = total_test_cases AND total_test_cases > 0))`,
@@ -1011,11 +1149,49 @@ export const getStudentPerformance = async (req, res, next) => {
         } else if (solvedCount > 0) {
           codingScore = Math.min(100, solvedCount * 25);
         }
+
+        // Fetch recent coding submissions
+        const subRows = await query(
+          `SELECT cs.id, cs.problem_id, COALESCE(p.title, CONCAT('Problem #', cs.problem_id)) as title,
+                  COALESCE(p.difficulty, 'Medium') as difficulty, cs.language, cs.status,
+                  cs.passed_test_cases, cs.total_test_cases, cs.created_at
+           FROM coding_submissions cs
+           LEFT JOIN practice_problems p ON cs.problem_id = p.id
+           WHERE cs.student_id = ?
+           ORDER BY cs.id DESC LIMIT 20`,
+          [userId]
+        );
+
+        if (subRows && subRows.length > 0) {
+          codingDetails = {
+            solvedCount,
+            totalProblems,
+            meanSolveRate: codingScore,
+            recentSubmissions: subRows.map(s => ({
+              id: s.id,
+              problemId: s.problem_id,
+              title: s.title,
+              difficulty: s.difficulty,
+              language: s.language || 'javascript',
+              status: String(s.status).toLowerCase() === 'accepted' || String(s.status).toLowerCase() === 'passed' ? 'Accepted' : 'Attempted',
+              passedTestCases: s.passed_test_cases || 0,
+              totalTestCases: s.total_test_cases || 0,
+              date: s.created_at ? new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            })),
+          };
+        } else {
+          codingDetails = {
+            solvedCount,
+            totalProblems,
+            meanSolveRate: codingScore,
+            recentSubmissions: [],
+          };
+        }
       } catch (e) {
         console.warn('[getStudentPerformance coding warning]', e.message);
       }
 
-      // 4. Learning progress (from active roadmap items or computed dynamically from student activity)
+      // 5. Learning progress (from active roadmap items or computed dynamically from student activity)
       try {
         const rmItems = await query(`SELECT ri.status FROM roadmap_items ri JOIN roadmaps r ON ri.roadmap_id = r.id WHERE r.student_id = ?`, [userId]);
         if (rmItems && rmItems.length > 0) {
@@ -1032,24 +1208,35 @@ export const getStudentPerformance = async (req, res, next) => {
             learningProgress = Math.round(activityWeights.reduce((a, b) => a + (b.val * b.w), 0) / sumW);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
-      // 5. Interview score
+      // 6. Interview score & mock interview details
       try {
-        const iRows = await query(`SELECT overall_score FROM interview_submissions WHERE user_id = ?`, [userId]);
+        const iRows = await query(`SELECT id, role, overall_score, feedback, created_at FROM interview_submissions WHERE user_id = ? ORDER BY id DESC LIMIT 15`, [userId]);
         if (iRows && iRows.length > 0) {
           const sum = iRows.reduce((acc, r) => acc + (Number(r.overall_score) || 0), 0);
           interviewScore = Math.round(sum / iRows.length);
+          interviewDetails = {
+            completedCount: iRows.length,
+            meanScore: interviewScore,
+            interviews: iRows.map(r => ({
+              id: r.id,
+              role: r.role || 'Full Stack Engineer',
+              score: Number(r.overall_score) || 0,
+              feedback: r.feedback || 'Assessment completed successfully',
+              date: r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            })),
+          };
         }
-      } catch (e) {}
+      } catch (e) { }
 
-      // 6. Ranking
+      // 7. Ranking
       try {
         const uCount = await query(`SELECT COUNT(*) as count FROM users WHERE role = 'student'`);
         if (uCount && uCount[0]) totalStudents = Math.max(1, uCount[0].count);
-      } catch (e) {}
+      } catch (e) { }
 
-      // 7. Weekly Progress Generation (for ST_ProgressAnalytics chart)
+      // 8. Weekly Progress Generation (for ST_ProgressAnalytics chart)
       const baseProg = learningProgress || (solvedCount > 0 ? 30 : 0);
       weeklyProgress = [
         { week: "Week 1", value: Math.min(100, Math.round(baseProg * 0.3)) },
@@ -1060,10 +1247,24 @@ export const getStudentPerformance = async (req, res, next) => {
     }
 
     const validScores = [attendanceScore, quizScore, codingScore, interviewScore].filter(s => s > 0);
-    const overallScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : 0;
+    const overallScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : (learningProgress || 0);
+
+    // Compute Mean Progress across all primary learning tracks
+    const trackScores = [];
+    if (taskDetails.totalAssigned > 0) trackScores.push(taskDetails.completionRate);
+    if (quizDetails.totalAttempted > 0) trackScores.push(quizDetails.meanScore);
+    if (codingScore > 0) trackScores.push(codingScore);
+    if (attendanceDetails.total > 0) trackScores.push(attendanceScore);
+    if (interviewDetails.completedCount > 0) trackScores.push(interviewScore);
+    if (learningProgress > 0) trackScores.push(learningProgress);
+
+    const meanProgress = trackScores.length > 0
+      ? Math.round(trackScores.reduce((a, b) => a + b, 0) / trackScores.length)
+      : (overallScore || learningProgress || 50);
 
     const performanceData = {
       overallScore,
+      meanProgress,
       attendanceScore,
       codingScore,
       quizScore,
@@ -1077,6 +1278,22 @@ export const getStudentPerformance = async (req, res, next) => {
       weeklyData: weeklyProgress,
       weeklyProgress,
       monthlyProgress: [],
+      // Complete track collections
+      taskDetails,
+      quizDetails,
+      codingDetails,
+      attendanceDetails,
+      interviewDetails,
+      tracksMean: {
+        taskMean: taskDetails.completionRate || 0,
+        taskScoreMean: taskDetails.meanScore || 0,
+        quizMean: quizDetails.meanScore || quizScore || 0,
+        codingMean: codingScore || (solvedCount > 0 ? 50 : 0),
+        attendanceMean: attendanceScore || 0,
+        interviewMean: interviewScore || 0,
+        roadmapMean: learningProgress || 0,
+        overallMean: meanProgress,
+      },
     };
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
   } catch (error) {
