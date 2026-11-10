@@ -144,24 +144,29 @@ export async function fetchStudentTrainingSyncData(payload = {}) {
     [userId, userId, mappedUser.student_batch_id || -1]
   );
 
-  const batches = (batchRows && batchRows.length > 0 ? batchRows : [
-    {
-      id: mappedUser.student_batch_id || 1,
-      name: mappedUser.assigned_batch || 'Full Stack Web Development',
-      topic: 'Full Stack Engineering',
-      status: 'active',
-      date: '2026-01-15',
-    }
-  ]).map((b) => ({
-    trainx_batch_id: `batch_${b.id}`,
-    batch_name: b.name || 'Full Stack Web Development',
-    course_name: b.topic || b.name || 'Full Stack Engineering',
-    start_date: b.date ? new Date(b.date).toISOString().split('T')[0] : '2026-01-15',
-    end_date: '2026-06-30',
-    status: b.status || 'active',
-  }));
+  const batches = (batchRows || []).map((b) => {
+    const startDate = b.date
+      ? new Date(b.date).toISOString().split('T')[0]
+      : (b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
 
-  const studentBatchIds = batchRows ? batchRows.map(b => b.id) : [1];
+    let endDate = null;
+    if (startDate) {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + 6);
+      endDate = d.toISOString().split('T')[0];
+    }
+
+    return {
+      trainx_batch_id: `batch_${b.id}`,
+      batch_name: b.name || `Batch ${b.id}`,
+      course_name: b.topic || b.name || 'Technical Training Course',
+      start_date: startDate,
+      end_date: endDate,
+      status: b.status || 'active',
+    };
+  });
+
+  const studentBatchIds = batches.map(b => Number(b.trainx_batch_id.replace('batch_', ''))).filter(n => !isNaN(n));
   const batchPlaceholders = studentBatchIds.length > 0 ? studentBatchIds.map(() => '?').join(',') : 'NULL';
 
   // 3. Category 2: Sessions

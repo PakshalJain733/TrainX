@@ -44,6 +44,22 @@ export const collectRealStudentSignals = async (studentId) => {
   const weakSkills = [];
   let suggestedTrack = 'Full Stack Engineering';
 
+  // Check student target track, enrolled batch topic, or department
+  try {
+    const [pref] = await query(
+      `SELECT COALESCE(s.target_track, u.target_track, b.topic, b.name, d.name) AS pref_track
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN batches b ON (b.id = s.batch_id OR b.id = (SELECT batch_id FROM student_batches WHERE user_id = u.id LIMIT 1))
+       LEFT JOIN departments d ON (d.id = u.department_id OR d.id = s.department_id)
+       WHERE u.id = ? LIMIT 1`,
+      [sId]
+    );
+    if (pref && pref.pref_track && String(pref.pref_track).trim()) {
+      suggestedTrack = String(pref.pref_track).trim();
+    }
+  } catch (_) {}
+
   // 1. Real assessment scores by topic
   try {
     const attempts = await query(

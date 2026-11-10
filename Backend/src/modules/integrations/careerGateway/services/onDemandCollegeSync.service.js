@@ -1,4 +1,5 @@
 import { query } from '../../../../config/db.js';
+import { getRelatedCollegeIds } from '../../../../models/user.model.js';
 
 /**
  * Calculates session duration in minutes.
@@ -108,34 +109,43 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
   const targetCollegeId = collegeTenant.id;
   const externalCollegeSlug = collegeTenant.externalId;
 
-  // 2. Category 1: Batches
+  // 2. Category 1: Batches (support target college and any institutional alias IDs)
+  const relatedCollegeIds = await getRelatedCollegeIds(targetCollegeId);
+  const collegeIdsToSearch = relatedCollegeIds.length > 0 ? relatedCollegeIds : [targetCollegeId];
+  const collegePlaceholders = collegeIdsToSearch.map(() => '?').join(',');
+
   const batchRows = await query(
-    `SELECT b.id, b.name, b.topic, b.status, b.date, b.academic_year, b.created_at
+    `SELECT b.id, b.name, b.topic, b.description, b.status, b.date, b.academic_year, b.created_at
      FROM batches b
-     WHERE b.college_id = ?
+     WHERE b.college_id IN (${collegePlaceholders})
      ORDER BY b.id ASC`,
-    [targetCollegeId]
+    collegeIdsToSearch
   );
 
-  const batches = (batchRows && batchRows.length > 0 ? batchRows : [
-    {
-      id: 1,
-      name: 'Python Full Stack 2026',
-      topic: 'Full Stack Engineering',
-      status: 'active',
-      date: '2026-01-15',
+  const batches = (batchRows || []).map((b) => {
+    const startDate = b.date
+      ? new Date(b.date).toISOString().split('T')[0]
+      : (b.created_at ? new Date(b.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+    let endDate = null;
+    if (startDate) {
+      const d = new Date(startDate);
+      d.setMonth(d.getMonth() + 6);
+      endDate = d.toISOString().split('T')[0];
     }
-  ]).map((b) => ({
-    trainx_batch_id: `batch_${b.id}`,
-    batch_name: b.name || 'Full Stack Web Development',
-    course_name: b.topic || b.name || 'Full Stack Engineering',
-    start_date: b.date ? new Date(b.date).toISOString().split('T')[0] : '2026-01-15',
-    end_date: '2026-06-30',
-    status: b.status || 'active',
-  }));
+
+    return {
+      trainx_batch_id: `batch_${b.id}`,
+      batch_name: b.name || `Batch ${b.id}`,
+      course_name: b.topic || b.description || b.name || 'Technical Training Course',
+      start_date: startDate,
+      end_date: endDate,
+      status: b.status || 'active',
+    };
+  });
 
   const batchIds = batches.map(b => Number(b.trainx_batch_id.replace('batch_', ''))).filter(n => !isNaN(n));
-  const fallbackBatchId = batches[0]?.trainx_batch_id || 'batch_1';
+  const fallbackBatchId = batchIds.length > 0 ? `batch_${batchIds[0]}` : null;
   const batchPlaceholders = batchIds.length > 0 ? batchIds.map(() => '?').join(',') : 'NULL';
 
   // 3. Category 2: Sessions
@@ -155,7 +165,7 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
 
   const sessions = (sessionRows || []).map((s) => ({
     trainx_session_id: `sess_${s.id}`,
-    trainx_batch_id: `batch_${s.batch_id || batchIds[0] || 1}`,
+    trainx_batch_id: s.batch_id ? `batch_${s.batch_id}` : fallbackBatchId,
     topic_name: s.title || 'Technical Training Session',
     session_date: s.session_date
       ? new Date(s.session_date).toISOString().replace('T', ' ').substring(0, 19)
@@ -175,10 +185,10 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
      LEFT JOIN attendance_sessions s ON s.id = a.session_id
      LEFT JOIN students st ON st.user_id = a.user_id
      LEFT JOIN career_gateway_student_mappings m ON m.trainx_user_id = a.user_id
-     WHERE a.college_id = ? OR u.college_id = ?
+     WHERE a.college_id IN (${collegePlaceholders}) OR u.college_id IN (${collegePlaceholders})
      ORDER BY a.session_date DESC
      LIMIT 2000`,
-    [targetCollegeId, targetCollegeId]
+    [...collegeIdsToSearch, ...collegeIdsToSearch]
   );
 
   const attendance = (attendanceRows || []).map((a) => {
@@ -189,7 +199,7 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
       career_gateway_student_id: a.mapped_cg_id || a.career_gateway_student_id || null,
       clg_id: a.clg_id || a.mapped_clg_id || a.roll_number || null,
       trainx_session_id: `sess_${a.session_id || a.id}`,
-      trainx_batch_id: `batch_${a.batch_id || batchIds[0] || 1}`,
+      trainx_batch_id: a.batch_id ? `batch_${a.batch_id}` : fallbackBatchId,
       attended: isPresent,
       attendance_percentage: isPresent ? 100 : 0,
     };
@@ -201,25 +211,25 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
     assessmentRows = await query(
       `SELECT asm.id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
        FROM assessments asm
-       WHERE asm.college_id = ? OR asm.batch_id IN (${batchPlaceholders})
+       WHERE asm.college_id IN (${collegePlaceholders}) OR asm.batch_id IN (${batchPlaceholders})
        ORDER BY asm.id ASC
        LIMIT 500`,
-      [targetCollegeId, ...batchIds]
+      [...collegeIdsToSearch, ...batchIds]
     );
   } else {
     assessmentRows = await query(
       `SELECT asm.id, asm.batch_id, asm.title, asm.category, asm.total_marks, asm.pass_marks
        FROM assessments asm
-       WHERE asm.college_id = ?
+       WHERE asm.college_id IN (${collegePlaceholders})
        ORDER BY asm.id ASC
        LIMIT 500`,
-      [targetCollegeId]
+      collegeIdsToSearch
     );
   }
 
   const assessments = (assessmentRows || []).map((asm) => ({
     trainx_assessment_id: `asm_${asm.id}`,
-    trainx_batch_id: `batch_${asm.batch_id || batchIds[0] || 1}`,
+    trainx_batch_id: asm.batch_id ? `batch_${asm.batch_id}` : fallbackBatchId,
     title: asm.title || 'Technical Assessment',
     max_score: Number(asm.total_marks || 100),
     passing_score: Number(asm.pass_marks || 50),
@@ -242,10 +252,10 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
      JOIN users u ON u.id = att.user_id
      LEFT JOIN students st ON st.user_id = att.user_id
      LEFT JOIN career_gateway_student_mappings m ON m.trainx_user_id = att.user_id
-     WHERE u.college_id = ? OR asm.college_id = ?
+     WHERE u.college_id IN (${collegePlaceholders}) OR asm.college_id IN (${collegePlaceholders})
      ORDER BY att.id DESC
      LIMIT 2000`,
-    [targetCollegeId, targetCollegeId]
+    [...collegeIdsToSearch, ...collegeIdsToSearch]
   );
 
   const assessment_results = (attemptRows || []).map((att) => {
@@ -260,7 +270,7 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
       career_gateway_student_id: att.mapped_cg_id || att.career_gateway_student_id || null,
       clg_id: att.clg_id || att.mapped_clg_id || att.roll_number || null,
       trainx_assessment_id: `asm_${att.assessment_id}`,
-      trainx_batch_id: `batch_${att.batch_id || batchIds[0] || 1}`,
+      trainx_batch_id: att.batch_id ? `batch_${att.batch_id}` : fallbackBatchId,
       score,
       max_score: maxScore,
       passed,
@@ -279,9 +289,9 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
      FROM users u
      LEFT JOIN students st ON st.user_id = u.id
      LEFT JOIN career_gateway_student_mappings m ON m.trainx_user_id = u.id
-     WHERE u.college_id = ? AND u.role = 'student'
+     WHERE (u.college_id IN (${collegePlaceholders}) OR st.college_id IN (${collegePlaceholders})) AND u.role = 'student'
      LIMIT 1000`,
-    [targetCollegeId]
+    [...collegeIdsToSearch, ...collegeIdsToSearch]
   );
 
   // Quick lookup of attendance counts per student
@@ -293,22 +303,22 @@ export async function fetchCollegeTrainingSyncData(payload = {}) {
 
   const student_progress = (studentRows || []).map((s) => {
     const studentIdentifier = s.roll_number || s.mapped_clg_id || s.clg_id || s.mapped_cg_id || s.career_gateway_student_id || `STU-${s.user_id}`;
-    const completedTopics = attendanceCounts.get(s.user_id) || 15;
-    const totalTopics = sessions.length > 0 ? sessions.length : 20;
+    const completedTopics = attendanceCounts.get(s.user_id) || 0;
+    const totalTopics = sessions.length;
     const completionPercentage = totalTopics > 0
       ? Number(Math.min(100, Math.round((completedTopics / totalTopics) * 100)))
-      : 75.0;
+      : 0;
 
     return {
       student_id: studentIdentifier,
       career_gateway_student_id: s.mapped_cg_id || s.career_gateway_student_id || null,
       clg_id: s.clg_id || s.mapped_clg_id || s.roll_number || null,
-      trainx_batch_id: `batch_${s.batch_id || batchIds[0] || 1}`,
+      trainx_batch_id: s.batch_id ? `batch_${s.batch_id}` : fallbackBatchId,
       completion_percentage: completionPercentage,
       overall_status: completionPercentage >= 100 ? 'completed' : 'in_progress',
       completed_topics: completedTopics,
       total_topics: totalTopics,
-      last_active_at: `${new Date().toISOString().split('T')[0]} 16:00:00`,
+      last_active_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
     };
   });
 
