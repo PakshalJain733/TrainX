@@ -10,7 +10,7 @@ import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Batches.css";
 
 /* ── Inline dropdown for Admin Batches (CSS: AdminBatches.css .admin-batch-select-*) ── */
-function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction, emptyMessage = 'No options found' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
   const triggerRef = useRef(null);
@@ -72,7 +72,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="admin-batch-select-dropdown"
+          className={`admin-batch-select-dropdown${coords.dropUp ? ' admin-batch-select-dropdown--up' : ''}`}
           style={{
             position: 'fixed',
             top: coords.dropUp ? 'auto' : `${coords.top}px`,
@@ -84,15 +84,21 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
             zIndex: 99999,
           }}
         >
-          {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
-                <span className="admin-batch-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-batch-select-check" />}
-              </div>
-            );
-          })}
+          {safeOptions.length === 0 ? (
+            <div className="admin-batch-select-empty">
+              {emptyMessage}
+            </div>
+          ) : (
+            safeOptions.map(opt => {
+              const isSel = String(opt.value) === String(value);
+              return (
+                <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
+                  <span className="admin-batch-select-option-label">{opt.label}</span>
+                  {isSel && <Check className="admin-batch-select-check" />}
+                </div>
+              );
+            })
+          )}
         </div>,
         document.body
       )}
@@ -2394,14 +2400,10 @@ export default function AdminBatches() {
                         label: t.name,
                       }))}
                       onChange={(val) => setMentor(val)}
-                      placeholder={loadingTrainers ? "Loading registered trainers..." : (trainers.length === 0 ? "No registered trainers found" : "Select Trainer...")}
+                      placeholder="Select Trainer..."
+                      emptyMessage="No trainer found"
                       icon={Users}
                     />
-                    {!loadingTrainers && trainers.length === 0 && (
-                      <span className="form-hint" style={{ color: "#ef4444", fontSize: "11px", marginTop: "4px", display: "block" }}>
-                        No registered trainers found. Please add a user with role "Trainer" in User Management.
-                      </span>
-                    )}
                   </div>
                 </div>
 

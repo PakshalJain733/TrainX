@@ -1130,6 +1130,15 @@
   color: #4f46e5;
 }
 
+.admin-batch-select-empty {
+  padding: 12px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  user-select: none;
+}
+
 /* Active vs Inactive Batch Status Tabs - Modern Pill Bar */
 .batch-status-tabs-container {
   display: flex;
