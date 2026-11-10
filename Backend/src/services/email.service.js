@@ -1,10 +1,21 @@
 import { BrevoClient } from '@getbrevo/brevo';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 import dns from 'dns';
 import net from 'net';
 import { query } from '../config/db.js';
+
+let nodemailerModule = null;
+const getNodemailer = async () => {
+  if (nodemailerModule) return nodemailerModule;
+  try {
+    const mod = await import('nodemailer');
+    nodemailerModule = mod.default || mod;
+    return nodemailerModule;
+  } catch (_) {
+    return null;
+  }
+};
 
 // Enforce IPv4 resolution order across Node.js to prevent ENETUNREACH on platforms without IPv6 routing
 if (dns.setDefaultResultOrder) {
@@ -42,12 +53,17 @@ const getResolvedIpv4Host = async (host) => {
 };
 
 const createTransporterInstance = async (port, isSecure) => {
+  const nm = await getNodemailer();
+  if (!nm) {
+    throw new Error('Nodemailer package is not installed. Please configure Brevo or install nodemailer.');
+  }
+
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
   const user = (process.env.SMTP_USER || '').trim();
   const pass = (process.env.SMTP_PASS || '').trim();
   const resolvedHost = await getResolvedIpv4Host(host);
 
-  return nodemailer.createTransport({
+  return nm.createTransport({
     host: resolvedHost,
     port,
     secure: isSecure,
