@@ -7,6 +7,7 @@ import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/AD_Users.css";
 
 /* ── Inline dropdown for Admin Users ── */
@@ -2074,6 +2075,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess, departments = [] }) 
 }
 
 export default function AdminUsers() {
+  const { isModuleActive } = useSystemMaintenance();
   const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2410,7 +2412,7 @@ export default function AdminUsers() {
         department: isStudentRole ? formData.department : "",
         department_id: isStudentRole ? (selectedDeptObj?.id || formData.department_id || null) : null,
         secure_code: generatedCode || formData.secure_code || "",
-        is_approved: 0,
+        is_approved: 1,
         is_active: 1,
       };
       const res = await apiFetch("/admin/users", {
@@ -2738,18 +2740,20 @@ export default function AdminUsers() {
                     </td>
                     <td>
                       {(() => {
-                        const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1";
+                        const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1" || !isModuleActive("adminApproveUsers");
+                        const isActive = u.is_active === 1 || u.is_active === true || String(u.is_active) === "1" || u.is_active === undefined;
+                        const showActive = isApproved && isActive;
                         return (
-                          <span className={`status-badge ${isApproved ? "status-badge--active" : "status-badge--inactive"}`}>
+                          <span className={`status-badge ${showActive ? "status-badge--active" : "status-badge--inactive"}`}>
                             <span className="status-dot"></span>
-                            {isApproved ? "Approved" : "Unapproved"}
+                            {showActive ? "Active" : "Inactive"}
                           </span>
                         );
                       })()}
                     </td>
                     <td>
                       <div className="action-btns-row action-btns-right">
-                        {!(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1") && (
+                        {isModuleActive("adminApproveUsers") && !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1") && (
                           <button
                             className="btn-table-action btn-table-action--approve"
                             title="Approve User Registration"

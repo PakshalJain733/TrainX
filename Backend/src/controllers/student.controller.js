@@ -537,7 +537,8 @@ export const getStudentDashboard = async (req, res, next) => {
 
     const dashboardData = {
       personalDetails: {
-        name: callerUser.name || req.user.name || 'Student',
+        name: callerUser.name || callerUser.fullName || req.user?.name || req.user?.fullName || 'Student',
+        email: callerUser.email || req.user?.email || '',
         department: callerStudent.department || callerUser.department || '',
       },
       academicOverview: {

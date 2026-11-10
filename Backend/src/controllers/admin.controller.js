@@ -23,13 +23,22 @@ import { createNotification } from '../services/notification.service.js';
 import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 
 /**
+ * Helper to test if a role string represents Super Admin
+ */
+const isSuperAdminRole = (role) => {
+  if (!role) return false;
+  const r = String(role).toLowerCase().trim().replace(/_/g, '');
+  return r === 'superadmin' || r.includes('super');
+};
+
+/**
  * Helper to determine college isolation filter based on caller role
  */
 const getCallerCollegeFilter = (req) => {
-  if (req.user.role === ROLES.SUPER_ADMIN) {
+  if (isSuperAdminRole(req.user?.role)) {
     return req.query.collegeId ? parseInt(req.query.collegeId, 10) : null;
   }
-  return req.user.collegeId || req.user.college_id;
+  return req.user?.collegeId || req.user?.college_id;
 };
 
 /**
@@ -51,7 +60,7 @@ const normalizeRole = (role) => {
  * College admins may only manage coordinator / mentor / student accounts.
  */
 const canAssignRole = (callerRole, targetRole) => {
-  if (callerRole === ROLES.SUPER_ADMIN) return true;
+  if (isSuperAdminRole(callerRole)) return true;
   return [ROLES.COORDINATOR, ROLES.MENTOR, ROLES.TRAINER, ROLES.STUDENT].includes(targetRole);
 };
 
@@ -117,15 +126,17 @@ export const getAdminUsers = async (req, res, next) => {
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
     let users = await getAllUsersModel(collegeId);
 
-    // Optional approval filtering: if caller explicitly specifies approved/pending
-    if (req.query.approved === 'true' || req.query.is_approved === 'true' || req.query.approved_only === 'true') {
+    // Approval feature switch handling: if approvals are disabled, treat all users as approved
+    if (!isApprovalFeatureActive()) {
+      users = users.map((u) => ({ ...u, is_approved: 1, is_active: 1 }));
+    } else if (req.query.approved === 'true' || req.query.is_approved === 'true' || req.query.approved_only === 'true') {
       users = users.filter((u) => u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1');
     } else if (req.query.approved === 'false' || req.query.is_approved === 'false' || req.query.pending === 'true') {
       users = users.filter((u) => !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1'));
     }
 
     // College Admins can only view/manage Students, Mentors, and Coordinators (not other Admins)
-    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+    if (!isSuperAdminRole(req.user?.role)) {
       users = users.filter((u) => {
         const r = String(u.role || '').toLowerCase();
         return !r.includes('admin');
@@ -176,7 +187,7 @@ export const getAdminPendingUsers = async (req, res, next) => {
 
     // Super Admin exclusively reviews and approves Admin accounts (College Admins, Department Admins, HODs)
     // College Admins review and approve non-Admin users (Students, Mentors, Coordinators) belonging to their college
-    if (req.user?.role === ROLES.SUPER_ADMIN) {
+    if (isSuperAdminRole(req.user?.role)) {
       users = users.filter((u) => {
         const r = String(u.role || '').toLowerCase();
         return (r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin')) && r !== 'super_admin';
@@ -219,7 +230,7 @@ export const approveUserAdmin = async (req, res, next) => {
     }
 
     const userRole = String(user.role || '').toLowerCase();
-    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+    if (!isSuperAdminRole(req.user?.role)) {
       if (userRole.includes('admin') || userRole === 'super_admin') {
         return sendError(res, 'Unauthorized: Only Super Admin can approve College Admin registrations.', 403);
       }
@@ -286,7 +297,7 @@ export const rejectUserAdmin = async (req, res, next) => {
     }
 
     const userRole = String(user.role || '').toLowerCase();
-    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+    if (!isSuperAdminRole(req.user?.role)) {
       if (userRole.includes('admin') || userRole === 'super_admin') {
         return sendError(res, 'Unauthorized: Only Super Admin can reject College Admin registrations.', 403);
       }
@@ -345,8 +356,8 @@ export const createUserAdmin = async (req, res, next) => {
     // College Isolation Enforcement:
     // College Admins can ONLY create users within their own college.
     let targetCollegeId = req.user.collegeId;
-    if (req.user.role === ROLES.SUPER_ADMIN) {
-      targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : 1;
+    if (isSuperAdminRole(req.user?.role)) {
+      targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : (targetCollegeId || 1);
     }
 
     // Hierarchy validation: verify department & batch belong to the target college if specified
@@ -355,7 +366,7 @@ export const createUserAdmin = async (req, res, next) => {
     if (department_id) {
       const deptRecord = await getDepartmentByIdModel(department_id);
       if (deptRecord) {
-        if (deptRecord.college_id !== targetCollegeId && req.user.role !== ROLES.SUPER_ADMIN) {
+        if (deptRecord.college_id !== targetCollegeId && !isSuperAdminRole(req.user?.role)) {
           return sendError(res, 'Cannot assign user to a department from another college', 403);
         }
         validatedDeptName = deptRecord.code || deptRecord.name;
@@ -376,7 +387,7 @@ export const createUserAdmin = async (req, res, next) => {
 
     if (batch_id) {
       const batchRecord = await getBatchByIdModel(batch_id);
-      if (batchRecord && batchRecord.college_id !== targetCollegeId && req.user.role !== ROLES.SUPER_ADMIN) {
+      if (batchRecord && batchRecord.college_id !== targetCollegeId && !isSuperAdminRole(req.user?.role)) {
         return sendError(res, 'Cannot assign user to a batch from another college', 403);
       }
     }
@@ -397,7 +408,7 @@ export const createUserAdmin = async (req, res, next) => {
 
     // Check if Super Admin is directly provisioning an Admin account
     const isSuperAdminAccount = canonicalRole === ROLES.SUPER_ADMIN;
-    const isSuperAdminAddingAdmin = req.user?.role === ROLES.SUPER_ADMIN && (
+    const isSuperAdminAddingAdmin = isSuperAdminRole(req.user?.role) && (
       canonicalRole === ROLES.COLLEGE_ADMIN || 
       isSuperAdminAccount || 
       String(canonicalRole).includes('admin')
@@ -459,8 +470,8 @@ export const createUserAdmin = async (req, res, next) => {
     if (existing) {
       // Requirement: If user was pre-added or registers with updated name, sync details
       const trimmedName = (name || '').trim();
-      const existingApproved = isSuperAdminAddingAdmin ? 1 : 0;
-      const existingVerified = isSuperAdminAddingAdmin ? 1 : (existing.is_verified || 0);
+      const existingApproved = (isSuperAdminAddingAdmin || !isApprovalFeatureActive()) ? 1 : 0;
+      const existingVerified = (isSuperAdminAddingAdmin || !isApprovalFeatureActive()) ? 1 : (existing.is_verified || 0);
 
       if (trimmedName) {
         if (isSuperAdminAddingAdmin) {
@@ -539,8 +550,8 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     // When Super Admin directly adds an Admin account, they are immediately approved and active.
-    // Self-registering users from the registration page are created with is_approved = 0 and require manual approval.
-    const isApprovedVal = isSuperAdminAddingAdmin ? 1 : 0;
+    // If approval feature is inactive, all created users are immediately approved and active.
+    const isApprovedVal = isSuperAdminAddingAdmin || !isApprovalFeatureActive() ? 1 : 0;
 
     const newUser = await createUser({
       name,
@@ -648,7 +659,7 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
 
     // 1. Identify target college ID with strict college isolation
     let targetCollegeId = req.user.collegeId || req.user.college_id;
-    if (req.user.role === ROLES.SUPER_ADMIN) {
+    if (isSuperAdminRole(req.user?.role)) {
       targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : (targetCollegeId || 1);
     }
     if (!targetCollegeId) {
@@ -922,7 +933,7 @@ export const updateUserAdmin = async (req, res, next) => {
     }
 
     // College Isolation check: non-super_admin cannot update users belonging to another college
-    if (req.user.role !== ROLES.SUPER_ADMIN && existingUser.college_id !== req.user.collegeId) {
+    if (!isSuperAdminRole(req.user?.role) && existingUser.college_id !== req.user.collegeId) {
       return sendError(res, 'Access forbidden: Cannot modify users from another college', 403);
     }
 
@@ -963,7 +974,7 @@ export const updateUserAdmin = async (req, res, next) => {
 
     // Only super admins may move a user to another college
     if (req.body.college_id !== undefined) {
-      if (req.user.role !== ROLES.SUPER_ADMIN) {
+      if (!isSuperAdminRole(req.user?.role)) {
         return sendError(res, 'Access forbidden: Only super admins can change college assignment', 403);
       }
       updates.college_id = parseInt(req.body.college_id, 10);
@@ -985,7 +996,7 @@ export const deleteUserAdmin = async (req, res, next) => {
     }
 
     // College Isolation check: non-super_admin cannot delete users from another college
-    if (req.user.role !== ROLES.SUPER_ADMIN && existingUser.college_id !== req.user.collegeId) {
+    if (!isSuperAdminRole(req.user?.role) && existingUser.college_id !== req.user.collegeId) {
       return sendError(res, 'Access forbidden: Cannot delete users from another college', 403);
     }
 
@@ -1518,7 +1529,7 @@ export const assignMentorToStudents = async (req, res, next) => {
 
     // Multi-college isolation: identify caller's college
     let targetCollegeId = req.user?.collegeId || req.user?.college_id;
-    if (req.user?.role === ROLES.SUPER_ADMIN && req.body.collegeId) {
+    if (isSuperAdminRole(req.user?.role) && req.body.collegeId) {
       targetCollegeId = parseInt(req.body.collegeId, 10);
     }
 
@@ -1549,7 +1560,7 @@ export const assignMentorToStudents = async (req, res, next) => {
         WHERE (${mentorSearchConditions.join(' OR ')})
       `;
       const sqlParams = [...mentorParams];
-      if (targetCollegeId && req.user?.role !== ROLES.SUPER_ADMIN) {
+      if (targetCollegeId && !isSuperAdminRole(req.user?.role)) {
         mentorSql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
         sqlParams.push(targetCollegeId);
       }
@@ -1631,7 +1642,7 @@ export const assignMentorToStudents = async (req, res, next) => {
       const studentBatchId = parseId(row.batch_id);
 
       // Enforce college-level isolation
-      if (targetCollegeId && row.college_id && row.college_id !== targetCollegeId && req.user?.role !== ROLES.SUPER_ADMIN) {
+      if (targetCollegeId && row.college_id && row.college_id !== targetCollegeId && !isSuperAdminRole(req.user?.role)) {
         return sendError(res, `Access denied: Student "${row.student_name}" belongs to another college`, 403);
       }
 

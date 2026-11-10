@@ -501,6 +501,14 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
+          try {
+            const cur = JSON.parse(sessionStorage.getItem("user") || "{}");
+            sessionStorage.setItem("user", JSON.stringify({ ...cur, ...fetchedUser }));
+            if (localStorage.getItem("user")) {
+              localStorage.setItem("user", JSON.stringify({ ...JSON.parse(localStorage.getItem("user") || "{}"), ...fetchedUser }));
+            }
+          } catch {}
+
           const userKey = fetchedUser.id || fetchedUser.email;
           const isUpdated = checkIsProfileUpdated(res.data, userKey);
           const isDismissed = checkIsDismissedThisSession(userKey);
@@ -526,6 +534,13 @@ export default function StudentLayout() {
             if (fetchedUser.avatar_url || fetchedUser.avatar) {
               setAvatarUrl(fetchedUser.avatar_url || fetchedUser.avatar);
             }
+            try {
+              const cur = JSON.parse(sessionStorage.getItem("user") || "{}");
+              sessionStorage.setItem("user", JSON.stringify({ ...cur, ...fetchedUser }));
+              if (localStorage.getItem("user")) {
+                localStorage.setItem("user", JSON.stringify({ ...JSON.parse(localStorage.getItem("user") || "{}"), ...fetchedUser }));
+              }
+            } catch {}
             const userKey = fetchedUser.id || fetchedUser.email;
             const isUpdated = checkIsProfileUpdated(res.data, userKey);
             const isDismissed = checkIsDismissedThisSession(userKey);

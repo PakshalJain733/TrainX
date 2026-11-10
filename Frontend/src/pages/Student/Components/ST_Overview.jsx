@@ -107,8 +107,23 @@ export default function Overview() {
           let resolvedName = (typeof u.name === "string" && u.name) ||
             (typeof u.fullName === "string" && u.fullName) ||
             (typeof u.full_name === "string" && u.full_name) ||
-            (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
-            "Student";
+            "";
+          if (!resolvedName || resolvedName === "Student") {
+            const email = typeof u.email === "string" ? u.email : "";
+            if (email && email.includes("@")) {
+              resolvedName = email.split("@")[0].replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            }
+          }
+          if (!resolvedName) resolvedName = "Student";
+
+          // Sync resolved user back into session/local storage
+          try {
+            const cur = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+            const merged = { ...cur, ...u, name: resolvedName };
+            sessionStorage.setItem("user", JSON.stringify(merged));
+            if (localStorage.getItem("user")) localStorage.setItem("user", JSON.stringify(merged));
+          } catch {}
+
           const dept = student.department || u.department || u.dept || "";
           const sem = student.semester || u.semester || u.sem || u.current_semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
@@ -131,7 +146,7 @@ export default function Overview() {
             ...prev,
             personalDetails: {
               ...prev.personalDetails,
-              name: resolvedName !== "Student" ? resolvedName : prev.personalDetails.name,
+              name: resolvedName !== "Student" ? resolvedName : (prev.personalDetails.name || "Student"),
               department: dept || prev.personalDetails.department,
             },
             academicOverview: {
@@ -159,6 +174,11 @@ export default function Overview() {
             setDashboard((prev) => {
               const resPersonal = result.data.personalDetails || {};
               const resAcademic = result.data.academicOverview || {};
+              const resolvedName = (resPersonal.name && resPersonal.name !== "Student")
+                ? resPersonal.name
+                : (prev.personalDetails?.name && prev.personalDetails.name !== "Student"
+                    ? prev.personalDetails.name
+                    : (storedUser.name && storedUser.name !== "Student" ? storedUser.name : ""));
 
               return {
                 ...prev,
@@ -166,7 +186,7 @@ export default function Overview() {
                 personalDetails: {
                   ...prev.personalDetails,
                   ...resPersonal,
-                  name: (resPersonal.name && resPersonal.name !== "Student") ? resPersonal.name : (prev.personalDetails.name && prev.personalDetails.name !== "Student" ? prev.personalDetails.name : ""),
+                  name: resolvedName || prev.personalDetails?.name || resPersonal.name || "",
                   department: resPersonal.department || prev.personalDetails.department,
                 },
                 academicOverview: {
@@ -298,10 +318,10 @@ export default function Overview() {
     if (hName && hName !== "Student" && typeof hName === "string" && hName.trim()) {
       return hName.trim();
     }
-    const email = storedUser.email || "";
+    const email = storedUser.email || dashboard.personalDetails?.email || "";
     if (email && email.includes("@")) {
       const derived = email.split("@")[0].replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-      if (derived) return derived;
+      if (derived && derived !== "Student") return derived;
     }
     return "Student";
   })();

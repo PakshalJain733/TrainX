@@ -380,6 +380,11 @@ export default function ProfilePage() {
           sessionStorage.removeItem(`st_flash_skipped_${userKey}`);
           localStorage.removeItem(`st_flash_skipped_${userKey}`);
         }
+        try {
+          const merged = { ...u, ...res.data, name: form.name.trim() };
+          sessionStorage.setItem("user", JSON.stringify(merged));
+          if (localStorage.getItem("user")) localStorage.setItem("user", JSON.stringify(merged));
+        } catch { }
         sessionStorage.removeItem("showFirstLoginAlert");
         sessionStorage.removeItem("st_first_login_dismissed");
         sessionStorage.removeItem("st_flash_skipped_session");

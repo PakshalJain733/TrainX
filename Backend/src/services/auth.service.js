@@ -122,6 +122,7 @@ const buildUserResponse = async (user) => {
 
 const generateFinalToken = (user) => generateToken({
   userId: user.id,
+  name: user.name || null,
   email: user.email || null,
   mobile: user.mobile_number || null,
   role: user.role,
