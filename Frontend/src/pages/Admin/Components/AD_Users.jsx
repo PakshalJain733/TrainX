@@ -2513,15 +2513,19 @@ export default function AdminUsers() {
         method: "DELETE",
       });
       if (res && res.error) {
-        alert(res.error || res.message || "Failed to delete user");
+        setActionToast({ type: "error", message: res.error || res.message || "Failed to delete user" });
+        setTimeout(() => setActionToast(null), 5000);
       } else {
         setIsDeleteModalOpen(false);
+        setActionToast({ type: "success", message: `User "${selectedUser.name || selectedUser.email}" was deleted successfully.` });
+        setTimeout(() => setActionToast(null), 5000);
         fetchUsers();
         fetchStats();
       }
     } catch (err) {
       console.error("Failed to delete user:", err);
-      alert(err.message || "Failed to delete user");
+      setActionToast({ type: "error", message: err.message || "Failed to delete user" });
+      setTimeout(() => setActionToast(null), 5000);
     } finally {
       setActionLoading(false);
     }

@@ -13,6 +13,7 @@ import {
   findUserByEmailOrMobile,
   findUserById,
   toSafeUser,
+  isSameCollegeOrAlias,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
@@ -50,6 +51,46 @@ const getCallerCollegeFilter = (req) => {
     return req.query.collegeId ? parseInt(req.query.collegeId, 10) : null;
   }
   return req.user?.collegeId || req.user?.college_id;
+};
+
+/**
+ * Verifies if the target user belongs to the caller's college (including alias IDs, student records, and NULL college fallback)
+ */
+const canCallerManageUser = async (req, targetUser) => {
+  if (!targetUser) return false;
+  if (isSuperAdminRole(req.user?.role)) {
+    return true;
+  }
+  const callerCollegeId = getCallerCollegeFilter(req);
+  if (!callerCollegeId) {
+    return true; // No restriction on caller
+  }
+
+  // Determine the effective college ID of the target user
+  let targetCollegeId = targetUser.college_id;
+  if (!targetCollegeId) {
+    // Check if student table has college_id
+    try {
+      const studentRows = await query('SELECT college_id FROM students WHERE user_id = ? LIMIT 1', [targetUser.id]);
+      if (studentRows && studentRows.length > 0 && studentRows[0].college_id) {
+        targetCollegeId = studentRows[0].college_id;
+      }
+    } catch (_) {}
+  }
+
+  // If target user still has no college_id in users or students table:
+  // e.g. shared trainer, unassigned staff, or invited via this college admin
+  if (!targetCollegeId) {
+    return true;
+  }
+
+  // Check direct equality (string coercion handles string vs integer college IDs)
+  if (String(callerCollegeId) === String(targetCollegeId)) {
+    return true;
+  }
+
+  // Check alias college match (e.g. PVPPCOE & VPPCOE duplicate records)
+  return await isSameCollegeOrAlias(callerCollegeId, targetCollegeId);
 };
 
 /**
@@ -245,8 +286,7 @@ export const approveUserAdmin = async (req, res, next) => {
       if (userRole.includes('admin') || userRole === 'super_admin') {
         return sendError(res, 'Unauthorized: Only Super Admin can approve College Admin registrations.', 403);
       }
-      const callerCollegeId = getCallerCollegeFilter(req);
-      if (callerCollegeId && user.college_id && String(callerCollegeId) !== String(user.college_id)) {
+      if (!(await canCallerManageUser(req, user))) {
         return sendError(res, 'Unauthorized: You can only approve pending users from your own college.', 403);
       }
     }
@@ -326,8 +366,7 @@ export const rejectUserAdmin = async (req, res, next) => {
       if (userRole.includes('admin') || userRole === 'super_admin') {
         return sendError(res, 'Unauthorized: Only Super Admin can reject College Admin registrations.', 403);
       }
-      const callerCollegeId = getCallerCollegeFilter(req);
-      if (callerCollegeId && user.college_id && String(callerCollegeId) !== String(user.college_id)) {
+      if (!(await canCallerManageUser(req, user))) {
         return sendError(res, 'Unauthorized: You can only reject pending users from your own college.', 403);
       }
     }
@@ -375,8 +414,8 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
       return sendError(res, 'User does not have a valid email address configured.', 400);
     }
 
-    // College isolation check
-    if (!isSuperAdminRole(req.user?.role) && req.user?.collegeId && user.college_id && user.college_id !== req.user.collegeId) {
+    // College isolation check: permits users belonging to caller's college or alias institutions
+    if (!(await canCallerManageUser(req, user))) {
       return sendError(res, 'Access forbidden: Cannot resend activation for user from another college', 403);
     }
 
@@ -1143,8 +1182,8 @@ export const updateUserAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
-    // College Isolation check: non-super_admin cannot update users belonging to another college
-    if (!isSuperAdminRole(req.user?.role) && existingUser.college_id !== req.user.collegeId) {
+    // College Isolation check: permits users belonging to caller's college or alias institutions
+    if (!(await canCallerManageUser(req, existingUser))) {
       return sendError(res, 'Access forbidden: Cannot modify users from another college', 403);
     }
 
@@ -1206,8 +1245,8 @@ export const deleteUserAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
-    // College Isolation check: non-super_admin cannot delete users from another college
-    if (!isSuperAdminRole(req.user?.role) && existingUser.college_id !== req.user.collegeId) {
+    // College Isolation check: permits users belonging to caller's college or alias institutions
+    if (!(await canCallerManageUser(req, existingUser))) {
       return sendError(res, 'Access forbidden: Cannot delete users from another college', 403);
     }
 
