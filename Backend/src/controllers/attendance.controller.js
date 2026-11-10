@@ -336,26 +336,12 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
 
         if (targetUserId) {
           const statusVal = isPresent ? 'present' : 'absent';
-          try {
-            await query(
-              `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by, remarks)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'Admin Roster Save')
-               ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks), updated_at = CURRENT_TIMESTAMP`,
-              [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal, userId]
-            );
-          } catch (attErr) {
-            // Fallback gracefully if database does not yet have updated_at column
-            if (attErr.code === 'ER_BAD_FIELD_ERROR' || attErr.message?.includes('updated_at')) {
-              await query(
-                `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by, remarks)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 'Admin Roster Save')
-                 ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks)`,
-                [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal, userId]
-              );
-            } else {
-              throw attErr;
-            }
-          }
+          await query(
+            `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, marked_by, remarks)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'Admin Roster Save')
+             ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), marked_by = VALUES(marked_by), remarks = VALUES(remarks)`,
+            [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal, userId]
+          );
           await getStudentAttendanceSummaryService(targetUserId);
           markedResults.push({ userId: targetUserId, status: statusVal });
         }

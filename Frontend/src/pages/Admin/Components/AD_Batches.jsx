@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, PowerOff, FileSpreadsheet } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, PowerOff, FileSpreadsheet } from "lucide-react";
 import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -188,6 +188,29 @@ export default function AdminBatches() {
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const [viewingCodeSubmission, setViewingCodeSubmission] = useState(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [isSubmissionsFullScreen, setIsSubmissionsFullScreen] = useState(false);
+  const [isCodeFullScreen, setIsCodeFullScreen] = useState(false);
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [submissionFilter, setSubmissionFilter] = useState("all"); // 'all' | 'passed' | 'failed'
+
+  const downloadSubmissionCode = (sub, task) => {
+    if (!sub) return;
+    const code = sub.code_submission || sub.submitted_code || "";
+    const lang = (sub.language || task?.language || "java").toLowerCase();
+    const ext = lang === "python" ? "py" : lang.includes("c++") || lang.includes("cpp") ? "cpp" : "java";
+    const studentName = (sub.name || "Student").replace(/[^a-zA-Z0-9]/g, "_");
+    const taskName = (task?.title || sub.task_title || "Solution").replace(/[^a-zA-Z0-9]/g, "_");
+    const filename = `${studentName}_${taskName}.${ext}`;
+    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const fetchTrainers = async () => {
     setLoadingTrainers(true);
@@ -440,6 +463,8 @@ export default function AdminBatches() {
     setActiveTaskForSubmissions(task);
     setLoadingSubmissions(true);
     setTaskSubmissions([]);
+    setSubmissionSearch("");
+    setSubmissionFilter("all");
     try {
       const res = await apiFetch(`/batches/tasks/${task.id}/submissions`);
       if (res && res.data && Array.isArray(res.data)) {
@@ -1234,122 +1259,457 @@ export default function AdminBatches() {
           )}
 
           {/* Modal for View Submissions */}
-          {activeTaskForSubmissions && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                backgroundColor: "rgba(15, 23, 42, 0.6)",
-                backdropFilter: "blur(4px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 9999,
-                padding: "20px"
-              }}
-            >
+          {activeTaskForSubmissions && (() => {
+            const totalSubmissionsCount = taskSubmissions.length;
+            const passedSubmissionsCount = taskSubmissions.filter((s) => s.status === "Passed" || s.status === "Completed").length;
+            const passRatePercent = totalSubmissionsCount > 0 ? Math.round((passedSubmissionsCount / totalSubmissionsCount) * 100) : 0;
+            const avgScoreVal = totalSubmissionsCount > 0 ? (taskSubmissions.reduce((acc, s) => acc + Number(s.marks_obtained ?? s.score ?? 0), 0) / totalSubmissionsCount).toFixed(1) : 0;
+            const maxPossiblePoints = activeTaskForSubmissions?.points || 100;
+
+            const filteredSubs = taskSubmissions.filter((sub) => {
+              const q = (submissionSearch || "").trim().toLowerCase();
+              const matchesSearch = !q ||
+                (sub.name && sub.name.toLowerCase().includes(q)) ||
+                (sub.email && sub.email.toLowerCase().includes(q)) ||
+                (sub.roll_number && sub.roll_number.toLowerCase().includes(q));
+
+              if (!matchesSearch) return false;
+              const isPassed = sub.status === "Passed" || sub.status === "Completed";
+              if (submissionFilter === "passed") return isPassed;
+              if (submissionFilter === "failed") return !isPassed;
+              return true;
+            });
+
+            return (
               <div
                 style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  maxWidth: "880px",
-                  width: "100%",
-                  maxHeight: "85vh",
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(15, 23, 42, 0.75)",
+                  backdropFilter: "blur(6px)",
                   display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-                  overflow: "hidden"
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 9999,
+                  padding: isSubmissionsFullScreen ? "0px" : "20px",
+                  transition: "all 0.2s ease"
                 }}
               >
-                {/* Modal Header */}
-                <div style={{ padding: "20px 24px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc" }}>
-                  <div>
-                    <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-                      Submissions: {activeTaskForSubmissions.title}
-                    </h3>
-                    <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
-                      Student code submissions for {selectedBatch.name}
-                    </p>
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: isSubmissionsFullScreen ? "0px" : "18px",
+                    maxWidth: isSubmissionsFullScreen ? "100vw" : "1400px",
+                    width: isSubmissionsFullScreen ? "100vw" : "96vw",
+                    height: isSubmissionsFullScreen ? "100vh" : "92vh",
+                    maxHeight: isSubmissionsFullScreen ? "100vh" : "92vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.3)",
+                    overflow: "hidden",
+                    border: isSubmissionsFullScreen ? "none" : "1px solid #e2e8f0"
+                  }}
+                >
+                  {/* Modal Header */}
+                  <div style={{
+                    padding: "20px 28px",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                      <div style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 10px rgba(79, 70, 229, 0.3)"
+                      }}>
+                        <Code2 size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                          <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                            Submissions: {activeTaskForSubmissions.title}
+                          </h3>
+                          <span style={{
+                            background: "#e0e7ff",
+                            color: "#4338ca",
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 700
+                          }}>
+                            {selectedBatch?.name || "Batch"}
+                          </span>
+                          <span style={{
+                            background: "#f1f5f9",
+                            color: "#475569",
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600
+                          }}>
+                            Language: {(activeTaskForSubmissions?.language || "Java").toUpperCase()}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0 0" }}>
+                          Student code submissions & auto-evaluation results • Max Score: {maxPossiblePoints} pts
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubmissionsFullScreen(!isSubmissionsFullScreen)}
+                        title={isSubmissionsFullScreen ? "Exit Fullscreen" : "Fullscreen View"}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "10px",
+                          width: "38px",
+                          height: "38px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#94a3b8"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                      >
+                        {isSubmissionsFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTaskForSubmissions(null);
+                          setIsSubmissionsFullScreen(false);
+                        }}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "10px",
+                          width: "38px",
+                          height: "38px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#475569"; }}
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTaskForSubmissions(null)}
-                    style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
 
-                {/* Modal Content */}
-                <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
-                  {loadingSubmissions ? (
-                    <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
-                      <RefreshCw size={28} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "8px" }} />
-                      <p>Loading student submissions...</p>
+                  {/* Summary KPI Banner & Filters Bar */}
+                  <div style={{
+                    padding: "16px 28px",
+                    background: "#ffffff",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px"
+                  }}>
+                    {/* KPI Cards Row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+                      <div style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e0e7ff", color: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Users size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Total Submissions</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>{totalSubmissionsCount}</div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#dcfce7", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <CheckCircle2 size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", textTransform: "uppercase" }}>Pass Rate</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#166534" }}>
+                            {passedSubmissionsCount} / {totalSubmissionsCount} ({passRatePercent}%)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Award size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Average Score</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>
+                            {avgScoreVal} <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>/ {maxPossiblePoints} pts</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : taskSubmissions.length === 0 ? (
-                    <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
-                      <FileText size={40} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
-                      <p className="admin-empty-state-title" style={{ fontSize: "15px" }}>No submissions yet</p>
-                      <p className="admin-empty-state-sub" style={{ fontSize: "13px" }}>Students in {selectedBatch.name} have not submitted code for this task yet.</p>
+
+                    {/* Filter and Search Bar */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+                      <div style={{ position: "relative", flex: "1 1 320px", maxWidth: "450px" }}>
+                        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                        <input
+                          type="text"
+                          value={submissionSearch}
+                          onChange={(e) => setSubmissionSearch(e.target.value)}
+                          placeholder="Search student name, email, or roll number..."
+                          style={{
+                            width: "100%",
+                            padding: "8px 14px 8px 36px",
+                            borderRadius: "10px",
+                            border: "1px solid #cbd5e1",
+                            fontSize: "13px",
+                            outline: "none",
+                            background: "#ffffff",
+                            transition: "border-color 0.15s ease"
+                          }}
+                          onFocus={(e) => (e.target.style.borderColor = "#4f46e5")}
+                          onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+                        />
+                      </div>
+
+                      {/* Filter Tabs */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#f1f5f9", padding: "4px", borderRadius: "10px" }}>
+                        {[
+                          { id: "all", label: `All (${totalSubmissionsCount})` },
+                          { id: "passed", label: `Passed (${passedSubmissionsCount})` },
+                          { id: "failed", label: `Needs Review (${totalSubmissionsCount - passedSubmissionsCount})` },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setSubmissionFilter(tab.id)}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: "8px",
+                              border: "none",
+                              fontSize: "12.5px",
+                              fontWeight: submissionFilter === tab.id ? 700 : 500,
+                              background: submissionFilter === tab.id ? "#ffffff" : "transparent",
+                              color: submissionFilter === tab.id ? "#4f46e5" : "#64748b",
+                              boxShadow: submissionFilter === tab.id ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="admin-users-table-card" style={{ border: "1px solid #e2e8f0" }}>
-                      <div className="admin-users-table-responsive">
-                        <table className="admin-users-table">
+                  </div>
+
+                  {/* Modal Content / Submissions Table */}
+                  <div style={{ padding: "20px 28px", overflowY: "auto", flex: 1, background: "#f8fafc" }}>
+                    {loadingSubmissions ? (
+                      <div style={{ textAlign: "center", padding: "80px 0", color: "#64748b" }}>
+                        <RefreshCw size={32} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "12px" }} />
+                        <p style={{ fontSize: "14px", fontWeight: 600 }}>Loading student submissions...</p>
+                      </div>
+                    ) : taskSubmissions.length === 0 ? (
+                      <div className="admin-empty-state-card" style={{ padding: "60px 20px", background: "#ffffff", borderRadius: "14px", border: "1px dashed #cbd5e1", textAlign: "center" }}>
+                        <FileText size={48} style={{ color: "#94a3b8", margin: "0 auto 14px" }} />
+                        <p className="admin-empty-state-title" style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>No submissions yet</p>
+                        <p className="admin-empty-state-sub" style={{ fontSize: "13px", color: "#64748b" }}>Students in {selectedBatch?.name || "this batch"} have not submitted code for this task yet.</p>
+                      </div>
+                    ) : filteredSubs.length === 0 ? (
+                      <div className="admin-empty-state-card" style={{ padding: "50px 20px", background: "#ffffff", borderRadius: "14px", border: "1px dashed #cbd5e1", textAlign: "center" }}>
+                        <Search size={40} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
+                        <p style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: 0 }}>No matching submissions</p>
+                        <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 12px 0" }}>No students match &quot;{submissionSearch}&quot; with filter &quot;{submissionFilter}&quot;.</p>
+                        <button
+                          type="button"
+                          onClick={() => { setSubmissionSearch(""); setSubmissionFilter("all"); }}
+                          style={{
+                            padding: "6px 14px",
+                            background: "#e0e7ff",
+                            color: "#4338ca",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Clear Filters
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                           <thead>
-                            <tr>
-                              <th>Student Details</th>
-                              <th>Roll Number</th>
-                              <th>Submission Result</th>
-                              <th>Marks / Score</th>
-                              <th style={{ textAlign: "left" }}>Submitted At</th>
-                              <th style={{ textAlign: "center" }}>Action</th>
+                            <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: "12px", color: "#475569", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              <th style={{ padding: "14px 20px" }}>Student Details</th>
+                              <th style={{ padding: "14px 18px" }}>Roll Number</th>
+                              <th style={{ padding: "14px 18px" }}>Submission Result</th>
+                              <th style={{ padding: "14px 18px" }}>Marks & Test Cases</th>
+                              <th style={{ padding: "14px 18px" }}>Submitted At</th>
+                              <th style={{ padding: "14px 20px", textAlign: "center" }}>Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {taskSubmissions.map((sub) => {
+                            {filteredSubs.map((sub, idx) => {
                               const isPassed = sub.status === "Passed" || sub.status === "Completed";
                               const isPartial = sub.status === "Partial";
-                              const statusCls = isPassed ? "status-badge--active" : isPartial ? "status-badge--warning" : "status-badge--inactive";
                               const marksVal = sub.marks_obtained ?? sub.score ?? 0;
-                              const maxPoints = sub.total_marks || activeTaskForSubmissions?.points || 100;
+                              const maxPoints = sub.total_marks || maxPossiblePoints;
+                              const scorePercent = maxPoints > 0 ? Math.round((marksVal / maxPoints) * 100) : 0;
+
                               return (
-                                <tr key={sub.id}>
-                                  <td>
-                                    <div className="user-cell">
-                                      <div className="user-avatar" style={{ width: "34px", height: "34px", fontSize: "12px" }}>
+                                <tr
+                                  key={sub.id || idx}
+                                  style={{
+                                    borderBottom: idx === filteredSubs.length - 1 ? "none" : "1px solid #f1f5f9",
+                                    transition: "background 0.15s ease"
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                                >
+                                  {/* Student Details */}
+                                  <td style={{ padding: "16px 20px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                      <div style={{
+                                        width: "38px",
+                                        height: "38px",
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                                        color: "#ffffff",
+                                        fontWeight: 700,
+                                        fontSize: "13px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0
+                                      }}>
                                         {getInitials(sub.name)}
                                       </div>
                                       <div>
-                                        <div className="user-name-title" style={{ fontSize: "13.5px" }}>{sub.name || "Student"}</div>
-                                        <div className="user-email-sub" style={{ fontSize: "11.5px" }}>{sub.email}</div>
+                                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
+                                          {sub.name || "Student"}
+                                        </div>
+                                        <div style={{ fontSize: "12px", color: "#64748b" }}>
+                                          {sub.email}
+                                        </div>
                                       </div>
                                     </div>
                                   </td>
-                                  <td>
-                                    <span className="roster-badge-roll">{sub.roll_number || "N/A"}</span>
+
+                                  {/* Roll Number */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <span style={{
+                                      fontFamily: "monospace",
+                                      fontWeight: 700,
+                                      fontSize: "12px",
+                                      background: "#f1f5f9",
+                                      color: "#334155",
+                                      padding: "4px 10px",
+                                      borderRadius: "6px",
+                                      border: "1px solid #e2e8f0"
+                                    }}>
+                                      {sub.roll_number || "N/A"}
+                                    </span>
                                   </td>
-                                  <td>
-                                    <span className={`status-badge ${statusCls}`}>
-                                      <span className="status-dot"></span>
+
+                                  {/* Submission Result */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <span style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      padding: "5px 12px",
+                                      borderRadius: "9999px",
+                                      fontSize: "12px",
+                                      fontWeight: 700,
+                                      background: isPassed ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2",
+                                      color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c",
+                                      border: `1px solid ${isPassed ? "#bbf7d0" : isPartial ? "#fde68a" : "#fecaca"}`
+                                    }}>
+                                      <span style={{
+                                        width: "7px",
+                                        height: "7px",
+                                        borderRadius: "50%",
+                                        background: "currentColor"
+                                      }} />
                                       {sub.status || "Submitted"}
                                     </span>
                                   </td>
-                                  <td>
-                                    <div style={{ fontWeight: 700, color: isPassed ? "#16a34a" : isPartial ? "#d97706" : "#475569", fontSize: "13px" }}>
-                                      {marksVal} / {maxPoints} pts
+
+                                  {/* Marks & Feedback */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                                      <span style={{
+                                        fontSize: "15px",
+                                        fontWeight: 800,
+                                        color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c"
+                                      }}>
+                                        {marksVal} / {maxPoints} pts
+                                      </span>
+                                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>
+                                        ({scorePercent}%)
+                                      </span>
                                     </div>
                                     {sub.feedback && (
-                                      <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                                      <div style={{
+                                        fontSize: "11.5px",
+                                        color: "#64748b",
+                                        marginTop: "4px",
+                                        maxWidth: "260px",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap"
+                                      }} title={sub.feedback}>
                                         {sub.feedback}
                                       </div>
                                     )}
                                   </td>
-                                  <td style={{ textAlign: "left", fontSize: "12.5px", color: "#64748b" }}>
+
+                                  {/* Submitted At */}
+                                  <td style={{ padding: "16px 18px", fontSize: "12.5px", color: "#64748b" }}>
                                     {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
                                   </td>
-                                  <td style={{ textAlign: "center" }}>
+
+                                  {/* Action: View Code */}
+                                  <td style={{ padding: "16px 20px", textAlign: "center" }}>
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -1359,23 +1719,29 @@ export default function AdminBatches() {
                                       style={{
                                         display: "inline-flex",
                                         alignItems: "center",
-                                        gap: "5px",
-                                        padding: "6px 13px",
-                                        background: "#4f46e5",
+                                        gap: "6px",
+                                        padding: "8px 16px",
+                                        background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
                                         color: "#ffffff",
                                         border: "none",
-                                        borderRadius: "6px",
-                                        fontSize: "12px",
-                                        fontWeight: 600,
+                                        borderRadius: "8px",
+                                        fontSize: "12.5px",
+                                        fontWeight: 700,
                                         cursor: "pointer",
-                                        boxShadow: "0 1px 2px rgba(79, 70, 229, 0.2)",
+                                        boxShadow: "0 2px 6px rgba(79, 70, 229, 0.25)",
                                         transition: "all 0.15s ease",
                                         whiteSpace: "nowrap"
                                       }}
-                                      onMouseEnter={(e) => (e.currentTarget.style.background = "#4338ca")}
-                                      onMouseLeave={(e) => (e.currentTarget.style.background = "#4f46e5")}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-1px)";
+                                        e.currentTarget.style.boxShadow = "0 4px 10px rgba(79, 70, 229, 0.35)";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "0 2px 6px rgba(79, 70, 229, 0.25)";
+                                      }}
                                     >
-                                      <Code2 size={13} />
+                                      <Code2 size={15} />
                                       View Code
                                     </button>
                                   </td>
@@ -1385,319 +1751,519 @@ export default function AdminBatches() {
                           </tbody>
                         </table>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Modal Footer */}
-                <div style={{ padding: "16px 24px", borderTop: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "right" }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTaskForSubmissions(null)}
-                    style={{
-                      padding: "8px 20px",
-                      background: "#e2e8f0",
-                      color: "#334155",
-                      border: "none",
-                      borderRadius: "9999px",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Close
-                  </button>
+                  {/* Modal Footer */}
+                  <div style={{
+                    padding: "16px 28px",
+                    borderTop: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }}>
+                    <span style={{ fontSize: "12.5px", color: "#64748b" }}>
+                      Showing {filteredSubs.length} of {totalSubmissionsCount} total submissions
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTaskForSubmissions(null);
+                        setIsSubmissionsFullScreen(false);
+                      }}
+                      style={{
+                        padding: "9px 24px",
+                        background: "#e2e8f0",
+                        color: "#334155",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        transition: "background 0.15s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#cbd5e1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* Modal for Viewing Student Submitted Code */}
-          {viewingCodeSubmission && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                backgroundColor: "rgba(15, 23, 42, 0.75)",
-                backdropFilter: "blur(5px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 10000,
-                padding: "20px"
-              }}
-              onClick={() => setViewingCodeSubmission(null)}
-            >
+          {/* Modal for Viewing Student Submitted Code (IDE Style) */}
+          {viewingCodeSubmission && (() => {
+            const rawCode = viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "";
+            const codeLines = rawCode ? rawCode.split("\n") : ["// No code submitted by student"];
+            const submissionLang = (viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase();
+            const fileExtension = submissionLang === "python" ? "py" : submissionLang.includes("c++") || submissionLang.includes("cpp") ? "cpp" : "java";
+            const fileName = `Solution.${fileExtension}`;
+            const isPassed = viewingCodeSubmission.status === "Passed" || viewingCodeSubmission.status === "Completed";
+            const isPartial = viewingCodeSubmission.status === "Partial";
+            const marksVal = viewingCodeSubmission.marks_obtained ?? viewingCodeSubmission.score ?? 0;
+            const maxPoints = viewingCodeSubmission.total_marks || activeTaskForSubmissions?.points || 100;
+
+            return (
               <div
                 style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  maxWidth: "800px",
-                  width: "100%",
-                  maxHeight: "90vh",
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(10, 15, 30, 0.85)",
+                  backdropFilter: "blur(8px)",
                   display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                  overflow: "hidden"
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 10000,
+                  padding: isCodeFullScreen ? "0px" : "20px",
+                  transition: "all 0.2s ease"
                 }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={() => setViewingCodeSubmission(null)}
               >
-                {/* Header */}
-                <div style={{
-                  padding: "18px 24px",
-                  borderBottom: "1px solid #e2e8f0",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "#f8fafc"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "10px",
-                      background: "#e0e7ff",
-                      color: "#4338ca",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}>
-                      <Code2 size={22} />
-                    </div>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-                          {viewingCodeSubmission.name || "Student"}&apos;s Submitted Code
-                        </h3>
-                        <span style={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          padding: "2px 8px",
-                          borderRadius: "6px",
-                          background: "#e2e8f0",
-                          color: "#334155",
-                          fontFamily: "monospace"
-                        }}>
-                          {viewingCodeSubmission.roll_number || "N/A"}
-                        </span>
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: isCodeFullScreen ? "0px" : "18px",
+                    maxWidth: isCodeFullScreen ? "100vw" : "1480px",
+                    width: isCodeFullScreen ? "100vw" : "96vw",
+                    height: isCodeFullScreen ? "100vh" : "94vh",
+                    maxHeight: isCodeFullScreen ? "100vh" : "94vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 30px 70px -15px rgba(0, 0, 0, 0.45)",
+                    overflow: "hidden",
+                    border: isCodeFullScreen ? "none" : "1px solid #cbd5e1"
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Top Header */}
+                  <div style={{
+                    padding: "16px 24px",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+                    flexWrap: "wrap",
+                    gap: "12px"
+                  }}>
+                    {/* Left: Student & Task Info */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                      <div style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 10px rgba(59, 130, 246, 0.3)"
+                      }}>
+                        <Code2 size={22} />
                       </div>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
-                        Task: <strong style={{ color: "#334155" }}>{activeTaskForSubmissions?.title || viewingCodeSubmission.task_title || "Assignment"}</strong>
-                        {viewingCodeSubmission.department ? ` • ${viewingCodeSubmission.department}` : ""}
-                      </p>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                          <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                            {viewingCodeSubmission.name || "Student"}&apos;s Submitted Code
+                          </h3>
+                          <span style={{
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            background: "#e2e8f0",
+                            color: "#334155",
+                            fontFamily: "monospace"
+                          }}>
+                            {viewingCodeSubmission.roll_number || "N/A"}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "12.5px", color: "#64748b", margin: "3px 0 0 0" }}>
+                          Task: <strong style={{ color: "#334155" }}>{activeTaskForSubmissions?.title || viewingCodeSubmission.task_title || "Assignment"}</strong>
+                          {viewingCodeSubmission.department ? ` • ${viewingCodeSubmission.department}` : ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setViewingCodeSubmission(null)}
-                    style={{
-                      background: "#f1f5f9",
-                      border: "none",
-                      borderRadius: "8px",
-                      width: "32px",
-                      height: "32px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#64748b",
-                      cursor: "pointer"
-                    }}
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
 
-                {/* Sub-header / Status Badges */}
-                <div style={{
-                  padding: "10px 24px",
-                  background: "#ffffff",
-                  borderBottom: "1px solid #f1f5f9",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                  fontSize: "12px"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{
-                      background: "#4f46e5",
-                      color: "#ffffff",
-                      padding: "3px 10px",
-                      borderRadius: "6px",
-                      fontWeight: 700,
-                      fontSize: "11.5px",
-                      letterSpacing: "0.5px"
-                    }}>
-                      {(viewingCodeSubmission.language || activeTaskForSubmissions?.language || "Java").toUpperCase()}
-                    </span>
-                    <span style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "5px",
-                      padding: "3px 10px",
-                      borderRadius: "6px",
-                      fontWeight: 600,
-                      fontSize: "11.5px",
-                      background: viewingCodeSubmission.status === "Passed" || viewingCodeSubmission.status === "Completed"
-                        ? "#dcfce7"
-                        : viewingCodeSubmission.status === "Partial"
-                        ? "#fef3c7"
-                        : "#fee2e2",
-                      color: viewingCodeSubmission.status === "Passed" || viewingCodeSubmission.status === "Completed"
-                        ? "#166534"
-                        : viewingCodeSubmission.status === "Partial"
-                        ? "#92400e"
-                        : "#991b1b"
-                    }}>
+                    {/* Right: Badges & Window Action Buttons */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                      {/* Language pill */}
                       <span style={{
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        background: "currentColor"
-                      }} />
-                      {viewingCodeSubmission.status || "Submitted"}
-                    </span>
-                    <span style={{ color: "#475569", fontWeight: 700 }}>
-                      Score: {viewingCodeSubmission.marks_obtained ?? viewingCodeSubmission.score ?? 0} / {viewingCodeSubmission.total_marks || activeTaskForSubmissions?.points || 100} pts
-                    </span>
-                  </div>
-                  <div style={{ color: "#64748b", fontSize: "11.5px" }}>
-                    Submitted: {viewingCodeSubmission.submitted_at ? new Date(viewingCodeSubmission.submitted_at).toLocaleString() : "N/A"}
-                  </div>
-                </div>
+                        background: "#4f46e5",
+                        color: "#ffffff",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        letterSpacing: "0.5px"
+                      }}>
+                        {(viewingCodeSubmission.language || activeTaskForSubmissions?.language || "Java").toUpperCase()}
+                      </span>
 
-                {/* Modal Body */}
-                <div style={{ padding: "20px 24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {/* Code Snippet Box */}
-                  <div style={{ borderRadius: "10px", overflow: "hidden", border: "1px solid #1e293b", background: "#0f172a" }}>
-                    <div style={{
-                      padding: "8px 16px",
-                      background: "#1e293b",
-                      borderBottom: "1px solid #334155",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444" }} />
-                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#f59e0b" }} />
-                        <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10b981" }} />
-                        <span style={{ fontSize: "11px", color: "#94a3b8", marginLeft: "8px", fontFamily: "monospace" }}>
-                          Solution.{(viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase() === "python" ? "py" : (viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase().includes("c++") || (viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase().includes("cpp") ? "cpp" : "java"}
-                        </span>
-                      </div>
+                      {/* Status pill */}
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        background: isPassed ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2",
+                        color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c",
+                        border: `1px solid ${isPassed ? "#bbf7d0" : isPartial ? "#fde68a" : "#fecaca"}`
+                      }}>
+                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "currentColor" }} />
+                        {viewingCodeSubmission.status || "Submitted"}
+                      </span>
+
+                      {/* Score pill */}
+                      <span style={{
+                        background: "#f1f5f9",
+                        color: "#0f172a",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
+                        fontWeight: 800,
+                        fontSize: "12.5px",
+                        border: "1px solid #e2e8f0"
+                      }}>
+                        Score: {marksVal} / {maxPoints} pts
+                      </span>
+
+                      {/* Copy Code button */}
                       <button
                         type="button"
                         onClick={() => {
-                          const codeToCopy = viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "";
-                          navigator.clipboard.writeText(codeToCopy);
+                          navigator.clipboard.writeText(rawCode);
                           setCodeCopied(true);
                           setTimeout(() => setCodeCopied(false), 2000);
                         }}
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "5px",
-                          padding: "4px 10px",
-                          background: codeCopied ? "#059669" : "#334155",
-                          color: "#f8fafc",
-                          border: "none",
-                          borderRadius: "6px",
-                          fontSize: "11.5px",
-                          fontWeight: 600,
+                          gap: "6px",
+                          padding: "6px 13px",
+                          background: codeCopied ? "#16a34a" : "#ffffff",
+                          color: codeCopied ? "#ffffff" : "#334155",
+                          border: `1px solid ${codeCopied ? "#16a34a" : "#cbd5e1"}`,
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          fontWeight: 700,
                           cursor: "pointer",
-                          transition: "background 0.15s ease"
+                          transition: "all 0.15s ease"
                         }}
                       >
-                        {codeCopied ? <Check size={12} /> : <Copy size={12} />}
+                        {codeCopied ? <Check size={14} /> : <Copy size={14} />}
                         {codeCopied ? "Copied!" : "Copy Code"}
                       </button>
+
+                      {/* Download Code button */}
+                      <button
+                        type="button"
+                        onClick={() => downloadSubmissionCode(viewingCodeSubmission, activeTaskForSubmissions)}
+                        title="Download Solution File"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 13px",
+                          background: "#ffffff",
+                          color: "#334155",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                      >
+                        <Download size={14} />
+                        Download
+                      </button>
+
+                      {/* Fullscreen Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setIsCodeFullScreen(!isCodeFullScreen)}
+                        title={isCodeFullScreen ? "Exit Fullscreen" : "Fullscreen Code View"}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          width: "34px",
+                          height: "34px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                      >
+                        {isCodeFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                      </button>
+
+                      {/* Close button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingCodeSubmission(null);
+                          setIsCodeFullScreen(false);
+                        }}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          width: "34px",
+                          height: "34px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#475569"; }}
+                      >
+                        <X size={18} />
+                      </button>
                     </div>
-                    <pre style={{
-                      margin: 0,
-                      padding: "16px",
-                      color: "#e2e8f0",
-                      fontFamily: "'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace",
-                      fontSize: "13px",
-                      lineHeight: "1.65",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-all",
-                      maxHeight: "360px",
-                      overflowY: "auto"
-                    }}>
-                      <code>{viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "// No code submitted by student"}</code>
-                    </pre>
                   </div>
 
-                  {/* Compiler / Evaluation Feedback Output */}
-                  {viewingCodeSubmission.feedback && (
+                  {/* Body Content */}
+                  <div style={{
+                    padding: "20px 24px",
+                    overflowY: "auto",
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "18px",
+                    background: "#0d1117"
+                  }}>
+                    {/* IDE Code Editor Window */}
                     <div style={{
-                      padding: "14px 16px",
-                      borderRadius: "10px",
-                      background: viewingCodeSubmission.status === "Compilation Error" ? "#fef2f2" : "#f8fafc",
-                      border: viewingCodeSubmission.status === "Compilation Error" ? "1px solid #fecaca" : "1px solid #e2e8f0"
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                      border: "1px solid #30363d",
+                      background: "#090d16",
+                      display: "flex",
+                      flexDirection: "column",
+                      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5)",
+                      flex: 1,
+                      minHeight: "420px"
+                    }}>
+                      {/* Editor Titlebar & Tab */}
+                      <div style={{
+                        padding: "10px 16px",
+                        background: "#161b22",
+                        borderBottom: "1px solid #30363d",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          {/* Traffic light macOS dots */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#ef4444" }} />
+                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#f59e0b" }} />
+                            <div style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#10b981" }} />
+                          </div>
+
+                          {/* Active File Tab */}
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: "#0d1117",
+                            padding: "5px 14px",
+                            borderRadius: "6px 6px 0 0",
+                            border: "1px solid #30363d",
+                            borderBottom: "none",
+                            fontSize: "12.5px",
+                            color: "#f0f6fc",
+                            fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                            fontWeight: 600
+                          }}>
+                            <span style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background: submissionLang === "python" ? "#38bdf8" : submissionLang.includes("c++") ? "#f43f5e" : "#fbbf24"
+                            }} />
+                            {fileName}
+                          </div>
+                        </div>
+
+                        {/* File metrics on the right */}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          fontSize: "12px",
+                          color: "#8b949e",
+                          fontFamily: "monospace"
+                        }}>
+                          <span>{codeLines.length} lines</span>
+                          <span>•</span>
+                          <span>{rawCode.length} chars</span>
+                          <span>•</span>
+                          <span style={{ background: "#21262d", padding: "2px 6px", borderRadius: "4px", fontSize: "11px" }}>UTF-8</span>
+                        </div>
+                      </div>
+
+                      {/* Editor Code Body with Line Number Gutter */}
+                      <div style={{
+                        display: "flex",
+                        flex: 1,
+                        overflow: "auto",
+                        minHeight: "360px",
+                        maxHeight: isCodeFullScreen ? "calc(100vh - 350px)" : "520px"
+                      }}>
+                        {/* Line Numbers Gutter */}
+                        <div style={{
+                          userSelect: "none",
+                          padding: "18px 14px 18px 18px",
+                          background: "#080c14",
+                          borderRight: "1px solid #21262d",
+                          color: "#484f58",
+                          textAlign: "right",
+                          fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                          fontSize: "13px",
+                          lineHeight: "1.7",
+                          minWidth: "52px"
+                        }}>
+                          {codeLines.map((_, i) => (
+                            <div key={i}>{i + 1}</div>
+                          ))}
+                        </div>
+
+                        {/* Actual Code View */}
+                        <pre style={{
+                          margin: 0,
+                          padding: "18px 24px",
+                          flex: 1,
+                          color: "#e6edf3",
+                          fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                          fontSize: "13.5px",
+                          lineHeight: "1.7",
+                          whiteSpace: "pre",
+                          overflowX: "auto",
+                          overflowY: "auto",
+                          background: "#090d16"
+                        }}>
+                          <code>{rawCode || "// No code content submitted by student"}</code>
+                        </pre>
+                      </div>
+                    </div>
+
+                    {/* Evaluation Result & Execution Console Card */}
+                    <div style={{
+                      borderRadius: "12px",
+                      background: isPassed ? "#062817" : viewingCodeSubmission.status === "Compilation Error" ? "#2a0d0d" : "#161b22",
+                      border: `1px solid ${isPassed ? "#059669" : viewingCodeSubmission.status === "Compilation Error" ? "#991b1b" : "#30363d"}`,
+                      padding: "16px 20px"
                     }}>
                       <div style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: viewingCodeSubmission.status === "Compilation Error" ? "#991b1b" : "#334155",
-                        marginBottom: "6px"
+                        justifyContent: "space-between",
+                        marginBottom: "10px",
+                        flexWrap: "wrap",
+                        gap: "8px"
                       }}>
-                        <Terminal size={15} />
-                        {viewingCodeSubmission.status === "Compilation Error" ? "Compilation / Runtime Error Details" : "Evaluation Result & Feedback"}
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "13.5px",
+                          fontWeight: 700,
+                          color: isPassed ? "#34d399" : viewingCodeSubmission.status === "Compilation Error" ? "#f87171" : "#f0f6fc"
+                        }}>
+                          <Terminal size={17} />
+                          {viewingCodeSubmission.status === "Compilation Error"
+                            ? "Compilation / Runtime Error Details"
+                            : isPassed
+                            ? "Auto-Evaluation: All Test Cases Passed Successfully"
+                            : "Evaluation Result & Feedback"}
+                        </div>
+                        <span style={{
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          background: isPassed ? "#064e3b" : "#21262d",
+                          color: isPassed ? "#6ee7b7" : "#e6edf3"
+                        }}>
+                          Awarded: {marksVal} / {maxPoints} Points
+                        </span>
                       </div>
+
                       <pre style={{
                         margin: 0,
-                        padding: "10px 12px",
-                        background: viewingCodeSubmission.status === "Compilation Error" ? "#450a0a" : "#0f172a",
-                        color: viewingCodeSubmission.status === "Compilation Error" ? "#fca5a5" : "#94a3b8",
+                        padding: "12px 16px",
+                        background: "#020617",
+                        color: isPassed ? "#4ade80" : viewingCodeSubmission.status === "Compilation Error" ? "#fca5a5" : "#94a3b8",
                         borderRadius: "8px",
-                        fontFamily: "monospace",
-                        fontSize: "12px",
-                        lineHeight: "1.5",
+                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+                        fontSize: "12.5px",
+                        lineHeight: "1.6",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-all",
                         maxHeight: "180px",
-                        overflowY: "auto"
+                        overflowY: "auto",
+                        border: "1px solid #1e293b"
                       }}>
-                        {viewingCodeSubmission.feedback}
+                        {viewingCodeSubmission.feedback || (isPassed ? "Passed all test cases (100% Score)" : "No evaluator feedback provided.")}
                       </pre>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Modal Footer */}
-                <div style={{
-                  padding: "14px 24px",
-                  borderTop: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                  display: "flex",
-                  justifyContent: "flex-end"
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setViewingCodeSubmission(null)}
-                    style={{
-                      padding: "8px 22px",
-                      background: "#e2e8f0",
-                      color: "#334155",
-                      border: "none",
-                      borderRadius: "9999px",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Close Code Viewer
-                  </button>
+                  {/* Modal Footer */}
+                  <div style={{
+                    padding: "14px 28px",
+                    borderTop: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#64748b", fontSize: "12.5px" }}>
+                      <Clock size={15} />
+                      <span>Submitted on: {viewingCodeSubmission.submitted_at ? new Date(viewingCodeSubmission.submitted_at).toLocaleString() : "N/A"}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewingCodeSubmission(null);
+                        setIsCodeFullScreen(false);
+                      }}
+                      style={{
+                        padding: "9px 24px",
+                        background: "#e2e8f0",
+                        color: "#334155",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        transition: "background 0.15s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#cbd5e1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                    >
+                      Close Code Viewer
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     );
