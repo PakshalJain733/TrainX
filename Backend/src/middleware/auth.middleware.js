@@ -6,7 +6,7 @@ import { query } from '../config/db.js';
 // In-memory cache for user active status to optimize high-frequency authenticated requests
 // Structure: Map<userId, { exists: boolean, isActive: boolean, role: string, collegeId: any, expiresAt: number }>
 const userActiveCache = new Map();
-const CACHE_TTL_MS = 30 * 1000; // 30 seconds bounded window
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes bounded window to prevent DB query storms
 
 /**
  * Immediately invalidates cached authentication status for a user by evicting
@@ -87,8 +87,9 @@ export async function verifyUserIsActive(userId) {
 
     return isActive;
   } catch (err) {
-    console.error(`[Auth] Database check error for user ${numId} (FAIL-CLOSED):`, err.message);
-    return false; // Fail closed on database error
+    console.error(`[Auth] Database check error for user ${numId}:`, err.message);
+    if (cached && cached.exists) return Boolean(cached.isActive);
+    return true; // Fallback to cryptographically valid token on transient DB error
   }
 }
 
@@ -182,9 +183,22 @@ export const authenticateToken = async (req, res, next) => {
       };
       userActiveCache.set(userId, userStatus);
     } catch (dbErr) {
-      console.error(`[Auth Middleware] Database error checking active status for user ${userId} (FAIL-CLOSED):`, dbErr.message);
-      // FAIL CLOSED: do not allow unverified tokens when database is unavailable or query fails
-      return sendError(res, 'Authentication verification failed. Please try again.', 401);
+      console.error(`[Auth Middleware] Database error checking active status for user ${userId}:`, dbErr.message);
+      if (cached && cached.exists && cached.isActive) {
+        userStatus = cached;
+      } else if (decodedUser && decodedUser.role) {
+        req.user = {
+          ...decodedUser,
+          id: userId,
+          userId: userId,
+          collegeId: decodedUser.collegeId || decodedUser.college_id || null,
+          college_id: decodedUser.collegeId || decodedUser.college_id || null,
+          role: decodedUser.role,
+        };
+        return next();
+      } else {
+        return sendError(res, 'Database temporarily unavailable. Please retry in a moment.', 503);
+      }
     }
   }
 

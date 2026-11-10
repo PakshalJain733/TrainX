@@ -84,6 +84,20 @@ export function getAuthToken() {
   return null;
 }
 
+export function isTokenExpired(rawToken) {
+  if (!rawToken || typeof rawToken !== "string") return true;
+  try {
+    const parts = rawToken.split(".");
+    if (parts.length < 2) return true;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.exp) return false;
+    const nowSec = Math.floor(Date.now() / 1000);
+    return payload.exp < nowSec;
+  } catch {
+    return false;
+  }
+}
+
 export async function apiFetch(endpoint, options = {}) {
   try {
     let token = getAuthToken();
@@ -117,10 +131,11 @@ export async function apiFetch(endpoint, options = {}) {
       const message = errorData.message || `Request failed with status ${res.status}`;
       console.warn(`[apiFetch] ${endpoint}: ${message}`);
 
-      // Handle invalid or dead session tokens (e.g. user deleted or database reseeded)
+      // Handle invalid or dead session tokens ONLY if the token itself is genuinely expired
       if (res.status === 401 && token) {
         const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/verify-otp') || endpoint.includes('/auth/register');
-        if (!isAuthEndpoint) {
+        const tokenIsExpired = isTokenExpired(token);
+        if (!isAuthEndpoint && tokenIsExpired) {
           sessionStorage.removeItem("token");
           sessionStorage.removeItem("authToken");
           sessionStorage.removeItem("auth_token");

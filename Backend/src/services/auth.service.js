@@ -52,7 +52,8 @@ const assertUserCanAuthenticate = async (user) => {
   if (!user) {
     throw createAuthError('Invalid credentials.', 401);
   }
-  if (user.role === 'super_admin') return;
+  const roleNormalized = String(user.role || '').toLowerCase().replace(/_/g, '');
+  if (roleNormalized === 'superadmin' || roleNormalized.includes('super')) return;
 
   const isVerified = user.is_verified === 1 || user.is_verified === true || user.is_verified === '1';
   if (!isVerified) {

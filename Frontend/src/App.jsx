@@ -318,6 +318,8 @@ function App() {
             </Route>
             <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
             <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/super_admin/*" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/super_admin" element={<Navigate to="/super-admin" replace />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

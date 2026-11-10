@@ -8,7 +8,7 @@ import FullNotificationModal from "../../../components/ui/FullNotificationModal"
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/SA_Layout.css";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 
 const defaultNotificationsList = [];
 
@@ -445,15 +445,16 @@ export default function SuperAdminLayout() {
 
   const fetchUser = async () => {
     try {
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      const token = getAuthToken();
       if (!token) return;
       const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
-          const name = (typeof data.user.name === 'string' && data.user.name) || (typeof data.user.email === 'string' && data.user.email) || "Super Admin";
+        const userObj = data.data || data.user;
+        if (userObj) {
+          const name = (typeof userObj.name === 'string' && userObj.name) || (typeof userObj.email === 'string' && userObj.email) || "Super Admin";
           const initials = typeof name === 'string' && name.trim()
             ? name.trim()
                 .split(' ')
@@ -464,10 +465,13 @@ export default function SuperAdminLayout() {
             : "SA";
           setUserProfile({
             name,
-            email: data.user.email || "admin@trainingportal.com",
+            email: userObj.email || "admin@trainingportal.com",
             initials: initials || "SA"
           });
-          sessionStorage.setItem('user', JSON.stringify(data.user));
+          const curStored = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+          const merged = { ...curStored, ...userObj, name };
+          sessionStorage.setItem('user', JSON.stringify(merged));
+          if (localStorage.getItem('user')) localStorage.setItem('user', JSON.stringify(merged));
         }
       }
     } catch (err) {
