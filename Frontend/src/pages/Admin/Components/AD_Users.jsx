@@ -2103,6 +2103,9 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", message: "" });
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+  const [sentEmailIds, setSentEmailIds] = useState({});
+  const [actionToast, setActionToast] = useState(null);
   const [isSyncingCG, setIsSyncingCG] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [syncSummary, setSyncSummary] = useState(null);
@@ -2353,21 +2356,28 @@ export default function AdminUsers() {
   };
 
   const handleResendActivation = async (user) => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || sendingEmailId) return;
+    setSendingEmailId(user.id);
+    setActionToast(null);
     try {
       const res = await apiFetch(`/admin/users/${user.id}/resend-activation`, {
         method: "POST",
       });
       if (res && (res.data || res.success)) {
-        setSuccessMsg(res.message || `Activation email re-sent to ${user.email}`);
-        setTimeout(() => setSuccessMsg(""), 3500);
+        const msg = res.message || `Activation email successfully sent to ${user.email}`;
+        setActionToast({ type: "success", message: msg });
+        setSentEmailIds(prev => ({ ...prev, [user.id]: true }));
+        setTimeout(() => setActionToast(null), 5000);
       } else {
-        setErrorMsg(res?.message || res?.error || "Failed to resend activation email");
-        setTimeout(() => setErrorMsg(""), 3500);
+        const err = res?.message || res?.error || "Failed to resend activation email";
+        setActionToast({ type: "error", message: err });
+        setTimeout(() => setActionToast(null), 5000);
       }
     } catch (err) {
-      setErrorMsg(err.message || "Failed to resend activation email");
-      setTimeout(() => setErrorMsg(""), 3500);
+      setActionToast({ type: "error", message: err.message || "Failed to resend activation email" });
+      setTimeout(() => setActionToast(null), 5000);
+    } finally {
+      setSendingEmailId(null);
     }
   };
 
@@ -2704,6 +2714,43 @@ export default function AdminUsers() {
         </div>
       )}
 
+      {/* Action Toast Alert */}
+      {actionToast && (
+        <div 
+          style={{
+            margin: "0 0 16px 0",
+            padding: "12px 18px",
+            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: actionToast.type === "success" ? "#ecfdf5" : "#fef2f2",
+            border: `1px solid ${actionToast.type === "success" ? "#a7f3d0" : "#fecaca"}`,
+            color: actionToast.type === "success" ? "#065f46" : "#991b1b",
+            fontSize: "14px",
+            fontWeight: 500,
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+            animation: "fadeIn 0.25s ease-out"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {actionToast.type === "success" ? (
+              <CheckCircle2 size={18} style={{ color: "#10b981", flexShrink: 0 }} />
+            ) : (
+              <AlertCircle size={18} style={{ color: "#ef4444", flexShrink: 0 }} />
+            )}
+            <span>{actionToast.message}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setActionToast(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: "4px" }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="admin-users-table-card">
         <div className="admin-users-table-responsive">
@@ -2787,11 +2834,23 @@ export default function AdminUsers() {
                         {(u.is_active === 0 || !u.is_verified) && u.email && (
                           <button
                             className="btn-table-action"
-                            style={{ color: "#4f46e5", borderColor: "#c7d2fe" }}
-                            title="Resend Activation Email"
+                            style={{ 
+                              color: sentEmailIds[u.id] ? "#10b981" : "#4f46e5", 
+                              borderColor: sentEmailIds[u.id] ? "#a7f3d0" : "#c7d2fe",
+                              backgroundColor: sentEmailIds[u.id] ? "#ecfdf5" : undefined,
+                              cursor: sendingEmailId === u.id ? "wait" : "pointer"
+                            }}
+                            title={sentEmailIds[u.id] ? "Activation email sent!" : (sendingEmailId === u.id ? "Sending activation email..." : "Resend Activation Email")}
+                            disabled={sendingEmailId === u.id}
                             onClick={() => handleResendActivation(u)}
                           >
-                            <Mail size={14} />
+                            {sendingEmailId === u.id ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : sentEmailIds[u.id] ? (
+                              <Check size={14} style={{ color: "#10b981" }} />
+                            ) : (
+                              <Mail size={14} />
+                            )}
                           </button>
                         )}
                         {isModuleActive("adminApproveUsers") && !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1") && (

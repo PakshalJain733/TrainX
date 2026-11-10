@@ -266,9 +266,6 @@ export default function ActivateAccount() {
         {/* Header Branding */}
         <div className="activate-account-header">
           <img src={Logo2} alt="TrainX" className="activate-account-logo" />
-          <div className="activate-account-badge">
-            {Icons.shieldCheck} TrainX Verified
-          </div>
           <h1 className="activate-account-title">Activate Your Account</h1>
           <p className="activate-account-subtitle">
             Welcome to TrainX. Set your private password to activate your account.

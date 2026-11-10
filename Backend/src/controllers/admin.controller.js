@@ -25,6 +25,8 @@ import {
   sendStaffActivationEmail,
   sendAdminDirectCreatedEmail,
   sendAccountRejectionEmail,
+  sendAdminInvitationCodeEmail,
+  sendStaffInvitationCodeEmail,
 } from '../services/email.service.js';
 import { createAccountActivation } from '../modules/integrations/careerGateway/services/accountActivation.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
@@ -378,6 +380,60 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
       return sendError(res, 'Access forbidden: Cannot resend activation for user from another college', 403);
     }
 
+    const userRole = (user.role || '').toLowerCase();
+    const collegeName = req.user?.collegeName || user.college_name || 'TrainX Partner Institution';
+
+    // If role is mentor, coordinator, trainer, or college_admin, use the Secure Code Activation flow
+    if (['mentor', 'coordinator', 'trainer', 'college_admin', 'admin'].includes(userRole)) {
+      // Find active unused secure code, or create a fresh one
+      const activeRows = await query(
+        `SELECT code FROM secure_codes 
+         WHERE (email = ? OR role = ?) AND is_used = 0 AND expires_at > NOW() 
+         ORDER BY id DESC LIMIT 1`,
+        [user.email, userRole]
+      );
+
+      let codeToUse = activeRows && activeRows.length > 0 ? activeRows[0].code : null;
+
+      if (!codeToUse) {
+        const prefix = userRole === 'coordinator' ? 'CO' : (['college_admin', 'admin'].includes(userRole) ? 'ADM' : (userRole === 'trainer' ? 'TRN' : 'FAC'));
+        const year = new Date().getFullYear();
+        const randomDigits = Math.floor(1000 + Math.random() * 9000);
+        codeToUse = `${prefix}-${year}-${randomDigits}`;
+
+        await createSecureCode({
+          code: codeToUse,
+          role: userRole,
+          college_id: user.college_id || req.user?.collegeId || null,
+          email: user.email,
+          created_by: req.user?.id || null,
+          email_delivery_status: 'sent',
+          max_uses: 1,
+          expires_in_hours: 72,
+        });
+      }
+
+      if (['college_admin', 'admin'].includes(userRole)) {
+        await sendAdminInvitationCodeEmail({
+          to: user.email,
+          name: user.name,
+          code: codeToUse,
+          collegeName,
+        });
+      } else {
+        await sendStaffInvitationCodeEmail({
+          to: user.email,
+          name: user.name,
+          role: user.role,
+          code: codeToUse,
+          collegeName,
+        });
+      }
+
+      return sendSuccess(res, `Activation email with secure code successfully sent to ${user.email}`);
+    }
+
+    // Default flow (e.g. students)
     const { rawToken } = await createAccountActivation(user.id);
     await sendStaffActivationEmail({
       to: user.email,

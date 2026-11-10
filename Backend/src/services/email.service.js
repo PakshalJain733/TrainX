@@ -1056,17 +1056,17 @@ export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawTo
   try {
     const frontendUrl = getPrimaryFrontendUrl();
     const activationLink = `${frontendUrl}/activate-account?token=${rawToken}&email=${encodeURIComponent(to)}`;
-    const subject = 'Welcome to Career Gateway – Activate Your Account';
+    const subject = 'Welcome to TrainX – Activate Your Account';
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
-        Welcome to Career Gateway! 🎉
+        Welcome to TrainX! 🎉
       </div>
       <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
         Hello <strong>${name}</strong>,
       </p>
       <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        Welcome to Career Gateway!
+        Welcome to TrainX!
       </p>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
         Your account has been successfully created by the administrator.
@@ -1082,7 +1082,7 @@ export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawTo
       </div>
 
       <p style="margin: 24px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
-        After successfully setting your password, you can log in to Career Gateway using your registered email address and newly created password.
+        After successfully setting your password, you can log in to TrainX using your registered email address and newly created password.
       </p>
 
       <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0; border: 1px solid #e2e8f0;">
@@ -1094,18 +1094,18 @@ export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawTo
 
       <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
         Best Regards,<br/>
-        <strong>Career Gateway Team</strong>
+        <strong>TrainX Team</strong>
       </p>
     `;
 
     const htmlContent = renderBaseTemplate({
       title: 'Activate Your Account',
-      subtitle: 'Career Gateway Staff & Administrator Onboarding',
+      subtitle: 'TrainX Staff & Administrator Onboarding',
       contentHtml,
       footerNote: 'This activation link is valid for 72 hours and can only be used once. For security reasons, do not share this link.',
     });
 
-    const textContent = `Hello ${name},\n\nWelcome to Career Gateway!\n\nYour account has been successfully created by the administrator.\n\nTo get started, please activate your account and set your password by visiting:\n${activationLink}\n\nAfter successfully setting your password, you can log in to Career Gateway using your registered email address and newly created password.\n\nBest Regards,\nCareer Gateway Team`;
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYour account has been successfully created by the administrator.\n\nTo get started, please activate your account and set your password by visiting:\n${activationLink}\n\nAfter successfully setting your password, you can log in to TrainX using your registered email address and newly created password.\n\nBest Regards,\nTrainX Team`;
 
     return await sendEmail({
       to,
