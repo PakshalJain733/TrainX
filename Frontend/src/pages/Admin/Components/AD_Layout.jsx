@@ -5,8 +5,6 @@ import { AdminSidebar } from "./AD_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import "../Styles/AD_Layout.css";
-import logoImg from "../../../assets/Logo.png";
-import trainXImg from "../../../assets/TrainX.png";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
@@ -574,17 +572,6 @@ export default function AdminLayout() {
                   </button>
                 </AppTooltip>
 
-                {collapsed && (
-                  <Link to="/admin" className="admin-header__collapsed-brand">
-                    <div className="admin-header__collapsed-logo-box">
-                      <img src={logoImg} alt="TrainX" className="admin-header__collapsed-logo" />
-                    </div>
-                    <div className="admin-header__collapsed-brand-text">
-                      <span className="admin-header__collapsed-name">Train</span>
-                      <img src={trainXImg} alt="X" className="admin-header__collapsed-x" />
-                    </div>
-                  </Link>
-                )}
 
                 <GlobalHeaderSearch role="admin" />
               </div>

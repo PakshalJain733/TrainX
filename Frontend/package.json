@@ -38,5 +38,9 @@
   },
   "overrides": {
     "dompurify": "^3.4.17"
+  },
+  "engines": {
+    "node": ">=18.20.0",
+    "npm": ">=10.0.0"
   }
 }
