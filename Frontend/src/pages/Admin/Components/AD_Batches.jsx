@@ -1258,7 +1258,7 @@ export default function AdminBatches() {
             </div>
           )}
 
-          {/* Modal for View Submissions */}
+          {/* Modal for View Submissions (Full Viewport Portal Covering Sidebar) */}
           {activeTaskForSubmissions && (() => {
             const totalSubmissionsCount = taskSubmissions.length;
             const passedSubmissionsCount = taskSubmissions.filter((s) => s.status === "Passed" || s.status === "Completed").length;
@@ -1280,62 +1280,67 @@ export default function AdminBatches() {
               return true;
             });
 
-            return (
+            return createPortal(
               <div
                 style={{
                   position: "fixed",
                   inset: 0,
-                  backgroundColor: "rgba(15, 23, 42, 0.75)",
-                  backdropFilter: "blur(6px)",
+                  backgroundColor: "rgba(15, 23, 42, 0.65)",
+                  backdropFilter: "blur(8px)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  zIndex: 9999,
-                  padding: isSubmissionsFullScreen ? "0px" : "20px",
+                  zIndex: 99999,
+                  padding: isSubmissionsFullScreen ? "0px" : "16px",
                   transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setActiveTaskForSubmissions(null);
+                  setIsSubmissionsFullScreen(false);
                 }}
               >
                 <div
                   style={{
                     background: "#ffffff",
                     borderRadius: isSubmissionsFullScreen ? "0px" : "18px",
-                    maxWidth: isSubmissionsFullScreen ? "100vw" : "1400px",
-                    width: isSubmissionsFullScreen ? "100vw" : "96vw",
-                    height: isSubmissionsFullScreen ? "100vh" : "92vh",
-                    maxHeight: isSubmissionsFullScreen ? "100vh" : "92vh",
+                    width: isSubmissionsFullScreen ? "100vw" : "min(1440px, calc(100vw - 32px))",
+                    height: isSubmissionsFullScreen ? "100vh" : "min(880px, calc(100vh - 32px))",
+                    maxWidth: isSubmissionsFullScreen ? "100vw" : "1440px",
+                    maxHeight: isSubmissionsFullScreen ? "100vh" : "880px",
                     display: "flex",
                     flexDirection: "column",
-                    boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.3)",
+                    boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
                     overflow: "hidden",
-                    border: isSubmissionsFullScreen ? "none" : "1px solid #e2e8f0"
+                    border: isSubmissionsFullScreen ? "none" : "1px solid #cbd5e1"
                   }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Modal Header */}
+                  {/* Clean White Modal Header matching Assign Topics Portal */}
                   <div style={{
-                    padding: "20px 28px",
+                    padding: "16px 24px",
                     borderBottom: "1px solid #e2e8f0",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)"
+                    background: "#ffffff",
+                    flexShrink: 0
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                       <div style={{
                         width: "44px",
                         height: "44px",
                         borderRadius: "12px",
-                        background: "linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)",
-                        color: "#ffffff",
+                        background: "rgba(79, 70, 229, 0.08)",
+                        color: "#4f46e5",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 4px 10px rgba(79, 70, 229, 0.3)"
+                        justifyContent: "center"
                       }}>
                         <Code2 size={24} />
                       </div>
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                          <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                          <h3 style={{ fontSize: "19px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
                             Submissions: {activeTaskForSubmissions.title}
                           </h3>
                           <span style={{
@@ -1359,7 +1364,7 @@ export default function AdminBatches() {
                             Language: {(activeTaskForSubmissions?.language || "Java").toUpperCase()}
                           </span>
                         </div>
-                        <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 0 0" }}>
+                        <p style={{ fontSize: "13px", color: "#64748b", margin: "3px 0 0 0" }}>
                           Student code submissions & auto-evaluation results • Max Score: {maxPossiblePoints} pts
                         </p>
                       </div>
@@ -1373,8 +1378,8 @@ export default function AdminBatches() {
                           background: "#ffffff",
                           border: "1px solid #cbd5e1",
                           borderRadius: "10px",
-                          width: "38px",
-                          height: "38px",
+                          width: "36px",
+                          height: "36px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -1382,10 +1387,10 @@ export default function AdminBatches() {
                           cursor: "pointer",
                           transition: "all 0.15s ease"
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.borderColor = "#94a3b8"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.borderColor = "#cbd5e1"; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
                       >
-                        {isSubmissionsFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                        {isSubmissionsFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                       </button>
                       <button
                         type="button"
@@ -1394,22 +1399,22 @@ export default function AdminBatches() {
                           setIsSubmissionsFullScreen(false);
                         }}
                         style={{
-                          background: "#ffffff",
-                          border: "1px solid #cbd5e1",
+                          background: "#f1f5f9",
+                          border: "none",
                           borderRadius: "10px",
-                          width: "38px",
-                          height: "38px",
+                          width: "36px",
+                          height: "36px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: "#475569",
+                          color: "#64748b",
                           cursor: "pointer",
                           transition: "all 0.15s ease"
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; e.currentTarget.style.color = "#475569"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
                       >
-                        <X size={20} />
+                        <X size={18} />
                       </button>
                     </div>
                   </div>
@@ -1761,7 +1766,8 @@ export default function AdminBatches() {
                     background: "#f8fafc",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between"
+                    justifyContent: "space-between",
+                    flexShrink: 0
                   }}>
                     <span style={{ fontSize: "12.5px", color: "#64748b" }}>
                       Showing {filteredSubs.length} of {totalSubmissionsCount} total submissions
@@ -1790,11 +1796,12 @@ export default function AdminBatches() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             );
           })()}
 
-          {/* Modal for Viewing Student Submitted Code (IDE Style) */}
+          {/* Modal for Viewing Student Submitted Code (Full Viewport Portal Covering Sidebar) */}
           {viewingCodeSubmission && (() => {
             const rawCode = viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "";
             const codeLines = rawCode ? rawCode.split("\n") : ["// No code submitted by student"];
@@ -1806,7 +1813,7 @@ export default function AdminBatches() {
             const marksVal = viewingCodeSubmission.marks_obtained ?? viewingCodeSubmission.score ?? 0;
             const maxPoints = viewingCodeSubmission.total_marks || activeTaskForSubmissions?.points || 100;
 
-            return (
+            return createPortal(
               <div
                 style={{
                   position: "fixed",
@@ -1816,20 +1823,23 @@ export default function AdminBatches() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  zIndex: 10000,
-                  padding: isCodeFullScreen ? "0px" : "20px",
+                  zIndex: 100000,
+                  padding: isCodeFullScreen ? "0px" : "16px",
                   transition: "all 0.2s ease"
                 }}
-                onClick={() => setViewingCodeSubmission(null)}
+                onClick={() => {
+                  setViewingCodeSubmission(null);
+                  setIsCodeFullScreen(false);
+                }}
               >
                 <div
                   style={{
                     background: "#ffffff",
                     borderRadius: isCodeFullScreen ? "0px" : "18px",
+                    width: isCodeFullScreen ? "100vw" : "min(1480px, calc(100vw - 32px))",
+                    height: isCodeFullScreen ? "100vh" : "min(920px, calc(100vh - 32px))",
                     maxWidth: isCodeFullScreen ? "100vw" : "1480px",
-                    width: isCodeFullScreen ? "100vw" : "96vw",
-                    height: isCodeFullScreen ? "100vh" : "94vh",
-                    maxHeight: isCodeFullScreen ? "100vh" : "94vh",
+                    maxHeight: isCodeFullScreen ? "100vh" : "920px",
                     display: "flex",
                     flexDirection: "column",
                     boxShadow: "0 30px 70px -15px rgba(0, 0, 0, 0.45)",
@@ -1845,9 +1855,10 @@ export default function AdminBatches() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
+                    background: "#ffffff",
                     flexWrap: "wrap",
-                    gap: "12px"
+                    gap: "12px",
+                    flexShrink: 0
                   }}>
                     {/* Left: Student & Task Info */}
                     <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -2261,7 +2272,8 @@ export default function AdminBatches() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             );
           })()}
         </div>
