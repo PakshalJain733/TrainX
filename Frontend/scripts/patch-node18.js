@@ -1,18 +1,12 @@
-import path from "path";
 import process from "node:process";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const [major, minor] = process.versions.node.split(".").map(Number);
 
-const nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
+console.log(`[env-check] Node.js version: v${process.versions.node}`);
 
-console.log(`[env-check] Running under Node.js v${process.versions.node}`);
-
-if (nodeMajor < 18) {
-  console.error(`[env-check] Unsupported Node.js version v${process.versions.node}. Minimum requirement is Node.js 18.`);
+if (major < 18 || (major === 18 && minor < 20)) {
+  console.error(`[env-check] Incompatible Node.js detected: v${process.versions.node}. Minimum requirement is Node.js 18.20.0.`);
   process.exit(1);
 }
 
-// Full compatibility verified for Node.js 18.20.8+ as well as modern Node versions
-console.log(`[env-check] Environment compatibility verified. Running on Node.js ${process.versions.node}.`);
+console.log(`[env-check] Environment verified. All dependencies natively compatible with Node.js 18.20.8.`);

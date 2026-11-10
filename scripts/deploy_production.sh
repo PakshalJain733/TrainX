@@ -67,11 +67,11 @@ log_info "Current deployment commit: ${CURRENT_COMMIT}"
 
 # --- Step 3: Frontend Build & Verification ---
 cd "${FRONTEND_DIR}"
-log_info "Installing frontend dependencies (engine-strict=false)..."
+log_info "Installing frontend dependencies with npm ci..."
 if [ -f "package-lock.json" ]; then
-  npm ci --engine-strict=false --prefer-offline 2>&1 || npm install --engine-strict=false
+  npm ci --prefer-offline 2>&1 || npm install
 else
-  npm install --engine-strict=false
+  npm install
 fi
 
 log_info "Building frontend production bundle..."
