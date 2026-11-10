@@ -8,8 +8,7 @@ import "../Styles/CO_Sidebar.css";
 
 function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   return (
-    <AppTooltip text="TrainX Overview" show={collapsed && !mobileOpen} position="right">
-      <Link
+    <Link
         to="/coordinator"
         className="sidebar-brand"
         style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
@@ -27,7 +26,6 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
           </div>
         )}
       </Link>
-    </AppTooltip>
   );
 }
 
