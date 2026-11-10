@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "react-router-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus, Plus } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2, ShieldAlert, Repeat, UserX, UserMinus, Plus, Mail } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -2349,6 +2349,25 @@ export default function AdminUsers() {
     }
   };
 
+  const handleResendActivation = async (user) => {
+    if (!user || !user.id) return;
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/resend-activation`, {
+        method: "POST",
+      });
+      if (res && (res.data || res.success)) {
+        setSuccessMsg(res.message || `Activation email re-sent to ${user.email}`);
+        setTimeout(() => setSuccessMsg(""), 3500);
+      } else {
+        setErrorMsg(res?.message || res?.error || "Failed to resend activation email");
+        setTimeout(() => setErrorMsg(""), 3500);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || "Failed to resend activation email");
+      setTimeout(() => setErrorMsg(""), 3500);
+    }
+  };
+
   const handleOpenEdit = (user) => {
     setSelectedUser(user);
     setFormData({
@@ -2742,6 +2761,15 @@ export default function AdminUsers() {
                       {(() => {
                         const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1" || !isModuleActive("adminApproveUsers");
                         const isActive = u.is_active === 1 || u.is_active === true || String(u.is_active) === "1" || u.is_active === undefined;
+                        const isPendingActivation = (u.is_active === 0 || u.is_active === false || String(u.is_active) === "0" || !u.is_verified);
+                        if (isPendingActivation) {
+                          return (
+                            <span className="status-badge" style={{ backgroundColor: "#fef3c7", color: "#b45309", borderColor: "#fde68a" }}>
+                              <span className="status-dot" style={{ backgroundColor: "#f59e0b" }}></span>
+                              Pending Activation
+                            </span>
+                          );
+                        }
                         const showActive = isApproved && isActive;
                         return (
                           <span className={`status-badge ${showActive ? "status-badge--active" : "status-badge--inactive"}`}>
@@ -2753,6 +2781,16 @@ export default function AdminUsers() {
                     </td>
                     <td>
                       <div className="action-btns-row action-btns-right">
+                        {(u.is_active === 0 || !u.is_verified) && u.email && (
+                          <button
+                            className="btn-table-action"
+                            style={{ color: "#4f46e5", borderColor: "#c7d2fe" }}
+                            title="Resend Activation Email"
+                            onClick={() => handleResendActivation(u)}
+                          >
+                            <Mail size={14} />
+                          </button>
+                        )}
                         {isModuleActive("adminApproveUsers") && !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === "1") && (
                           <button
                             className="btn-table-action btn-table-action--approve"
@@ -2837,6 +2875,7 @@ export default function AdminUsers() {
                         setGeneratedCode('');
                       }}
                       options={[
+                        { value: "college_admin", label: "Admin" },
                         { value: "student", label: "Student" },
                         { value: "trainer", label: "Trainer" },
                         { value: "mentor", label: "Mentor" },

@@ -17,7 +17,8 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
-import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail } from '../services/email.service.js';
+import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail, sendStaffActivationEmail } from '../services/email.service.js';
+import { createAccountActivation } from '../modules/integrations/careerGateway/services/accountActivation.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 import { createNotification } from '../services/notification.service.js';
 import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
@@ -56,12 +57,12 @@ const normalizeRole = (role) => {
 };
 
 /**
- * Privilege guard: only a super_admin may assign admin-level roles.
- * College admins may only manage coordinator / mentor / student accounts.
+ * Privilege guard: allows Super Admin to assign any role, and College Admins
+ * to provision Admin, Coordinator, Mentor, Trainer, and Student accounts.
  */
 const canAssignRole = (callerRole, targetRole) => {
   if (isSuperAdminRole(callerRole)) return true;
-  return [ROLES.COORDINATOR, ROLES.MENTOR, ROLES.TRAINER, ROLES.STUDENT].includes(targetRole);
+  return [ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR, ROLES.TRAINER, ROLES.STUDENT].includes(targetRole);
 };
 
 /**
@@ -315,6 +316,44 @@ export const rejectUserAdmin = async (req, res, next) => {
 };
 
 /**
+ * Resend activation email to staff/admin user who is pending activation
+ */
+export const resendStaffActivationAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await findUserById(id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    if (user.is_active === 1 && user.password_hash && user.password_hash.trim().length > 0) {
+      return sendError(res, 'This user account is already active and password has been configured.', 400);
+    }
+
+    if (!user.email || !user.email.includes('@')) {
+      return sendError(res, 'User does not have a valid email address configured.', 400);
+    }
+
+    // College isolation check
+    if (!isSuperAdminRole(req.user?.role) && req.user?.collegeId && user.college_id && user.college_id !== req.user.collegeId) {
+      return sendError(res, 'Access forbidden: Cannot resend activation for user from another college', 403);
+    }
+
+    const { rawToken } = await createAccountActivation(user.id);
+    await sendStaffActivationEmail({
+      to: user.email,
+      name: user.name,
+      role: user.role,
+      rawToken,
+    });
+
+    return sendSuccess(res, `Activation email successfully re-sent to ${user.email}`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * User Hierarchy Assignment: User -> College -> Department -> Batch -> Role
  */
 export const createUserAdmin = async (req, res, next) => {
@@ -414,10 +453,18 @@ export const createUserAdmin = async (req, res, next) => {
       String(canonicalRole).includes('admin')
     );
 
-    // For non-student staff roles (Coordinator, Mentor) or self-registering College Admins:
-    // Ensure a Secure Access Code exists so user can complete registration with it if needed.
+    // For non-student staff roles (Admin, Coordinator, Mentor, Trainer):
+    // Accounts are created with Pending Activation (is_active: 0, is_verified: 0, is_approved: 1).
+    // An activation email with a single-use token is sent so the user can set their own password.
+    // No default password is stored or sent.
+    const isStaffRole = canonicalRole === ROLES.COORDINATOR || 
+                        canonicalRole === ROLES.MENTOR || 
+                        canonicalRole === ROLES.TRAINER || 
+                        canonicalRole === ROLES.COLLEGE_ADMIN || 
+                        canonicalRole === ROLES.SUPER_ADMIN || 
+                        String(canonicalRole).includes('admin');
+
     let targetSecureCode = (secure_code || code || '').trim().toUpperCase();
-    const isStaffRole = canonicalRole === ROLES.COORDINATOR || canonicalRole === ROLES.MENTOR || canonicalRole === ROLES.TRAINER || canonicalRole === ROLES.COLLEGE_ADMIN;
     if (isStaffRole && !isSuperAdminAddingAdmin) {
       if (!targetSecureCode) {
         const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : (canonicalRole === ROLES.TRAINER ? 'TRN' : 'ADM'));
@@ -443,21 +490,17 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    // Determine account status and provisioned password:
-    // 1. If Super Admin adds an Admin:
-    //    The account is directly pre-approved, active, and verified.
-    //    Their login email and password are sent directly in a login credentials email.
-    // 2. Otherwise (coordinators, mentors, students):
-    //    is_verified = 0, is_approved = 0, is_active = 0 (Requires completing registration and manual approval)
     const rawPassword = (password || '').trim();
     let finalPassword = rawPassword;
     if (!finalPassword) {
-      if (isSuperAdminAddingAdmin) {
-        finalPassword = `Admin@${Math.random().toString(36).slice(-6)}!`;
-      } else if (canonicalRole === ROLES.STUDENT) {
+      if (canonicalRole === ROLES.STUDENT) {
         finalPassword = 'Student@' + Math.random().toString(36).slice(-6) + '!';
       }
     }
+
+    const isApprovedVal = isStaffRole || !isApprovalFeatureActive() ? 1 : 0;
+    const initialActive = isStaffRole ? 0 : 1;
+    const initialVerified = isStaffRole ? 0 : (isSuperAdminAddingAdmin ? 1 : 0);
 
     // Check if user already exists in DB (registered first on portal, or pre-added)
     let existing = null;
@@ -470,31 +513,25 @@ export const createUserAdmin = async (req, res, next) => {
     if (existing) {
       // Requirement: If user was pre-added or registers with updated name, sync details
       const trimmedName = (name || '').trim();
-      const existingApproved = (isSuperAdminAddingAdmin || !isApprovalFeatureActive()) ? 1 : 0;
-      const existingVerified = (isSuperAdminAddingAdmin || !isApprovalFeatureActive()) ? 1 : (existing.is_verified || 0);
+      const existingApproved = isStaffRole || !isApprovalFeatureActive() ? 1 : (existing.is_approved || 0);
+      const existingVerified = isStaffRole ? (existing.is_verified || 0) : (!isApprovalFeatureActive() ? 1 : (existing.is_verified || 0));
+      const existingActive = isStaffRole ? (existing.is_active || 0) : 1;
 
       if (trimmedName) {
-        if (isSuperAdminAddingAdmin) {
-          const updateData = {
-            name: trimmedName,
-            role: canonicalRole,
-            college_id: targetCollegeId,
-            department: validatedDeptName,
-            department_id: validatedDeptId,
-            is_approved: 1,
-            is_active: 1,
-            is_verified: 1,
-          };
-          if (finalPassword) {
-            updateData.password = finalPassword;
-          }
-          await updateUserModel(existing.id, updateData);
-        } else {
-          await query(
-            'UPDATE users SET name = ?, role = ?, college_id = ?, department = ?, department_id = ?, is_approved = ? WHERE id = ?',
-            [trimmedName, canonicalRole, targetCollegeId, validatedDeptName, validatedDeptId, existingApproved, existing.id]
-          );
+        const updateData = {
+          name: trimmedName,
+          role: canonicalRole,
+          college_id: targetCollegeId,
+          department: validatedDeptName,
+          department_id: validatedDeptId,
+          is_approved: existingApproved,
+          is_active: existingActive,
+          is_verified: existingVerified,
+        };
+        if (finalPassword) {
+          updateData.password = finalPassword;
         }
+        await updateUserModel(existing.id, updateData);
       }
 
       if (canonicalRole === ROLES.STUDENT) {
@@ -531,9 +568,26 @@ export const createUserAdmin = async (req, res, next) => {
         }
       }
 
-      const msg = isSuperAdminAddingAdmin
-        ? 'Administrator account provisioned and approved successfully.'
-        : 'User name and details updated in database. Status set to pending approval.';
+      // If staff user is not activated yet, send activation email
+      if (isStaffRole && existing.email && existing.email.includes('@') && (existing.is_active === 0 || !existing.password_hash)) {
+        try {
+          const { rawToken } = await createAccountActivation(existing.id);
+          sendStaffActivationEmail({
+            to: existing.email,
+            name: trimmedName || existing.name,
+            role: canonicalRole,
+            rawToken,
+          }).catch((err) => {
+            console.warn(`[Staff Activation Email Dispatch Notice] ${err.message}`);
+          });
+        } catch (err) {
+          console.warn(`[Staff Activation Token Error] ${err.message}`);
+        }
+      }
+
+      const msg = isStaffRole
+        ? 'User details updated. Activation email dispatched for account setup.'
+        : 'User details updated in database.';
 
       return sendSuccess(res, {
         user: {
@@ -543,27 +597,23 @@ export const createUserAdmin = async (req, res, next) => {
           role: canonicalRole,
           college_id: targetCollegeId,
           is_approved: existingApproved,
-          is_active: 1,
+          is_active: existingActive,
           is_verified: existingVerified,
         }
       }, msg);
     }
 
-    // When Super Admin directly adds an Admin account, they are immediately approved and active.
-    // If approval feature is inactive, all created users are immediately approved and active.
-    const isApprovedVal = isSuperAdminAddingAdmin || !isApprovalFeatureActive() ? 1 : 0;
-
     const newUser = await createUser({
       name,
-      password: finalPassword,
+      password: finalPassword || '',
       email: email || '',
       mobile_number: mobile_number || '',
       role: canonicalRole,
       college_id: targetCollegeId,
       department: validatedDeptName,
       department_id: validatedDeptId,
-      is_active: 1,
-      is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+      is_active: initialActive,
+      is_verified: initialVerified,
       is_approved: isApprovedVal,
     });
 
@@ -595,19 +645,22 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     if (newUser.email && newUser.email.includes('@')) {
-      if (isSuperAdminAddingAdmin) {
-        // Super Admin added an Admin -> send login credentials email with email and password
-        sendAdminCredentialsEmail({
-          to: newUser.email,
-          name: newUser.name,
-          password: finalPassword,
-          collegeName: targetCollegeName,
-          role: canonicalRole === ROLES.SUPER_ADMIN ? 'Super Administrator' : 'College Administrator',
-        }).catch((err) => {
-          console.warn(`[Admin Credentials Email Dispatch Notice] ${err.message}`);
-        });
+      if (isStaffRole) {
+        try {
+          const { rawToken } = await createAccountActivation(newUser.id);
+          sendStaffActivationEmail({
+            to: newUser.email,
+            name: newUser.name,
+            role: canonicalRole,
+            rawToken,
+          }).catch((err) => {
+            console.warn(`[Staff Activation Email Dispatch Notice] ${err.message}`);
+          });
+        } catch (err) {
+          console.warn(`[Staff Activation Token Error] ${err.message}`);
+        }
       } else {
-        // Staff/mentors/coordinators -> send registration invitation with secure code
+        // Student account welcome email with secure code
         const isStudentAccount = canonicalRole === ROLES.STUDENT;
         sendWelcomeEmail({
           to: newUser.email,
@@ -625,8 +678,8 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    const successMessage = isSuperAdminAddingAdmin
-      ? 'Administrator account created successfully. Login credentials email has been sent to the admin.'
+    const successMessage = isStaffRole
+      ? 'Account created successfully. An activation email has been dispatched to the user to set their password.'
       : 'User created successfully. Registration invitation with secure access code dispatched.';
 
     return sendSuccess(
@@ -634,8 +687,8 @@ export const createUserAdmin = async (req, res, next) => {
       successMessage,
       {
         ...newUser,
-        secure_code: isSuperAdminAddingAdmin ? null : (targetSecureCode || null),
-        is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+        secure_code: isStaffRole ? null : (targetSecureCode || null),
+        is_verified: initialVerified,
         is_approved: isApprovedVal,
         studentProfile,
       },

@@ -1829,7 +1829,7 @@ export default function ManageUsers() {
         college: newUserForm.college || 'College',
         designation: 'Institutional Admin',
         date: new Date().toISOString().split('T')[0],
-        status: 'Verified',
+        status: 'Pending Activation',
       };
       setAdminRequests([newAdmin, ...adminRequests]);
     } else if (newUserForm.role === 'coordinators') {
@@ -1840,7 +1840,7 @@ export default function ManageUsers() {
         phone: newUserForm.phone || '',
         college: newUserForm.college || 'College',
         department: newUserForm.department || 'Department',
-        status: 'Active',
+        status: 'Pending Activation',
       };
       setCoordinators([newCoord, ...coordinators]);
     } else if (newUserForm.role === 'mentors') {

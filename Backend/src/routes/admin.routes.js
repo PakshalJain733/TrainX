@@ -6,6 +6,7 @@ import {
   getAdminPendingUsers,
   approveUserAdmin,
   rejectUserAdmin,
+  resendStaffActivationAdmin,
   createUserAdmin,
   bulkCreateUsersAdmin,
   updateUserAdmin,
@@ -51,6 +52,7 @@ router.get('/users', getAdminUsers);
 router.get('/pending-users', requireFeature('adminApproveUsers'), getAdminPendingUsers);
 router.patch('/users/:id/approve', requireFeature('adminApproveUsers'), approveUserAdmin);
 router.patch('/users/:id/reject', requireFeature('adminApproveUsers'), rejectUserAdmin);
+router.post('/users/:id/resend-activation', resendStaffActivationAdmin);
 router.post('/users', createUserAdmin);
 router.post('/users/bulk-upload', bulkCreateUsersAdmin);
 router.put('/users/:id', updateUserAdmin);

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { query } from '../../../../config/db.js';
-import { sendGenericEmail } from '../../../../services/email.service.js';
+import { sendGenericEmail, sendStaffActivationEmail } from '../../../../services/email.service.js';
 import { invalidateUserAuthCache } from '../../../../middleware/auth.middleware.js';
 
 const ACTIVATION_TOKEN_EXPIRY_HOURS = 72; // 3 days
@@ -189,14 +189,14 @@ export async function resendAccountActivation(email) {
 
   const cleanEmail = email.trim().toLowerCase();
   const [user] = await query(
-    `SELECT u.id, u.name, u.email, u.source_system, u.password_hash, u.is_active
+    `SELECT u.id, u.name, u.email, u.role, u.source_system, u.password_hash, u.is_active
      FROM users u
      WHERE LOWER(u.email) = ?
      LIMIT 1`,
     [cleanEmail]
   );
 
-  // If user does not exist or has already set their password, return generic message
+  // If user does not exist or has already set their password and is active, return generic message
   if (!user || (user.password_hash && user.password_hash.trim().length > 0 && user.is_active === 1)) {
     return { success: true, message: genericMessage };
   }
@@ -204,10 +204,17 @@ export async function resendAccountActivation(email) {
   // Create fresh activation token (invalidates older unused tokens)
   const { rawToken } = await createAccountActivation(user.id);
 
-  // Dispatch email
-  await sendActivationEmail({ to: user.email, name: user.name, rawToken }).catch((err) => {
-    console.warn(`[Activation Notice] Resend email failed for ${cleanEmail}: ${err.message}`);
-  });
+  // Dispatch appropriate activation email based on role
+  const isStaff = user.role && user.role !== 'student' && !String(user.role).toLowerCase().includes('student');
+  if (isStaff) {
+    await sendStaffActivationEmail({ to: user.email, name: user.name, role: user.role, rawToken }).catch((err) => {
+      console.warn(`[Activation Notice] Resend staff activation email failed for ${cleanEmail}: ${err.message}`);
+    });
+  } else {
+    await sendActivationEmail({ to: user.email, name: user.name, rawToken }).catch((err) => {
+      console.warn(`[Activation Notice] Resend email failed for ${cleanEmail}: ${err.message}`);
+    });
+  }
 
   return {
     success: true,

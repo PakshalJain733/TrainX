@@ -214,7 +214,7 @@ export default function ActivateAccount() {
           </div>
           <h1 className="activate-account-title">Activate Your Account</h1>
           <p className="activate-account-subtitle">
-            Welcome to TrainX. Set your private password to activate your technical training & assessment workspace.
+            Welcome to Career Gateway. Set your private password to activate your account.
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export default function ActivateAccount() {
             </div>
             <h2>Account Activated Successfully!</h2>
             <p>
-              Your TrainX student credentials have been created. You can now access all learning batches, coding labs, and technical assessments.
+              Your account credentials have been created. You can now access your dashboard and workspace.
             </p>
             <div className="activate-countdown-badge">
               Redirecting to login in <strong>{redirectCountdown}</strong> seconds...
@@ -243,7 +243,7 @@ export default function ActivateAccount() {
             </div>
             <h2>Account Already Activated</h2>
             <p>
-              This activation token has already been consumed. Your TrainX password is set and active.
+              This activation token has already been consumed. Your password is set and active.
             </p>
             <Link to="/" className="activate-btn activate-btn--primary">
               Sign In to Your Account
@@ -277,12 +277,12 @@ export default function ActivateAccount() {
             {/* Email Field */}
             {emailParam ? (
               <div className="activate-input-group">
-                <label className="activate-label" htmlFor="student-email">
-                  {Icons.email} Registered Student Email
+                <label className="activate-label" htmlFor="user-email">
+                  {Icons.email} Registered Email
                 </label>
                 <div className="activate-input-wrapper activate-input-wrapper--readonly">
                   <input
-                    id="student-email"
+                    id="user-email"
                     type="email"
                     value={emailParam}
                     readOnly
@@ -295,7 +295,7 @@ export default function ActivateAccount() {
             ) : (
               <div className="activate-input-group">
                 <label className="activate-label" htmlFor="manual-email">
-                  {Icons.email} Registered Student Email *
+                  {Icons.email} Registered Email *
                 </label>
                 <div className="activate-input-wrapper">
                   <input

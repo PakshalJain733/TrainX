@@ -1045,3 +1045,75 @@ export const sendAdminNewPendingUserEmail = async ({ adminEmail, adminName = 'Ad
     return null;
   }
 };
+
+/**
+ * Send Account Activation Email for newly provisioned Admin, Mentor, Coordinator, Trainer
+ * Dispatches activation token link to allow the user to set their password.
+ */
+export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawToken }) => {
+  try {
+    const frontendUrl = getPrimaryFrontendUrl();
+    const activationLink = `${frontendUrl}/activate-account?token=${rawToken}&email=${encodeURIComponent(to)}`;
+    const subject = 'Welcome to Career Gateway – Activate Your Account';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to Career Gateway! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to Career Gateway!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your account has been successfully created by the administrator.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To get started, please activate your account and set your password by clicking the button below.
+      </p>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate My Account
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After successfully setting your password, you can log in to Career Gateway using your registered email address and newly created password.
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Best Regards,<br/>
+        <strong>Career Gateway Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Activate Your Account',
+      subtitle: 'Career Gateway Staff & Administrator Onboarding',
+      contentHtml,
+      footerNote: 'This activation link is valid for 72 hours and can only be used once. For security reasons, do not share this link.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to Career Gateway!\n\nYour account has been successfully created by the administrator.\n\nTo get started, please activate your account and set your password by visiting:\n${activationLink}\n\nAfter successfully setting your password, you can log in to Career Gateway using your registered email address and newly created password.\n\nBest Regards,\nCareer Gateway Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStaffActivationEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};

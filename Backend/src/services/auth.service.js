@@ -55,22 +55,20 @@ const assertUserCanAuthenticate = async (user) => {
   const roleNormalized = String(user.role || '').toLowerCase().replace(/_/g, '');
   if (roleNormalized === 'superadmin' || roleNormalized.includes('super')) return;
 
+  const isInactive = isInactiveUser(user);
   const isVerified = user.is_verified === 1 || user.is_verified === true || user.is_verified === '1';
-  if (!isVerified) {
-    throw createAuthError('Your registration is incomplete. Please complete your registration and verify your account.', 403);
+  const hasPassword = Boolean(user.password_hash && String(user.password_hash).trim().length > 0);
+
+  if (isInactive || !isVerified || !hasPassword) {
+    throw createAuthError('Your account is pending activation. Please check your email to activate your account and set your password.', 403);
   }
 
   // Check if user approval workflow is enabled in system feature switches
   const approvalRequired = await isApprovalFeatureActive();
   if (approvalRequired) {
-    const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
+    const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1');
     if (!isApproved) {
       throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
-    }
-  } else {
-    // If approval workflow is turned OFF, bypass the approval barrier completely
-    if (isInactiveUser(user)) {
-      throw createAuthError('Your account is currently inactive or suspended. Please contact your administrator.', 403);
     }
   }
 };
