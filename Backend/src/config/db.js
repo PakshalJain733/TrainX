@@ -93,6 +93,16 @@ export const checkDatabaseConnection = async () => {
       `);
     } catch (_) {}
 
+    // Approval workflow completely disabled: Auto-approve all registered accounts
+    try {
+      await query(`
+        UPDATE users 
+        SET is_approved = 1, is_active = 1 
+        WHERE (is_approved = 0 OR is_approved IS NULL) 
+          AND role != 'super_admin'
+      `);
+    } catch (_) {}
+
     // Auto-create essential performance indexes for 500+ concurrent users
     try {
       const performanceIndexes = [

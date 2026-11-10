@@ -37,6 +37,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
 import { getAllCodingSubmissionsAdmin, updateSubmissionFeedbackController } from '../controllers/codingSubmission.controller.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
@@ -47,9 +48,9 @@ router.use(authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN));
 router.get('/', getAdminData);
 router.get('/stats', getAdminStats);
 router.get('/users', getAdminUsers);
-router.get('/pending-users', getAdminPendingUsers);
-router.patch('/users/:id/approve', approveUserAdmin);
-router.patch('/users/:id/reject', rejectUserAdmin);
+router.get('/pending-users', requireFeature('adminApproveUsers'), getAdminPendingUsers);
+router.patch('/users/:id/approve', requireFeature('adminApproveUsers'), approveUserAdmin);
+router.patch('/users/:id/reject', requireFeature('adminApproveUsers'), rejectUserAdmin);
 router.post('/users', createUserAdmin);
 router.post('/users/bulk-upload', bulkCreateUsersAdmin);
 router.put('/users/:id', updateUserAdmin);
@@ -94,8 +95,8 @@ router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
 
 
 // Career Gateway Data Bridge Routes
-router.post('/career-gateway/sync-inbound', handleCareerGatewayInboundSync);
-router.post('/career-gateway/sync-outbound', handleCareerGatewayOutboundSync);
-router.get('/career-gateway/sync-status', handleCareerGatewaySyncStatus);
+router.post('/career-gateway/sync-inbound', requireFeature('adminCareerGatewaySync'), handleCareerGatewayInboundSync);
+router.post('/career-gateway/sync-outbound', requireFeature('adminCareerGatewaySync'), handleCareerGatewayOutboundSync);
+router.get('/career-gateway/sync-status', requireFeature('adminCareerGatewaySync'), handleCareerGatewaySyncStatus);
 
 export default router;

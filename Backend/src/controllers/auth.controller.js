@@ -2,6 +2,7 @@ import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAn
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
+import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -268,11 +269,13 @@ export const checkRegistrationStatus = async (req, res, next) => {
     if (!user) {
       return sendError(res, 'No registered account found for this email', 404);
     }
-    const isApproved = (user.is_active === 1 || user.is_active === true || user.is_active === '\x01') &&
-                       (user.is_approved === 1 || user.is_approved === true || user.is_approved === '\x01');
+    const approvalRequired = await isApprovalFeatureActive();
+    const isApproved = !approvalRequired ||
+      ((user.is_active === 1 || user.is_active === true || user.is_active === '\x01') &&
+       (user.is_approved === 1 || user.is_approved === true || user.is_approved === '\x01'));
     return sendSuccess(res, 'Registration status retrieved successfully', {
       email: user.email,
-      isApproved,
+      isApproved: Boolean(isApproved),
       status: isApproved ? 'approved' : 'pending',
       role: user.role,
       name: user.name,

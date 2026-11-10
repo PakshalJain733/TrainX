@@ -1,6 +1,7 @@
 import express from 'express';
 import { runCodeController, submitCodeController, mySubmissionsController } from '../controllers/coding.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = express.Router();
 
@@ -10,8 +11,8 @@ const router = express.Router();
  * POST /api/v1/code/submit          - evaluate against stored test cases and save
  * GET  /api/v1/code/submissions/my  - get authenticated student's own submissions
  */
-router.post('/run', authenticateToken, runCodeController);
-router.post('/submit', authenticateToken, submitCodeController);
+router.post('/run', authenticateToken, requireFeature('codingCompiler'), runCodeController);
+router.post('/submit', authenticateToken, requireFeature('codingCompiler'), submitCodeController);
 router.get('/submissions/my', authenticateToken, mySubmissionsController);
 
 export default router;

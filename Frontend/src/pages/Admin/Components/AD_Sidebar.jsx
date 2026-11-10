@@ -32,8 +32,8 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true, moduleKey: "adminDashboard" },
   { title: "Manage Users", url: "/admin/users", icon: UserCog, moduleKey: "manageUsers" },
-  { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck, moduleKey: "adminBulkUserImport" },
-  { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase, moduleKey: "adminC2C" },
+  { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck, moduleKey: "adminApproveUsers" },
+  { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase, moduleKey: "adminC2CEnrollments" },
   { title: "Batches", url: "/admin/batches", icon: Code2, moduleKey: "adminBatches" },
   { title: "Departments", url: "/admin/departments", icon: Briefcase, moduleKey: "adminDepartments" },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck, moduleKey: "adminLearningContent" },
@@ -44,7 +44,7 @@ const primaryNavItems = [
   { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck, moduleKey: "adminAttendance" },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2, moduleKey: "adminWeeklyReports" },
   { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle, moduleKey: "defaulters" },
-  { title: "Career Gateway Sync", url: "/admin/career-gateway", icon: Zap },
+  { title: "Career Gateway Sync", url: "/admin/career-gateway", icon: Zap, moduleKey: "adminCareerGatewaySync" },
 ];
 
 const footerNavItems = [

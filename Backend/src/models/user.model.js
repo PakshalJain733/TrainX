@@ -399,8 +399,8 @@ export const createUser = async ({
   password = '',
   password_hash = '',
   is_active = true,
-  is_verified = 0,
-  is_approved = 0,
+  is_verified = 1,
+  is_approved = 1,
 }) => {
   const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim() : null;
   const normalizedMobile = typeof mobile_number === 'string' && mobile_number.trim() ? mobile_number.trim() : null;

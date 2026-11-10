@@ -1,5 +1,6 @@
 import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
+import { clearFeatureCache } from '../middleware/featureSwitch.middleware.js';
 
 let isTableInitialized = false;
 const ensureTableExists = async () => {
@@ -105,6 +106,27 @@ export const toggleFeatureSwitch = async (req, res, next) => {
       }
     } catch (_) {}
 
+    // Invalidate in-memory switch cache so backend immediately respects change
+    clearFeatureCache();
+
+    // If Approve Users switch is turned OFF (activeVal === 0), auto-approve all existing pending users
+    if (
+      (feature_key === 'adminApproveUsers' || feature_key === 'superAdminApproveUsers' || feature_key === 'approveUsers') &&
+      activeVal === 0
+    ) {
+      try {
+        await query(`
+          UPDATE users 
+          SET is_approved = 1, is_active = 1 
+          WHERE (is_approved = 0 OR is_approved IS NULL) 
+            AND role != 'super_admin'
+        `);
+        console.log('[FeatureSwitches] User approval turned OFF: Auto-approved all pending users in DB.');
+      } catch (err) {
+        console.warn('[FeatureSwitches] Auto-approve warning:', err.message);
+      }
+    }
+
     return sendSuccess(res, `Feature ${feature_key} is now ${activeVal === 1 ? 'ON (true)' : 'OFF (false)'}`, {
       feature_key,
       is_active: Boolean(activeVal),
@@ -131,6 +153,8 @@ export const toggleEmergencyMode = async (req, res, next) => {
         updated_at = CURRENT_TIMESTAMP
     `, [activeVal]);
 
+    clearFeatureCache();
+
     return sendSuccess(res, `Emergency mode is now ${activeVal === 1 ? 'ON' : 'OFF'}`, {
       globalEmergencyMode: Boolean(activeVal),
     });
@@ -151,6 +175,8 @@ export const restoreAllFeatureSwitches = async (req, res, next) => {
       VALUES ('__global_emergency_mode', 'Global Emergency Lockout', 'System', 0)
       ON DUPLICATE KEY UPDATE is_active = 0, updated_at = CURRENT_TIMESTAMP
     `);
+
+    clearFeatureCache();
 
     return sendSuccess(res, 'All feature switches have been restored to ON (true)', {
       all_active: true,
@@ -177,6 +203,8 @@ export const updateFeatureNotice = async (req, res, next) => {
       SET notice_message = ?, updated_at = CURRENT_TIMESTAMP
       WHERE feature_key = ?
     `, [notice_message || null, feature_key]);
+
+    clearFeatureCache();
 
     return sendSuccess(res, 'Feature notice updated successfully', {
       feature_key,

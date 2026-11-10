@@ -30,6 +30,7 @@ import {
 import { authenticateToken } from '../../../middleware/auth.middleware.js';
 import { authorizeRoles } from '../../../middleware/role.middleware.js';
 import { ROLES } from '../../../utils/constants.js';
+import { requireFeature } from '../../../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
@@ -110,6 +111,7 @@ router.post(
   '/monitoring/trigger-export',
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  requireFeature('adminCareerGatewaySync'),
   handleManualExportTrigger
 );
 
@@ -118,6 +120,7 @@ router.get(
   '/sync/executions',
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  requireFeature('adminCareerGatewaySync'),
   handleGetSyncExecutions
 );
 
@@ -125,6 +128,7 @@ router.post(
   '/sync/on-demand',
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  requireFeature('adminCareerGatewaySync'),
   handleAdminTriggerSync
 );
 

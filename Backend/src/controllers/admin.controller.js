@@ -20,6 +20,7 @@ import { ROLES } from '../utils/constants.js';
 import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail, sendStudentCredentialsEmail } from '../services/email.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 import { createNotification } from '../services/notification.service.js';
+import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 
 /**
  * Helper to determine college isolation filter based on caller role
@@ -163,6 +164,11 @@ export const getAdminUsers = async (req, res, next) => {
 
 export const getAdminPendingUsers = async (req, res, next) => {
   try {
+    const approvalRequired = await isApprovalFeatureActive();
+    if (!approvalRequired) {
+      return sendSuccess(res, 'User approval workflow is currently disabled by system policy', []);
+    }
+
     const { role, search } = req.query;
     const collegeId = getCallerCollegeFilter(req);
 

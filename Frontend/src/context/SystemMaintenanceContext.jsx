@@ -79,7 +79,7 @@ const initialMaintenanceConfig = {
     // 2. Student Dashboard Features (Main Tabs & Small Sub-Features)
     studentDashboard: {
       key: "studentDashboard",
-      name: "Student Workspace Overview Tab",
+      name: "Overview",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -89,7 +89,7 @@ const initialMaintenanceConfig = {
     },
     aiRoadmaps: {
       key: "aiRoadmaps",
-      name: "AI Milestone Roadmap Generator Tab",
+      name: "AI Roadmap",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -111,7 +111,7 @@ const initialMaintenanceConfig = {
     },
     aiInterviews: {
       key: "aiInterviews",
-      name: "AI Interview Practice Tab",
+      name: "AI Interview",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -133,7 +133,7 @@ const initialMaintenanceConfig = {
     },
     skillGapAnalysis: {
       key: "skillGapAnalysis",
-      name: "Skill-Gap Analysis",
+      name: "Progress",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -154,7 +154,7 @@ const initialMaintenanceConfig = {
     },
     learningContent: {
       key: "learningContent",
-      name: "Learning Content & Study Notes",
+      name: "Learning Content",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -164,7 +164,7 @@ const initialMaintenanceConfig = {
     },
     academicQuizzes: {
       key: "academicQuizzes",
-      name: "Academic Quiz",
+      name: "Quiz",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -174,7 +174,7 @@ const initialMaintenanceConfig = {
     },
     practiceCoding: {
       key: "practiceCoding",
-      name: "Coding Practice",
+      name: "Practice",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -194,7 +194,7 @@ const initialMaintenanceConfig = {
     },
     attendance: {
       key: "attendance",
-      name: "Student Attendance & History Tracker Tab",
+      name: "Attendance",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -204,7 +204,7 @@ const initialMaintenanceConfig = {
     },
     weeklyReports: {
       key: "weeklyReports",
-      name: "Weekly Student Performance PDF Reports Tab",
+      name: "Weekly Reports",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -224,7 +224,7 @@ const initialMaintenanceConfig = {
     },
     studentBatches: {
       key: "studentBatches",
-      name: "Student Batches Tab",
+      name: "Batches",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -234,7 +234,7 @@ const initialMaintenanceConfig = {
     },
     studentLeaderboard: {
       key: "studentLeaderboard",
-      name: "Student Batch Leaderboard & Gamified XP Rankings Tab",
+      name: "Leaderboard",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -264,7 +264,7 @@ const initialMaintenanceConfig = {
     },
     studentHelp: {
       key: "studentHelp",
-      name: "Student Helpdesk & Support Ticket Portal Tab",
+      name: "Support Tickets",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -387,7 +387,7 @@ const initialMaintenanceConfig = {
     // 3. Mentor Features (Main Tabs & Small Sub-Features)
     mentorDashboard: {
       key: "mentorDashboard",
-      name: "Mentor Overview Tab",
+      name: "Overview",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -397,7 +397,7 @@ const initialMaintenanceConfig = {
     },
     mentorStudents: {
       key: "mentorStudents",
-      name: "Assigned Students Tab",
+      name: "Students",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -407,7 +407,7 @@ const initialMaintenanceConfig = {
     },
     mentorLeaderboard: {
       key: "mentorLeaderboard",
-      name: "Mentor Leaderboard & Student Rankings Tab",
+      name: "Leaderboard",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -417,7 +417,7 @@ const initialMaintenanceConfig = {
     },
     mentorRoadmaps: {
       key: "mentorRoadmaps",
-      name: "Mentor Review of Student AI Roadmaps Tab",
+      name: "Roadmaps",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -428,7 +428,7 @@ const initialMaintenanceConfig = {
     },
     mentorAIInterviews: {
       key: "mentorAIInterviews",
-      name: "Mentor Review of AI Interview Transcripts Tab",
+      name: "AI Interviews",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -439,7 +439,7 @@ const initialMaintenanceConfig = {
     },
     mentorSkillGaps: {
       key: "mentorSkillGaps",
-      name: "Mentor Review of Student Skill Diagnostics Tab",
+      name: "Skill Gaps",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -450,7 +450,7 @@ const initialMaintenanceConfig = {
     },
     mentorAttendance: {
       key: "mentorAttendance",
-      name: "Live Class Attendance Marker & Register Tab",
+      name: "Attendance",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -460,7 +460,7 @@ const initialMaintenanceConfig = {
     },
     defaulters: {
       key: "defaulters",
-      name: "Defaulter Management Tab",
+      name: "Defaulters",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -491,7 +491,7 @@ const initialMaintenanceConfig = {
     },
     mentorStudyMaterial: {
       key: "mentorStudyMaterial",
-      name: "Faculty Study Material & Resource Uploader Tab",
+      name: "Study Material",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -511,7 +511,7 @@ const initialMaintenanceConfig = {
     },
     mentorQuizzes: {
       key: "mentorQuizzes",
-      name: "Mentor Quiz & Assessment Authoring Tab",
+      name: "Quizzes",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -521,7 +521,7 @@ const initialMaintenanceConfig = {
     },
     mentorPerformance: {
       key: "mentorPerformance",
-      name: "Mentor Student Analytics & Progress Audit Tab",
+      name: "Progress",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -541,7 +541,7 @@ const initialMaintenanceConfig = {
     },
     mentorWeeklyReports: {
       key: "mentorWeeklyReports",
-      name: "Mentor's Weekly Student PDF Audits Tab",
+      name: "Weekly Reports",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -561,7 +561,7 @@ const initialMaintenanceConfig = {
     },
     mentorHelp: {
       key: "mentorHelp",
-      name: "Mentor Help & Support Center Tab",
+      name: "Support Ticket",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -644,7 +644,7 @@ const initialMaintenanceConfig = {
     // 4. Coordinator Features (Main Tabs & Small Sub-Features)
     coordinatorDashboard: {
       key: "coordinatorDashboard",
-      name: "Coordinator Overview Tab",
+      name: "Overview",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -654,7 +654,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorBatches: {
       key: "coordinatorBatches",
-      name: "Department Batch & Division Setup Tab",
+      name: "Batches",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -664,7 +664,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorStudents: {
       key: "coordinatorStudents",
-      name: "Department Student Roster Tab",
+      name: "Students",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -674,7 +674,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorPerformances: {
       key: "coordinatorPerformances",
-      name: "Department Quiz & Coding Test Analytics Tab",
+      name: "Performances",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -694,7 +694,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorStudentsNeedImprovement: {
       key: "coordinatorStudentsNeedImprovement",
-      name: "Low-Performing Student Intervention Tracker Tab",
+      name: "Academic Support",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -704,7 +704,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorAttendance: {
       key: "coordinatorAttendance",
-      name: "Department Attendance Register & Defaulter Tab",
+      name: "Attendance Governance",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -714,7 +714,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorMentors: {
       key: "coordinatorMentors",
-      name: "Mentors Directory Tab",
+      name: "Mentors",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -724,7 +724,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorRequests: {
       key: "coordinatorRequests",
-      name: "Student Approvals & Requests Tab",
+      name: "Requests & Approvals",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -734,7 +734,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorBroadcast: {
       key: "coordinatorBroadcast",
-      name: "Department Broadcast Announcement Center Tab",
+      name: "Broadcast Notice Center",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -744,7 +744,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorHelp: {
       key: "coordinatorHelp",
-      name: "Coordinator Support & System Documentation Center Tab",
+      name: "Support Ticket",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -816,7 +816,7 @@ const initialMaintenanceConfig = {
     // 5. College Admin Features (Main Tabs & Small Sub-Features)
     adminDashboard: {
       key: "adminDashboard",
-      name: "College Admin Executive Dashboard Tab",
+      name: "Overview",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -826,7 +826,7 @@ const initialMaintenanceConfig = {
     },
     manageUsers: {
       key: "manageUsers",
-      name: "College User Directory & Role Assignment Tab",
+      name: "Manage Users",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -846,7 +846,7 @@ const initialMaintenanceConfig = {
     },
     adminBatches: {
       key: "adminBatches",
-      name: "College Batches & Academic Year Setup Tab",
+      name: "Batches",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -856,7 +856,7 @@ const initialMaintenanceConfig = {
     },
     adminDepartments: {
       key: "adminDepartments",
-      name: "Academic Streams & Department Structure Manager Tab",
+      name: "Departments",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -866,7 +866,7 @@ const initialMaintenanceConfig = {
     },
     adminAttendance: {
       key: "adminAttendance",
-      name: "Institutional Attendance CSV Register Upload Tab",
+      name: "Attendance",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -876,7 +876,7 @@ const initialMaintenanceConfig = {
     },
     adminLearningContent: {
       key: "adminLearningContent",
-      name: "Institutional Study Material Repository Setup Tab",
+      name: "Manage Content",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -886,7 +886,7 @@ const initialMaintenanceConfig = {
     },
     adminQuizzes: {
       key: "adminQuizzes",
-      name: "College Quiz & Assessment Test Authoring Tab",
+      name: "Manage Quizzes",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -896,7 +896,7 @@ const initialMaintenanceConfig = {
     },
     adminPracticeProblems: {
       key: "adminPracticeProblems",
-      name: "Coding Practice Problem Authoring Tool Tab",
+      name: "Coding Practice",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -906,7 +906,7 @@ const initialMaintenanceConfig = {
     },
     adminBroadcast: {
       key: "adminBroadcast",
-      name: "College-Wide Announcement Broadcast System Tab",
+      name: "Broadcast Notice",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -916,7 +916,7 @@ const initialMaintenanceConfig = {
     },
     adminProgress: {
       key: "adminProgress",
-      name: "Institutional Performance & Benchmark Analytics Tab",
+      name: "Student Progress",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -946,7 +946,7 @@ const initialMaintenanceConfig = {
     },
     adminC2CEnrollments: {
       key: "adminC2CEnrollments",
-      name: "Campus-to-Corporate (C2C) Institutional Program Management Tab",
+      name: "Trainings & Enrollments",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -956,17 +956,17 @@ const initialMaintenanceConfig = {
     },
     adminApproveUsers: {
       key: "adminApproveUsers",
-      name: "Pending Account Registration Approval Queue Tab",
+      name: "Approve Users",
       category: "College Admin",
-      active: true,
+      active: false,
       role: "College Admin",
       description: "Reviewing and approving newly registered student and mentor accounts before granting platform login",
-      message: "Registration approval queue is updating.",
+      message: "Registration approval workflow is disabled. All accounts are auto-approved.",
       updatedAt: "Just now",
     },
     adminHelp: {
       key: "adminHelp",
-      name: "College Admin Support & Ticket Center Tab",
+      name: "Support Tickets",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1046,7 +1046,7 @@ const initialMaintenanceConfig = {
     },
     adminWeeklyReports: {
       key: "adminWeeklyReports",
-      name: "College-Wide Weekly Mentor Governance Audit Tab",
+      name: "Weekly Reports",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1056,7 +1056,7 @@ const initialMaintenanceConfig = {
     },
     adminLeaderboard: {
       key: "adminLeaderboard",
-      name: "College-Wide Student & Batch Leaderboard Tab",
+      name: "Leaderboard",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1065,7 +1065,49 @@ const initialMaintenanceConfig = {
       updatedAt: "Just now",
     },
 
-    // 5b. Coordinator Missing Features
+    // 5b. Coordinator & Mentor Missing Features
+    coordinatorLeaderboard: {
+      key: "coordinatorLeaderboard",
+      name: "Leaderboard",
+      category: "Coordinator Features",
+      active: true,
+      role: "Coordinator",
+      description: "Department-wide student leaderboard ranking by coding points, quiz scores, and active streaks",
+      message: "Department leaderboard is currently updating.",
+      updatedAt: "Just now",
+    },
+    mentorBatches: {
+      key: "mentorBatches",
+      name: "Batches",
+      category: "Mentor Features",
+      active: true,
+      role: "Mentor",
+      description: "Viewing and managing assigned student batches, division schedules, and cohort progress",
+      message: "Mentor Batch Management is under maintenance.",
+      updatedAt: "Just now",
+    },
+    mentorCodingPractice: {
+      key: "mentorCodingPractice",
+      name: "Coding Practice",
+      category: "Mentor Features",
+      active: true,
+      role: "Mentor",
+      description: "Reviewing student coding practice submissions, problem-wise progress, and judge results",
+      message: "Mentor Coding Practice review is under maintenance.",
+      updatedAt: "Just now",
+    },
+    adminCareerGatewaySync: {
+      key: "adminCareerGatewaySync",
+      name: "Career Gateway Sync",
+      category: "College Admin",
+      active: true,
+      role: "College Admin",
+      description: "On-demand bi-directional sync between TrainX training records and Career Gateway placement portal",
+      message: "Career Gateway Sync is currently undergoing scheduled maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 5c. Coordinator (continued)
     coordinatorPlacement: {
       key: "coordinatorPlacement",
       name: "Coordinator Campus Placement Drives & Company Mapping Tab",
@@ -1102,7 +1144,7 @@ const initialMaintenanceConfig = {
     // 6. Super Admin Workspace Features (Global Enterprise Governance)
     superAdminOverview: {
       key: "superAdminOverview",
-      name: "Super Admin Global Overview & Platform Analytics Tab",
+      name: "Overview",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1112,7 +1154,7 @@ const initialMaintenanceConfig = {
     },
     superAdminColleges: {
       key: "superAdminColleges",
-      name: "Multi-College Directory & Institutional Management Tab",
+      name: "Colleges",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1132,7 +1174,7 @@ const initialMaintenanceConfig = {
     },
     superAdminUsers: {
       key: "superAdminUsers",
-      name: "Global User Management & Token Invitation Generator Tab",
+      name: "Manage Users",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1142,17 +1184,17 @@ const initialMaintenanceConfig = {
     },
     superAdminApproveUsers: {
       key: "superAdminApproveUsers",
-      name: "Admin Account Registration Approval Queue Tab",
+      name: "Approve Registration",
       category: "Super Admin",
-      active: true,
+      active: false,
       role: "Super Admin",
       description: "Reviewing and approving newly registered college admins, department heads, and institutional representatives",
-      message: "Admin Registration Approval queue is currently under maintenance.",
+      message: "Admin Registration Approval workflow is disabled. All accounts are auto-approved.",
       updatedAt: "Just now",
     },
     superAdminFeatureSwitches: {
       key: "superAdminFeatureSwitches",
-      name: "System Feature Switches & Maintenance Controls Tab",
+      name: "Feature Switches",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1162,7 +1204,7 @@ const initialMaintenanceConfig = {
     },
     superAdminTickets: {
       key: "superAdminTickets",
-      name: "Global System Support Ticket Desk & Escalations Tab",
+      name: "Support Tickets",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1172,7 +1214,7 @@ const initialMaintenanceConfig = {
     },
     superAdminSystemHealth: {
       key: "superAdminSystemHealth",
-      name: "Server Infrastructure, DB & API Telemetry Tab",
+      name: "System Health",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1232,8 +1274,14 @@ const KEY_ALIASES = {
   adminC2C: "adminC2CEnrollments",
   adminWeeklyReports: "adminWeeklyReports",
   adminLeaderboard: "adminLeaderboard",
+  adminBulkUserImport: "adminApproveUsers",
   coordinatorPlacement: "coordinatorPlacement",
   coordinatorNotifications: "coordinatorNotifications",
+  coordinatorLeaderboard: "coordinatorLeaderboard",
+  mentorBatches: "mentorBatches",
+  mentorCodingPractice: "mentorCodingPractice",
+  adminCareerGatewaySync: "adminCareerGatewaySync",
+  "career-gateway": "adminCareerGatewaySync",
   superAdminMaintenance: "superAdminFeatureSwitches",
   superAdminFeatureSwitches: "superAdminFeatureSwitches",
   register: "userRegistration",

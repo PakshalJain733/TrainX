@@ -710,10 +710,15 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
-        setRegisteredEmail(formData.email.trim());
+        // Approval is completely disabled: accounts are instantly active & verified
+        setIsApproved(true);
         setShowPendingApproval(true);
         setErrorMsg("");
-        setSuccessMsg("");
+        setSuccessMsg(data.data?.message || "Registration completed successfully! Your account is active.");
+        if (data.data?.token) {
+          sessionStorage.setItem("trainx_token", data.data.token);
+          sessionStorage.setItem("token", data.data.token);
+        }
       } else {
         setErrorMsg(data.message || "Registration failed");
       }
@@ -781,71 +786,42 @@ function Register() {
         {!showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
-          <div className={`pending-approval-card ${isApproved ? "approved" : ""}`}>
-            <div className={`pending-approval-icon-wrapper ${isApproved ? "approved" : ""}`}>
-              {isApproved ? (
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              ) : (
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              )}
+          <div className="pending-approval-card approved">
+            <div className="pending-approval-icon-wrapper approved">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
             </div>
 
-            <h3 className={`pending-approval-title ${isApproved ? "approved" : ""}`}>
-              {isApproved ? "Registration Approved! 🎉" : "Registration Submitted Successfully!"}
+            <h3 className="pending-approval-title approved">
+              Registration Completed! 🎉
             </h3>
 
             <p className="pending-approval-subtitle">
-              {isApproved
-                ? (role === "Admin"
-                    ? "Your account has been officially approved by the Super Administrator. You can now log in!"
-                    : "Your account has been officially approved by the College Administrator. You can now log in!")
-                : "Your registration details have been successfully submitted."}
+              Your account has been created and verified. You can now log in immediately!
             </p>
 
-            <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
-              <div className={`pending-approval-badge-row ${isApproved ? "approved" : ""}`}>
-                <span className={`pending-approval-badge ${isApproved ? "approved" : ""}`}>
-                  {isApproved
-                    ? "Status: Approved"
-                    : (role === "Admin" ? "Status: Pending Super Admin Approval" : "Status: Pending Admin Approval")}
+            <div className="pending-approval-box approved">
+              <div className="pending-approval-badge-row approved">
+                <span className="pending-approval-badge approved">
+                  Status: Active & Verified
                 </span>
               </div>
-              <p className={`pending-approval-desc ${isApproved ? "approved" : ""}`}>
-                {isApproved
-                  ? `Your account is active and verified! Redirecting to login screen automatically in ${redirectCountdown}s...`
-                  : (role === "Admin"
-                      ? "You can login only after the Super Administrator approves your account. Your registration is currently under review."
-                      : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration.")}
+              <p className="pending-approval-desc approved">
+                Your account is fully activated! Redirecting to login screen automatically in {redirectCountdown}s...
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/")}
-              className={`pending-approval-btn ${isApproved ? "approved" : ""}`}
+              className="pending-approval-btn approved"
             >
-              {isApproved ? (
-                <>
-                  <span>Proceed to Login Screen ({redirectCountdown}s)</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="19" y1="12" x2="5" y2="12" />
-                    <polyline points="12 19 5 12 12 5" />
-                  </svg>
-                  <span>Return to Login Screen</span>
-                </>
-              )}
+              <span>Proceed to Login Screen ({redirectCountdown}s)</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </button>
           </div>
         ) : (

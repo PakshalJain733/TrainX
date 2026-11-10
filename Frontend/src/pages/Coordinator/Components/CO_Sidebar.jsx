@@ -36,7 +36,7 @@ const primaryNavItems = [
   { title: "Mentors", url: "/coordinator/mentors", icon: UserCog, moduleKey: "coordinatorMentors" },
   { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
   { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
-  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "studentLeaderboard" },
+  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "coordinatorLeaderboard" },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck, moduleKey: "coordinatorAttendance" },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox, moduleKey: "coordinatorRequests" },
 ];

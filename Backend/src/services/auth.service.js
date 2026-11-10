@@ -30,6 +30,7 @@ import { sendOtpEmail, sendWelcomeEmail, sendRegistrationPendingEmail, sendAdmin
 import { findSecureCode, findSecureCodeByCodeOnly, markCodeAsUsed } from '../models/secureCode.model.js';
 import { findCollegeById } from '../models/college.model.js';
 import { pool } from '../config/db.js';
+import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
@@ -47,7 +48,7 @@ const isInactiveUser = (user) => {
   return ['0', 'false', 'inactive', 'pending'].includes(String(user.is_active).toLowerCase());
 };
 
-const assertUserCanAuthenticate = (user) => {
+const assertUserCanAuthenticate = async (user) => {
   if (!user) {
     throw createAuthError('Invalid credentials.', 401);
   }
@@ -58,9 +59,18 @@ const assertUserCanAuthenticate = (user) => {
     throw createAuthError('Your registration is incomplete. Please complete your registration and verify your account.', 403);
   }
 
-  const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
-  if (!isApproved) {
-    throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
+  // Check if user approval workflow is enabled in system feature switches
+  const approvalRequired = await isApprovalFeatureActive();
+  if (approvalRequired) {
+    const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
+    if (!isApproved) {
+      throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
+    }
+  } else {
+    // If approval workflow is turned OFF, bypass the approval barrier completely
+    if (isInactiveUser(user)) {
+      throw createAuthError('Your account is currently inactive or suspended. Please contact your administrator.', 403);
+    }
   }
 };
 
@@ -122,7 +132,7 @@ const generateFinalToken = (user) => generateToken({
 });
 
 const finalizePrimaryAuthentication = async (user) => {
-  assertUserCanAuthenticate(user);
+  await assertUserCanAuthenticate(user);
 
   return {
     token: generateFinalToken(user),
@@ -157,7 +167,8 @@ export const sendRegistrationOtp = async (data = {}) => {
   if (existingUser && existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
     const isCompleted = Boolean(existingUser.is_profile_updated);
     const isApproved = existingUser.is_approved === 1 || existingUser.is_approved === true || String(existingUser.is_approved) === '1';
-    if (isCompleted && isApproved) {
+    const approvalRequired = await isApprovalFeatureActive();
+    if (isCompleted && (isApproved || !approvalRequired)) {
       throw createAuthError('An account already exists for this email. Please log in instead.', 409);
     }
   }
@@ -335,7 +346,8 @@ export const registerUser = async (data) => {
     const isAdmin = existingUser.role === ROLES.SUPER_ADMIN || existingUser.role === ROLES.COLLEGE_ADMIN || String(existingUser.role || '').toLowerCase().includes('admin');
 
     const isApproved = existingUser.is_approved === 1 || existingUser.is_approved === true || String(existingUser.is_approved) === '1';
-    if (isAdmin || (isCompleted && hasPassword && isApproved)) {
+    const approvalRequired = await isApprovalFeatureActive();
+    if (isAdmin || (isCompleted && hasPassword && (isApproved || !approvalRequired))) {
       throw createAuthError('You are already registered! Please log in with your email and password.', 409);
     }
 
@@ -403,9 +415,9 @@ export const registerUser = async (data) => {
       semester: derivedSemester,
       roll_number,
       is_profile_updated: 1,
-      is_active: 0,
-      is_verified: 0,
-      is_approved: 0,
+      is_active: (canonicalRole === ROLES.SUPER_ADMIN || autoApproved) ? 1 : 0,
+      is_verified: 1,
+      is_approved: (canonicalRole === ROLES.SUPER_ADMIN || autoApproved) ? 1 : 0,
     });
 
     if (canonicalRole === ROLES.COORDINATOR && existingDeptId) {
@@ -430,7 +442,7 @@ export const registerUser = async (data) => {
       });
     }
 
-    const token = canonicalRole === ROLES.SUPER_ADMIN ? generateFinalToken(updatedUser) : null;
+    const token = (canonicalRole === ROLES.SUPER_ADMIN || autoApproved) ? generateFinalToken(updatedUser) : null;
 
     return {
       token,
@@ -445,8 +457,14 @@ export const registerUser = async (data) => {
         division: studentProfile?.division || division || '',
         semester: studentProfile?.semester || derivedSemester || '',
         roll_number: studentProfile?.roll_number || roll_number || '',
+        is_approved: autoApproved ? true : Boolean(updatedUser.is_approved),
+        is_active: autoApproved ? true : Boolean(updatedUser.is_active),
         studentProfile,
       },
+      requiresApproval: !autoApproved,
+      message: autoApproved
+        ? 'Registration complete! Your account is active and you can now log in.'
+        : 'Registration completed successfully! Your account is awaiting administrator approval.',
     };
   }
 
@@ -534,7 +552,10 @@ export const registerUser = async (data) => {
     } catch (_) {}
   }
 
-  // Create base User with is_active = 1 for Super Admin and College Admin (provisioned with secure code)
+  const approvalRequired = await isApprovalFeatureActive();
+  const autoApproved = !approvalRequired;
+
+  // Create base User with is_active = 1 for Super Admin or when approval requirement is disabled
   const user = await createUser({
     name,
     email: email || null,
@@ -544,9 +565,9 @@ export const registerUser = async (data) => {
     college_id: assignedCollegeId,
     department: resolvedDeptName || department || null,
     department_id: assignedDeptId || null,
-    is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
-    is_verified: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
-    is_approved: 0,
+    is_active: canonicalRole === ROLES.SUPER_ADMIN || autoApproved ? 1 : 0,
+    is_verified: 1,
+    is_approved: canonicalRole === ROLES.SUPER_ADMIN || autoApproved ? 1 : 0,
   });
 
   if (codeRecord && codeRecord.id) {
@@ -575,7 +596,7 @@ export const registerUser = async (data) => {
   }
 
   if (user.email && user.email.includes('@')) {
-    if (canonicalRole === ROLES.SUPER_ADMIN) {
+    if (canonicalRole === ROLES.SUPER_ADMIN || autoApproved) {
       sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((error) => {
         console.warn(`[AUTH] Welcome email notification skipped: ${error.message}`);
       });
@@ -619,8 +640,10 @@ export const registerUser = async (data) => {
     }
   }
 
+  const token = (canonicalRole === ROLES.SUPER_ADMIN || autoApproved) ? generateFinalToken(user) : null;
+
   return {
-    token: canonicalRole === ROLES.SUPER_ADMIN ? generateFinalToken(user) : null,
+    token,
     user: {
       id: user.id,
       name: user.name,
@@ -632,8 +655,15 @@ export const registerUser = async (data) => {
       division: studentProfile?.division || division || '',
       semester: studentProfile?.semester || semester || '',
       roll_number: studentProfile?.roll_number || roll_number || '',
+      is_approved: autoApproved ? true : Boolean(user.is_approved),
+      is_active: autoApproved ? true : Boolean(user.is_active),
       studentProfile,
     },
+    requiresApproval: !autoApproved,
+    isApproved: autoApproved,
+    message: autoApproved
+      ? 'Registration complete! Your account is active and you can now log in.'
+      : 'Your registration is complete! Your account is pending manual approval by your Administrator. You will be able to log in once an admin approves your profile.',
   };
 };
 
@@ -683,7 +713,7 @@ export const sendUserOtp = async (identifier) => {
     user.is_active = 1;
     user.role = 'super_admin';
   } else {
-    assertUserCanAuthenticate(user);
+    await assertUserCanAuthenticate(user);
   }
 
   const otp = generateOtp(6);
@@ -716,7 +746,7 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
     throw createAuthError('Invalid credentials.', 401);
   }
 
-  assertUserCanAuthenticate(user);
+  await assertUserCanAuthenticate(user);
 
   const isValid = await verifyOtpRecord(cleanIdentifier, otp);
   if (!isValid) {
@@ -777,7 +807,7 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
     throw createAuthError('Invalid credentials.', 401);
   }
 
-  assertUserCanAuthenticate(user);
+  await assertUserCanAuthenticate(user);
 
   const isValid = await verifyStoredPassword(user, cleanPassword);
 
@@ -855,7 +885,7 @@ export const resetUserPasswordWithOtp = async (identifier, otp, newPassword) => 
   if (!user) {
     throw createAuthError('No user account found with this identifier', 404);
   }
-  assertUserCanAuthenticate(user);
+  await assertUserCanAuthenticate(user);
 
   const isValidOtp = await verifyOtpRecord(identifier, otp);
   if (!isValidOtp) {
