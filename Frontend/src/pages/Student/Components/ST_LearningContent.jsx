@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Search, BookOpen, BookOpenCheck, FileText, Video, Sparkles, ExternalLink, Download, Eye, X, Play } from "lucide-react";
+import { Search, BookOpen, BookOpenCheck, FileText, Video, Sparkles, ExternalLink, Download, Eye, X, Play, RefreshCw } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { Badge } from "../../../components/ui/Badge";
 import { EVENTS, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -216,19 +216,39 @@ export default function LearningContent() {
         </div>
       </div>
 
-      {/* Resource Cards Grid */}
-      <div className="learning-resources-grid">
-        {loading ? (
-          <div className="learning-empty-state">
-            <p className="learning-empty-title">Loading study materials...</p>
+      {/* Resource Cards Grid or Centered Empty State */}
+      {loading ? (
+        <div className="learning-empty-card">
+          <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
+          <h3 className="learning-empty-title">Loading study materials...</h3>
+          <p className="learning-empty-desc">Fetching published lecture notes, reference guides, and curriculum resources.</p>
+        </div>
+      ) : filteredResources.length === 0 ? (
+        <div className="learning-empty-card">
+          <div className="learning-empty-icon-wrap">
+            <BookOpen size={36} color="#4f46e5" />
           </div>
-        ) : filteredResources.length === 0 ? (
-          <div className="learning-empty-state">
-            <BookOpen size={36} className="learning-empty-icon" />
-            <p className="learning-empty-title">No learning resources available yet.</p>
-          </div>
-        ) : (
-          filteredResources.map((item) => {
+          <h3 className="learning-empty-title">
+            {searchQuery ? "No Matching Learning Resources" : "No Learning Resources Available"}
+          </h3>
+          <p className="learning-empty-desc">
+            {searchQuery
+              ? `No resources match "${searchQuery}". Try searching with different keywords or clear your query.`
+              : "No study materials or documentation have been published for your cohort yet. Check back soon for new resources."}
+          </p>
+          {searchQuery && (
+            <button
+              type="button"
+              className="learning-empty-clear-btn"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="learning-resources-grid">
+          {filteredResources.map((item) => {
             const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null;
@@ -319,9 +339,9 @@ export default function LearningContent() {
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
 
       {/* Dynamic File & Video Viewer Modal */}

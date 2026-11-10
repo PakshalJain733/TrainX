@@ -548,27 +548,72 @@
   margin-top: 8px !important;
 }
 
+/* Empty State Card (Centered Quiz Style) */
+.learning-empty-card,
 .learning-empty-state {
   grid-column: 1 / -1 !important;
+  width: 100% !important;
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 16px !important;
   padding: 56px 24px !important;
   text-align: center !important;
-  background: #ffffff !important;
-  border: 1.5px dashed #cbd5e1 !important;
-  border-radius: 16px !important;
-  color: #64748b !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+  margin-top: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.learning-empty-icon-wrap {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 20px !important;
+  background: rgba(79, 70, 229, 0.08) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-bottom: 16px !important;
 }
 
 .learning-empty-icon {
-  margin: 0 auto 12px auto !important;
-  color: #6366f1 !important;
-  opacity: 0.8 !important;
+  margin: 0 auto !important;
+  color: #4f46e5 !important;
+  opacity: 1 !important;
 }
 
 .learning-empty-title {
-  font-weight: 600 !important;
-  font-size: 15px !important;
-  color: #334155 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.learning-empty-desc {
+  font-size: 14px !important;
+  color: #64748b !important;
+  max-width: 440px !important;
   margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+.learning-empty-clear-btn {
+  margin-top: 16px !important;
+  padding: 8px 20px !important;
+  border-radius: 8px !important;
+  background: #e0e7ff !important;
+  color: #4338ca !important;
+  border: none !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.learning-empty-clear-btn:hover {
+  background: #c7d2fe !important;
 }
 
 .learning-resource-card {

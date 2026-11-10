@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck } from "lucide-react";
+import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck, RefreshCw } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -546,19 +546,39 @@ export default function AdminLearningContent() {
         </div>
       </div>
 
-      {/* Resource Cards Grid */}
-      <div className="learning-resources-grid">
-        {loading ? (
-          <div className="learning-empty-state">
-            <p className="learning-empty-title">Loading learning content...</p>
+      {/* Resource Cards Grid or Centered Empty State */}
+      {loading ? (
+        <div className="learning-empty-card">
+          <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
+          <h3 className="learning-empty-title">Loading learning content...</h3>
+          <p className="learning-empty-desc">Fetching published study guides, lecture notes, and curriculum documentation.</p>
+        </div>
+      ) : filteredResources.length === 0 ? (
+        <div className="learning-empty-card">
+          <div className="learning-empty-icon-wrap">
+            <BookOpen size={36} color="#4f46e5" />
           </div>
-        ) : filteredResources.length === 0 ? (
-          <div className="learning-empty-state">
-            <BookOpen size={36} className="learning-empty-icon" />
-            <p className="learning-empty-title">No learning resources uploaded yet.</p>
-          </div>
-        ) : (
-          filteredResources.map((item) => {
+          <h3 className="learning-empty-title">
+            {searchQuery ? "No Matching Learning Resources" : "No Learning Resources Uploaded Yet"}
+          </h3>
+          <p className="learning-empty-desc">
+            {searchQuery
+              ? `No resources match "${searchQuery}". Try searching with different keywords or clear your query.`
+              : "No learning materials or documentation have been published yet. Click \"Upload Learning Content\" above to add lecture notes, guides, or video resources."}
+          </p>
+          {searchQuery && (
+            <button
+              type="button"
+              className="learning-empty-clear-btn"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="learning-resources-grid">
+          {filteredResources.map((item) => {
             const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_name || (item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null);
@@ -652,9 +672,9 @@ export default function AdminLearningContent() {
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
 
       {/* Dynamic File & Video Viewer Modal */}
