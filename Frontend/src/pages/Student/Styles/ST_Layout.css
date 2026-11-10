@@ -263,6 +263,8 @@ body {
   height: 100dvh;
   overflow: hidden;
   background: var(--app-page-bg, #dbe6f2);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* Notification Dropdown */

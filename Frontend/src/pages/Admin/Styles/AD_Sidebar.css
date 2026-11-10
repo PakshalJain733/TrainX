@@ -27,18 +27,24 @@
   max-width: var(--sidebar-width) !important;
   flex: 0 0 var(--sidebar-width) !important;
   flex-shrink: 0 !important;
+  height: 100vh;
   min-height: 100vh;
   background: var(--sidebar-bg);
   border-right: none !important;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease;
-  overflow: hidden;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
   position: relative;
   z-index: 100;
   padding: 12px 0;
   box-sizing: border-box;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+  contain: layout;
 }
 
 .admin-sidebar.sidebar--collapsed {
@@ -66,7 +72,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  overflow: hidden;
 }
 
 .sidebar-brand-logo-container {
@@ -81,7 +86,10 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   padding: 4px;
   flex-shrink: 0;
-  overflow: hidden;
+  box-sizing: border-box;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .sidebar-brand-logo {
@@ -89,6 +97,7 @@
   height: 100%;
   object-fit: contain;
   border-radius: 50% !important;
+  display: block;
 }
 
 .sidebar-brand-text {
@@ -243,8 +252,10 @@
   position: relative;
   transition: background 0.18s, color 0.18s;
   white-space: nowrap;
-  overflow: hidden;
   box-sizing: border-box;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 .sidebar-menu-btn-admin:hover {
@@ -324,10 +335,10 @@
 .sidebar--collapsed .sidebar-menu-btn,
 .sidebar--collapsed .sidebar-menu-btn-admin {
   justify-content: center;
-  padding: 0;
-  width: 44px;
-  height: 44px;
-  margin: 0 auto;
+  padding: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 auto !important;
   border-radius: 10px;
   gap: 0;
 }
@@ -352,7 +363,7 @@
 
 .sidebar--collapsed .sidebar-header-admin {
   justify-content: center;
-  padding: 12px 0;
+  padding: 12px 0 !important;
   gap: 0;
 }
 
