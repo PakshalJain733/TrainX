@@ -37,42 +37,5 @@ export default defineConfig({
   },
   build: {
     chunkSizeWarningLimit: 1600,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          const normalized = id.replace(/\\/g, '/');
-          if (normalized.includes('node_modules')) {
-            if (normalized.includes('/@monaco-editor/')) {
-              return 'vendor-monaco';
-            }
-            if (normalized.includes('/lucide-react/')) {
-              return 'vendor-icons';
-            }
-            if (
-              normalized.includes('/node_modules/react/') ||
-              normalized.includes('/node_modules/react-dom/') ||
-              normalized.includes('/node_modules/react-is/') ||
-              normalized.includes('/node_modules/react-router/') ||
-              normalized.includes('/node_modules/react-router-dom/') ||
-              normalized.includes('/node_modules/scheduler/') ||
-              normalized.includes('/node_modules/use-sync-external-store/')
-            ) {
-              return 'vendor-react';
-            }
-            if (normalized.includes('/recharts/')) {
-              return 'vendor-charts';
-            }
-            if (
-              normalized.includes('/xlsx/') ||
-              normalized.includes('/socket.io-client/') ||
-              normalized.includes('/qrcode/')
-            ) {
-              return 'vendor-utils';
-            }
-            return 'vendor';
-          }
-        },
-      },
-    },
   },
 })
