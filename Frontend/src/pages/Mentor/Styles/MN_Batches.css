@@ -1392,3 +1392,11 @@
   background: #cbd5e1;
   color: #0f172a;
 }
+
+
+@media (max-width: 768px) {
+  .mentor-search-wrapper {
+    min-width: 0;
+    width: 100%;
+  }
+}

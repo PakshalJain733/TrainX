@@ -68,7 +68,8 @@ export default function CustomSelect({
     const availableSpace = openUp ? spaceAbove - 16 : spaceBelow - 16;
     const maxHeight = Math.max(80, Math.min(maxDropdownHeight, availableSpace));
     
-    const targetWidth = rect.width > 0 ? rect.width : 160;
+    const maxAllowedWidth = Math.max(120, viewportWidth - 16);
+    const targetWidth = Math.min(rect.width > 0 ? rect.width : 160, maxAllowedWidth);
     const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - targetWidth - 8));
 
     const computedStyle = {

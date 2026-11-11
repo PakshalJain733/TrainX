@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './styles/mobile-foundation.css'
 import App from './App.jsx'
 
 // Auto-recover from stale chunk dynamic import failures on new production deployments

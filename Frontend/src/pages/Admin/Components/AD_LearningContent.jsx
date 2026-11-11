@@ -380,12 +380,12 @@ export default function AdminLearningContent() {
       {showForm && createPortal(
         <div 
           className="sa-modal-overlay" 
-          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'fadeIn 0.2s ease-out' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', animation: 'fadeIn 0.2s ease-out' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
           <div 
             className="sa-modal-dialog" 
-            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
+            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100dvh - 32px)' }}
           >
             <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
               <div className="sa-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -427,7 +427,7 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-row-2 form-grid-2">
                   <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Type</label>
                     <AdminLcSelect
@@ -458,7 +458,7 @@ export default function AdminLearningContent() {
                 </div>
 
                 {/* Side-by-Side Upload Document & Resource Link inputs */}
-                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                <div className="form-row-2 form-grid-2" style={{ alignItems: 'start' }}>
                   <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span>Upload Document / File {newType !== "Link" ? "*" : ""}</span>

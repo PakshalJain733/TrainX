@@ -542,3 +542,13 @@
   border: 1px solid #ddd6fe;
   line-height: 1.5;
 }
+
+
+@media (max-width: 768px) {
+  .mentor-perf-search-wrap,
+  .mentor-perf-filter-select-wrap {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}

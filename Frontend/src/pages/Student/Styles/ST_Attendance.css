@@ -635,6 +635,15 @@
   .attendance-grid-qr {
     grid-template-columns: 1fr;
   }
+
+  .attendance-qr-box {
+    padding: 20px;
+  }
+
+  .attendance-mark-btn {
+    width: 100%;
+    max-width: 260px;
+  }
 }
 
 .attendance-card-title {

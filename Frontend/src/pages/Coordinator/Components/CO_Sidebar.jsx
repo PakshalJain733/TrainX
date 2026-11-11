@@ -1,9 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, GraduationCap, UserCheck, CalendarCheck, FileCheck2, LineChart, Briefcase, Inbox, FileSpreadsheet, Bell, Settings, HelpCircle, Code, Bot, AlertTriangle, Megaphone, Trophy, Code2, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, CalendarCheck, LineChart, Inbox, HelpCircle, AlertTriangle, Megaphone, Trophy, Code2, UserCog, X } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import AppTooltip from "../../../components/ui/AppTooltip";
+import SidebarNavGroups from "../../../components/Common/SidebarNavGroups";
+import MobileDrawerFooter from "../../../components/Common/MobileDrawerFooter";
+import { useMobileDrawer } from "../../../hooks/useMobileDrawer";
 import "../Styles/CO_Sidebar.css";
 
 function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
@@ -11,7 +14,6 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
     <Link
         to="/coordinator"
         className="sidebar-brand"
-        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
       >
         <div className="sidebar-brand-logo-container">
           <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
@@ -29,16 +31,28 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   );
 }
 
-const primaryNavItems = [
-  { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true, moduleKey: "coordinatorDashboard" },
-  { title: "Students", url: "/coordinator/students", icon: Users, moduleKey: "coordinatorStudents" },
-  { title: "Batches", url: "/coordinator/batches", icon: Code2, moduleKey: "coordinatorBatches" },
-  { title: "Mentors", url: "/coordinator/mentors", icon: UserCog, moduleKey: "coordinatorMentors" },
-  { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
-  { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
-  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "coordinatorLeaderboard" },
-  { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck, moduleKey: "coordinatorAttendance" },
-  { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox, moduleKey: "coordinatorRequests" },
+const navGroups = [
+  {
+    id: "management",
+    label: "Cohort & Faculty",
+    items: [
+      { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true, moduleKey: "coordinatorDashboard" },
+      { title: "Students", url: "/coordinator/students", icon: Users, moduleKey: "coordinatorStudents" },
+      { title: "Batches", url: "/coordinator/batches", icon: Code2, moduleKey: "coordinatorBatches" },
+      { title: "Mentors", url: "/coordinator/mentors", icon: UserCog, moduleKey: "coordinatorMentors" },
+    ],
+  },
+  {
+    id: "governance",
+    label: "Performance & Governance",
+    items: [
+      { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
+      { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
+      { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "coordinatorLeaderboard" },
+      { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck, moduleKey: "coordinatorAttendance" },
+      { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox, moduleKey: "coordinatorRequests" },
+    ],
+  },
 ];
 
 const footerNavItems = [
@@ -49,10 +63,15 @@ const footerNavItems = [
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
   const { isModuleActive } = useSystemMaintenance();
+  const userInfo = useMobileDrawer(mobileOpen, onClose, "Coordinator");
 
-  const visiblePrimaryItems = primaryNavItems.filter(
-    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
-  );
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.moduleKey || isModuleActive(item.moduleKey)),
+    }))
+    .filter((group) => group.items.length > 0);
+
   const visibleFooterItems = footerNavItems.filter(
     (item) => !item.moduleKey || isModuleActive(item.moduleKey)
   );
@@ -104,21 +123,34 @@ export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   };
 
   return (
-    <aside className={`coordinator-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+    <aside className={`coordinator-sidebar ${collapsed && !mobileOpen ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       <div className="sidebar-header-coordinator">
-        <SidebarBrand collapsed={collapsed} subtitle="Coordinator" />
+        <SidebarBrand collapsed={collapsed} mobileOpen={mobileOpen} subtitle="Coordinator" />
+        <button
+          type="button"
+          className="mobile-drawer-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <div className="sidebar-content">
-        <ul className="sidebar-menu">
-          {visiblePrimaryItems.map(renderItem)}
-        </ul>
+        <SidebarNavGroups
+          groups={visibleGroups}
+          collapsed={collapsed}
+          mobileOpen={mobileOpen}
+          isActive={isActive}
+          renderItem={renderItem}
+        />
       </div>
 
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>
+        <MobileDrawerFooter userInfo={userInfo} profileUrl="/coordinator/profile" onClose={onClose} />
       </div>
     </aside>
   );

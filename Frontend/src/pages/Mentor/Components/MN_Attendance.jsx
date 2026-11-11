@@ -173,7 +173,7 @@ export default function Attendance() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: '24px' }}>
+      <div className="mn-attendance-split-grid">
         
         {/* Controls Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

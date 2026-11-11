@@ -470,7 +470,7 @@ export default function AdminHelp() {
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="form-grid-2" style={{ gap: "12px" }}>
                   <div className="admin-form-group">
                     <label className="admin-form-label">Category</label>
                     <select

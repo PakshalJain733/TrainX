@@ -831,6 +831,7 @@ select option,
 .sidebar-header-admin,
 .sidebar-header-coordinator,
 .sidebar-header-mentor,
+.sidebar-header-trainer,
 .sidebar-header-student,
 .sa-sidebar .sidebar-header {
   display: flex !important;
@@ -916,6 +917,7 @@ select option,
 .brand-x-img-admin,
 .brand-x-img-coordinator,
 .brand-x-img-mentor,
+.brand-x-img-trainer,
 .brand-x-img-student {
   height: 20px !important;
   min-height: 20px !important;

@@ -686,3 +686,7 @@
 .sa-pro-card:hover .sa-pro-card-pill {
   transform: translateY(-1px);
 }
+
+.sa-bottom-grid--single {
+  grid-template-columns: 1fr;
+}

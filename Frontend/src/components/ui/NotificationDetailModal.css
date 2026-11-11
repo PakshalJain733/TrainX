@@ -394,3 +394,31 @@
   background: #15803d !important;
   transform: translateY(-1px);
 }
+
+@media (max-width: 640px) {
+  .notif-modal-overlay {
+    padding: 10px;
+  }
+
+  .notif-modal-card {
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+    border-radius: 16px;
+    overflow-y: auto;
+  }
+
+  .notif-modal-header {
+    padding: 16px 16px 14px;
+    gap: 10px;
+  }
+
+  .notif-modal-icon-box {
+    width: 38px;
+    height: 38px;
+  }
+
+  .notif-meet-join-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}

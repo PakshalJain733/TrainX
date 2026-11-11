@@ -336,7 +336,7 @@ export function TrainerProfile() {
             </div>
 
             {/* Change Password Button in Dossier */}
-            <div className="profile-actions-wrapper" style={{ gridTemplateColumns: "1fr", marginTop: "16px" }}>
+            <div className="profile-actions-wrapper profile-actions-wrapper--single" style={{ marginTop: "16px" }}>
               <button
                 type="button"
                 onClick={() => setShowPasswordModal(true)}

@@ -402,4 +402,11 @@
 
 .mentor-btn-submit-modal:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-}
+}
+
+
+@media (max-width: 768px) {
+  .mentor-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

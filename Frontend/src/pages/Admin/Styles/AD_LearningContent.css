@@ -1068,3 +1068,28 @@
   border-radius: 8px !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
 }
+
+@media (max-width: 768px) {
+  .learning-card-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .learning-file-name-text {
+    max-width: 180px !important;
+  }
+
+  .lc-viewer-image-wrap {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .learning-card-header-row {
+    flex-wrap: wrap !important;
+  }
+
+  .learning-file-name-text {
+    max-width: 100% !important;
+  }
+}

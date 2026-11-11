@@ -135,3 +135,15 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+@media (max-width: 768px) {
+  .mentor-page-header {
+    margin-bottom: 14px;
+  }
+
+  .mentor-table th,
+  .mentor-table td {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+}
+

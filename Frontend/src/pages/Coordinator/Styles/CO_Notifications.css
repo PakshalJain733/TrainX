@@ -115,3 +115,22 @@
   font-weight: 600;
   border: 1px solid #e2e8f0;
 }
+
+@media (max-width: 768px) {
+  .coord-notif-page-header-row,
+  .coord-notif-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .coord-notif-mark-read-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .coord-broadcast-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}

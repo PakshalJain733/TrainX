@@ -1014,7 +1014,7 @@
   .maintenancecontrols-btn-emergency,
   .maintenancecontrols-header-actions .sa-btn-primary {
     flex: 1 1 auto;
-    min-width: 140px;
+    min-width: 0;
     justify-content: center;
     white-space: nowrap;
   }
@@ -1041,6 +1041,20 @@
 
   .mc-search-flex {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .maintenancecontrols-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .maintenancecontrols-btn-emergency,
+  .maintenancecontrols-header-actions .sa-btn-primary {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
   }
 }
 

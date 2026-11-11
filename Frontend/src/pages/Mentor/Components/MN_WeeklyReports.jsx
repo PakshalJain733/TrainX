@@ -949,7 +949,7 @@ export default function WeeklyReports() {
             </div>
 
             <div className="mentor-report-modal-body" style={{ background: "#ffffff" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+              <div className="form-grid-3" style={{ gap: "16px", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                 <div>
                   <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>Mentor</div>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>

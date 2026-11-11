@@ -3542,7 +3542,7 @@ export default function AdminUsers() {
               </button>
             </div>
             <div className="modal-body" style={{ padding: "20px 24px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div className="form-grid-2" style={{ marginBottom: "16px" }}>
                 <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
                   <div style={{ fontSize: "12px", fontWeight: "600", color: "#64748b", textTransform: "uppercase" }}>Inbound Sync</div>
                   <div style={{ fontSize: "20px", fontWeight: "700", color: "#0f172a", marginTop: "4px" }}>{syncSummary?.inbound?.successCount ?? 0} Students</div>

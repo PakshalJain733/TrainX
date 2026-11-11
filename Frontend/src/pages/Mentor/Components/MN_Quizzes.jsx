@@ -135,7 +135,7 @@ function QuizResultsPanel({ quiz, onBack }) {
         </div>
       </div>
 
-      <div className="quiz-results-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", marginBottom: "20px" }}>
+      <div className="quiz-results-kpi-grid">
         {[
           { l: 'Total Submissions', v: results.length, c: '#4f46e5', icon: <Users size={20} /> },
           { l: 'Average Score', v: `${avg}%`, c: '#f59e0b', icon: <Trophy size={20} /> },

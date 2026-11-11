@@ -422,8 +422,12 @@
 }
 
 @media (max-width: 580px) {
+  .setup-inst-page {
+    min-height: 100dvh;
+    padding: 16px 10px;
+  }
   .setup-inst-card {
-    padding: 24px 20px;
+    padding: 20px 14px;
   }
   .setup-form-row-2 {
     grid-template-columns: 1fr;

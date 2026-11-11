@@ -670,3 +670,11 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
 }
 
+
+
+@media (max-width: 768px) {
+  .learning-resources-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}

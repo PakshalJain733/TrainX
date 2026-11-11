@@ -1,22 +1,24 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Sparkles, Bot, AlertTriangle, CalendarCheck, Trophy,AlertCircle, BookOpenCheck, FileCheck2, HelpCircle, LineChart, Megaphone, GraduationCap, Code2, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, Sparkles, Bot, AlertTriangle, CalendarCheck, Trophy, AlertCircle, BookOpenCheck, FileCheck2, HelpCircle, LineChart, GraduationCap, Code2, X } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import AppTooltip from "../../../components/ui/AppTooltip";
+import SidebarNavGroups from "../../../components/Common/SidebarNavGroups";
+import MobileDrawerFooter from "../../../components/Common/MobileDrawerFooter";
+import { useMobileDrawer } from "../../../hooks/useMobileDrawer";
 import "../Styles/MN_Sidebar.css";
 
-function SidebarBrand({ collapsed, subtitle }) {
+function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   return (
     <Link
         to="/mentor"
         className="sidebar-brand"
-        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
       >
         <div className="sidebar-brand-logo-container">
           <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <div className="sidebar-brand-text">
             <div className="brand-row">
               <span className="brand-name1">Train</span>
@@ -29,21 +31,39 @@ function SidebarBrand({ collapsed, subtitle }) {
   );
 }
 
-const primaryNavItems = [
-  { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true, moduleKey: "mentorDashboard" },
-  { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
-  { title: "Batches", url: "/mentor/batches", icon: Users, moduleKey: "mentorBatches" },
-  { title: "Coding Practice", url: "/mentor/coding-practice", icon: Code2, moduleKey: "mentorCodingPractice" },
-  { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
-  { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap, moduleKey: "mentorQuizzes" },
-  { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles, moduleKey: "mentorRoadmaps" },
-  { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot, moduleKey: "mentorAIInterviews" },
-  { title: "Progress", url: "/mentor/performance", icon: LineChart, moduleKey: "mentorPerformance" },
-  { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle, moduleKey: "mentorSkillGaps" },
-  { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy, moduleKey: "mentorLeaderboard" },
-  { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck, moduleKey: "mentorAttendance" },
-  { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2, moduleKey: "mentorWeeklyReports" },
-  { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle, moduleKey: "defaulters" },
+const navGroups = [
+  {
+    id: "cohort",
+    label: "Overview & Cohort",
+    items: [
+      { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true, moduleKey: "mentorDashboard" },
+      { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
+      { title: "Batches", url: "/mentor/batches", icon: Users, moduleKey: "mentorBatches" },
+    ],
+  },
+  {
+    id: "learning",
+    label: "Training & AI Tools",
+    items: [
+      { title: "Coding Practice", url: "/mentor/coding-practice", icon: Code2, moduleKey: "mentorCodingPractice" },
+      { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
+      { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap, moduleKey: "mentorQuizzes" },
+      { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles, moduleKey: "mentorRoadmaps" },
+      { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot, moduleKey: "mentorAIInterviews" },
+    ],
+  },
+  {
+    id: "tracking",
+    label: "Tracking & Reports",
+    items: [
+      { title: "Progress", url: "/mentor/performance", icon: LineChart, moduleKey: "mentorPerformance" },
+      { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle, moduleKey: "mentorSkillGaps" },
+      { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy, moduleKey: "mentorLeaderboard" },
+      { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck, moduleKey: "mentorAttendance" },
+      { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2, moduleKey: "mentorWeeklyReports" },
+      { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle, moduleKey: "defaulters" },
+    ],
+  },
 ];
 
 const footerNavItems = [
@@ -53,10 +73,15 @@ const footerNavItems = [
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
   const { isModuleActive } = useSystemMaintenance();
+  const userInfo = useMobileDrawer(mobileOpen, onClose, "Mentor");
 
-  const visiblePrimaryItems = primaryNavItems.filter(
-    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
-  );
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.moduleKey || isModuleActive(item.moduleKey)),
+    }))
+    .filter((group) => group.items.length > 0);
+
   const visibleFooterItems = footerNavItems.filter(
     (item) => !item.moduleKey || isModuleActive(item.moduleKey)
   );
@@ -94,17 +119,29 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
   };
 
   return (
-    <aside className={`mentor-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+    <aside className={`mentor-sidebar ${collapsed && !mobileOpen ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       {/* Header */}
       <div className="sidebar-header-mentor">
-        <SidebarBrand collapsed={collapsed} subtitle="Mentor" />
+        <SidebarBrand collapsed={collapsed} mobileOpen={mobileOpen} subtitle="Mentor" />
+        <button
+          type="button"
+          className="mobile-drawer-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Nav */}
       <div className="sidebar-content">
-        <ul className="sidebar-menu">
-          {visiblePrimaryItems.map(renderItem)}
-        </ul>
+        <SidebarNavGroups
+          groups={visibleGroups}
+          collapsed={collapsed}
+          mobileOpen={mobileOpen}
+          isActive={isActive}
+          renderItem={renderItem}
+        />
       </div>
 
       {/* Pinned Bottom */}
@@ -112,6 +149,7 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>
+        <MobileDrawerFooter userInfo={userInfo} profileUrl="/mentor/profile" onClose={onClose} />
       </div>
     </aside>
   );

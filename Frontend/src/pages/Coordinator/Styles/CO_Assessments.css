@@ -837,5 +837,25 @@
   gap: 16px;
 }
 
+@media (max-width: 768px) {
+  .scorecard-kpi-grid,
+  .coord-assess-modal-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coord-card-title--between,
+  .coord-assess-modal-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scorecard-kpi-grid,
+  .coord-assess-modal-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 

@@ -321,3 +321,15 @@
 .trainer-profile-switch input:checked + .profile-slider {
   background-color: #0055ba !important;
 }
+
+
+.profile-actions-wrapper--single {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 640px) {
+  .trainer-stats-mini-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}

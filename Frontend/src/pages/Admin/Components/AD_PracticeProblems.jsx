@@ -1786,7 +1786,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                     />
                   </div>
 
-                  <div className="add-prob-grid-3" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1.2fr", gap: "12px", marginBottom: "12px" }}>
+                  <div className="add-prob-grid-3 form-grid-3" style={{ gap: "12px", marginBottom: "12px" }}>
                     <div className="form-group-admin">
                       <label>Topic / Category</label>
                       <input
@@ -1842,7 +1842,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                     </div>
                   </div>
 
-                  <div className="add-prob-grid-3" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                  <div className="add-prob-grid-3 form-grid-3" style={{ gap: "12px", marginBottom: "12px" }}>
                     <div className="form-group-admin">
                       <label>Allowed Language</label>
                       <AdminPpSelect
@@ -2039,7 +2039,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+              <div className="form-grid-2" style={{ gap: "14px", marginBottom: "16px" }}>
                 <div className="form-group-admin">
                   <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
                     Difficulty Level

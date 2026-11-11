@@ -1968,3 +1968,33 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
+
+@media (max-width: 640px) {
+  .register-page,
+  .register-container {
+    min-height: 100dvh;
+  }
+}
+
+@media (max-width: 374px) {
+  .email-with-otp-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .get-otp-inline-btn,
+  .verify-email-otp-btn {
+    width: 100%;
+  }
+
+  .login-otp-inputs-compact {
+    gap: 4px;
+  }
+
+  .input-group input.login-otp-digit-input-compact,
+  .login-otp-digit-input-compact {
+    height: 38px !important;
+    font-size: 16px !important;
+  }
+}

@@ -268,7 +268,7 @@ export default function AdminWeeklyReports() {
                 </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "10px" }}>
+              <div className="form-grid-2" style={{ gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "10px" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Batch</span>
                   <div style={{ fontWeight: 600, color: "#1e293b" }}>{selectedReport.batch}</div>

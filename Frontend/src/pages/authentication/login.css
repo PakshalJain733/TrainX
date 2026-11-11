@@ -2573,3 +2573,40 @@ input::-ms-clear {
     font-size: 12.5px !important;
   }
 }
+
+@media (max-width: 768px) {
+  .login-page {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+  }
+}
+
+@media (max-width: 374px) {
+  .login-page {
+    padding: 8px !important;
+  }
+
+  .login-card-welcome-header,
+  .auth-error-msg,
+  .auth-success-msg,
+  form {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .login-mode-segmented-bar {
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+    width: calc(100% - 24px) !important;
+  }
+
+  .login-otp-input-row {
+    gap: 5px;
+  }
+
+  .login-otp-digit-input {
+    height: 42px;
+    font-size: 17px;
+  }
+}

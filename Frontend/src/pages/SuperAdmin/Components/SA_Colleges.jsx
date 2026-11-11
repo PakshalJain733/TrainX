@@ -592,7 +592,7 @@ export default function Colleges() {
               </div>
 
               <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-grid-2">
                   <div className="form-group-admin">
                     <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Department Code</label>
                     <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewDeptModal.code || '—'}</p>
@@ -1258,7 +1258,7 @@ export default function Colleges() {
             </div>
 
             <div className="modal-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2">
                 <div className="form-group-admin">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Short Code</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewCollegeModal.code || '—'}</p>

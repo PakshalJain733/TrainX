@@ -304,3 +304,15 @@
   align-items: center;
   gap: 4px;
 }
+
+
+@media (max-width: 768px) {
+  .mentor-roadmaps-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .mentor-roadmap-card {
+    padding: 16px;
+  }
+}

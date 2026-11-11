@@ -1174,7 +1174,7 @@ export default function AdminBatches() {
                   <p className="admin-empty-state-sub" style={{ fontSize: "14px" }}>Click "Create New Task" or "Add Batch Task" above to assign problem sets to this batch.</p>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+                <div className="responsive-card-grid" style={{ gap: "20px" }}>
                   {batchTasks.map((t) => {
                     const parsedTestCases = typeof t.test_cases === "string" ? JSON.parse(t.test_cases || "[]") : (t.test_cases || []);
                     return (
@@ -1479,7 +1479,7 @@ export default function AdminBatches() {
                     gap: "14px"
                   }}>
                     {/* KPI Cards Row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+                    <div className="form-grid-3" style={{ gap: "14px" }}>
                       <div style={{
                         background: "#f8fafc",
                         border: "1px solid #e2e8f0",

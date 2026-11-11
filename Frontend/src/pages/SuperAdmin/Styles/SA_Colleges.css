@@ -448,3 +448,29 @@
   margin-top: 1px;
 }
 
+@media (max-width: 768px) {
+  .colleges-search-card,
+  .sa-search-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .colleges-search-wrap,
+  .sa-search-wrap,
+  .colleges-search-card .college-select-wrap,
+  .colleges-search-card .custom-select-wrap,
+  .sa-search-card .college-select-wrap,
+  .sa-search-card .custom-select-wrap,
+  .sa-search-card .college-select {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .colleges-filter-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

@@ -330,7 +330,7 @@ export default function Overview() {
       </div>
 
       {/* Main Content Grid: Connected Institutions */}
-      <div className="sa-bottom-grid" style={{ gridTemplateColumns: "1fr" }}>
+      <div className="sa-bottom-grid sa-bottom-grid--single">
         {/* Connected Institutions Overview Widget */}
         <div className="sa-widget-card overview-widget-flex">
           <div className="overview-widget-header">

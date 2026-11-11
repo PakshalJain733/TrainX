@@ -29,7 +29,7 @@ import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail, sendRegistrationPendingEmail, sendAdminNewPendingUserEmail } from './email.service.js';
 import { findSecureCode, findSecureCodeByCodeOnly, markCodeAsUsed } from '../models/secureCode.model.js';
 import { findCollegeById } from '../models/college.model.js';
-import { pool } from '../config/db.js';
+import { pool, query } from '../config/db.js';
 import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 import { createNotification } from './notification.service.js';
 

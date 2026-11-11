@@ -385,7 +385,7 @@ export default function ForcePasswordChangeModal() {
             <div style={{ fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
               Password Requirements:
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
+            <div className="form-grid-2" style={{ gap: "4px" }}>
               <div style={{ color: hasMinLength ? "#16a34a" : "#64748b", fontWeight: hasMinLength ? 600 : 400 }}>
                 {hasMinLength ? "✓" : "•"} Min 8 characters
               </div>

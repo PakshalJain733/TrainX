@@ -545,8 +545,12 @@
 }
 
 @media (max-width: 520px) {
+  .activate-account-page {
+    min-height: 100dvh;
+    padding: 16px 10px;
+  }
   .activate-account-card {
-    padding: 24px 20px;
+    padding: 20px 14px;
   }
   .activate-criteria-list {
     grid-template-columns: 1fr;

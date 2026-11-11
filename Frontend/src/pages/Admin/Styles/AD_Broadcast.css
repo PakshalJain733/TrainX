@@ -327,3 +327,17 @@
   height: 14px;
   color: #4f46e5;
 }
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .broadcast-send-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

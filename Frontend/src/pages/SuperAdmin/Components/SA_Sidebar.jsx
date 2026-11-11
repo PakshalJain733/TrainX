@@ -1,21 +1,23 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, FileCheck2 } from "lucide-react";
+import { LayoutDashboard, Building2, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, X } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import AppTooltip from "../../../components/ui/AppTooltip";
+import SidebarNavGroups from "../../../components/Common/SidebarNavGroups";
+import MobileDrawerFooter from "../../../components/Common/MobileDrawerFooter";
+import { useMobileDrawer } from "../../../hooks/useMobileDrawer";
 import "../Styles/SA_Sidebar.css";
 
-function SidebarBrand({ collapsed, subtitle }) {
+function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
   return (
     <Link
         to="/super-admin"
         className="sidebar-brand"
-        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
       >
         <div className="sidebar-brand-logo-container">
           <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
         </div>
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <div className="sidebar-brand-text">
             <div className="brand-row">
               <span className="brand-name1">Train</span>
@@ -28,13 +30,25 @@ function SidebarBrand({ collapsed, subtitle }) {
   );
 }
 
-const primaryNavItems = [
-  { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
-  { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
-  { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
-  { title: "Approve Registration", url: "/super-admin/approve-users", icon: UserCheck },
-  { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
-  { title: "System Health", url: "/super-admin/health", icon: Activity },
+const navGroups = [
+  {
+    id: "platform",
+    label: "Platform",
+    items: [
+      { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
+      { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
+    ],
+  },
+  {
+    id: "governance",
+    label: "Users & Controls",
+    items: [
+      { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
+      { title: "Approve Registration", url: "/super-admin/approve-users", icon: UserCheck },
+      { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
+      { title: "System Health", url: "/super-admin/health", icon: Activity },
+    ],
+  },
 ];
 
 const footerNavItems = [
@@ -43,6 +57,7 @@ const footerNavItems = [
 
 export default function SuperAdminSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const userInfo = useMobileDrawer(mobileOpen, onClose, "Super Admin");
 
   const isActive = (url, exact) =>
     exact
@@ -77,24 +92,37 @@ export default function SuperAdminSidebar({ collapsed, mobileOpen, onClose }) {
   };
 
   return (
-    <aside className={`sa-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+    <aside className={`sa-sidebar ${collapsed && !mobileOpen ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       {/* Header */}
       <div className="sidebar-header">
-        <SidebarBrand collapsed={collapsed} subtitle="Super Admin" />
+        <SidebarBrand collapsed={collapsed} mobileOpen={mobileOpen} subtitle="Super Admin" />
+        <button
+          type="button"
+          className="mobile-drawer-close-btn"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       {/* Nav */}
       <div className="sidebar-content">
-        <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
-        </ul>
+        <SidebarNavGroups
+          groups={navGroups}
+          collapsed={collapsed}
+          mobileOpen={mobileOpen}
+          isActive={isActive}
+          renderItem={renderItem}
+        />
       </div>
 
-      {/* Pinned Bottom Support Section */}
+      {/* Pinned Bottom Support & Mobile Account Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
           {footerNavItems.map(renderItem)}
         </ul>
+        <MobileDrawerFooter userInfo={userInfo} profileUrl="/super-admin/profile" onClose={onClose} />
       </div>
     </aside>
   );
