@@ -19,8 +19,10 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
+router.use(requireFeature('trainings'));
 
 // ==========================================
 // PUBLIC & WEBHOOK ENDPOINTS (No token required)

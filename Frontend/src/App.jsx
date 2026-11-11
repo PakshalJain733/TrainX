@@ -125,7 +125,7 @@ const TrainerProfile = lazy(() => import('./pages/Trainer/Components/TR_Profile'
 function App() {
   return (
     <SystemMaintenanceProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <DesktopNotificationListener />
         <MeetingReminderBanner />
         <GlobalTooltipManager />

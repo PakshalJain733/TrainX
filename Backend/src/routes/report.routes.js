@@ -9,9 +9,11 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requireFeature('weeklyReports'));
 
 router.get('/', getReportData);
 router.post('/weekly/generate', generateWeeklyReportController);

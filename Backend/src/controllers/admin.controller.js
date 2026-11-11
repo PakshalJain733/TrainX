@@ -78,9 +78,9 @@ const canCallerManageUser = async (req, targetUser) => {
     } catch (_) {}
   }
 
-  // If target user still has no college_id in users or students table:
+  // If target user is a trainer, or still has no college_id in users or students table:
   // e.g. shared trainer, unassigned staff, or invited via this college admin
-  if (!targetCollegeId) {
+  if (String(targetUser.role).toLowerCase() === 'trainer' || !targetCollegeId) {
     return true;
   }
 
@@ -420,16 +420,28 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
     }
 
     const userRole = (user.role || '').toLowerCase();
-    const collegeName = req.user?.collegeName || user.college_name || 'TrainX Partner Institution';
+    let collegeName = req.user?.collegeName || user.college_name || '';
+    if (!collegeName && (user.college_id || req.user?.collegeId)) {
+      try {
+        const colRows = await query('SELECT name FROM colleges WHERE id = ? LIMIT 1', [user.college_id || req.user?.collegeId]);
+        if (colRows && colRows.length > 0) {
+          collegeName = colRows[0].name;
+        }
+      } catch (_) {}
+    }
+    if (!collegeName) collegeName = 'TrainX Partner Institution';
 
     // If role is mentor, coordinator, trainer, or college_admin, use the Secure Code Activation flow
     if (['mentor', 'coordinator', 'trainer', 'college_admin', 'admin'].includes(userRole)) {
-      // Find active unused secure code, or create a fresh one
+      // Find active unused secure code for this user's email, or create a fresh one
       const activeRows = await query(
         `SELECT code FROM secure_codes 
-         WHERE (email = ? OR role = ?) AND is_used = 0 AND expires_at > NOW() 
+         WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) 
+           AND status = 'active' 
+           AND (expires_at IS NULL OR expires_at > NOW())
+           AND (max_uses IS NULL OR max_uses = 0 OR uses_count < max_uses)
          ORDER BY id DESC LIMIT 1`,
-        [user.email, userRole]
+        [user.email]
       );
 
       let codeToUse = activeRows && activeRows.length > 0 ? activeRows[0].code : null;
@@ -443,43 +455,56 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
         await createSecureCode({
           code: codeToUse,
           role: userRole,
-          college_id: user.college_id || req.user?.collegeId || null,
-          email: user.email,
+          college_name: collegeName,
+          description: `Resent activation for ${userRole}: ${user.name || user.email}`,
+          email: user.email.trim().toLowerCase(),
           created_by: req.user?.id || null,
           email_delivery_status: 'sent',
           max_uses: 1,
-          expires_in_hours: 72,
+          expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000),
         });
       }
 
-      if (['college_admin', 'admin'].includes(userRole)) {
-        await sendAdminInvitationCodeEmail({
-          to: user.email,
-          name: user.name,
-          code: codeToUse,
-          collegeName,
-        });
-      } else {
-        await sendStaffInvitationCodeEmail({
-          to: user.email,
-          name: user.name,
-          role: user.role,
-          code: codeToUse,
-          collegeName,
-        });
+      try {
+        if (['college_admin', 'admin'].includes(userRole)) {
+          await sendAdminInvitationCodeEmail({
+            to: user.email,
+            name: user.name,
+            code: codeToUse,
+            college_name: collegeName,
+            collegeName,
+          });
+        } else {
+          await sendStaffInvitationCodeEmail({
+            to: user.email,
+            name: user.name,
+            role: user.role,
+            code: codeToUse,
+            college_name: collegeName,
+            collegeName,
+          });
+        }
+      } catch (mailErr) {
+        console.error(`[Resend Staff Activation Mail Error] ${mailErr.message}`);
+        return sendError(res, `Activation code generated (${codeToUse}), but failed to deliver email: ${mailErr.message}`, 500);
       }
 
       return sendSuccess(res, `Activation email with secure code successfully sent to ${user.email}`);
     }
 
     // Default flow (e.g. students)
-    const { rawToken } = await createAccountActivation(user.id);
-    await sendStaffActivationEmail({
-      to: user.email,
-      name: user.name,
-      role: user.role,
-      rawToken,
-    });
+    try {
+      const { rawToken } = await createAccountActivation(user.id);
+      await sendStaffActivationEmail({
+        to: user.email,
+        name: user.name,
+        role: user.role,
+        rawToken,
+      });
+    } catch (mailErr) {
+      console.error(`[Resend Student Activation Mail Error] ${mailErr.message}`);
+      return sendError(res, `Failed to dispatch activation email: ${mailErr.message}`, 500);
+    }
 
     return sendSuccess(res, `Activation email successfully re-sent to ${user.email}`);
   } catch (error) {

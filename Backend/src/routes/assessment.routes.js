@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 import {
   getAssessments,
   getAvailableAssessments,
@@ -20,6 +21,7 @@ import {
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requireFeature('academicQuizzes'));
 
 const instructorOrAdmin = authorizeRoles(
   ROLES.SUPER_ADMIN,

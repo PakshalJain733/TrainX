@@ -45,20 +45,18 @@ export default function LearningContent() {
       console.error("Failed to load student learning content:", err);
     }
 
-    if (loadedItems.length > 0) {
-      const mapped = loadedItems.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        category: item.batch || item.category || "All Batches",
-        subject: item.subject || "General",
-        type: item.type || "Document",
-        file_url: item.file_url,
-        link: item.link,
-        status: "Published",
-      }));
-      setResources(mapped);
-    }
+    const mapped = (loadedItems || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      category: item.batch || item.category || "All Batches",
+      subject: item.subject || "General",
+      type: item.type || "Document",
+      file_url: item.file_url,
+      link: item.link,
+      status: "Published",
+    }));
+    setResources(mapped);
     setLoading(false);
   };
 

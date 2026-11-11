@@ -112,6 +112,17 @@ export const generateCode = async (req, res, next) => {
       } catch (_) {}
     }
 
+    // Resolve college name from caller's collegeId if still not resolved
+    if (!collegeFullName && (req.user?.collegeId || req.user?.college_id)) {
+      try {
+        const cId = req.user.collegeId || req.user.college_id;
+        const colRows = await query('SELECT name FROM colleges WHERE id = ? LIMIT 1', [cId]);
+        if (colRows && colRows.length > 0) {
+          collegeFullName = colRows[0].name;
+        }
+      } catch (_) {}
+    }
+
     const newCode = await createSecureCode({
       code: finalCode,
       role: normalizedRole,

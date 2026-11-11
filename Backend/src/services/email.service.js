@@ -48,7 +48,7 @@ const getResolvedIpv4Host = async (host) => {
       cachedIpv4Host = ips[0];
       return cachedIpv4Host;
     }
-  } catch (_) {}
+  } catch (_) { }
   return host;
 };
 
@@ -121,7 +121,7 @@ export const isEmailSystemDisabled = async () => {
     if (emailRow && emailRow.length > 0) {
       return emailRow[0].is_active === 0 || emailRow[0].is_active === false;
     }
-  } catch (e) {}
+  } catch (e) { }
   return false;
 };
 
@@ -440,7 +440,7 @@ export const sendWelcomeEmail = async ({
     const roleUpper = role.toUpperCase();
     const isStudent = String(role || '').toLowerCase().trim() === 'student';
     const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : role.toLowerCase() === 'trainer' ? '#3b82f6' : '#6366f1';
-    
+
     const queryParamsObj = {
       email: to || '',
       name: name || '',
@@ -529,7 +529,7 @@ export const sendWelcomeEmail = async ({
       footerNote: 'Need assistance? Reach out to your campus administrator or coordinator.',
     });
 
-    const subject = secure_code 
+    const subject = secure_code
       ? `Action Required: Complete Your ${roleUpper} Registration (Secure Code: ${secure_code})`
       : `Welcome ${name}! Complete your registration`;
     const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration is submitted, your account will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
@@ -927,10 +927,10 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
   try {
     const htmlContent = html
       ? renderBaseTemplate({
-          title: subject || 'Training Portal Notification',
-          subtitle: '',
-          contentHtml: html,
-        })
+        title: subject || 'Training Portal Notification',
+        subtitle: '',
+        contentHtml: html,
+      })
       : null;
 
     return await sendEmail({
@@ -1129,8 +1129,10 @@ export const sendAdminInvitationCodeEmail = async ({
   name = 'Admin',
   code,
   college_name = '',
+  collegeName = '',
 }) => {
   try {
+    const finalCollegeName = college_name || collegeName || '';
     const frontendBase = getPrimaryFrontendUrl();
     const activationLink = `${frontendBase}/activate-account?role=college_admin&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
     const subject = 'Welcome to TrainX – Admin Account Activation';
@@ -1146,7 +1148,7 @@ export const sendAdminInvitationCodeEmail = async ({
         Welcome to TrainX!
       </p>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        You have been invited to join TrainX as an Admin${college_name ? ` for <strong>${college_name}</strong>` : ''}.
+        You have been invited to join TrainX as an Admin${finalCollegeName ? ` for <strong>${finalCollegeName}</strong>` : ''}.
       </p>
       <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
         To activate your account, please click the button below.
@@ -1224,8 +1226,10 @@ export const sendStaffInvitationCodeEmail = async ({
   role = 'Staff',
   code,
   college_name = '',
+  collegeName = '',
 }) => {
   try {
+    const finalCollegeName = college_name || collegeName || '';
     const frontendBase = getPrimaryFrontendUrl();
     const roleCapitalized = String(role).charAt(0).toUpperCase() + String(role).slice(1).replace(/_/g, ' ');
     const activationLink = `${frontendBase}/activate-account?role=${encodeURIComponent(role)}&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
@@ -1242,7 +1246,7 @@ export const sendStaffInvitationCodeEmail = async ({
         Welcome to TrainX!
       </p>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        You have been invited to join TrainX as a <strong>${roleCapitalized}</strong>${college_name ? ` for <strong>${college_name}</strong>` : ''}.
+        You have been invited to join TrainX as a <strong>${roleCapitalized}</strong>${finalCollegeName ? ` for <strong>${finalCollegeName}</strong>` : ''}.
       </p>
       <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
         To activate your account, please click the button below.

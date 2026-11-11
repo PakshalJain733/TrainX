@@ -89,6 +89,9 @@
   align-items: center;
   gap: 10px;
   overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .sidebar-brand-logo-container {

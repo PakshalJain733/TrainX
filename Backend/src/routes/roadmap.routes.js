@@ -12,6 +12,7 @@ import {
   getRoadmapLockStatus,
 } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
@@ -23,6 +24,7 @@ router.post('/quiz/generate', generateTopicQuiz);
 
 // Protect roadmap routes
 router.use(authenticateToken);
+router.use(requireFeature('aiRoadmaps'));
 
 // Rate limiting & lock status check (7-day generation cooldown)
 router.get('/lock-status', getRoadmapLockStatus);

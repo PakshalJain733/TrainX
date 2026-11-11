@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck, RefreshCw } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/AD_LearningContent.css";
 
@@ -176,7 +176,7 @@ export default function AdminLearningContent() {
     setResources(prev => [tempEntry, ...prev]);
 
     try {
-      const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
+      const token = getAuthToken() || "";
 
 
       let res;

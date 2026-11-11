@@ -1,6 +1,8 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import { validateCollegeForm } from '../utils/collegeValidation.js';
+import { getRelatedCollegeIds } from '../models/user.model.js';
+import { revokeUserAuthInCache } from '../middleware/auth.middleware.js';
 
 let tablesInitialized = false;
 async function ensureCollegeTable() {
@@ -299,16 +301,17 @@ export const deleteCollege = async (req, res, next) => {
     const collegeName = targetCollege.name || '';
     const collegeCode = targetCollege.code || '';
 
-    // 2. Fetch associated users, departments, and batches
-    const userRows = await query('SELECT id, email FROM users WHERE college_id = ?', [numId]);
-    const userIds = userRows.map((u) => u.id);
-    const userEmails = userRows.map((u) => u.email).filter(Boolean);
-
-    const deptRows = await query('SELECT id FROM departments WHERE college_id = ?', [numId]);
-    const deptIds = deptRows.map((d) => d.id);
-
-    const batchRows = await query('SELECT id FROM batches WHERE college_id = ?', [numId]);
-    const batchIds = batchRows.map((b) => b.id);
+    // Determine all related/alias college IDs (e.g. PVPPCOE & VPPCOE duplicate records)
+    const allCollegeIds = [numId];
+    try {
+      const relIds = await getRelatedCollegeIds(numId);
+      if (Array.isArray(relIds)) {
+        for (const rid of relIds) {
+          if (!allCollegeIds.includes(rid)) allCollegeIds.push(rid);
+        }
+      }
+    } catch (_) {}
+    const cPlaceholders = allCollegeIds.map(() => '?').join(',');
 
     // Helper for safe non-fatal cascading deletions across auxiliary tables
     const safeDelete = async (sql, params = []) => {
@@ -319,7 +322,33 @@ export const deleteCollege = async (req, res, next) => {
       }
     };
 
-    // Disable foreign key checks temporarily for seamless cascading deletion across interrelated tables
+    // 2. Fetch ALL associated users across users, students, departments, and batches
+    // Exclude super_admin accounts to prevent accidental lockout
+    const userRows = await query(
+      `SELECT DISTINCT u.id, u.email 
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       WHERE (
+         u.college_id IN (${cPlaceholders})
+         OR s.college_id IN (${cPlaceholders})
+         OR d.college_id IN (${cPlaceholders})
+         OR u.id IN (SELECT user_id FROM student_batches WHERE batch_id IN (SELECT id FROM batches WHERE college_id IN (${cPlaceholders})))
+         OR (u.department IS NOT NULL AND LOWER(TRIM(u.department)) IN (SELECT LOWER(TRIM(name)) FROM departments WHERE college_id IN (${cPlaceholders})))
+       )
+       AND (u.role != 'super_admin' AND u.role NOT LIKE '%super%')`,
+      [...allCollegeIds, ...allCollegeIds, ...allCollegeIds, ...allCollegeIds, ...allCollegeIds]
+    );
+    const userIds = userRows.map((u) => u.id);
+    const userEmails = userRows.map((u) => u.email).filter(Boolean);
+
+    const deptRows = await query(`SELECT id FROM departments WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+    const deptIds = deptRows.map((d) => d.id);
+
+    const batchRows = await query(`SELECT id FROM batches WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+    const batchIds = batchRows.map((b) => b.id);
+
+    // Disable foreign key checks temporarily for complete cascading deletion
     await query('SET FOREIGN_KEY_CHECKS = 0');
 
     try {
@@ -327,26 +356,47 @@ export const deleteCollege = async (req, res, next) => {
       if (userIds.length > 0) {
         const uPlaceholders = userIds.map(() => '?').join(',');
 
-        await safeDelete(`DELETE FROM students WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
+        // Purge student auxiliary & profile records
+        await safeDelete(`DELETE FROM students WHERE user_id IN (${uPlaceholders}) OR college_id IN (${cPlaceholders})`, [...userIds, ...allCollegeIds]);
+        await safeDelete(`DELETE FROM student_personaldetails WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM student_parentdetail WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM student_add WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM student_classroom_mapping WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM students_erp_backup WHERE user_id IN (${uPlaceholders}) OR college_id IN (${cPlaceholders})`, [...userIds, ...allCollegeIds]);
+        await safeDelete(`DELETE FROM students_prn_mapping WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM students_sem_mapping WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM tbl_student_batch_sem_div_mapping WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM tbl_student_exam_classrom_mapping WHERE student_id IN (${uPlaceholders})`, userIds);
+
+        // Purge student enrollment & batch records
         await safeDelete(`DELETE FROM student_batches WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM student_quiz_completions WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM coordinator_departments WHERE coordinator_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM mentor_student_assignments WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await safeDelete(`DELETE FROM mentor_assignments WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM mentor_assignments WHERE student_id IN (${uPlaceholders}) OR mentor_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        
+        // Purge attendance & tracking records
         await safeDelete(`DELETE FROM attendance_summary WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM attendance_scans WHERE user_id IN (${uPlaceholders})`, userIds);
-        await safeDelete(`DELETE FROM attendance WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
+        await safeDelete(`DELETE FROM attendance WHERE user_id IN (${uPlaceholders}) OR college_id IN (${cPlaceholders})`, [...userIds, ...allCollegeIds]);
         await safeDelete(`DELETE FROM defaulters WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
         await safeDelete(`DELETE FROM interventions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM remedial_interventions WHERE student_id IN (${uPlaceholders})`, userIds);
+
+        // Purge interviews, leave requests, live sessions
         await safeDelete(`DELETE FROM interview_sessions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
         await safeDelete(`DELETE FROM interview_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM interviews WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM leave_requests WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM live_sessions WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
         await safeDelete(`DELETE FROM milestones WHERE user_id IN (${uPlaceholders})`, userIds);
+
+        // Purge roadmaps, assessments, practice problems
         await safeDelete(`DELETE FROM practice_problem_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM roadmap_items WHERE roadmap_id IN (SELECT id FROM roadmaps WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders}))`, [...userIds, ...userIds]);
         await safeDelete(`DELETE FROM roadmaps WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
         await safeDelete(`DELETE FROM skill_gap_analysis WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM skill_gaps WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM study_materials WHERE uploaded_by IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM support_tickets WHERE user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM task_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
@@ -355,6 +405,14 @@ export const deleteCollege = async (req, res, next) => {
         await safeDelete(`DELETE FROM drive_participations WHERE student_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM training_enrollments WHERE student_user_id IN (${uPlaceholders})`, userIds);
         await safeDelete(`DELETE FROM c2c_enrollments WHERE student_id IN (${uPlaceholders})`, userIds);
+
+        // Purge authentication tokens, notifications & activations
+        await safeDelete(`DELETE FROM account_activations WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM user_auth_token WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM user_oauth_tokens WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM notifications WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM faculty WHERE user_id IN (${uPlaceholders}) OR college_id IN (${cPlaceholders})`, [...userIds, ...allCollegeIds]);
+        await safeDelete(`DELETE FROM alumni_data WHERE student_id IN (${uPlaceholders}) OR college_id IN (${cPlaceholders})`, [...userIds, ...allCollegeIds]);
       }
 
       // 4. Delete OTP records of users
@@ -369,11 +427,14 @@ export const deleteCollege = async (req, res, next) => {
         await safeDelete(`DELETE FROM batch_daily_topics WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM task_submissions WHERE task_id IN (SELECT id FROM batch_tasks WHERE batch_id IN (${bPlaceholders}))`, batchIds);
         await safeDelete(`DELETE FROM batch_tasks WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM batch_trainers WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM attendance_sessions WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM student_batches WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM mentor_student_assignments WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM training_enrollments WHERE batch_id IN (${bPlaceholders})`, batchIds);
         await safeDelete(`DELETE FROM practice_problems WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM syllabus_tracker WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM time_table_batch_subject WHERE batch_id IN (${bPlaceholders})`, batchIds);
       }
 
       // 6. Delete Department associations
@@ -383,47 +444,68 @@ export const deleteCollege = async (req, res, next) => {
       }
 
       // 7. Delete College-level assessments and quizzes
-      await safeDelete(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE college_id = ?)`, [numId]);
-      await safeDelete(`DELETE FROM assessment_attempts WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM assessment_questions WHERE assessment_id IN (SELECT id FROM assessments WHERE college_id = ?)`, [numId]);
-      await safeDelete(`DELETE FROM assessments WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE college_id IN (${cPlaceholders}))`, allCollegeIds);
+      await safeDelete(`DELETE FROM assessment_attempts WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM assessment_questions WHERE assessment_id IN (SELECT id FROM assessments WHERE college_id IN (${cPlaceholders}))`, allCollegeIds);
+      await safeDelete(`DELETE FROM assessments WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
 
       // 8. Delete Broadcasts and notifications
-      await safeDelete(`DELETE FROM broadcast_notifications WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM broadcasts WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM broadcast_notifications WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM broadcasts WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
 
       // 9. Delete Mock Drives & Training Programs
-      await safeDelete(`DELETE FROM drive_participations WHERE drive_id IN (SELECT id FROM mock_drives WHERE college_id = ?)`, [numId]);
-      await safeDelete(`DELETE FROM mock_drives WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM training_enrollments WHERE program_id IN (SELECT id FROM training_programs WHERE college_id = ?)`, [numId]);
-      await safeDelete(`DELETE FROM training_programs WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM drive_participations WHERE drive_id IN (SELECT id FROM mock_drives WHERE college_id IN (${cPlaceholders}))`, allCollegeIds);
+      await safeDelete(`DELETE FROM mock_drives WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM training_enrollments WHERE program_id IN (SELECT id FROM training_programs WHERE college_id IN (${cPlaceholders}))`, allCollegeIds);
+      await safeDelete(`DELETE FROM training_programs WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
 
-      // 10. Delete Attendance sessions, shared content, practice problems
-      await safeDelete(`DELETE FROM attendance_sessions WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM attendance WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM shared_content WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM practice_problems WHERE college_id = ?`, [numId]);
+      // 10. Delete Attendance sessions, shared content, practice problems, trainings, subjects
+      await safeDelete(`DELETE FROM attendance_sessions WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM attendance WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM shared_content WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM practice_problems WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM trainings WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM subjects WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM faculty_branch_management WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM career_gateway_sync_log WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM trainx_training_export_batches WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
 
       // 11. Delete Batches, Departments, Students
-      await safeDelete(`DELETE FROM batches WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM departments WHERE college_id = ?`, [numId]);
-      await safeDelete(`DELETE FROM students WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM batches WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM departments WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
+      await safeDelete(`DELETE FROM students WHERE college_id IN (${cPlaceholders})`, allCollegeIds);
 
       // 12. Delete Secure codes, code requests, and C2C enrollments referencing this college name/code
       if (collegeName) {
         await safeDelete(`DELETE FROM secure_codes WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
         await safeDelete(`DELETE FROM secure_code_requests WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
         await safeDelete(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeName]);
+        await safeDelete(`DELETE FROM c2c_registrations WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeName]);
       }
       if (collegeCode) {
         await safeDelete(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeCode]);
+        await safeDelete(`DELETE FROM c2c_registrations WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeCode]);
+      }
+      if (userEmails.length > 0) {
+        const emailPlaceholders = userEmails.map(() => '?').join(',');
+        await safeDelete(`DELETE FROM secure_codes WHERE LOWER(email) IN (${emailPlaceholders})`, userEmails.map((e) => e.toLowerCase()));
+        await safeDelete(`DELETE FROM secure_code_requests WHERE LOWER(email) IN (${emailPlaceholders})`, userEmails.map((e) => e.toLowerCase()));
       }
 
-      // 13. Delete ALL users belonging to this college
-      await safeDelete(`DELETE FROM users WHERE college_id = ?`, [numId]);
+      // 13. Delete ALL users belonging to this college (strictly excluding super_admin)
+      if (userIds.length > 0) {
+        const uPlaceholders = userIds.map(() => '?').join(',');
+        await safeDelete(`DELETE FROM users WHERE id IN (${uPlaceholders}) AND role NOT IN ('super_admin', 'superadmin')`, userIds);
+      }
+      await safeDelete(`DELETE FROM users WHERE college_id IN (${cPlaceholders}) AND role NOT IN ('super_admin', 'superadmin')`, allCollegeIds);
 
-      // 14. Finally, delete the college row itself
-      await query(`DELETE FROM colleges WHERE id = ?`, [numId]);
+      // 14. Finally, delete the college row(s) itself
+      await query(`DELETE FROM colleges WHERE id IN (${cPlaceholders})`, allCollegeIds);
+
+      // 15. Invalidate auth caches immediately so any open sessions are revoked right now
+      for (const uid of userIds) {
+        revokeUserAuthInCache(uid);
+      }
     } finally {
       // Re-enable foreign key checks
       await query('SET FOREIGN_KEY_CHECKS = 1');

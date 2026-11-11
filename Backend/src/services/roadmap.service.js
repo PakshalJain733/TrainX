@@ -42,7 +42,7 @@ export const collectRealStudentSignals = async (studentId) => {
   const sId = Number(studentId);
   const assessmentScores = {};
   const weakSkills = [];
-  let suggestedTrack = 'Full Stack Engineering';
+  let suggestedTrack = null; // resolved from student's batch topic, target_track, or department — no hardcoded default
 
   // Check student target track, enrolled batch topic, or department
   try {
@@ -165,8 +165,10 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
     : realSignals.assessmentScores;
 
   // Use the targeted role when provided, otherwise derive from the student's real weak areas.
+  // Final fallback is a generic track — no institution-specific name hardcoded here.
   const requestedRole = (targetRole && String(targetRole).trim())
-    || (weakSkills.length > 0 ? weakSkills[0] : realSignals.suggestedTrack);
+    || (weakSkills.length > 0 ? weakSkills[0] : realSignals.suggestedTrack)
+    || 'Software Engineering';
 
   const careerTrackName = requestedRole;
 

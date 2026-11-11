@@ -75,7 +75,18 @@ export async function verifyUserIsActive(userId) {
     }
 
     const dbUser = rows[0];
-    const isActive = dbUser.is_active === 1 || dbUser.is_active === true || dbUser.is_active === '1';
+    let isActive = dbUser.is_active === 1 || dbUser.is_active === true || dbUser.is_active === '1';
+
+    // If user is tied to a college and not a super admin, verify that the college has not been deleted
+    const isSuper = String(dbUser.role || '').toLowerCase().includes('super');
+    if (!isSuper && dbUser.college_id) {
+      try {
+        const colRows = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [dbUser.college_id]);
+        if (!colRows || colRows.length === 0) {
+          isActive = false;
+        }
+      } catch (_) {}
+    }
 
     userActiveCache.set(numId, {
       exists: true,

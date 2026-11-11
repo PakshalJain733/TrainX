@@ -15,7 +15,14 @@ import {
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
-import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
+import { ROLES } from '../utils/constants.js';
+import {
+  isApprovalFeatureActive,
+  isRegistrationFeatureActive,
+  isPasswordLoginFeatureActive,
+  isOtpLoginFeatureActive,
+  isPasswordResetFeatureActive,
+} from '../middleware/featureSwitch.middleware.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -44,15 +51,15 @@ export const getCollegeByEmail = async (req, res, next) => {
 
 const checkRegistrationFeatureActive = async () => {
   try {
-    const rows = await query(`SELECT is_active, notice_message FROM feature_switches WHERE feature_key IN ('userRegistration', 'register') LIMIT 1`);
-    if (rows && rows.length > 0 && Number(rows[0].is_active) === 0) {
+    const active = await isRegistrationFeatureActive();
+    if (!active) {
       return {
         allowed: false,
-        message: rows[0].notice_message || 'Self-registration and new account sign-up is currently disabled by system administration.',
+        message: 'Self-registration and new account sign-up is currently disabled by system administration.',
       };
     }
   } catch (err) {
-    // If table doesn't exist or query fails, default to allowed
+    // If error occurs, fail-open to allowed
   }
   return { allowed: true };
 };
@@ -98,6 +105,11 @@ export const verifyRegisterOtp = async (req, res, next) => {
 
 export const sendOtp = async (req, res, next) => {
   try {
+    const otpActive = await isOtpLoginFeatureActive();
+    if (!otpActive) {
+      return sendError(res, 'OTP authentication gateway is temporarily offline for maintenance.', 403);
+    }
+
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     if (!identifier) {
       return sendError(res, 'Email or Mobile number is required', 400);
@@ -111,6 +123,11 @@ export const sendOtp = async (req, res, next) => {
 
 export const verifyOtpAndLogin = async (req, res, next) => {
   try {
+    const otpActive = await isOtpLoginFeatureActive();
+    if (!otpActive) {
+      return sendError(res, 'OTP authentication gateway is temporarily offline for maintenance.', 403);
+    }
+
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     const { otp, rememberMe, remember_me } = req.body;
     if (!identifier || !otp) {
@@ -132,6 +149,16 @@ export const passwordLogin = async (req, res, next) => {
     if (!identifier || !password) {
       return sendError(res, 'Email/Mobile and Password are required', 400);
     }
+
+    const pwActive = await isPasswordLoginFeatureActive();
+    if (!pwActive) {
+      const user = await findUserByEmailOrMobile(identifier);
+      const isSuperAdmin = user && (user.role === ROLES.SUPER_ADMIN || String(user.role).toLowerCase().includes('super'));
+      if (!isSuperAdmin) {
+        return sendError(res, 'Password authentication is undergoing routine maintenance.', 403);
+      }
+    }
+
     const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
     const result = await loginWithPassword(identifier, password, isRemember);
     return sendSuccess(res, 'Login successful', result);
@@ -207,6 +234,11 @@ export const getMe = async (req, res, next) => {
 
 export const changePassword = async (req, res, next) => {
   try {
+    const pwResetActive = await isPasswordResetFeatureActive();
+    if (!pwResetActive) {
+      return sendError(res, 'Password recovery and change service is currently updating.', 403);
+    }
+
     const userId = req.user.userId || req.user.id;
     const { currentPassword, newPassword } = req.body;
     if (!newPassword || newPassword.length < 6) {
@@ -221,6 +253,11 @@ export const changePassword = async (req, res, next) => {
 
 export const resetPasswordWithOtp = async (req, res, next) => {
   try {
+    const pwResetActive = await isPasswordResetFeatureActive();
+    if (!pwResetActive) {
+      return sendError(res, 'Password recovery and change service is currently updating.', 403);
+    }
+
     const { otp, newPassword } = req.body;
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     if (!identifier || !otp || !newPassword) {

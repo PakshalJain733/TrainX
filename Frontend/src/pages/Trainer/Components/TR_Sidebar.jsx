@@ -8,6 +8,7 @@ import {
   Trophy,
   HelpCircle
 } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import AppTooltip from "../../../components/ui/AppTooltip";
@@ -18,7 +19,6 @@ function SidebarBrand({ collapsed, subtitle }) {
     <Link
         to="/trainer"
         className="sidebar-brand"
-        style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
       >
         <div className="sidebar-brand-logo-container">
           <img src={logoImg} alt="TrainX" className="sidebar-brand-logo" />
@@ -37,19 +37,27 @@ function SidebarBrand({ collapsed, subtitle }) {
 }
 
 const primaryNavItems = [
-  { title: "Overview", url: "/trainer", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/trainer/batches", icon: Users },
-  { title: "Add Batch Task", url: "/trainer/tasks", icon: Code2 },
-  { title: "Submissions", url: "/trainer/submissions", icon: FileCheck2 },
-  { title: "Leaderboard", url: "/trainer/leaderboard", icon: Trophy },
+  { title: "Overview", url: "/trainer", icon: LayoutDashboard, exact: true, moduleKey: "trainerOverview" },
+  { title: "Batches", url: "/trainer/batches", icon: Users, moduleKey: "trainerBatches" },
+  { title: "Add Batch Task", url: "/trainer/tasks", icon: Code2, moduleKey: "trainerTasks" },
+  { title: "Submissions", url: "/trainer/submissions", icon: FileCheck2, moduleKey: "trainerSubmissions" },
+  { title: "Leaderboard", url: "/trainer/leaderboard", icon: Trophy, moduleKey: "trainerLeaderboard" },
 ];
 
 const footerNavItems = [
-  { title: "Support Ticket", url: "/trainer/help", icon: HelpCircle },
+  { title: "Support Ticket", url: "/trainer/help", icon: HelpCircle, moduleKey: "trainerHelp" },
 ];
 
 export function TrainerSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const { isModuleActive } = useSystemMaintenance();
+
+  const visiblePrimaryItems = primaryNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
+  const visibleFooterItems = footerNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
 
   const isActive = (url, exact) =>
     exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
@@ -99,14 +107,14 @@ export function TrainerSidebar({ collapsed, mobileOpen, onClose }) {
       {/* Nav */}
       <div className="sidebar-content">
         <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
+          {visiblePrimaryItems.map(renderItem)}
         </ul>
       </div>
 
       {/* Pinned Bottom */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
+          {visibleFooterItems.map(renderItem)}
         </ul>
       </div>
     </aside>

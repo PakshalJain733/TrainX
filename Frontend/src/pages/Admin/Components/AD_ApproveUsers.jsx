@@ -133,6 +133,8 @@ export default function AD_ApproveUsers() {
         matchesRole = roleLower.includes("mentor") || roleLower.includes("faculty");
       } else if (selectedRole === "coordinator") {
         matchesRole = roleLower.includes("coordinator");
+      } else if (selectedRole === "trainer") {
+        matchesRole = roleLower.includes("trainer");
       } else {
         matchesRole = roleLower === selectedRole.toLowerCase();
       }
@@ -171,6 +173,7 @@ export default function AD_ApproveUsers() {
 
   // College Admin counts
   const studentCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "student").length;
+  const trainerCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "trainer").length;
   const mentorCount = pendingUsers.filter(
     (u) => String(u.role).toLowerCase() === "mentor" || String(u.role).toLowerCase() === "faculty"
   ).length;
@@ -308,6 +311,17 @@ export default function AD_ApproveUsers() {
 
             <div className="approve-stat-card">
               <div>
+                <div className="approve-stat-lbl">Trainers</div>
+                <div className="approve-stat-val">{trainerCount}</div>
+                <div className="approve-stat-sub">Trainer requests</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--emerald">
+                <Briefcase size={24} />
+              </div>
+            </div>
+
+            <div className="approve-stat-card">
+              <div>
                 <div className="approve-stat-lbl">Mentors</div>
                 <div className="approve-stat-val">{mentorCount}</div>
                 <div className="approve-stat-sub">Mentor requests</div>
@@ -396,6 +410,13 @@ export default function AD_ApproveUsers() {
                 onClick={() => setSelectedRole("coordinator")}
               >
                 Coordinators ({coordCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "trainer" ? "active" : ""}`}
+                onClick={() => setSelectedRole("trainer")}
+              >
+                Trainers ({trainerCount})
               </button>
             </div>
           </div>
@@ -488,6 +509,10 @@ export default function AD_ApproveUsers() {
               avatarClass = "user-avatar--coordinator";
               roleBadgeBg = "#fef3c7";
               roleBadgeColor = "#b45309";
+            } else if (roleStr.includes("trainer")) {
+              avatarClass = "user-avatar--trainer";
+              roleBadgeBg = "#ecfdf5";
+              roleBadgeColor = "#047857";
             }
 
             return (
@@ -690,6 +715,8 @@ export default function AD_ApproveUsers() {
                     avatarClass = "user-avatar--mentor";
                   } else if (roleStr.includes("coordinator")) {
                     avatarClass = "user-avatar--coordinator";
+                  } else if (roleStr.includes("trainer")) {
+                    avatarClass = "user-avatar--trainer";
                   }
 
                   return (

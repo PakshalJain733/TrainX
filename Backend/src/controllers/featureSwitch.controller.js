@@ -2,6 +2,39 @@ import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { clearFeatureCache } from '../middleware/featureSwitch.middleware.js';
 
+const DEFAULT_FEATURES = [
+  { key: 'loginWithPassword', name: 'Password & OTP Login System', category: 'Auth & Security', active: 1 },
+  { key: 'loginWithOTP', name: 'OTP Login System', category: 'Auth & Security', active: 1 },
+  { key: 'userRegistration', name: 'Self-Registration & Sign-Up Flow', category: 'Auth & Security', active: 1 },
+  { key: 'passwordReset', name: 'Password Recovery & Reset Modal', category: 'Auth & Security', active: 1 },
+  { key: 'adminApproveUsers', name: 'User Registration Approval Workflow', category: 'User Management', active: 1 },
+  { key: 'manageUsers', name: 'User Management', category: 'User Management', active: 1 },
+  { key: 'adminCareerGatewaySync', name: 'Career Gateway Sync Integration', category: 'Integrations', active: 1 },
+  { key: 'codingCompiler', name: 'Code Execution Engine & Compiler', category: 'Academics', active: 1 },
+  { key: 'practiceCoding', name: 'Coding Practice Problems', category: 'Academics', active: 1 },
+  { key: 'adminPracticeProblems', name: 'Manage Practice Problems', category: 'Academics', active: 1 },
+  { key: 'academicQuizzes', name: 'Quizzes & Technical Assessments', category: 'Academics', active: 1 },
+  { key: 'aiRoadmaps', name: 'AI Personalized Learning Roadmaps', category: 'AI Features', active: 1 },
+  { key: 'aiInterviews', name: 'AI Mock Interview Simulator', category: 'AI Features', active: 1 },
+  { key: 'skillGapAnalysis', name: 'Skill Gap Analysis & Student Progress', category: 'Academics', active: 1 },
+  { key: 'studentLeaderboard', name: 'Student & Institutional Leaderboard', category: 'Academics', active: 1 },
+  { key: 'attendance', name: 'Attendance Tracking & Governance', category: 'Academics', active: 1 },
+  { key: 'weeklyReports', name: 'Weekly Progress Reports', category: 'Reporting', active: 1 },
+  { key: 'defaulters', name: 'Defaulters Management', category: 'Reporting', active: 1 },
+  { key: 'batches', name: 'Batch Management & Scheduling', category: 'Administration', active: 1 },
+  { key: 'trainings', name: 'Trainings & C2C Enrollments', category: 'Administration', active: 1 },
+  { key: 'departments', name: 'Department Management', category: 'Administration', active: 1 },
+  { key: 'broadcast', name: 'Broadcast Notice Center', category: 'Communication', active: 1 },
+  { key: 'supportTickets', name: 'Support Tickets & Help Desk', category: 'Support', active: 1 },
+  { key: 'trainerOverview', name: 'Trainer Overview & Performance Metrics', category: 'Trainer Features', active: 1 },
+  { key: 'trainerBatches', name: 'Trainer Batches & Student Roster', category: 'Trainer Features', active: 1 },
+  { key: 'trainerTasks', name: 'Batch Tasks & Programming Assignments', category: 'Trainer Features', active: 1 },
+  { key: 'trainerSubmissions', name: 'Student Code Submissions & Evaluation', category: 'Trainer Features', active: 1 },
+  { key: 'trainerLeaderboard', name: 'Trainer Batch Leaderboard', category: 'Trainer Features', active: 1 },
+  { key: 'trainerProfile', name: 'Trainer Profile & Settings', category: 'Trainer Features', active: 1 },
+  { key: 'trainerHelp', name: 'Trainer Support & Help Desk', category: 'Trainer Features', active: 1 },
+];
+
 let isTableInitialized = false;
 const ensureTableExists = async () => {
   if (isTableInitialized) return;
@@ -17,6 +50,20 @@ const ensureTableExists = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    // Seed missing default feature switches without overriding existing active states
+    for (const f of DEFAULT_FEATURES) {
+      try {
+        await query(`
+          INSERT INTO feature_switches (feature_key, feature_name, category, is_active)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+            feature_name = VALUES(feature_name),
+            category = VALUES(category)
+        `, [f.key, f.name, f.category, f.active]);
+      } catch (_) {}
+    }
+
     isTableInitialized = true;
   } catch (err) {
     console.warn('[FeatureSwitches] Table check warning:', err.message);

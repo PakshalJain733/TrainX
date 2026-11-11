@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { SlidersHorizontal, Power, CheckCircle2, AlertTriangle, Wrench, Sparkles, RefreshCw, Search, Edit3, Code, Users, CalendarCheck, Eye, Shield, X, MessageSquare, Lock, ArrowRight, Info, Building2 } from "lucide-react";
+import { SlidersHorizontal, Power, CheckCircle2, AlertTriangle, Wrench, Sparkles, RefreshCw, Search, Edit3, Code, Users, CalendarCheck, Eye, Shield, X, MessageSquare, Lock, ArrowRight, Info, Building2, LayoutDashboard } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { collegeAPI } from "../../../services/api";
@@ -133,7 +133,7 @@ function LivePreviewModal({ moduleData, onClose }) {
               </p>
             </div>
             <div className="mc-preview-target">
-              <Info size={13} style={{ color: "#94a3b8" }} />
+              <Info size={13} className="mc-preview-target-icon" />
               <span>Target Role Restricted: <strong>{moduleData.role}</strong></span>
             </div>
           </div>
@@ -168,6 +168,7 @@ export default function MaintenanceControls() {
   const [selectedCollege, setSelectedCollege] = useState("all");
 
   const [activeCategory, setActiveCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "on" | "off"
   const [searchQuery, setSearchQuery] = useState("");
   const [editingModule, setEditingModule] = useState(null);
   const [previewModule, setPreviewModule] = useState(null);
@@ -195,13 +196,18 @@ export default function MaintenanceControls() {
   const modulesList = Object.values(config.modules);
 
   const filteredModules = modulesList.filter((mod) => {
+    const isModActive = mod.active && !config.globalEmergencyMode;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "on" && isModActive) ||
+      (statusFilter === "off" && !isModActive);
     const matchesSearch =
       mod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mod.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       mod.role.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
       activeCategory === "all" || mod.category === activeCategory;
-    return matchesSearch && matchesCategory;
+    return matchesStatus && matchesSearch && matchesCategory;
   });
 
   const totalModules = modulesList.length;
@@ -217,6 +223,8 @@ export default function MaintenanceControls() {
         return Code;
       case "Mentor Features":
         return Users;
+      case "Trainer Features":
+        return LayoutDashboard;
       case "Coordinator Features":
         return CalendarCheck;
       case "College Admin":
@@ -236,6 +244,7 @@ export default function MaintenanceControls() {
     { id: "Auth & Security", label: "Auth & Security", count: modulesList.filter(m => m.category === "Auth & Security").length },
     { id: "Student Features", label: "Student Portal", count: modulesList.filter(m => m.category === "Student Features").length },
     { id: "Mentor Features", label: "Mentor Workspace", count: modulesList.filter(m => m.category === "Mentor Features").length },
+    { id: "Trainer Features", label: "Trainer Portal", count: modulesList.filter(m => m.category === "Trainer Features").length },
     { id: "Coordinator Features", label: "Coordinator Faculty", count: modulesList.filter(m => m.category === "Coordinator Features").length },
     { id: "College Admin", label: "College Admin", count: modulesList.filter(m => m.category === "College Admin").length },
     { id: "Super Admin", label: "Super Admin", count: modulesList.filter(m => m.category === "Super Admin").length },
@@ -285,7 +294,11 @@ export default function MaintenanceControls() {
 
       {/* Standardized KPI Grid */}
       <div className="sa-kpi-grid">
-        <div className="sa-stats-card">
+        <div
+          className={`sa-stats-card sa-stats-card--clickable ${statusFilter === 'all' ? 'sa-stats-card--selected' : ''}`}
+          onClick={() => setStatusFilter('all')}
+          title="Click to view all features"
+        >
           <div className="sa-stats-card-header">
             <span className="sa-stats-label">Managed Modules</span>
             <div className="sa-stats-icon-box sa-stats-icon-box--default">
@@ -302,7 +315,11 @@ export default function MaintenanceControls() {
           </div>
         </div>
 
-        <div className="sa-stats-card">
+        <div
+          className={`sa-stats-card sa-stats-card--clickable ${statusFilter === 'on' ? 'sa-stats-card--selected' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'on' ? 'all' : 'on')}
+          title="Click to filter ON (Active) features"
+        >
           <div className="sa-stats-card-header">
             <span className="sa-stats-label">Active Online</span>
             <div className="sa-stats-icon-box sa-stats-icon-box--default">
@@ -321,7 +338,11 @@ export default function MaintenanceControls() {
           </div>
         </div>
 
-        <div className="sa-stats-card">
+        <div
+          className={`sa-stats-card sa-stats-card--clickable ${statusFilter === 'off' ? 'sa-stats-card--selected' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'off' ? 'all' : 'off')}
+          title="Click to filter OFF (Under Maintenance) features"
+        >
           <div className="sa-stats-card-header">
             <span className="sa-stats-label">Under Maintenance</span>
             <div className="sa-stats-icon-box sa-stats-icon-box--default">
@@ -379,7 +400,7 @@ export default function MaintenanceControls() {
         <div className="mc-college-selector-wrap">
           <Building2 size={18} className="mc-college-icon" />
           <span className="mc-college-label">Institution Scope:</span>
-          <div style={{ flex: 1, maxWidth: "340px" }}>
+          <div className="mc-college-select-box">
             <CustomSelect
               value={selectedCollege}
               onChange={setSelectedCollege}
@@ -389,6 +410,39 @@ export default function MaintenanceControls() {
               }))}
             />
           </div>
+        </div>
+
+        {/* Live Status Filter Toggle: All / ON / OFF */}
+        <div className="mc-status-toggle-group">
+          <button
+            type="button"
+            className={`mc-status-btn ${statusFilter === "all" ? "mc-status-btn--active" : ""}`}
+            onClick={() => setStatusFilter("all")}
+            title="Show all features"
+          >
+            <span>All</span>
+            <span className="mc-status-btn-count">{totalModules}</span>
+          </button>
+          <button
+            type="button"
+            className={`mc-status-btn mc-status-btn--on ${statusFilter === "on" ? "mc-status-btn--active" : ""}`}
+            onClick={() => setStatusFilter("on")}
+            title="Show only Active (ON) features"
+          >
+            <span className="mc-status-indicator mc-status-indicator--on"></span>
+            <span>ON</span>
+            <span className="mc-status-btn-count">{activeCount}</span>
+          </button>
+          <button
+            type="button"
+            className={`mc-status-btn mc-status-btn--off ${statusFilter === "off" ? "mc-status-btn--active" : ""}`}
+            onClick={() => setStatusFilter("off")}
+            title="Show only Toggled OFF (Under Maintenance) features"
+          >
+            <span className="mc-status-indicator mc-status-indicator--off"></span>
+            <span>OFF</span>
+            <span className="mc-status-btn-count">{maintenanceCount}</span>
+          </button>
         </div>
 
         <div className="sa-search-wrap dept-search-box mc-search-flex">
@@ -521,6 +575,34 @@ export default function MaintenanceControls() {
                   </tr>
                 );
               })}
+              {filteredModules.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="mc-empty-state-cell">
+                    <SlidersHorizontal size={36} className="mc-empty-state-icon" />
+                    <div className="mc-empty-state-title">
+                      No feature switches match your filter
+                    </div>
+                    <div className="mc-empty-state-desc">
+                      {statusFilter !== "all"
+                        ? `No ${statusFilter === "on" ? "ACTIVE (ON)" : "MAINTENANCE (OFF)"} features found in this view.`
+                        : "Try adjusting your search query or category."}
+                    </div>
+                    {(statusFilter !== "all" || searchQuery || activeCategory !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStatusFilter("all");
+                          setSearchQuery("");
+                          setActiveCategory("all");
+                        }}
+                        className="mc-empty-state-reset-btn"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

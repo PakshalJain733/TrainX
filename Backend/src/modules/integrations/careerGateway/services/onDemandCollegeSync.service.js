@@ -74,16 +74,16 @@ async function resolveCollegeTenant(collegeId, careerGatewayCollegeId) {
     return {
       id: firstCollege.id,
       name: firstCollege.name,
-      code: firstCollege.code || firstCollege.career_gateway_college_id || 'pvppcoe',
-      externalId: candidate || firstCollege.career_gateway_college_id || firstCollege.code || 'pvppcoe',
+      code: firstCollege.code || firstCollege.career_gateway_college_id || String(firstCollege.id),
+      externalId: candidate || firstCollege.career_gateway_college_id || firstCollege.code || String(firstCollege.id),
     };
   }
 
   return {
     id: 1,
-    name: 'PVPPCOE College of Engineering',
-    code: candidate || 'pvppcoe',
-    externalId: candidate || 'pvppcoe',
+    name: process.env.DEFAULT_COLLEGE_NAME || 'College of Engineering',
+    code: candidate || process.env.CAREER_GATEWAY_COLLEGE_ID || 'default',
+    externalId: candidate || process.env.CAREER_GATEWAY_COLLEGE_ID || 'default',
   };
 }
 

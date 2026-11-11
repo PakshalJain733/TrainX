@@ -7,6 +7,7 @@ import {
   updateSubmissionFeedbackController,
 } from '../controllers/codingSubmission.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = express.Router();
 
@@ -19,13 +20,13 @@ const staffOrAdmin = authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLE
  * Route: Get all coding submissions (Admin / Mentors / Instructors Only)
  * GET /api/v1/coding-submissions
  */
-router.get('/', authenticateToken, staffOrAdmin, getAllCodingSubmissionsAdmin);
+router.get('/', authenticateToken, staffOrAdmin, requireFeature('trainerSubmissions'), getAllCodingSubmissionsAdmin);
 
 /**
  * Route: Save a student's coding attempt and marks
  * POST /api/v1/coding-submissions
  */
-router.post('/', authenticateToken, createCodingSubmission);
+router.post('/', authenticateToken, requireFeature('codingCompiler'), createCodingSubmission);
 
 /**
  * Route: Save optional feedback on coding submission (Admin / Mentors / Instructors Only)

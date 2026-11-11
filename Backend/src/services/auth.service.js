@@ -72,6 +72,23 @@ const assertUserCanAuthenticate = async (user) => {
       throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
     }
   }
+
+  // Verify that the college institution associated with this account still exists
+  let targetCollegeId = user.college_id;
+  if (!targetCollegeId && roleNormalized.includes('student')) {
+    try {
+      const sRows = await query('SELECT college_id FROM students WHERE user_id = ? LIMIT 1', [user.id]);
+      if (sRows && sRows.length > 0 && sRows[0].college_id) {
+        targetCollegeId = sRows[0].college_id;
+      }
+    } catch (_) {}
+  }
+  if (targetCollegeId) {
+    const colRows = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [targetCollegeId]);
+    if (!colRows || colRows.length === 0) {
+      throw createAuthError('The college institution associated with this account has been deleted. Access is disabled.', 403);
+    }
+  }
 };
 
 const verifyStoredPassword = async (user, password) => {

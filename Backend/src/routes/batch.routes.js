@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 import {
   getBatches,
   createBatch,
@@ -27,6 +28,7 @@ import {
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requireFeature('batches'));
 
 const batchManager = authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.TRAINER);
 const taskStaff = authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.TRAINER, ROLES.MENTOR, ROLES.COORDINATOR);

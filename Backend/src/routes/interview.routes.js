@@ -6,9 +6,11 @@ import {
   getInterviewLockStatus,
 } from '../controllers/interview.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requireFeature('aiInterviews'));
 
 router.get('/lock-status', getInterviewLockStatus);
 router.get('/rate-limit', getInterviewLockStatus);

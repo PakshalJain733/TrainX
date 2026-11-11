@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .maintenancecontrols-header-title {
@@ -837,4 +837,212 @@
 .sa-stats-val--emerald {
   color: #059669 !important;
 }
+
+/* Status Filter Toggle Group (All / ON / OFF) */
+.mc-status-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  gap: 3px;
+}
+
+.mc-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.mc-status-btn:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.mc-status-btn--active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-weight: 700;
+}
+
+.mc-status-btn--on.mc-status-btn--active {
+  color: #059669 !important;
+}
+
+.mc-status-btn--off.mc-status-btn--active {
+  color: #d97706 !important;
+}
+
+.mc-status-btn-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.2);
+  color: inherit;
+}
+
+.mc-status-btn--active .mc-status-btn-count {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.mc-status-btn--on.mc-status-btn--active .mc-status-btn-count {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.mc-status-btn--off.mc-status-btn--active .mc-status-btn-count {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.mc-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.mc-status-indicator--on {
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+.mc-status-indicator--off {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+/* Clickable KPI Stat Cards */
+.sa-stats-card--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+.sa-stats-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.sa-stats-card--selected {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.25), 0 4px 12px rgba(79, 70, 229, 0.08) !important;
+}
+
+/* Scoped Utility Classes replacing inline styles */
+.mc-college-select-box {
+  flex: 1;
+  max-width: 340px;
+}
+
+.mc-preview-target-icon {
+  color: #94a3b8;
+}
+
+.mc-empty-state-cell {
+  text-align: center;
+  padding: 52px 24px;
+  color: #64748b;
+}
+
+.mc-empty-state-icon {
+  margin: 0 auto 12px;
+  color: #94a3b8;
+  display: block;
+}
+
+.mc-empty-state-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.mc-empty-state-desc {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.mc-empty-state-reset-btn {
+  margin-top: 16px;
+  padding: 6px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mc-empty-state-reset-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Responsive Styles for Mobile & Narrow Screens */
+@media (max-width: 768px) {
+  .maintenancecontrols-header-wrap {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .maintenancecontrols-header-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .maintenancecontrols-btn-emergency,
+  .maintenancecontrols-header-actions .sa-btn-primary {
+    flex: 1 1 auto;
+    min-width: 140px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .mc-college-filter-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .mc-college-selector-wrap {
+    min-width: 100%;
+  }
+
+  .mc-status-toggle-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mc-status-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .mc-search-flex {
+    width: 100%;
+  }
+}
+
+
 

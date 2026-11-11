@@ -315,7 +315,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   return createPortal(
     <div className="fs-portal-overlay" onClick={onClose}>
       <div className="fs-portal-dialog" onClick={e => e.stopPropagation()}>
-        
+
         {/* Header Bar */}
         <div className="fs-portal-header">
           <div className="fs-portal-header-left">
@@ -339,7 +339,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
         {/* Full-Screen Split Body */}
         <div className="fs-portal-body">
-          
+
           {/* Left Column: Topic & Trainer Editor */}
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
@@ -484,56 +484,56 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                 </div>
               ) : (
                 batches.map(item => {
-                const isSelected = item.id === selectedBatchId;
-                const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
-                const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
-                const displayStatus = isSelected ? topicStatus : item.status;
-                const displayTrainer = isSelected ? currentTrainer : item.trainer;
+                  const isSelected = item.id === selectedBatchId;
+                  const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
+                  const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
+                  const displayStatus = isSelected ? topicStatus : item.status;
+                  const displayTrainer = isSelected ? currentTrainer : item.trainer;
 
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => handleQuickEditTopic(item)}
-                    className={`fs-portal-batch-card ${isSelected ? 'fs-portal-batch-card--selected' : ''}`}
-                  >
-                    <div>
-                      <div className="fs-portal-batch-card-top">
-                        <span className="fs-portal-batch-badge">
-                          {item.name}
-                        </span>
-                        <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
-                          {displayStatus}
-                        </span>
-                      </div>
-
-                      <h4 className="fs-portal-batch-title">
-                        {displayTopic}
-                      </h4>
-
-                      <p className="fs-portal-batch-desc">
-                        {displayDesc}
-                      </p>
-                    </div>
-
-                    <div className="fs-portal-batch-footer">
-                      <div className="fs-portal-trainer-info">
-                        <div className="fs-portal-trainer-avatar">
-                          {(displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "T").charAt(0)}
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleQuickEditTopic(item)}
+                      className={`fs-portal-batch-card ${isSelected ? 'fs-portal-batch-card--selected' : ''}`}
+                    >
+                      <div>
+                        <div className="fs-portal-batch-card-top">
+                          <span className="fs-portal-batch-badge">
+                            {item.name}
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
+                            {displayStatus}
+                          </span>
                         </div>
-                        <span className="fs-portal-trainer-name">
-                          {displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "No Trainer Assigned"}
-                        </span>
-                        {(registeredTrainers.some(t => t.name === displayTrainer) || item.isTrainerRegistered) && (
-                          <span className="fs-portal-preassigned-tag" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0', fontSize: '10px', padding: '1px 5px' }}>Registered</span>
-                        )}
+
+                        <h4 className="fs-portal-batch-title">
+                          {displayTopic}
+                        </h4>
+
+                        <p className="fs-portal-batch-desc">
+                          {displayDesc}
+                        </p>
                       </div>
-                      <span className={isSelected ? "fs-portal-batch-status-active" : "fs-portal-batch-status-idle"}>
-                        {isSelected ? "Active Batch ✓" : "Click to Edit"}
-                      </span>
+
+                      <div className="fs-portal-batch-footer">
+                        <div className="fs-portal-trainer-info">
+                          <div className="fs-portal-trainer-avatar">
+                            {(displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "T").charAt(0)}
+                          </div>
+                          <span className="fs-portal-trainer-name">
+                            {displayTrainer && displayTrainer !== "Faculty Instructor" && displayTrainer !== "Unassigned" && displayTrainer !== "No Trainer Assigned" ? displayTrainer : "No Trainer Assigned"}
+                          </span>
+                          {(registeredTrainers.some(t => t.name === displayTrainer) || item.isTrainerRegistered) && (
+                            <span className="fs-portal-preassigned-tag" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0', fontSize: '10px', padding: '1px 5px' }}>Registered</span>
+                          )}
+                        </div>
+                        <span className={isSelected ? "fs-portal-batch-status-active" : "fs-portal-batch-status-idle"}>
+                          {isSelected ? "Active Batch ✓" : "Click to Edit"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              }))}
+                  );
+                }))}
             </div>
           </div>
         </div>
@@ -2077,6 +2077,14 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess, departments = [] }) 
 export default function AdminUsers() {
   const { isModuleActive } = useSystemMaintenance();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  let storedUser = null;
+  try {
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (raw) storedUser = JSON.parse(raw);
+  } catch (_) { }
+  const collegeName = storedUser?.college_name || storedUser?.college || "";
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -2095,6 +2103,18 @@ export default function AdminUsers() {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isGenerateCodeModalOpen, setIsGenerateCodeModalOpen] = useState(false);
+  const [genCodeForm, setGenCodeForm] = useState({
+    role: "mentor",
+    name: "",
+    email: "",
+    expiry_option: "7d",
+  });
+  const [isSubmittingGenCode, setIsSubmittingGenCode] = useState(false);
+  const [generatedStaffCode, setGeneratedStaffCode] = useState(null);
+  const [genCodeSuccessMsg, setGenCodeSuccessMsg] = useState("");
+  const [genCodeErrorMsg, setGenCodeErrorMsg] = useState("");
+  const [copiedStaffCode, setCopiedStaffCode] = useState(false);
   const [isBulkExcelOpen, setIsBulkExcelOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -2177,6 +2197,10 @@ export default function AdminUsers() {
       });
       if (res && res.data && res.data.code) {
         setGeneratedCode(res.data.code);
+        if (formData.email && formData.email.includes('@')) {
+          setActionToast({ type: "success", message: `Activation code generated and invitation email dispatched to ${formData.email}` });
+          setTimeout(() => setActionToast(null), 5000);
+        }
       } else {
         setGeneratedCode(generatedFallback);
       }
@@ -2185,6 +2209,54 @@ export default function AdminUsers() {
       setGeneratedCode(generatedFallback);
     } finally {
       setIsGeneratingCode(false);
+    }
+  };
+
+  const handleAdminGenerateCodeSubmit = async (e) => {
+    e.preventDefault();
+    if (!genCodeForm.email || !genCodeForm.email.includes('@')) {
+      setGenCodeErrorMsg("A valid registered email address is required.");
+      return;
+    }
+    setIsSubmittingGenCode(true);
+    setGenCodeErrorMsg("");
+    setGenCodeSuccessMsg("");
+    setGeneratedStaffCode(null);
+
+    const prefix = genCodeForm.role === 'coordinator' ? 'CO' : (genCodeForm.role === 'trainer' ? 'TRN' : 'FAC');
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const fallback = `${prefix}-${new Date().getFullYear()}-${randomHex}`;
+
+    try {
+      const res = await apiFetch('/secure-codes/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          role: genCodeForm.role,
+          email: genCodeForm.email.trim(),
+          name: genCodeForm.name.trim() || undefined,
+          college_name: collegeName || undefined,
+          max_uses: 1,
+          expiry_option: genCodeForm.expiry_option || '7d',
+          description: `Admin invitation for ${genCodeForm.role}: ${genCodeForm.name || genCodeForm.email}`,
+        }),
+      });
+
+      if (res && res.data && res.data.code) {
+        setGeneratedStaffCode(res.data.code);
+        setGenCodeSuccessMsg(res.message || `Activation code created and invitation email successfully delivered to ${genCodeForm.email}`);
+        setActionToast({ type: "success", message: `Activation code generated and invitation email sent to ${genCodeForm.email}` });
+        setTimeout(() => setActionToast(null), 5000);
+        fetchUsers();
+      } else {
+        setGeneratedStaffCode(fallback);
+        setGenCodeSuccessMsg(`Activation code generated: ${fallback}`);
+        fetchUsers();
+      }
+    } catch (err) {
+      console.error("Failed to generate code:", err);
+      setGenCodeErrorMsg(err.message || "Failed to generate activation code");
+    } finally {
+      setIsSubmittingGenCode(false);
     }
   };
 
@@ -2432,8 +2504,8 @@ export default function AdminUsers() {
       const isStudentRole = formData.role === "student";
       const selectedDeptObj = isStudentRole
         ? (departments || []).find(
-            (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
-          )
+          (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+        )
         : null;
 
       const payload = {
@@ -2476,8 +2548,8 @@ export default function AdminUsers() {
       const isStudentRole = formData.role === "student" || formData.role === "Student";
       const selectedDeptObj = isStudentRole
         ? (departments || []).find(
-            (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
-          )
+          (d) => (d.code && d.code === formData.department) || (d.name && d.name === formData.department)
+        )
         : null;
 
       const updatePayload = {
@@ -2564,6 +2636,18 @@ export default function AdminUsers() {
           <div className="ui-section-action" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button className="admin-btn-add" onClick={handleOpenAdd}>
               <UserPlus size={16} /> Add User
+            </button>
+            <button
+              className="admin-btn-secondary"
+              style={{ borderColor: '#6366f1', color: '#4f46e5', fontWeight: 650, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => {
+                setIsGenerateCodeModalOpen(true);
+                setGenCodeErrorMsg("");
+                setGenCodeSuccessMsg("");
+                setGeneratedStaffCode(null);
+              }}
+            >
+              <KeyRound size={16} /> Generate Code
             </button>
             <button
               className="admin-btn-excel"
@@ -2720,7 +2804,7 @@ export default function AdminUsers() {
 
       {/* Action Toast Alert */}
       {actionToast && (
-        <div 
+        <div
           style={{
             margin: "0 0 16px 0",
             padding: "12px 18px",
@@ -2745,8 +2829,8 @@ export default function AdminUsers() {
             )}
             <span>{actionToast.message}</span>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setActionToast(null)}
             style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: "4px" }}
           >
@@ -2838,8 +2922,8 @@ export default function AdminUsers() {
                         {(u.is_active === 0 || !u.is_verified) && u.email && (
                           <button
                             className="btn-table-action"
-                            style={{ 
-                              color: sentEmailIds[u.id] ? "#10b981" : "#4f46e5", 
+                            style={{
+                              color: sentEmailIds[u.id] ? "#10b981" : "#4f46e5",
                               borderColor: sentEmailIds[u.id] ? "#a7f3d0" : "#c7d2fe",
                               backgroundColor: sentEmailIds[u.id] ? "#ecfdf5" : undefined,
                               cursor: sendingEmailId === u.id ? "wait" : "pointer"
@@ -2998,7 +3082,7 @@ export default function AdminUsers() {
                         <div>
                           <div className="admin-user-token-title">Role Access Token</div>
                           <div className="admin-user-token-sub">
-                            Required for {formData.role === 'coordinator' ? 'Coordinator' : 'Mentor'} onboarding
+                            Required for {formData.role === 'coordinator' ? 'Coordinator' : (formData.role === 'trainer' ? 'Trainer' : (formData.role === 'college_admin' ? 'Admin' : 'Mentor'))} onboarding
                           </div>
                         </div>
                       </div>
@@ -3064,7 +3148,7 @@ export default function AdminUsers() {
                                 document.execCommand("copy");
                                 document.body.removeChild(textArea);
                               }
-                            } catch (_) {}
+                            } catch (_) { }
                             setCopiedCode(true);
                             setTimeout(() => setCopiedCode(false), 2000);
                           }}
@@ -3104,15 +3188,15 @@ export default function AdminUsers() {
                             loadingDepts
                               ? [{ value: "", label: "Loading departments...", disabled: true }]
                               : departmentOptions.length > 0
-                              ? departmentOptions
-                              : [{ value: "", label: "No department added" }]
+                                ? departmentOptions
+                                : [{ value: "", label: "No department added" }]
                           }
                           placeholder={
                             loadingDepts
                               ? "Loading departments..."
                               : departmentOptions.length > 0
-                              ? "Select Department"
-                              : "No department added"
+                                ? "Select Department"
+                                : "No department added"
                           }
                         />
                         {departmentOptions.length === 0 && !loadingDepts && (
@@ -3291,15 +3375,15 @@ export default function AdminUsers() {
                             loadingDepts
                               ? [{ value: "", label: "Loading departments...", disabled: true }]
                               : departmentOptions.length > 0
-                              ? departmentOptions
-                              : [{ value: "", label: "No department added" }]
+                                ? departmentOptions
+                                : [{ value: "", label: "No department added" }]
                           }
                           placeholder={
                             loadingDepts
                               ? "Loading departments..."
                               : departmentOptions.length > 0
-                              ? "Select Department"
-                              : "No department added"
+                                ? "Select Department"
+                                : "No department added"
                           }
                         />
                         {departmentOptions.length === 0 && !loadingDepts && (
@@ -3479,6 +3563,158 @@ export default function AdminUsers() {
                 Done
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Dedicated Generate Code Modal for Admin (Mentor, Coordinator, Trainer) */}
+      {isGenerateCodeModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsGenerateCodeModalOpen(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: '540px' }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Generate Activation Code</h2>
+                  <p className="modal-subtitle">Invite Mentor, Coordinator, or Trainer with a secure onboarding link.</p>
+                </div>
+              </div>
+              <button
+                className="modal-close-btn"
+                onClick={() => {
+                  setIsGenerateCodeModalOpen(false);
+                  setGeneratedStaffCode(null);
+                  setGenCodeErrorMsg("");
+                  setGenCodeSuccessMsg("");
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminGenerateCodeSubmit}>
+              <div className="modal-body">
+                {genCodeErrorMsg && (
+                  <div className="modal-feedback-alert modal-feedback--error">
+                    {genCodeErrorMsg}
+                  </div>
+                )}
+                {genCodeSuccessMsg && (
+                  <div className="modal-feedback-alert modal-feedback--success">
+                    {genCodeSuccessMsg}
+                  </div>
+                )}
+
+                <div className="form-group-admin" style={{ marginBottom: '16px' }}>
+                  <label>Select Target Role *</label>
+                  <AdminUserSelect
+                    value={genCodeForm.role}
+                    onChange={(val) => setGenCodeForm({ ...genCodeForm, role: val })}
+                    options={[
+                      { value: "mentor", label: "Mentor" },
+                      { value: "coordinator", label: "Coordinator" },
+                      { value: "trainer", label: "Trainer" },
+                    ]}
+                  />
+                </div>
+
+                <div className="form-row-2" style={{ marginBottom: '16px' }}>
+                  <div className="form-group-admin">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="e.g. Dr. Rajesh Sharma"
+                      value={genCodeForm.name}
+                      onChange={(e) => setGenCodeForm({ ...genCodeForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Token Expiry *</label>
+                    <AdminUserSelect
+                      value={genCodeForm.expiry_option}
+                      onChange={(val) => setGenCodeForm({ ...genCodeForm, expiry_option: val })}
+                      options={[
+                        { value: "24h", label: "24 Hours (1 Day)" },
+                        { value: "3d", label: "3 Days" },
+                        { value: "7d", label: "7 Days" },
+                        { value: "30d", label: "30 Days" },
+                        { value: "never", label: "Never / Unlimited" },
+                      ]}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin" style={{ marginBottom: '16px' }}>
+                  <label>
+                    Recipient Email Address *
+                    <span style={{ fontSize: '11.5px', color: '#4f46e5', fontWeight: 600, marginLeft: '8px' }}>
+                      (Activation email will be delivered here)
+                    </span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    className="form-input-admin"
+                    placeholder="e.g. faculty@college.edu or trainer@domain.com"
+                    value={genCodeForm.email}
+                    onChange={(e) => setGenCodeForm({ ...genCodeForm, email: e.target.value })}
+                  />
+                  <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    The user will receive an email containing this secure code and a link to set their password.
+                  </span>
+                </div>
+
+                {generatedStaffCode && (
+                  <div className="manageusers-token-hero" style={{ marginTop: '16px', background: '#f8fafc', border: '1.5px dashed #6366f1', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: '700', color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <Sparkles size={13} />
+                        <span>Issued Secure Activation Code</span>
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '2px', color: '#1e1b4b', fontFamily: 'monospace', marginTop: '4px' }}>
+                        {generatedStaffCode}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedStaffCode);
+                        setCopiedStaffCode(true);
+                        setTimeout(() => setCopiedStaffCode(false), 2000);
+                      }}
+                      className="admin-btn-secondary"
+                      style={{ padding: '8px 14px', fontSize: '13px' }}
+                    >
+                      {copiedStaffCode ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                      <span>{copiedStaffCode ? "Copied!" : "Copy Code"}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsGenerateCodeModalOpen(false)}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingGenCode}
+                  className="btn-modal-submit"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Sparkles size={16} />
+                  <span>{isSubmittingGenCode ? "Generating & Sending..." : "Generate & Send Code"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body
