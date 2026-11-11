@@ -719,8 +719,8 @@ export default function MentorQuizzes() {
               </div>
 
               <form onSubmit={handleCreateQuiz}>
-                <div className="form-grid-2">
-                  <div className="form-group">
+                <div className="form-grid-2 mobile-pair-2">
+                  <div className="form-group mobile-field-full">
                     <label className="form-label">Quiz Title *</label>
                     <input className="form-input" placeholder="e.g. Data Structures Exam" value={title} onChange={e => setTitle(e.target.value)} required />
                   </div>
@@ -740,13 +740,13 @@ export default function MentorQuizzes() {
                     <input className="form-input" type="number" min="5" value={durationMins} onChange={e => setDurationMins(e.target.value)} />
                   </div>
                   {mode === "ai" && (
-                    <div className="form-group">
+                    <div className="form-group mobile-field-full">
                       <label className="form-label">Number of Questions</label>
                       <input className="form-input" type="number" min="1" max="50" value={numQuestions} onChange={e => setNumQuestions(e.target.value)} />
                     </div>
                   )}
                   {mode === "bulk" && (
-                    <div className="form-group">
+                    <div className="form-group mobile-field-full">
                       <label className="form-label">Excel File Status</label>
                       <div className="manual-status-box" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span className={`q-count-badge ${parsedBulkQuestions.length > 0 ? "badge-success" : ""}`}>

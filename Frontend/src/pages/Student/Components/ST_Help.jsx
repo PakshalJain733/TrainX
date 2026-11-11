@@ -511,7 +511,7 @@ export default function Help() {
                 />
               </div>
 
-              <div className="help-grid-2col">
+              <div className="help-grid-2col mobile-pair-2">
                 <div className="help-form-group">
                   <label className="help-form-label">Category</label>
                   <StudentHelpSelect

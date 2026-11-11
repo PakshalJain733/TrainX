@@ -215,7 +215,7 @@ export default function MentorBroadcast() {
               />
             </div>
 
-            <div className="mentor-broadcast-form-row">
+            <div className="mentor-broadcast-form-row mobile-pair-2">
               <div className="mentor-broadcast-form-group">
                 <label>Target Batch</label>
                 <MentorBcastSelect

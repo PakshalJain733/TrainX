@@ -211,7 +211,7 @@ export default function AdminBroadcast() {
               />
             </div>
 
-            <div className="form-row">
+            <div className="form-row mobile-pair-2">
               <div className="form-group">
                 <label>Target Audience</label>
                 <AdminBcastSelect

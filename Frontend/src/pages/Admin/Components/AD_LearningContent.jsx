@@ -427,7 +427,7 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-row-2 form-grid-2">
+                <div className="form-row-2 form-grid-2 mobile-pair-2">
                   <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Type</label>
                     <AdminLcSelect

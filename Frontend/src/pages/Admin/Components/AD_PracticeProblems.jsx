@@ -1786,7 +1786,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                     />
                   </div>
 
-                  <div className="add-prob-grid-3 form-grid-3" style={{ gap: "12px", marginBottom: "12px" }}>
+                  <div className="add-prob-grid-3 form-grid-3 mobile-pair-2" style={{ gap: "12px", marginBottom: "12px" }}>
                     <div className="form-group-admin">
                       <label>Topic / Category</label>
                       <input
@@ -1810,7 +1810,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                         ]}
                       />
                     </div>
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label>Target Batch *</label>
                       {isMentor && batches.length === 0 ? (
                         <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", color: "#dc2626", fontSize: "13px", fontWeight: "500" }}>
@@ -1842,8 +1842,8 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                     </div>
                   </div>
 
-                  <div className="add-prob-grid-3 form-grid-3" style={{ gap: "12px", marginBottom: "12px" }}>
-                    <div className="form-group-admin">
+                  <div className="add-prob-grid-3 form-grid-3 mobile-pair-2" style={{ gap: "12px", marginBottom: "12px" }}>
+                    <div className="form-group-admin mobile-field-full">
                       <label>Allowed Language</label>
                       <AdminPpSelect
                         value={newProb.language || "All"}
@@ -2039,7 +2039,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                 />
               </div>
 
-              <div className="form-grid-2" style={{ gap: "14px", marginBottom: "16px" }}>
+              <div className="form-grid-2 mobile-pair-2" style={{ gap: "14px", marginBottom: "16px" }}>
                 <div className="form-group-admin">
                   <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
                     Difficulty Level

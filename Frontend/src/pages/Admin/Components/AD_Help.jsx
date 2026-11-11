@@ -470,7 +470,7 @@ export default function AdminHelp() {
                   />
                 </div>
 
-                <div className="form-grid-2" style={{ gap: "12px" }}>
+                <div className="form-grid-2 mobile-pair-2" style={{ gap: "12px" }}>
                   <div className="admin-form-group">
                     <label className="admin-form-label">Category</label>
                     <select

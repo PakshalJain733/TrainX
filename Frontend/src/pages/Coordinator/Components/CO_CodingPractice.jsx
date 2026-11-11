@@ -1013,8 +1013,8 @@ export default function CodingPractice() {
                 </div>
               </div>
 
-              <div className="coord-cp-form-grid-2">
-                <div className="coord-cp-form-group">
+              <div className="coord-cp-form-grid-2 mobile-pair-2">
+                <div className="coord-cp-form-group mobile-field-full">
                   <label className="coord-cp-form-label">Problem Title *</label>
                   <input
                     type="text"
@@ -1125,7 +1125,7 @@ export default function CodingPractice() {
                 </div>
               </div>
 
-              <div className="coord-cp-form-grid-2">
+              <div className="coord-cp-form-grid-2 mobile-pair-2">
                 <div className="coord-cp-form-group">
                   <label className="coord-cp-form-label">Tags (Comma separated)</label>
                   <input
@@ -1309,7 +1309,7 @@ export default function CodingPractice() {
                 />
               </div>
 
-              <div className="coord-cp-form-grid-2">
+              <div className="coord-cp-form-grid-2 mobile-pair-2">
                 <div className="coord-cp-form-group">
                   <label className="coord-cp-form-label">Department</label>
                   <CustomSelect
@@ -1334,7 +1334,7 @@ export default function CodingPractice() {
                 </div>
               </div>
 
-              <div className="coord-cp-form-grid-2">
+              <div className="coord-cp-form-grid-2 mobile-pair-2">
                 <div className="coord-cp-form-group">
                   <label className="coord-cp-form-label">Due Date & Time</label>
                   <input

@@ -384,7 +384,7 @@ export function TrainerSubmissions() {
 
                 {/* Feedback Input & Score Form */}
                 <div className="trainer-feedback-form">
-                  <div className="form-grid-2" style={{ gap: "12px" }}>
+                  <div className="form-grid-2 mobile-pair-2" style={{ gap: "12px" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#334155", marginBottom: "4px" }}>
                         Evaluation Score (out of {reviewModalSub.total_marks || 100})

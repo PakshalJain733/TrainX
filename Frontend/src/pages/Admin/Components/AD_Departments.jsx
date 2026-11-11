@@ -443,7 +443,7 @@ export default function Departments() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Name</span>
@@ -638,7 +638,7 @@ export default function Departments() {
 
             <form onSubmit={handleEditDepartment}>
               <div className="modal-body">
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label className="form-label-admin">
                       <span>Department Name</span>

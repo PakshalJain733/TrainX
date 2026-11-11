@@ -322,8 +322,8 @@ export default function AdminProfile() {
               </div>
             </div>
 
-            <div className="profile-form-grid">
-              <div className="profile-field">
+            <div className="profile-form-grid mobile-pair-2">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Full Name *</label>
                 <input
                   type="text"
@@ -336,7 +336,7 @@ export default function AdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Email Address *</label>
                 <input
                   type="email"
@@ -375,7 +375,7 @@ export default function AdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Department</label>
                 <CustomSelect
                   value={form.department}
@@ -390,7 +390,7 @@ export default function AdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Institution / Organization</label>
                 <input
                   type="text"

@@ -34,6 +34,16 @@ import { findSecureCode, createSecureCode } from '../models/secureCode.model.js'
 import { createNotification } from '../services/notification.service.js';
 import { isApprovalFeatureActive } from '../middleware/featureSwitch.middleware.js';
 
+const isFlagEnabled = (val) => val === 1 || val === true || String(val) === '1';
+
+const isUserActivated = (user) => Boolean(
+  user &&
+  isFlagEnabled(user.is_active) &&
+  isFlagEnabled(user.is_verified) &&
+  user.password_hash &&
+  String(user.password_hash).trim().length > 0
+);
+
 /**
  * Helper to test if a role string represents Super Admin
  */
@@ -178,13 +188,21 @@ export const getAdminUsers = async (req, res, next) => {
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
     let users = await getAllUsersModel(collegeId);
 
-    // Approval feature switch handling: if approvals are disabled, treat all users as approved
-    if (!isApprovalFeatureActive()) {
-      users = users.map((u) => ({ ...u, is_approved: 1, is_active: 1 }));
-    } else if (req.query.approved === 'true' || req.query.is_approved === 'true' || req.query.approved_only === 'true') {
-      users = users.filter((u) => u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1');
-    } else if (req.query.approved === 'false' || req.query.is_approved === 'false' || req.query.pending === 'true') {
-      users = users.filter((u) => !(u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1'));
+    const approvalRequired = await isApprovalFeatureActive();
+
+    // Never expose unverified users as active; accounts stay inactive until email activation completes
+    users = users.map((u) => ({
+      ...u,
+      is_active: isFlagEnabled(u.is_active) && isFlagEnabled(u.is_verified) ? 1 : 0,
+      ...(approvalRequired ? {} : { is_approved: 1 }),
+    }));
+
+    if (approvalRequired) {
+      if (req.query.approved === 'true' || req.query.is_approved === 'true' || req.query.approved_only === 'true') {
+        users = users.filter((u) => isFlagEnabled(u.is_approved));
+      } else if (req.query.approved === 'false' || req.query.is_approved === 'false' || req.query.pending === 'true') {
+        users = users.filter((u) => !isFlagEnabled(u.is_approved));
+      }
     }
 
     // College Admins can only view/manage Students, Mentors, and Coordinators (not other Admins)
@@ -395,6 +413,27 @@ export const rejectUserAdmin = async (req, res, next) => {
   }
 };
 
+const dispatchStaffCodeInvitationEmail = async ({ to, name, role, code, collegeName = '' }) => {
+  const roleNormalized = String(role || '').toLowerCase();
+  if (['college_admin', 'admin'].includes(roleNormalized)) {
+    return await sendAdminInvitationCodeEmail({
+      to,
+      name,
+      code,
+      college_name: collegeName,
+      collegeName,
+    });
+  }
+  return await sendStaffInvitationCodeEmail({
+    to,
+    name,
+    role,
+    code,
+    college_name: collegeName,
+    collegeName,
+  });
+};
+
 /**
  * Resend activation email to staff/admin user who is pending activation
  */
@@ -406,7 +445,7 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
-    if (user.is_active === 1 && user.password_hash && user.password_hash.trim().length > 0) {
+    if (isUserActivated(user)) {
       return sendError(res, 'This user account is already active and password has been configured.', 400);
     }
 
@@ -466,24 +505,13 @@ export const resendStaffActivationAdmin = async (req, res, next) => {
       }
 
       try {
-        if (['college_admin', 'admin'].includes(userRole)) {
-          await sendAdminInvitationCodeEmail({
-            to: user.email,
-            name: user.name,
-            code: codeToUse,
-            college_name: collegeName,
-            collegeName,
-          });
-        } else {
-          await sendStaffInvitationCodeEmail({
-            to: user.email,
-            name: user.name,
-            role: user.role,
-            code: codeToUse,
-            college_name: collegeName,
-            collegeName,
-          });
-        }
+        await dispatchStaffCodeInvitationEmail({
+          to: user.email,
+          name: user.name,
+          role: user.role,
+          code: codeToUse,
+          collegeName,
+        });
       } catch (mailErr) {
         console.error(`[Resend Staff Activation Mail Error] ${mailErr.message}`);
         return sendError(res, `Activation code generated (${codeToUse}), but failed to deliver email: ${mailErr.message}`, 500);
@@ -623,7 +651,13 @@ export const createUserAdmin = async (req, res, next) => {
                         canonicalRole === ROLES.SUPER_ADMIN || 
                         String(canonicalRole).includes('admin');
 
+    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
+    const cleanMobile = mobile_number ? String(mobile_number).trim() : null;
+
     let targetSecureCode = (secure_code || code || '').trim().toUpperCase();
+    const suppliedCode = targetSecureCode;
+    let codeAlreadyEmailed = false;
+
     if (isStaffRole && !isSuperAdminAddingAdmin) {
       if (!targetSecureCode) {
         const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : (canonicalRole === ROLES.TRAINER ? 'TRN' : 'ADM'));
@@ -631,15 +665,33 @@ export const createUserAdmin = async (req, res, next) => {
         targetSecureCode = `${prefix}-${randomHex}`;
       }
 
-      // Check if code is already registered in DB, otherwise insert into secure_codes table
+      // Check if code is already registered in DB (e.g. generated in-modal via /secure-codes/generate)
       try {
         const existingCodeRecord = await findSecureCode(targetSecureCode, canonicalRole);
-        if (!existingCodeRecord) {
+        if (existingCodeRecord) {
+          const codeEmail = existingCodeRecord.email ? String(existingCodeRecord.email).trim().toLowerCase() : null;
+          if (
+            suppliedCode &&
+            cleanEmail &&
+            codeEmail === cleanEmail &&
+            existingCodeRecord.email_delivery_status === 'sent'
+          ) {
+            codeAlreadyEmailed = true;
+          } else if (cleanEmail) {
+            await query(
+              'UPDATE secure_codes SET email = ?, email_delivery_status = ? WHERE id = ?',
+              [cleanEmail, 'sent', existingCodeRecord.id]
+            );
+          }
+        } else {
           await createSecureCode({
             code: targetSecureCode,
             role: canonicalRole,
             college_name: targetCollegeName || null,
+            email: cleanEmail || null,
+            email_delivery_status: cleanEmail ? 'sent' : 'pending',
             description: `Generated for ${canonicalRole} onboarding: ${name}`,
+            created_by: req.user?.id || null,
             max_uses: 1,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           });
@@ -651,25 +703,19 @@ export const createUserAdmin = async (req, res, next) => {
 
     const rawPassword = (password || '').trim();
     let finalPassword = rawPassword;
-    if (!finalPassword) {
-      if (canonicalRole === ROLES.STUDENT) {
-        finalPassword = 'Student@' + Math.random().toString(36).slice(-6) + '!';
-      } else if (isSuperAdminAddingAdmin) {
-        finalPassword = 'Admin@' + Math.floor(1000 + Math.random() * 9000) + '!';
-      }
+    if (!finalPassword && isSuperAdminAddingAdmin) {
+      finalPassword = 'Admin@' + Math.floor(1000 + Math.random() * 9000) + '!';
     }
 
-    const isApprovedVal = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : (!isApprovalFeatureActive() ? 1 : 0));
-    const initialActive = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : 1);
-    const initialVerified = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : 0);
+    const approvalRequired = await isApprovalFeatureActive();
+    const isApprovedVal = isSuperAdminAddingAdmin ? 1 : (isStaffRole ? 0 : (!approvalRequired ? 1 : 0));
+    const initialActive = isSuperAdminAddingAdmin ? 1 : 0;
+    const initialVerified = isSuperAdminAddingAdmin ? 1 : 0;
     const forcePasswordChangeVal = isSuperAdminAddingAdmin ? 1 : 0;
-    const activationStatusVal = isSuperAdminAddingAdmin ? 'completed' : (isStaffRole ? 'pending' : 'completed');
-    const approvalStatusVal = isSuperAdminAddingAdmin ? 'approved' : (isStaffRole ? 'pending' : 'pending');
+    const activationStatusVal = isSuperAdminAddingAdmin ? 'completed' : 'pending';
+    const approvalStatusVal = isSuperAdminAddingAdmin ? 'approved' : (isStaffRole ? 'pending' : (!approvalRequired ? 'approved' : 'pending'));
 
     // Check if user already exists in DB (registered first on portal, or pre-added)
-    const cleanEmail = email ? String(email).trim().toLowerCase() : null;
-    const cleanMobile = mobile_number ? String(mobile_number).trim() : null;
-
     let existing = null;
     if (cleanEmail) {
       existing = await findUserByEmailOrMobile(cleanEmail);
@@ -679,8 +725,8 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     if (existing) {
-      // If user account is already active and has a configured password, block duplicate creation
-      if (existing.is_active === 1 && existing.password_hash && String(existing.password_hash).trim().length > 0) {
+      // Only block duplicate creation if the user has already activated their account and configured a password
+      if (isUserActivated(existing)) {
         return sendError(
           res,
           `An active user account already exists with this email address (${existing.email || cleanEmail}).`,
@@ -690,9 +736,9 @@ export const createUserAdmin = async (req, res, next) => {
 
       // Requirement: If user was pre-added or registers with updated name, sync details
       const trimmedName = (name || '').trim();
-      const existingApproved = isStaffRole || !isApprovalFeatureActive() ? 1 : (existing.is_approved || 0);
-      const existingVerified = isStaffRole ? (existing.is_verified || 0) : (!isApprovalFeatureActive() ? 1 : (existing.is_verified || 0));
-      const existingActive = isStaffRole ? (existing.is_active || 0) : 1;
+      const existingVerified = isFlagEnabled(existing.is_verified) ? 1 : 0;
+      const existingApproved = (existingVerified && (isStaffRole || !approvalRequired)) ? 1 : (existing.is_approved || 0);
+      const existingActive = isUserActivated(existing) ? 1 : 0;
 
       if (trimmedName) {
         const updateData = {
@@ -745,24 +791,38 @@ export const createUserAdmin = async (req, res, next) => {
         }
       }
 
-      // If staff user is not activated yet, send activation email
-      if (isStaffRole && existing.email && existing.email.includes('@') && (existing.is_active === 0 || !existing.password_hash)) {
-        try {
-          const { rawToken } = await createAccountActivation(existing.id);
-          sendStaffActivationEmail({
-            to: existing.email,
-            name: trimmedName || existing.name,
-            role: canonicalRole,
-            rawToken,
-          }).catch((err) => {
-            console.warn(`[Staff Activation Email Dispatch Notice] ${err.message}`);
-          });
-        } catch (err) {
-          console.warn(`[Staff Activation Token Error] ${err.message}`);
+      // If user is not verified/activated yet, dispatch single activation email
+      if (!existingVerified && existing.email && existing.email.includes('@')) {
+        if (isStaffRole && !isSuperAdminAddingAdmin) {
+          if (!codeAlreadyEmailed) {
+            dispatchStaffCodeInvitationEmail({
+              to: existing.email,
+              name: trimmedName || existing.name,
+              role: canonicalRole,
+              code: targetSecureCode,
+              collegeName: targetCollegeName || '',
+            }).catch((err) => {
+              console.warn(`[Staff Access Code Email Dispatch Notice] ${err.message}`);
+            });
+          }
+        } else {
+          try {
+            const { rawToken } = await createAccountActivation(existing.id);
+            sendStaffActivationEmail({
+              to: existing.email,
+              name: trimmedName || existing.name,
+              role: canonicalRole,
+              rawToken,
+            }).catch((err) => {
+              console.warn(`[Activation Email Dispatch Notice] ${err.message}`);
+            });
+          } catch (err) {
+            console.warn(`[Activation Token Error] ${err.message}`);
+          }
         }
       }
 
-      const msg = isStaffRole
+      const msg = !existingVerified
         ? 'User details updated. Activation email dispatched for account setup.'
         : 'User details updated in database.';
 
@@ -866,27 +926,26 @@ export const createUserAdmin = async (req, res, next) => {
           }
         }
       } else if (isStaffRole) {
-        try {
-          const { rawToken } = await createAccountActivation(newUser.id);
-          sendStaffActivationEmail({
+        // Send ONLY the access-code invitation email (with activation link) if /secure-codes/generate has not already emailed this user
+        if (!codeAlreadyEmailed) {
+          dispatchStaffCodeInvitationEmail({
             to: newUser.email,
             name: newUser.name,
             role: canonicalRole,
-            rawToken,
+            code: targetSecureCode,
+            collegeName: targetCollegeName || '',
           }).catch((err) => {
-            console.warn(`[Staff Activation Email Dispatch Notice] ${err.message}`);
+            console.warn(`[Staff Access Code Email Dispatch Notice] ${err.message}`);
           });
-        } catch (err) {
-          console.warn(`[Staff Activation Token Error] ${err.message}`);
         }
-      } else {
-        // Student account welcome email with secure code
+      } else if (targetSecureCode) {
+        // Student account welcome email with explicit secure code
         const isStudentAccount = canonicalRole === ROLES.STUDENT;
         sendWelcomeEmail({
           to: newUser.email,
           name: newUser.name,
           role: canonicalRole,
-          secure_code: targetSecureCode || '',
+          secure_code: targetSecureCode,
           mobile_number: mobile_number || newUser.mobile_number || '',
           roll_number: isStudentAccount ? (roll_number || (studentProfile && studentProfile.roll_number) || '') : (roll_number || ''),
           department: validatedDeptName || department || '',
@@ -895,12 +954,27 @@ export const createUserAdmin = async (req, res, next) => {
         }).catch((err) => {
           console.warn(`[Admin User Creation Email Notice] ${err.message}`);
         });
+      } else {
+        // Student created without a secure code or password receives a direct activation mail
+        try {
+          const { rawToken } = await createAccountActivation(newUser.id);
+          sendStaffActivationEmail({
+            to: newUser.email,
+            name: newUser.name,
+            role: canonicalRole,
+            rawToken,
+          }).catch((err) => {
+            console.warn(`[Student Activation Email Dispatch Notice] ${err.message}`);
+          });
+        } catch (err) {
+          console.warn(`[Student Activation Token Error] ${err.message}`);
+        }
       }
     }
 
     const successMessage = isSuperAdminAddingAdmin
       ? 'Admin account created successfully. Welcome email with temporary password has been dispatched.'
-      : isStaffRole
+      : (isStaffRole || !targetSecureCode)
       ? 'Account created successfully. An activation email has been dispatched to the user to set their password.'
       : 'User created successfully. Registration invitation with secure access code dispatched.';
 
@@ -1103,8 +1177,8 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
         }
       }
 
-      // All validations passed: Safely insert User and Student Profile linked to validated department
-      const defaultPassword = item.password || ('Temp@' + Math.random().toString(36).slice(-8) + '!');
+      // All validations passed: Safely insert User (Pending Activation until verified via activation mail)
+      const explicitPassword = item.password ? String(item.password).trim() : '';
       const resolvedDeptName = matchedDept.name || rawDept;
       const resolvedDeptId = matchedDept.id;
 
@@ -1117,8 +1191,8 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
           college_id: targetCollegeId,
           department: resolvedDeptName,
           department_id: resolvedDeptId,
-          password: defaultPassword,
-          is_active: 1,
+          password: explicitPassword,
+          is_active: 0,
           is_verified: 0,
           is_approved: 0,
         });
@@ -1137,18 +1211,21 @@ export const bulkCreateUsersAdmin = async (req, res, next) => {
           mobile_number: mobile_number || null,
         });
 
-        // Send Welcome & Credentials Email with default password
+        // Send account activation email so user activates and configures their own password
         if (newUser.email && newUser.email.includes('@')) {
-          sendStudentCredentialsEmail({
-            to: newUser.email,
-            name: newUser.name,
-            password: defaultPassword,
-            roll_number: roll_number || studentProfile.roll_number,
-            department: resolvedDeptName,
-            collegeName: collegeName || '',
-          }).catch((err) => {
-            console.warn(`[Bulk Credentials Email Notice] ${err.message}`);
-          });
+          try {
+            const { rawToken } = await createAccountActivation(newUser.id);
+            sendStaffActivationEmail({
+              to: newUser.email,
+              name: newUser.name,
+              role: ROLES.STUDENT,
+              rawToken,
+            }).catch((err) => {
+              console.warn(`[Bulk Activation Email Notice] ${err.message}`);
+            });
+          } catch (tokenErr) {
+            console.warn(`[Bulk Activation Token Error] ${tokenErr.message}`);
+          }
         }
 
         createdList.push({
@@ -1253,6 +1330,14 @@ export const updateUserAdmin = async (req, res, next) => {
         return sendError(res, 'Access forbidden: Only super admins can change college assignment', 403);
       }
       updates.college_id = parseInt(req.body.college_id, 10);
+    }
+
+    // Do not allow an unverified account to be marked active before email activation completes
+    const targetVerified = updates.is_verified !== undefined
+      ? isFlagEnabled(updates.is_verified)
+      : isFlagEnabled(existingUser.is_verified);
+    if (!targetVerified && updates.is_active !== undefined && isFlagEnabled(updates.is_active)) {
+      updates.is_active = 0;
     }
 
     const updated = await updateUserModel(id, updates);

@@ -272,7 +272,7 @@ export default function LiveSessions() {
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                 />
               </div>
-              <div className="form-grid-2" style={{ gap: '12px' }}>
+              <div className="form-grid-2 mobile-pair-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Subject</label>
                   <input
@@ -292,7 +292,7 @@ export default function LiveSessions() {
                   />
                 </div>
               </div>
-              <div className="form-grid-2" style={{ gap: '12px' }}>
+              <div className="form-grid-2 mobile-pair-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Date</label>
                   <input

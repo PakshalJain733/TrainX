@@ -1158,7 +1158,7 @@ export default function MentorSkillGaps() {
                   />
                 </div>
 
-                <div className="msg-form-row">
+                <div className="msg-form-row mobile-pair-2">
                   {/* Difficulty */}
                   <div className="msg-form-group" style={{ flex: 1 }}>
                     <label className="msg-form-label">Difficulty Target</label>

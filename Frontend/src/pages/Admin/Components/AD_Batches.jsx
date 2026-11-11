@@ -928,9 +928,9 @@ export default function AdminBatches() {
                   </div>
                 </div>
 
-                <form onSubmit={handleTaskSubmit} className="add-task-form-body">
+                <form onSubmit={handleTaskSubmit} className="add-task-form-body mobile-fields-grid">
                   <div className="form-row-2">
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <FileText size={14} color="#4f46e5" />
                         <span>Task Title *</span>
@@ -944,7 +944,7 @@ export default function AdminBatches() {
                         onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))}
                       />
                     </div>
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <BookOpen size={14} color="#4f46e5" />
                         <span>Target Topic / Module *</span>
@@ -997,7 +997,7 @@ export default function AdminBatches() {
                         ]}
                       />
                     </div>
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <Sparkles size={14} color="#d97706" />
                         <span>XP Points Awarded</span>
@@ -1040,7 +1040,7 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-group-admin">
+                  <div className="form-group-admin mobile-field-full">
                     <label className="add-task-label">
                       <FileText size={14} color="#64748b" />
                       <span>Task Instructions & Description</span>
@@ -2391,7 +2391,7 @@ export default function AdminBatches() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Weekly Schedule *</label>
                     <input

@@ -250,7 +250,7 @@ export default function CoordinatorBroadcast() {
               />
             </div>
 
-            <div className="coordinator-broadcast-form-row">
+            <div className="coordinator-broadcast-form-row mobile-pair-2">
               <div className="coordinator-broadcast-form-group">
                 <label>Target Audience</label>
                 <CoordinatorBcastSelect

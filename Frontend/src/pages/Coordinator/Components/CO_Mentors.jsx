@@ -412,7 +412,7 @@ export default function CoordinatorMentors() {
                 />
               </div>
 
-              <div className="coord-form-grid-2">
+              <div className="coord-form-grid-2 mobile-pair-2">
                 <div className="coord-form-group">
                   <label className="coord-form-label">Department</label>
                   <CustomSelect

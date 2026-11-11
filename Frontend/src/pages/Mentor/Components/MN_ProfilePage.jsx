@@ -556,9 +556,9 @@ function MN_ProfilePage() {
               </div>
 
               {/* Exact 6 Fields Form Grid */}
-              <div className="profile-form-grid">
+              <div className="profile-form-grid mobile-pair-2">
                 {/* 1. Full Name */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Full Name *</label>
                   <div className="profile-input-wrapper">
                     <User size={16} className="profile-field-icon" />
@@ -576,7 +576,7 @@ function MN_ProfilePage() {
                 </div>
 
                 {/* 2. Email Address */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Email *</label>
                   <div className="profile-input-wrapper">
                     <Mail size={16} className="profile-field-icon" />
@@ -594,7 +594,7 @@ function MN_ProfilePage() {
                 </div>
 
                 {/* 3. Mobile Number */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Mobile Number *</label>
                   <div className="profile-input-wrapper">
                     <Phone size={16} className="profile-field-icon" />
@@ -612,7 +612,7 @@ function MN_ProfilePage() {
                 </div>
 
                 {/* 4. Department */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Department *</label>
                   <CustomSelect
                     value={form.department}

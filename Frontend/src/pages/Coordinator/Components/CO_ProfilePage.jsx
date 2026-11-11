@@ -373,8 +373,8 @@ export default function CoordinatorProfilePage() {
                 </div>
               </div>
 
-              <div className="profile-form-grid">
-                <div className="profile-field">
+              <div className="profile-form-grid mobile-pair-2">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Official Designation / Title *</label>
                   <input
                     type="text"
@@ -387,7 +387,7 @@ export default function CoordinatorProfilePage() {
                   />
                 </div>
 
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Department *</label>
                   <CustomSelect
                     value={form.department}

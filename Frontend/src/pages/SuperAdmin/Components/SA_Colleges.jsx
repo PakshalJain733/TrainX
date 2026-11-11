@@ -817,7 +817,7 @@ export default function Colleges() {
                   </div>
                 )}
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>College Full Name *</label>
                     <input
@@ -860,7 +860,7 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>City &amp; Location *</label>
                     <input
@@ -1037,7 +1037,7 @@ export default function Colleges() {
                     <span>{editErrors._general}</span>
                   </div>
                 )}
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>College Name *</label>
                     <input
@@ -1078,7 +1078,7 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>City &amp; Location *</label>
                     <input
@@ -1258,7 +1258,7 @@ export default function Colleges() {
             </div>
 
             <div className="modal-body">
-              <div className="form-grid-2">
+              <div className="form-grid-2 mobile-pair-2">
                 <div className="form-group-admin">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Short Code</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewCollegeModal.code || '—'}</p>
@@ -1275,11 +1275,11 @@ export default function Colleges() {
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Email Domain</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#4f46e5', fontSize: '13.5px' }}>{viewCollegeModal.domain ? `@${viewCollegeModal.domain.replace(/^@/, '')}` : '—'}</p>
                 </div>
-                <div className="form-group-admin">
+                <div className="form-group-admin mobile-field-full">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>College Administrator</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{viewCollegeModal.adminName || viewCollegeModal.admin_name || '—'}</p>
                 </div>
-                <div className="form-group-admin">
+                <div className="form-group-admin mobile-field-full">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Admin Email Address</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#2563eb', fontSize: '13.5px' }}>{viewCollegeModal.adminEmail || viewCollegeModal.contact_email || '—'}</p>
                 </div>

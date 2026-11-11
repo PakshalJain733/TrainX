@@ -2397,7 +2397,7 @@ export default function AdminUsers() {
       year: "FE",
       division: "A",
       semester: "1",
-      is_active: 1,
+      is_active: 0,
     });
     setGeneratedCode('');
     setIsGeneratingCode(false);
@@ -2516,8 +2516,7 @@ export default function AdminUsers() {
         department: isStudentRole ? formData.department : "",
         department_id: isStudentRole ? (selectedDeptObj?.id || formData.department_id || null) : null,
         secure_code: generatedCode || formData.secure_code || "",
-        is_approved: 1,
-        is_active: 1,
+        is_active: 0,
       };
       const res = await apiFetch("/admin/users", {
         method: "POST",
@@ -3006,14 +3005,15 @@ export default function AdminUsers() {
             </div>
             <form onSubmit={handleCreateUser}>
               <div className="modal-body">
-                {feedback.message && (
-                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
-                    {feedback.message}
-                  </div>
-                )}
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Assign Role *</label>
+                <div className="ad-user-fields-grid">
+                  {feedback.message && (
+                    <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
+                      {feedback.message}
+                    </div>
+                  )}
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label>Assign Role *</label>
                     <AdminUserSelect
                       value={formData.role}
                       onChange={(val) => {
@@ -3047,7 +3047,7 @@ export default function AdminUsers() {
                 </div>
 
                 <div className="form-row-2">
-                  <div className="form-group-admin">
+                  <div className="form-group-admin ad-field-full-mobile">
                     <label>Email *</label>
                     <input
                       type="email"
@@ -3058,7 +3058,7 @@ export default function AdminUsers() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
                   </div>
-                  <div className="form-group-admin">
+                  <div className={`form-group-admin ${formData.role !== "student" ? "ad-field-full-mobile" : ""}`}>
                     <label>Mobile Number</label>
                     <input
                       type="tel"
@@ -3179,7 +3179,7 @@ export default function AdminUsers() {
                           onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
                         />
                       </div>
-                      <div className="form-group-admin">
+                      <div className="form-group-admin ad-field-full-mobile">
                         <label>Department *</label>
                         <AdminUserSelect
                           value={formData.department}
@@ -3207,7 +3207,7 @@ export default function AdminUsers() {
                       </div>
                     </div>
 
-                    <div className="form-row-2">
+                    <div className="form-row-2 form-row-2--mobile-pair">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
                         <AdminUserSelect
@@ -3246,6 +3246,7 @@ export default function AdminUsers() {
                     </div>
                   </>
                 )}
+                </div>
               </div>
               <div className="modal-footer modal-footer-users">
                 <button
@@ -3286,34 +3287,35 @@ export default function AdminUsers() {
             </div>
             <form onSubmit={handleUpdateUser}>
               <div className="modal-body">
-                {feedback.message && (
-                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
-                    {feedback.message}
-                  </div>
-                )}
-                <div className="form-group-admin">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Email</label>
+                <div className="ad-user-fields-grid">
+                  {feedback.message && (
+                    <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
+                      {feedback.message}
+                    </div>
+                  )}
+                  <div className="form-group-admin ad-field-full-mobile">
+                    <label>Full Name *</label>
                     <input
-                      type="email"
+                      type="text"
+                      required
                       className="form-input-admin"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Mobile Number</label>
+
+                  <div className="form-row-2">
+                    <div className="form-group-admin ad-field-full-mobile">
+                      <label>Email</label>
+                      <input
+                        type="email"
+                        className="form-input-admin"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group-admin ad-field-full-mobile">
+                      <label>Mobile Number</label>
                     <input
                       type="tel"
                       className="form-input-admin"
@@ -3323,7 +3325,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 form-row-2--mobile-pair">
                   <div className="form-group-admin">
                     <label>Role</label>
                     <AdminUserSelect
@@ -3356,7 +3358,7 @@ export default function AdminUsers() {
                 {(formData.role === "student" || formData.role === "Student") && (
                   <>
                     <div className="form-row-2">
-                      <div className="form-group-admin">
+                      <div className="form-group-admin ad-field-full-mobile">
                         <label>Roll Number / ID</label>
                         <input
                           type="text"
@@ -3366,7 +3368,7 @@ export default function AdminUsers() {
                           onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
                         />
                       </div>
-                      <div className="form-group-admin">
+                      <div className="form-group-admin ad-field-full-mobile">
                         <label>Department</label>
                         <AdminUserSelect
                           value={formData.department}
@@ -3394,7 +3396,7 @@ export default function AdminUsers() {
                       </div>
                     </div>
 
-                    <div className="form-row-2">
+                    <div className="form-row-2 form-row-2--mobile-pair">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
                         <AdminUserSelect
@@ -3422,7 +3424,7 @@ export default function AdminUsers() {
                     </div>
 
                     <div className="form-row-2">
-                      <div className="form-group-admin">
+                      <div className="form-group-admin ad-field-full-mobile">
                         <label>Semester</label>
                         <input
                           type="text"
@@ -3435,6 +3437,7 @@ export default function AdminUsers() {
                     </div>
                   </>
                 )}
+                </div>
               </div>
               <div className="modal-footer modal-footer-users">
                 <button

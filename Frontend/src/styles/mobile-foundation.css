@@ -66,33 +66,51 @@ body.mobile-drawer-open .student-main {
   }
 }
 
-/* ── Mobile Drawer Shared Structural Rules ── */
+/* ── Shared Sidebar Group & Mobile Drawer Structural Rules ── */
 .sidebar-group-section {
   display: flex;
   flex-direction: column;
   margin-bottom: 6px;
 }
 
+.sidebar-group-section + .sidebar-group-section {
+  margin-top: 8px;
+  padding-top: 4px;
+}
+
 .sidebar-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px 4px 14px;
-  font-size: 10.5px;
+  padding: 6px 10px 6px 10px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #64748b;
+  letter-spacing: 0.08em;
+  color: #4a6785;
   background: transparent;
   border: none;
+  border-radius: 6px;
   width: 100%;
   text-align: left;
   cursor: pointer;
   user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .sidebar-group-header:hover {
-  color: #334155;
+  color: #1e293b;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.sidebar-footer-group-label {
+  padding: 2px 10px 6px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4a6785;
+  user-select: none;
 }
 
 .sidebar-group-chevron {
@@ -229,33 +247,33 @@ body.mobile-drawer-open .student-main {
 
 /* ── Tablet & Mobile Breakpoint (<= 768px) ── */
 @media (max-width: 768px) {
-  /* Consistent z-index stacking across ALL 6 dashboards */
-  .sa-header,
-  .superadmin-header,
-  .admin-header,
-  .mentor-header,
-  .coordinator-header,
-  .trainer-header,
-  .student-header {
+  /* Consistent z-index stacking across ALL 6 dashboards (higher specificity beats lazy route CSS) */
+  body .sa-header,
+  body .superadmin-header,
+  body .admin-header,
+  body .mentor-header,
+  body .coordinator-header,
+  body .trainer-header,
+  body .student-header {
     z-index: var(--z-sticky-header) !important;
     padding: 0 12px !important;
     height: 58px !important;
     min-height: 58px !important;
   }
 
-  .sidebar-backdrop {
+  body .sidebar-backdrop {
     z-index: var(--z-drawer-backdrop) !important;
     background: rgba(15, 23, 42, 0.52) !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
   }
 
-  .sa-sidebar,
-  .admin-sidebar,
-  .mentor-sidebar,
-  .coordinator-sidebar,
-  .trainer-sidebar,
-  .student-sidebar {
+  body .sa-sidebar,
+  body .admin-sidebar,
+  body .mentor-sidebar,
+  body .coordinator-sidebar,
+  body .trainer-sidebar,
+  body .student-sidebar {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -273,12 +291,13 @@ body.mobile-drawer-open .student-main {
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
-  .sa-sidebar.mobile-open,
-  .admin-sidebar.mobile-open,
-  .mentor-sidebar.mobile-open,
-  .coordinator-sidebar.mobile-open,
-  .trainer-sidebar.mobile-open,
-  .student-sidebar.mobile-open {
+  body .sa-sidebar.mobile-open,
+  body .admin-sidebar.mobile-open,
+  body .mentor-sidebar.mobile-open,
+  body .coordinator-sidebar.mobile-open,
+  body .trainer-sidebar.mobile-open,
+  body .student-sidebar.mobile-open {
+    z-index: var(--z-drawer-panel) !important;
     transform: translateX(0) !important;
   }
 
@@ -464,9 +483,12 @@ body.mobile-drawer-open .student-main {
   .student-modal-overlay,
   .mc-modal-overlay,
   .modal-overlay,
-  .modal-backdrop {
-    padding: 10px !important;
-    align-items: flex-end !important;
+  .modal-backdrop,
+  .trainings-modal-backdrop,
+  .coord-cp-modal-backdrop,
+  .msg-modal-backdrop {
+    padding: 14px 12px !important;
+    align-items: center !important;
   }
 
   .sa-modal-card,
@@ -478,40 +500,79 @@ body.mobile-drawer-open .student-main {
   .mc-modal-card,
   .bulk-modal-dialog,
   .cp-modal-card,
-  .proctor-gate-card {
+  .proctor-gate-card,
+  .modal-dialog,
+  .trainings-modal-dialog,
+  .coord-cp-modal-card,
+  .msg-modal-card {
     width: 100% !important;
     max-width: 100vw !important;
-    max-height: calc(100dvh - 20px) !important;
-    border-radius: 18px 18px 14px 14px !important;
+    max-height: min(88dvh, 720px) !important;
+    border-radius: 16px !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
-    margin: 0 !important;
+    margin: auto !important;
+  }
+
+  .modal-dialog > form,
+  .trainings-modal-dialog > form,
+  .sa-modal-card > form,
+  .admin-modal-card > form,
+  .mentor-modal-card > form,
+  .coord-modal-card > form,
+  .trainer-modal-card > form {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   .sa-modal-body,
   .admin-modal-body,
   .mentor-modal-body,
-  .mc-modal-body {
+  .mc-modal-body,
+  .modal-body,
+  .trainings-modal-body,
+  .coord-cp-modal-body {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     flex: 1 1 auto !important;
-    padding: 14px !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 13px 16px !important;
   }
 
   .sa-modal-header,
   .admin-modal-header,
   .mentor-modal-header,
-  .mc-modal-header {
-    padding: 14px !important;
+  .mc-modal-header,
+  .modal-header,
+  .trainings-modal-header,
+  .coord-cp-modal-header,
+  .msg-modal-header {
+    padding: 13px 16px !important;
+    gap: 10px !important;
     flex-shrink: 0 !important;
+  }
+
+  .modal-header-left {
+    min-width: 0 !important;
+    flex: 1 !important;
+    gap: 10px !important;
   }
 
   .sa-modal-footer,
   .admin-modal-footer,
   .mentor-modal-footer,
-  .mc-modal-footer {
-    padding: 12px 14px max(12px, env(safe-area-inset-bottom)) 14px !important;
+  .mc-modal-footer,
+  .modal-footer,
+  .modal-footer-users,
+  .trainings-modal-footer,
+  .coord-cp-form-footer,
+  .msg-modal-footer {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom)) 16px !important;
     flex-direction: column-reverse !important;
     gap: 8px !important;
     flex-shrink: 0 !important;
@@ -520,28 +581,214 @@ body.mobile-drawer-open .student-main {
   .sa-modal-footer button,
   .admin-modal-footer button,
   .mentor-modal-footer button,
-  .mc-modal-footer button {
+  .mc-modal-footer button,
+  .modal-footer button,
+  .modal-footer-users button,
+  .trainings-modal-footer button {
     width: 100% !important;
-    min-height: 42px !important;
+    min-height: 40px !important;
     justify-content: center !important;
   }
 
-  /* Compact KPI Grid (2 cols on 375px-640px, 1 col on <=374px) */
+  /* Universal Smart 2-Col Mobile Form Grid System (360px - 640px) */
+  .mobile-fields-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  .mobile-fields-grid > .form-row-2,
+  .mobile-fields-grid > .sa-form-row-2,
+  .mobile-fields-grid > .form-row-grid-2,
+  .mobile-fields-grid > .form-row,
+  .mobile-fields-grid > .form-row-3,
+  .mobile-fields-grid > .form-grid-2,
+  .mobile-fields-grid > .form-grid-3,
+  .mobile-fields-grid > .coord-cp-form-grid-2,
+  .mobile-fields-grid > .coord-form-grid-2,
+  .mobile-fields-grid > .coord-requests-form-row,
+  .mobile-fields-grid > .trainer-form-grid-2,
+  .mobile-fields-grid > .trainer-form-grid-4,
+  .mobile-fields-grid > .msg-form-row {
+    display: contents !important;
+  }
+
+  .mobile-fields-grid > *,
+  .mobile-fields-grid .form-row-2 > *,
+  .mobile-fields-grid .sa-form-row-2 > *,
+  .mobile-fields-grid .form-row-grid-2 > *,
+  .mobile-fields-grid .form-row > *,
+  .mobile-fields-grid .form-row-3 > *,
+  .mobile-fields-grid .form-grid-2 > *,
+  .mobile-fields-grid .form-grid-3 > *,
+  .mobile-fields-grid .coord-cp-form-grid-2 > *,
+  .mobile-fields-grid .coord-form-grid-2 > *,
+  .mobile-fields-grid .coord-requests-form-row > *,
+  .mobile-fields-grid .trainer-form-grid-2 > *,
+  .mobile-fields-grid .trainer-form-grid-4 > *,
+  .mobile-fields-grid .msg-form-row > * {
+    min-width: 0 !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  .mobile-fields-grid .mobile-field-full,
+  .mobile-fields-grid > .modal-feedback-alert,
+  .mobile-fields-grid > .modal-form-alert-banner,
+  .mobile-fields-grid > .admin-user-token-section,
+  .mobile-fields-grid > .test-cases-builder-card,
+  .mobile-fields-grid > .tc-builder-box {
+    grid-column: 1 / -1 !important;
+  }
+
+  .mobile-pair-2 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: start !important;
+  }
+
+  .mobile-pair-2 > * {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .mobile-pair-2 > .mobile-field-full {
+    grid-column: 1 / -1 !important;
+  }
+
+  .modal-body .custom-select-trigger,
+  .trainings-modal-body .custom-select-trigger,
+  .coord-cp-modal-body .custom-select-trigger {
+    min-height: 38px !important;
+    padding: 7px 11px !important;
+    font-size: 13.5px !important;
+  }
+
+  .modal-body .form-input-admin,
+  .modal-body .form-select-admin,
+  .trainings-modal-body .form-input {
+    height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
+  }
+
+  /* Keep modal close buttons circular/square instead of stretched ovals */
+  .modal-close-btn,
+  .admin-modal-close,
+  .admin-qr-close-btn,
+  .help-modal-close-btn,
+  .mentor-modal-close-btn,
+  .trainings-modal-close,
+  .qr-modal-close,
+  .ai-modal-close-btn,
+  .mentor-meet-modal-close,
+  .mn-ai-modal-close,
+  .mc-modal-close-btn,
+  .join-modal-close,
+  .sa-modal-close,
+  .trainer-modal-close-btn,
+  .notif-modal-close-btn,
+  .coord-modal-close-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    flex-shrink: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Compact KPI Grid (2 cols on 360px-640px, 1 col on <=359px) */
   .sa-kpi-grid,
   .overview-grid-4,
-  .grid-4 {
+  .grid-4,
+  .approve-stats-grid,
+  .trainings-stats-grid,
+  .ad-wr-stats-grid,
+  .prog-kpi-grid,
+  .sa-approve-stats-grid,
+  .my-attendance-metrics-grid,
+  .attendance-kpi-grid,
+  .skillgaps-kpi-grid,
+  .batches-summary-grid,
+  .weekly-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
   }
 
-  .sa-stats-card {
-    min-height: 98px !important;
-    max-height: none !important;
-    padding: 12px !important;
+  .trainings-stats-grid > .trainings-stat-card:first-child,
+  .sa-approve-stats-grid > .sa-approve-stat-card:first-child,
+  .batches-summary-grid > .batches-summary-card:first-child {
+    grid-column: 1 / -1 !important;
   }
 
-  .sa-stats-value {
-    font-size: 22px !important;
+  .sa-stats-card,
+  .overview-stat-card,
+  .approve-stat-card,
+  .trainings-stat-card,
+  .ad-wr-stat-card,
+  .prog-kpi-card,
+  .sa-approve-stat-card,
+  .my-attendance-summary-card .metric-box,
+  .attendance-kpi-content,
+  .skillgaps-kpi-card,
+  .batches-summary-card {
+    min-height: auto !important;
+    max-height: none !important;
+    padding: 12px 13px !important;
+    border-radius: 12px !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .my-attendance-summary-card {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .my-attendance-header-title {
+    margin-bottom: 12px !important;
+  }
+
+  .my-attendance-summary-card .metric-lbl,
+  .skillgaps-kpi-card .kpi-label,
+  .batches-summary-card .batches-summary-label {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .my-attendance-summary-card .metric-val-row {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    margin: 4px 0 !important;
+  }
+
+  .sa-stats-value,
+  .overview-stat-value,
+  .approve-stat-val,
+  .trainings-stat-num,
+  .ad-wr-stat-val,
+  .sa-approve-stat-val,
+  .my-attendance-summary-card .metric-num,
+  .batches-summary-val {
+    font-size: 20px !important;
+    line-height: 1.15 !important;
+  }
+
+  .skillgaps-kpi-card .kpi-val {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .approve-stat-icon-wrap,
+  .trainings-stat-icon,
+  .skillgaps-kpi-card .kpi-icon-wrap,
+  .batches-summary-icon-box {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
   }
 
   /* Pagination Touch Friendly Bar */
@@ -557,11 +804,26 @@ body.mobile-drawer-open .student-main {
   }
 }
 
-@media (max-width: 374px) {
+@media (max-width: 359px) {
   .sa-kpi-grid,
   .overview-grid-4,
-  .grid-4 {
+  .grid-4,
+  .approve-stats-grid,
+  .trainings-stats-grid,
+  .ad-wr-stats-grid,
+  .prog-kpi-grid,
+  .sa-approve-stats-grid,
+  .my-attendance-metrics-grid,
+  .attendance-kpi-grid,
+  .skillgaps-kpi-grid,
+  .batches-summary-grid,
+  .weekly-metrics-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .mobile-fields-grid,
+  .mobile-pair-2 {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .mobile-drawer-actions {
@@ -638,7 +900,7 @@ body.mobile-drawer-open .student-main {
 
 /* Touch Device Minimum Hit-Target Enhancements */
 @media (pointer: coarse) {
-  button,
+  button:not([class*="close"]):not(.password-toggle-btn),
   [role="button"],
   a[class*="btn"],
   .custom-select-trigger,

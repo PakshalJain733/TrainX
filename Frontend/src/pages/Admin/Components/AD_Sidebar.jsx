@@ -33,33 +33,39 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 
 const navGroups = [
   {
-    id: "core",
-    label: "Core & Users",
+    id: "workspace",
+    label: "Workspace",
     items: [
       { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true, moduleKey: "adminDashboard" },
-      { title: "Manage Users", url: "/admin/users", icon: UserCog, moduleKey: "manageUsers" },
+    ],
+  },
+  {
+    id: "users",
+    label: "Users & Structure",
+    items: [
       { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck, moduleKey: "adminApproveUsers" },
+      { title: "Manage Users", url: "/admin/users", icon: UserCog, moduleKey: "manageUsers" },
       { title: "Departments", url: "/admin/departments", icon: Briefcase, moduleKey: "adminDepartments" },
     ],
   },
   {
-    id: "academics",
-    label: "Training & Content",
+    id: "training",
+    label: "Academics & Practice",
     items: [
-      { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase, moduleKey: "adminC2CEnrollments" },
       { title: "Batches", url: "/admin/batches", icon: Code2, moduleKey: "adminBatches" },
+      { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase, moduleKey: "adminC2CEnrollments" },
       { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck, moduleKey: "adminLearningContent" },
       { title: "Coding Practice", url: "/admin/practice", icon: Terminal, moduleKey: "adminPracticeProblems" },
       { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap, moduleKey: "adminQuizzes" },
     ],
   },
   {
-    id: "analytics",
-    label: "Analytics & Sync",
+    id: "monitoring",
+    label: "Attendance & Insights",
     items: [
+      { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck, moduleKey: "adminAttendance" },
       { title: "Student Progress", url: "/admin/progress", icon: LineChart, moduleKey: "adminProgress" },
       { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy, moduleKey: "adminLeaderboard" },
-      { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck, moduleKey: "adminAttendance" },
       { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2, moduleKey: "adminWeeklyReports" },
       { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle, moduleKey: "defaulters" },
       { title: "Career Gateway Sync", url: "/admin/career-gateway", icon: Zap, moduleKey: "adminCareerGatewaySync" },
@@ -150,6 +156,9 @@ export function AdminSidebar({ collapsed, mobileOpen, onClose }) {
 
       {/* Pinned Bottom Support & Mobile Account Section */}
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && visibleFooterItems.length > 0 && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>

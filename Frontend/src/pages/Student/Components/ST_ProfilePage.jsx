@@ -693,8 +693,8 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="profile-form-grid">
-              <div className="profile-field">
+            <div className="profile-form-grid mobile-pair-2">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Full Name *</label>
                 <input
                   type="text"
@@ -706,7 +706,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Email Address *</label>
                 <input
                   type="email"
@@ -718,7 +718,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Phone Number *</label>
                 <input
                   type="text"
@@ -730,7 +730,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label profile-label-flex">
                   Department <span className="profile-label-hint">(Read-Only)</span>
                 </label>
@@ -864,7 +864,7 @@ export default function ProfilePage() {
               </div>
 
               {/* SEARCHABLE CAREER TRACK INPUT */}
-              <div className="profile-field profile-track-search-wrapper" ref={trackWrapperRef}>
+              <div className="profile-field profile-track-search-wrapper mobile-field-full" ref={trackWrapperRef}>
                 <label className="profile-label">Target Career Track / Role Goal *</label>
                 <div className="profile-track-search-box">
                   <Search

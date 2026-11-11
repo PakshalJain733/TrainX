@@ -33,33 +33,33 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 
 const navGroups = [
   {
-    id: "cohort",
-    label: "Overview & Cohort",
+    id: "workspace",
+    label: "Workspace",
     items: [
       { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true, moduleKey: "mentorDashboard" },
-      { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
+      { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck, moduleKey: "mentorAttendance" },
       { title: "Batches", url: "/mentor/batches", icon: Users, moduleKey: "mentorBatches" },
+      { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
     ],
   },
   {
-    id: "learning",
-    label: "Training & AI Tools",
+    id: "training",
+    label: "Academics & AI",
     items: [
       { title: "Coding Practice", url: "/mentor/coding-practice", icon: Code2, moduleKey: "mentorCodingPractice" },
-      { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
       { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap, moduleKey: "mentorQuizzes" },
+      { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
       { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles, moduleKey: "mentorRoadmaps" },
       { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot, moduleKey: "mentorAIInterviews" },
     ],
   },
   {
-    id: "tracking",
+    id: "reports",
     label: "Tracking & Reports",
     items: [
       { title: "Progress", url: "/mentor/performance", icon: LineChart, moduleKey: "mentorPerformance" },
       { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle, moduleKey: "mentorSkillGaps" },
       { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy, moduleKey: "mentorLeaderboard" },
-      { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck, moduleKey: "mentorAttendance" },
       { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2, moduleKey: "mentorWeeklyReports" },
       { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle, moduleKey: "defaulters" },
     ],
@@ -146,6 +146,9 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
 
       {/* Pinned Bottom */}
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && visibleFooterItems.length > 0 && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>

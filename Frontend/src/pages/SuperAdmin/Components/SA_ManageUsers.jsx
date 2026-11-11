@@ -2455,7 +2455,7 @@ export default function ManageUsers() {
               )}
 
               {/* Row 1: Role Box & Target College (Side-by-Side) */}
-              <div className="form-row-2 sa-form-row-2" style={{ marginBottom: '14px' }}>
+              <div className="form-row-2 sa-form-row-2 mobile-pair-2" style={{ marginBottom: '14px' }}>
                 <div className="form-group-admin">
                   <label>Assign Target Role *</label>
                   <div
@@ -2519,7 +2519,7 @@ export default function ManageUsers() {
               </div>
 
               {/* Row 2: Usage Limit (below role) & Expiry Duration (besides usage limit) */}
-              <div className="form-row-2 sa-form-row-2">
+              <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                 <div className="form-group-admin">
                   <label>Usage Limit (Max Uses) *</label>
                   <input
@@ -2666,7 +2666,7 @@ export default function ManageUsers() {
                 </div>
 
                 {/* Full Name & Password (Side-by-Side) */}
-                <div className="form-row-2 sa-form-row-2">
+                <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Full Name *</label>
                     <input
@@ -2784,7 +2784,7 @@ export default function ManageUsers() {
                       </div>
                     </div>
 
-                    <div className="form-row-2 sa-form-row-2">
+                    <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
                         <MuSelect

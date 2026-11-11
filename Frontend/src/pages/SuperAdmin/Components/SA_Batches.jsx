@@ -518,7 +518,7 @@ export default function Batches() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Batch Name *</label>
                     <input
@@ -570,7 +570,7 @@ export default function Batches() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Assigned Lead Trainer</label>
                     <input
@@ -751,7 +751,7 @@ export default function Batches() {
               }
             }}>
               <div className="modal-body">
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Batch / Batch Name *</label>
                     <input
@@ -801,7 +801,7 @@ export default function Batches() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Assigned Mentor / Trainer</label>
                     <input

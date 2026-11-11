@@ -1231,7 +1231,7 @@ export default function AdminTrainings() {
                   />
                 </div>
 
-                <div className="form-row-grid-2">
+                <div className="form-row-grid-2 mobile-pair-2">
                   <div className="form-group">
                     <label className="form-label">Training Fee (₹)</label>
                     <input
@@ -1258,7 +1258,7 @@ export default function AdminTrainings() {
                   </div>
                 </div>
 
-                <div className="form-row-grid-2">
+                <div className="form-row-grid-2 mobile-pair-2">
                   <div className="form-group">
                     <label className="form-label">Training Start Date</label>
                     <input
@@ -1279,7 +1279,7 @@ export default function AdminTrainings() {
                   </div>
                 </div>
 
-                <div className="form-row-grid-2">
+                <div className="form-row-grid-2 mobile-pair-2">
                   <div className="form-group">
                     <label className="form-label">Registration Opens</label>
                     <input

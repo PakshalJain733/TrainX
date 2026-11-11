@@ -124,7 +124,7 @@ export async function initializeDatabase() {
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
         target_track VARCHAR(150) NULL,
-        is_active BOOLEAN DEFAULT TRUE,
+        is_active BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
@@ -158,7 +158,8 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users MODIFY COLUMN role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student', 'trainer') NOT NULL DEFAULT 'student'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users DROP COLUMN password`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN is_active BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
@@ -172,6 +173,11 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN profile_pic VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN experience VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
+    try {
+      await conn.query(
+        `UPDATE users SET is_active = 0 WHERE role != 'super_admin' AND (is_verified = 0 OR is_verified IS NULL)`
+      );
+    } catch (_) { }
 
     // 4.05 Ensure Coordinator Departments Mapping Table
     await conn.query(`

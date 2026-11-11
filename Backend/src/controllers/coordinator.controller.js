@@ -587,8 +587,8 @@ export const createCoordinatorMentor = async (req, res, next) => {
       await query('UPDATE users SET role = ?, department = ?, college_id = ? WHERE id = ?', ['mentor', mentorDept, collegeId, mentorId]);
     } else {
       const result = await query(
-        'INSERT INTO users (name, email, role, department, college_id, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-        [name, email, 'mentor', mentorDept, collegeId, '$2a$10$abcdefghijklmnopqrstuu']
+        'INSERT INTO users (name, email, role, department, college_id, password_hash, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, NULL, 0, 0, 0)',
+        [name, email, 'mentor', mentorDept, collegeId]
       );
       mentorId = result.insertId;
     }
@@ -603,7 +603,7 @@ export const createCoordinatorMentor = async (req, res, next) => {
       email,
       department: mentorDept,
       assignedBatch: assignedBatch || 'Unassigned',
-      status: 'Active',
+      status: existing ? 'Active' : 'Pending Activation',
     });
   } catch (error) {
     next(error);

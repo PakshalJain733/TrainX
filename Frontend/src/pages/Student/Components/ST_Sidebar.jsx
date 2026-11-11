@@ -33,11 +33,18 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 
 const navGroups = [
   {
-    id: "learning",
-    label: "Learning & Practice",
+    id: "daily",
+    label: "Workspace",
     items: [
       { title: "Overview", url: "/student", icon: LayoutDashboard, exact: true, moduleKey: "studentDashboard" },
+      { title: "Attendance", url: "/student/attendance", icon: CalendarCheck, moduleKey: "attendance" },
       { title: "Batches", url: "/student/batches", icon: Code2, moduleKey: "studentBatches" },
+    ],
+  },
+  {
+    id: "learning",
+    label: "Academics & Practice",
+    items: [
       { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck, moduleKey: "learningContent" },
       { title: "Practice", url: "/student/practice", icon: Terminal, moduleKey: "practiceCoding" },
       { title: "Quiz", url: "/student/quiz", icon: GraduationCap, moduleKey: "academicQuizzes" },
@@ -45,7 +52,7 @@ const navGroups = [
   },
   {
     id: "ai",
-    label: "AI Career Prep",
+    label: "AI Prep",
     items: [
       { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles, moduleKey: "aiRoadmaps" },
       { title: "AI Interview", url: "/student/ai-interview", icon: Bot, moduleKey: "aiInterviews" },
@@ -53,11 +60,10 @@ const navGroups = [
   },
   {
     id: "tracking",
-    label: "Progress & Records",
+    label: "Performance",
     items: [
       { title: "Progress", url: "/student/progress", icon: LineChart, moduleKey: "skillGapAnalysis" },
       { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy, moduleKey: "studentLeaderboard" },
-      { title: "Attendance", url: "/student/attendance", icon: CalendarCheck, moduleKey: "attendance" },
       { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2, moduleKey: "weeklyReports" },
     ],
   },
@@ -143,6 +149,9 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
 
       {/* Pinned Bottom Account Section */}
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && visibleFooterItems.length > 0 && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>

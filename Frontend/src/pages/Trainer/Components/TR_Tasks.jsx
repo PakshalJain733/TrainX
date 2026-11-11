@@ -318,7 +318,7 @@ export function TrainerTasks() {
             </div>
 
             {/* Row 2: Topic, Difficulty, Points, Deadline */}
-            <div className="trainer-form-grid-4">
+            <div className="trainer-form-grid-4 mobile-pair-2">
               <div>
                 <label className="trainer-field-label">Topic / Concept</label>
                 <input

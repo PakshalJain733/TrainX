@@ -398,8 +398,8 @@ export const createUser = async ({
   department_id = null,
   password = '',
   password_hash = '',
-  is_active = true,
-  is_verified = 1,
+  is_active = false,
+  is_verified = 0,
   is_approved = 1,
 }) => {
   const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim() : null;
@@ -409,8 +409,10 @@ export const createUser = async ({
   const passwordValue = password || password_hash || '';
   const hashedPassword = passwordValue ? await hashPasswordValue(passwordValue) : '';
   const validCollegeId = await getValidCollegeId(college_id);
-  const activeValue = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
   const verifiedValue = is_verified === true || is_verified === 1 || String(is_verified) === '1' ? 1 : 0;
+  const requestedActive = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
+  // Non-super_admin users remain inactive until email activation (is_verified = 1) completes
+  const activeValue = role === ROLES.SUPER_ADMIN || (requestedActive === 1 && verifiedValue === 1) ? 1 : 0;
   const approvedValue = is_approved === true || is_approved === 1 || String(is_approved) === '1' ? 1 : 0;
   const res = await query(
     'INSERT INTO users (name, email, mobile_number, role, college_id, department, department_id, password_hash, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',

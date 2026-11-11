@@ -43,7 +43,7 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 const navGroups = [
   {
     id: "training",
-    label: "Training & Batches",
+    label: "Delivery",
     items: [
       { title: "Overview", url: "/trainer", icon: LayoutDashboard, exact: true, moduleKey: "trainerOverview" },
       { title: "Batches", url: "/trainer/batches", icon: Users, moduleKey: "trainerBatches" },
@@ -52,7 +52,7 @@ const navGroups = [
   },
   {
     id: "evaluation",
-    label: "Submissions & Ranks",
+    label: "Evaluation",
     items: [
       { title: "Submissions", url: "/trainer/submissions", icon: FileCheck2, moduleKey: "trainerSubmissions" },
       { title: "Leaderboard", url: "/trainer/leaderboard", icon: Trophy, moduleKey: "trainerLeaderboard" },
@@ -146,6 +146,9 @@ export function TrainerSidebar({ collapsed, mobileOpen, onClose }) {
 
       {/* Pinned Bottom */}
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && visibleFooterItems.length > 0 && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>

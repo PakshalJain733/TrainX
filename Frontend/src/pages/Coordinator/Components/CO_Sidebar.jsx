@@ -33,23 +33,23 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 
 const navGroups = [
   {
-    id: "management",
-    label: "Cohort & Faculty",
+    id: "cohort",
+    label: "Cohort",
     items: [
       { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true, moduleKey: "coordinatorDashboard" },
-      { title: "Students", url: "/coordinator/students", icon: Users, moduleKey: "coordinatorStudents" },
       { title: "Batches", url: "/coordinator/batches", icon: Code2, moduleKey: "coordinatorBatches" },
+      { title: "Students", url: "/coordinator/students", icon: Users, moduleKey: "coordinatorStudents" },
       { title: "Mentors", url: "/coordinator/mentors", icon: UserCog, moduleKey: "coordinatorMentors" },
     ],
   },
   {
-    id: "governance",
-    label: "Performance & Governance",
+    id: "monitoring",
+    label: "Monitoring",
     items: [
-      { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
-      { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
-      { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "coordinatorLeaderboard" },
       { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck, moduleKey: "coordinatorAttendance" },
+      { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
+      { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "coordinatorLeaderboard" },
+      { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
       { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox, moduleKey: "coordinatorRequests" },
     ],
   },
@@ -147,6 +147,9 @@ export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
       </div>
 
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && visibleFooterItems.length > 0 && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {visibleFooterItems.map(renderItem)}
         </ul>

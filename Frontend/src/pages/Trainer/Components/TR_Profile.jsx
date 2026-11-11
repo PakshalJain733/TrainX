@@ -401,9 +401,9 @@ export function TrainerProfile() {
               </div>
 
               {/* Form Grid: Exactly the 6 Fields */}
-              <div className="profile-form-grid" style={{ marginTop: "16px" }}>
+              <div className="profile-form-grid mobile-pair-2" style={{ marginTop: "16px" }}>
                 {/* 1. Full Name */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Full Name *</label>
                   <div className="trainer-input-wrapper">
                     <User size={16} className="trainer-input-icon" />
@@ -420,7 +420,7 @@ export function TrainerProfile() {
                 </div>
 
                 {/* 2. Email Address */}
-                <div className="profile-field">
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Email Address *</label>
                   <div className="trainer-input-wrapper">
                     <Mail size={16} className="trainer-input-icon" />

@@ -254,8 +254,8 @@ export default function SuperAdminProfile() {
               </div>
             </div>
 
-            <div className="sa-profile-form-grid">
-              <div className="profile-field">
+            <div className="sa-profile-form-grid mobile-pair-2">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Full Name *</label>
                 <input
                   type="text"
@@ -268,7 +268,7 @@ export default function SuperAdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Email Address *</label>
                 <input
                   type="email"
@@ -307,7 +307,7 @@ export default function SuperAdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Office Hours / Availability</label>
                 <input
                   type="text"
@@ -319,7 +319,7 @@ export default function SuperAdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Emergency Administrative Desk</label>
                 <input
                   type="text"

@@ -6,6 +6,16 @@ import { invalidateUserAuthCache } from '../../../../middleware/auth.middleware.
 
 const ACTIVATION_TOKEN_EXPIRY_HOURS = 72; // 3 days
 
+const isFlagEnabled = (val) => val === 1 || val === true || String(val) === '1';
+
+const isAccountAlreadyActivated = (user) => Boolean(
+  user &&
+  isFlagEnabled(user.is_active) &&
+  isFlagEnabled(user.is_verified) &&
+  user.password_hash &&
+  String(user.password_hash).trim().length > 0
+);
+
 /**
  * Generates a cryptographically random, single-use activation token for a student,
  * hashes it using SHA-256 for secure storage, and records it in `account_activations`.
@@ -102,7 +112,7 @@ export async function consumeAccountActivation(rawToken, newPassword, email = nu
   const tokenHash = crypto.createHash('sha256').update(cleanedToken).digest('hex');
 
   const [record] = await query(
-    `SELECT a.id, a.user_id, a.expires_at, a.consumed_at, u.email, u.name, u.is_active, u.password_hash
+    `SELECT a.id, a.user_id, a.expires_at, a.consumed_at, u.email, u.name, u.is_active, u.is_verified, u.password_hash
      FROM account_activations a
      JOIN users u ON u.id = a.user_id
      WHERE a.token_hash = ?
@@ -115,12 +125,12 @@ export async function consumeAccountActivation(rawToken, newPassword, email = nu
     if (email && typeof email === 'string' && email.includes('@')) {
       const cleanEmail = email.trim().toLowerCase();
       const [userRecord] = await query(
-        `SELECT id, email, is_active, password_hash FROM users WHERE LOWER(email) = ? LIMIT 1`,
+        `SELECT id, email, is_active, is_verified, password_hash FROM users WHERE LOWER(email) = ? LIMIT 1`,
         [cleanEmail]
       );
 
       if (userRecord) {
-        if (userRecord.is_active === 1 && userRecord.password_hash && userRecord.password_hash.trim().length > 0) {
+        if (isAccountAlreadyActivated(userRecord)) {
           throw new Error('Your account is already activated. Please sign in directly with your password.');
         }
 
@@ -189,15 +199,15 @@ export async function resendAccountActivation(email) {
 
   const cleanEmail = email.trim().toLowerCase();
   const [user] = await query(
-    `SELECT u.id, u.name, u.email, u.role, u.source_system, u.password_hash, u.is_active
+    `SELECT u.id, u.name, u.email, u.role, u.source_system, u.password_hash, u.is_active, u.is_verified
      FROM users u
      WHERE LOWER(u.email) = ?
      LIMIT 1`,
     [cleanEmail]
   );
 
-  // If user does not exist or has already set their password and is active, return generic message
-  if (!user || (user.password_hash && user.password_hash.trim().length > 0 && user.is_active === 1)) {
+  // If user does not exist or has already activated via email and set their password, return generic message
+  if (!user || isAccountAlreadyActivated(user)) {
     return { success: true, message: genericMessage };
   }
 

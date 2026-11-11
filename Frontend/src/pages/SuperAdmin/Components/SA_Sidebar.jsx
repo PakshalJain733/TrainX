@@ -32,19 +32,25 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 
 const navGroups = [
   {
-    id: "platform",
-    label: "Platform",
+    id: "workspace",
+    label: "Workspace",
     items: [
       { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
       { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
     ],
   },
   {
-    id: "governance",
-    label: "Users & Controls",
+    id: "users",
+    label: "Users & Access",
     items: [
-      { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
       { title: "Approve Registration", url: "/super-admin/approve-users", icon: UserCheck },
+      { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
+    ],
+  },
+  {
+    id: "system",
+    label: "System & Controls",
+    items: [
       { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
       { title: "System Health", url: "/super-admin/health", icon: Activity },
     ],
@@ -119,6 +125,9 @@ export default function SuperAdminSidebar({ collapsed, mobileOpen, onClose }) {
 
       {/* Pinned Bottom Support & Mobile Account Section */}
       <div className="sidebar-footer">
+        {(!collapsed || mobileOpen) && (
+          <div className="sidebar-footer-group-label">Support</div>
+        )}
         <ul className="sidebar-menu">
           {footerNavItems.map(renderItem)}
         </ul>
