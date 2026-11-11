@@ -301,7 +301,7 @@ export default function Overview() {
       <div className="overview-hero-card-sa">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">{userInitials}</div>
-          <div>
+          <div className="overview-hero-text">
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> INSTITUTIONAL SUPER ADMIN CONTROL HUB
             </div>
@@ -356,7 +356,7 @@ export default function Overview() {
             </div>
           ) : (
             <div className="overview-table-wrap">
-              <table className="overview-table">
+              <table className="overview-table mobile-stack-table">
                 <thead>
                   <tr className="overview-table-head-row">
                     <th className="overview-table-th" style={{ width: "38%" }}>Institution</th>
@@ -369,41 +369,20 @@ export default function Overview() {
                 <tbody>
                   {collegesList.slice(0, 10).map((college) => (
                     <tr key={college.id} className="overview-table-row">
-                      <td className="overview-table-td">
+                      <td className="overview-table-td" data-primary="true">
                         <div className="overview-td-title">{college.name}</div>
                         <div className="overview-td-sub">{college.code}</div>
                       </td>
-                      <td className="overview-table-td overview-td-text">{college.location || "Main Campus"}</td>
-                      <td className="overview-table-td overview-table-td--center overview-td-count">{college.studentsCount || college.student_count || 0}</td>
-                      <td className="overview-table-td overview-table-td--center">
+                      <td className="overview-table-td overview-td-text" data-label="Location">{college.location || "Main Campus"}</td>
+                      <td className="overview-table-td overview-table-td--center overview-td-count" data-label="Students">{college.studentsCount || college.student_count || 0}</td>
+                      <td className="overview-table-td overview-table-td--center" data-label="Status">
                         <StatusBadge status={college.status || 'Active'} />
                       </td>
-                      <td className="overview-table-td overview-table-td--right">
+                      <td className="overview-table-td overview-table-td--right" data-label="Actions">
                         <button
                           type="button"
+                          className="overview-remove-btn"
                           onClick={() => handleDeleteCollege(college.id, college.name)}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            padding: "5px 10px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            color: "#ef4444",
-                            backgroundColor: "#fef2f2",
-                            border: "1px solid #fecaca",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "#fee2e2";
-                            e.currentTarget.style.borderColor = "#fca5a5";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = "#fef2f2";
-                            e.currentTarget.style.borderColor = "#fecaca";
-                          }}
                           title="Remove College"
                         >
                           <Trash2 size={13} />

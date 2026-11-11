@@ -2192,15 +2192,19 @@ export default function AdminUsers() {
           college_name: collegeName || null,
           max_uses: 1,
           expiry_option: '7d',
+          skip_email: true,
           description: `Generated for ${roleParam} registration: ${formData.name || ''}`,
         }),
       });
       if (res && res.data && res.data.code) {
         setGeneratedCode(res.data.code);
-        if (formData.email && formData.email.includes('@')) {
-          setActionToast({ type: "success", message: `Activation code generated and invitation email dispatched to ${formData.email}` });
-          setTimeout(() => setActionToast(null), 5000);
-        }
+        setActionToast({
+          type: "success",
+          message: formData.email && formData.email.includes('@')
+            ? `Access token generated for ${formData.email}. Click Create User to dispatch the activation email.`
+            : "Access token generated. Click Create User to dispatch the activation email."
+        });
+        setTimeout(() => setActionToast(null), 5000);
       } else {
         setGeneratedCode(generatedFallback);
       }
@@ -3121,7 +3125,7 @@ export default function AdminUsers() {
                           <div className="manageusers-token-code">{generatedCode}</div>
                           {formData.email && (
                             <div style={{ fontSize: '11px', color: '#a5b4fc', marginTop: '3px' }}>
-                              ✓ Invitation & activation link dispatched to: {formData.email}
+                              ✓ Token ready — email with access code will be sent to {formData.email} when you click Create User
                             </div>
                           )}
                         </div>

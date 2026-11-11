@@ -25,7 +25,7 @@ export const getCodes = async (req, res, next) => {
 
 export const generateCode = async (req, res, next) => {
   try {
-    const { code, role, college_name, description, max_uses, expiry_option, expires_at } = req.body;
+    const { code, role, college_name, description, max_uses, expiry_option, expires_at, skip_email = false, send_email = true } = req.body;
     
     // Normalize role string
     let normalizedRole = role || 'all';
@@ -136,9 +136,10 @@ export const generateCode = async (req, res, next) => {
     });
 
     let emailDeliveryStatus = 'pending';
+    const shouldDispatchEmail = !skip_email && send_email !== false;
 
-    // Dispatch the activation email if target email is available
-    if (targetEmail && targetEmail.includes('@')) {
+    // Dispatch the activation email if target email is available and deferred dispatch was not requested
+    if (shouldDispatchEmail && targetEmail && targetEmail.includes('@')) {
       const creatorId = req.user?.id || null;
       const creatorRole = req.user?.role || 'Admin';
 

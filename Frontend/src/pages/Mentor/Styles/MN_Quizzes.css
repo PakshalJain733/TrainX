@@ -313,6 +313,44 @@
 
 @media (max-width: 640px) {
   .mq-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .mq-kpi-card {
+    padding: 12px 10px;
+    gap: 10px;
+    border-radius: 12px;
+    min-width: 0;
+  }
+
+  .mq-kpi-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .mq-kpi-val {
+    font-size: 16px;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+
+  .mq-kpi-label {
+    font-size: 11px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .mq-kpi-sub {
+    font-size: 10.5px;
+    line-height: 1.25;
+    color: #64748b;
+  }
+}
+
+@media (max-width: 359px) {
+  .mq-kpi-grid {
     grid-template-columns: 1fr;
   }
 }

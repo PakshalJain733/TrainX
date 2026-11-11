@@ -712,7 +712,8 @@ body.mobile-drawer-open .student-main {
   .attendance-kpi-grid,
   .skillgaps-kpi-grid,
   .batches-summary-grid,
-  .weekly-metrics-grid {
+  .weekly-metrics-grid,
+  .mq-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 10px !important;
   }
@@ -733,7 +734,8 @@ body.mobile-drawer-open .student-main {
   .my-attendance-summary-card .metric-box,
   .attendance-kpi-content,
   .skillgaps-kpi-card,
-  .batches-summary-card {
+  .batches-summary-card,
+  .mq-kpi-card {
     min-height: auto !important;
     max-height: none !important;
     padding: 12px 13px !important;
@@ -776,15 +778,28 @@ body.mobile-drawer-open .student-main {
     line-height: 1.15 !important;
   }
 
-  .skillgaps-kpi-card .kpi-val {
+  .skillgaps-kpi-card .kpi-val,
+  .mq-kpi-val {
     font-size: 16px !important;
     line-height: 1.2 !important;
+  }
+
+  .mq-kpi-label {
+    white-space: normal !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  .mq-kpi-sub {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
   }
 
   .approve-stat-icon-wrap,
   .trainings-stat-icon,
   .skillgaps-kpi-card .kpi-icon-wrap,
-  .batches-summary-icon-box {
+  .batches-summary-icon-box,
+  .mq-kpi-icon {
     width: 36px !important;
     height: 36px !important;
     border-radius: 10px !important;
@@ -817,7 +832,8 @@ body.mobile-drawer-open .student-main {
   .attendance-kpi-grid,
   .skillgaps-kpi-grid,
   .batches-summary-grid,
-  .weekly-metrics-grid {
+  .weekly-metrics-grid,
+  .mq-kpi-grid {
     grid-template-columns: 1fr !important;
   }
 

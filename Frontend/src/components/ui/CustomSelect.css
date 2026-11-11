@@ -58,6 +58,8 @@
   align-items: center;
   gap: 8px;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .custom-select-icon {
@@ -66,6 +68,8 @@
 }
 
 .custom-select-label {
+  display: block;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

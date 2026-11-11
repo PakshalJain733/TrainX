@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 import { getRelatedCollegeIds } from '../models/user.model.js';
@@ -1859,27 +1859,30 @@ export const getBatchTaskReport = async (req, res, next) => {
     if (isDownload) {
       const excelData = reportRows.map((r) => r.excelRow);
 
-      // Create Worksheet
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-      // Auto-size columns based on maximum content width
-      const colKeys = excelData.length > 0 ? Object.keys(excelData[0]) : [];
-      worksheet['!cols'] = colKeys.map((k) => {
-        let maxLen = k.length;
-        excelData.forEach((row) => {
-          const val = row[k] ? String(row[k]) : '';
-          if (val.length > maxLen) maxLen = val.length;
-        });
-        return { wch: Math.min(Math.max(maxLen + 3, 10), 45) };
-      });
-
-      const workbook = XLSX.utils.book_new();
+      // Create Workbook & Worksheet
+      const workbook = new ExcelJS.Workbook();
       const safeSheetName = (batch.name || 'Batch')
         .slice(0, 31)
         .replace(/[:\\\/\?\*\[\]]/g, '_');
-      XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+      const worksheet = workbook.addWorksheet(safeSheetName);
 
-      const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+      // Auto-size columns based on maximum content width
+      const colKeys = excelData.length > 0 ? Object.keys(excelData[0]) : [];
+      worksheet.columns = colKeys.map((k) => {
+        let maxLen = k.length;
+        excelData.forEach((row) => {
+          const val = row[k] != null ? String(row[k]) : '';
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        return {
+          header: k,
+          key: k,
+          width: Math.min(Math.max(maxLen + 3, 10), 45),
+        };
+      });
+      excelData.forEach((row) => worksheet.addRow(row));
+
+      const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
       const safeBatchName = (batch.name || `Batch_${cleanBatchId}`).replace(/[^a-zA-Z0-9_-]/g, '_');
       const filename = `${safeBatchName}_Task_Submissions_Report.xlsx`;
 

@@ -1862,17 +1862,6 @@ option:hover {
   box-sizing: border-box;
 }
 
-.sa-stats-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #3b82f6;
-  border-radius: 12px 12px 0 0;
-}
-
 .sa-stats-card:hover {
   border-color: #cbd5e1;
   transform: translateY(-1.5px);

@@ -398,8 +398,10 @@ export default function MaintenanceControls() {
       {/* College Selector & Search Filter Bar */}
       <div className="mc-college-filter-card">
         <div className="mc-college-selector-wrap">
-          <Building2 size={18} className="mc-college-icon" />
-          <span className="mc-college-label">Institution Scope:</span>
+          <div className="mc-college-label-row">
+            <Building2 size={18} className="mc-college-icon" />
+            <span className="mc-college-label">Institution Scope:</span>
+          </div>
           <div className="mc-college-select-box">
             <CustomSelect
               value={selectedCollege}
