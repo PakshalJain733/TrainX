@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, Code, Plus, Edit, Trash2, ListChecks, Send, Eye, CheckCircle2, XCircle, Clock, Award, Search, Filter, X, FileCode, FileCode2, Layers, ChevronRight, TrendingUp, Terminal, Sparkles, ChevronDown, AlertCircle, AlertTriangle, Cpu, Zap, CheckCheck, RefreshCw, User, MessageSquare, History } from "lucide-react";
+import { Check, Code, Plus, Edit, Trash2, ListChecks, Send, Eye, CheckCircle2, XCircle, Clock, Award, Search, Filter, X, FileCode, FileCode2, Layers, ChevronRight, TrendingUp, Terminal, Sparkles, ChevronDown, AlertCircle, AlertTriangle, Cpu, Zap, CheckCheck, RefreshCw, User, MessageSquare, History, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, addSharedCodingTask, EVENTS } from "../../../utils/sharedStore";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import GrantRetakeModal from "../../../components/Common/GrantRetakeModal";
 import "../Styles/AD_PracticeProblems.css";
 
 /* ── Dropdown for Admin PracticeProblems (Uses CustomSelect) ── */
@@ -152,6 +153,7 @@ export default function AdminPracticeProblems({ role = "admin" }) {
   const [editingProblemId, setEditingProblemId] = useState(null);
   const [showTestCaseModal, setShowTestCaseModal] = useState(false);
   const [selectedProblem, setSelectedProblem] = useState(null);
+  const [retakeModalProblem, setRetakeModalProblem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("All");
 
@@ -768,6 +770,14 @@ export default function AdminPracticeProblems({ role = "admin" }) {
                       <div className="action-btns-row action-btns-right">
                         <button
                           className="btn-table-action"
+                          onClick={() => setRetakeModalProblem(p)}
+                          title="Grant Retake to Students"
+                          style={{ color: "#4f46e5" }}
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                        <button
+                          className="btn-table-action"
                           onClick={() => handleOpenEditProblem(p)}
                           title="Edit Problem"
                         >
@@ -1090,6 +1100,15 @@ export default function AdminPracticeProblems({ role = "admin" }) {
 
                         <td style={{ textAlign: "right" }}>
                           <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              onClick={() => setRetakeModalProblem(p)}
+                              className="admin-action-btn admin-action-btn--secondary"
+                              title="Grant Retake to Students"
+                              style={{ padding: "5px 9px", fontSize: "12px", color: "#4f46e5", borderColor: "#c7d2fe" }}
+                            >
+                              <RotateCcw size={13} /> Retake
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenEditProblem(p)}
@@ -2285,6 +2304,17 @@ export default function AdminPracticeProblems({ role = "admin" }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Grant Retake Modal */}
+      {retakeModalProblem && (
+        <GrantRetakeModal
+          isOpen={Boolean(retakeModalProblem)}
+          onClose={() => setRetakeModalProblem(null)}
+          targetType="practice"
+          targetId={retakeModalProblem.id}
+          targetTitle={retakeModalProblem.title || `Problem #${retakeModalProblem.id}`}
+        />
       )}
     </div>
   );

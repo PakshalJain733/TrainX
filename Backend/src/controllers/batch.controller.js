@@ -881,20 +881,33 @@ export const getBatchTasks = async (req, res, next) => {
     );
 
     let studentSubmissions = new Map();
+    let studentRetakes = new Set();
     if (studentId && dbTasks && dbTasks.length > 0) {
       try {
         const taskIds = dbTasks.map(t => t.id);
         const taskPlaceholders = taskIds.map(() => '?').join(',');
         const subRows = await query(
-          `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score, feedback
+          `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score, feedback, attempt_number, is_retake
            FROM task_submissions 
-           WHERE user_id = ? AND (batch_id = ? OR task_id IN (${taskPlaceholders}))`,
+           WHERE user_id = ? AND (batch_id = ? OR task_id IN (${taskPlaceholders}))
+           ORDER BY id DESC`,
           [studentId, cleanId, ...taskIds]
         );
         if (Array.isArray(subRows)) {
           subRows.forEach(s => {
-            studentSubmissions.set(Number(s.task_id), s);
+            if (!studentSubmissions.has(Number(s.task_id))) {
+              studentSubmissions.set(Number(s.task_id), s);
+            }
           });
+        }
+
+        const retakeRows = await query(
+          `SELECT target_id FROM coding_retake_permissions
+           WHERE target_type = 'task' AND student_id = ? AND status = 'pending' AND target_id IN (${taskPlaceholders})`,
+          [studentId, ...taskIds]
+        );
+        if (Array.isArray(retakeRows)) {
+          retakeRows.forEach(r => studentRetakes.add(Number(r.target_id)));
         }
       } catch (e) {
         console.warn('[getBatchTasks submissions query error]', e.message);
@@ -948,6 +961,7 @@ export const getBatchTasks = async (req, res, next) => {
         ...parsed,
         status: taskStatus,
         alreadySubmitted,
+        retakeAvailable: studentRetakes.has(Number(t.id)),
         scoreObtained,
         marksObtained: scoreObtained,
         isExpired,
@@ -1010,16 +1024,32 @@ export const getTaskById = async (req, res, next) => {
 
     let alreadySubmitted = false;
     let submission = null;
+    let submissions = [];
+    let retakeAvailable = false;
+    let retakePermission = null;
+
     if (studentId) {
       const subRows = await query(
         `SELECT * FROM task_submissions 
          WHERE task_id = ? AND user_id = ? AND batch_id = ? 
-         ORDER BY id DESC LIMIT 1`,
+         ORDER BY id DESC`,
         [targetTask.id, studentId, targetTask.batch_id]
       );
       if (subRows && subRows.length > 0) {
         alreadySubmitted = true;
         submission = subRows[0];
+        submissions = subRows;
+      }
+
+      const retakeRows = await query(
+        `SELECT * FROM coding_retake_permissions 
+         WHERE target_type = 'task' AND target_id = ? AND student_id = ? AND status = 'pending' 
+         ORDER BY id DESC LIMIT 1`,
+        [targetTask.id, studentId]
+      );
+      if (retakeRows && retakeRows.length > 0) {
+        retakeAvailable = true;
+        retakePermission = retakeRows[0];
       }
     }
 
@@ -1043,6 +1073,9 @@ export const getTaskById = async (req, res, next) => {
       ...parsed,
       alreadySubmitted,
       submission,
+      submissions,
+      retakeAvailable,
+      retakePermission,
       isExpired,
       status: alreadySubmitted ? (submission?.status || 'Submitted') : (isExpired ? 'Expired' : 'Pending'),
     });

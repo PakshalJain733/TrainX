@@ -39,6 +39,7 @@ export default function PracticeProblems() {
           solveStatus: p.solve_status || "Unsolved",
           scoreObtained: p.marks_obtained ?? p.score_obtained ?? null,
           percentage: p.percentage ?? null,
+          retakeAvailable: Boolean(p.retakeAvailable),
           companies: p.tags ? (Array.isArray(p.tags) ? p.tags : (typeof p.tags === "string" ? p.tags.split(",").map(t => t.trim()) : [])) : ["TCS", "Infosys"],
           solutionAvailable: true,
           description: p.description || "No problem description provided.",
@@ -330,6 +331,24 @@ export default function PracticeProblems() {
                           >
                             {prob.title}
                           </Link>
+                          {prob.retakeAvailable && (
+                            <span
+                              style={{
+                                fontSize: "10.5px",
+                                fontWeight: 700,
+                                backgroundColor: "#fef3c7",
+                                color: "#b45309",
+                                border: "1px solid #fde68a",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px"
+                              }}
+                            >
+                              <RotateCcw size={10} /> Retake Available
+                            </span>
+                          )}
                           <span className="prob-points">{prob.points} pts</span>
                         </div>
                       </td>
@@ -387,11 +406,21 @@ export default function PracticeProblems() {
                       </td>
 
                       <td className="pp-td-action">
-                        <Button
-                          size="sm"
-                          className="solve-btn"
+                        {prob.retakeAvailable ? (
+                          <Button
+                            size="sm"
+                            className="solve-btn"
+                            onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: { ...prob, isExpired }, source: 'practice' } })}
+                            style={{ background: '#4f46e5', color: '#ffffff', borderColor: '#4338ca', fontWeight: 700 }}
+                          >
+                            <RotateCcw size={14} /> Start Retake
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="solve-btn"
                           disabled={attemptsExhausted}
-                          onClick={async () => {
+                            onClick={async () => {
                             if (attemptsExhausted) return;
                             try {
                               if (!document.fullscreenElement) {
@@ -404,16 +433,17 @@ export default function PracticeProblems() {
                               state: { task: { ...prob, isExpired }, source: 'practice', enterFullscreen: true } 
                             });
                           }}
-                          style={
+                            style={
                             attemptsExhausted
                               ? { background: '#f1f5f9', color: '#94a3b8', borderColor: '#e2e8f0', cursor: 'not-allowed' }
                               : isExpired
                               ? { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
                               : {}
                           }
-                        >
-                          <Terminal size={14} /> {btnLabel}
-                        </Button>
+                          >
+                            <Terminal size={14} /> {btnLabel}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

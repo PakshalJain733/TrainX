@@ -676,6 +676,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
     });
 
     let submissionMap = new Map();
+    let retakeSet = new Set();
     let attemptsMap = new Map(); // tracks attempt count per problem
     if (callerId) {
       try {
@@ -703,6 +704,15 @@ export const getStudentPracticeProblems = async (req, res, next) => {
               });
             }
           });
+        }
+
+        const retakeRows = await query(
+          `SELECT target_id FROM coding_retake_permissions 
+           WHERE target_type = 'practice' AND student_id = ? AND status = 'pending'`,
+          [callerId]
+        );
+        if (Array.isArray(retakeRows)) {
+          retakeRows.forEach(r => retakeSet.add(Number(r.target_id)));
         }
         // Practice problems solve status is derived strictly from coding_submissions
       } catch (e) { }
@@ -742,6 +752,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
           solve_status: solveStatus,
           is_expired: isExpired,
           isExpired: isExpired,
+          retakeAvailable: retakeSet.has(Number(p.id)),
           score_obtained: sub ? sub.score : null,
           marks_obtained: sub ? sub.score : null,
           percentage: sub ? sub.percentage : null,
@@ -767,10 +778,26 @@ export const getStudentPracticeProblemById = async (req, res, next) => {
       return sendError(res, 'Practice problem not found', 404);
     }
     const isExpired = isDeadlineExpired(problem.due_date || problem.dueDate);
+    let retakeAvailable = false;
+    const callerId = req.user?.userId || req.user?.id;
+    if (callerId) {
+      try {
+        const retakeRows = await query(
+          `SELECT id FROM coding_retake_permissions 
+           WHERE target_type = 'practice' AND target_id = ? AND student_id = ? AND status = 'pending' 
+           LIMIT 1`,
+          [id, callerId]
+        );
+        if (retakeRows && retakeRows.length > 0) {
+          retakeAvailable = true;
+        }
+      } catch (e) {}
+    }
     return sendSuccess(res, 'Practice problem retrieved successfully', {
       ...problem,
       isExpired,
       is_expired: isExpired,
+      retakeAvailable,
     });
   } catch (error) {
     next(error);

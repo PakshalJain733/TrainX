@@ -40,6 +40,7 @@ import featureSwitchRoutes from './routes/featureSwitch.routes.js';
 import systemHealthRoutes from './routes/systemHealth.routes.js';
 import googleAuthRoutes from './routes/googleAuth.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import retakeRoutes from './routes/retake.routes.js';
 import careerGatewayRoutes from './modules/integrations/careerGateway/careerGateway.routes.js';
 import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
@@ -263,6 +264,8 @@ app.use('/api/v1/c2c', c2cRoutes);
 app.use('/api/v1/admin/c2c', c2cRoutes);
 app.use('/api/v1/feature-switches', featureSwitchRoutes);
 app.use('/api/v1/maintenance', featureSwitchRoutes);
+app.use('/api/v1/retakes', retakeRoutes);
+app.use('/api/retakes', retakeRoutes);
 app.use('/api/google/auth', googleAuthRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/notification', notificationRoutes);

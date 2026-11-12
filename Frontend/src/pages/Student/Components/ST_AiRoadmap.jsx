@@ -1685,7 +1685,9 @@ export default function AIRoadmap() {
         body: JSON.stringify({ targetRole: cleanRole }),
       });
 
-      if (response && (response.status === 429 || response?.rateLimit?.isLocked || response.isLocked)) {
+      const rawData = response?.data?.roadmap || response?.data || (response?.milestones ? response : null);
+
+      if (response && (response.status === 429 || (!rawData && (response?.rateLimit?.isLocked || response.isLocked)))) {
         const lockInfo = response.rateLimit || response;
         setRoadmapRateLimit({
           isLocked: true,
@@ -1698,11 +1700,8 @@ export default function AIRoadmap() {
         return;
       }
 
-      if (response && response.data) {
-        const genData = {
-          ...response.data,
-          milestones: enforceSequentialMilestoneLocks(response.data.milestones || []),
-        };
+      if (rawData) {
+        const genData = mergeCachedProgress(rawData);
 
         // Add to allRoadmaps list
         setAllRoadmaps((prev) => [genData, ...prev.filter((r) => r.id !== genData.id)]);
@@ -1710,7 +1709,9 @@ export default function AIRoadmap() {
         setActiveMilestoneIdx(0);
         setViewMode("milestones");
         setActiveSection("theory");
+        setGoalInput("");
         resetQuizState();
+        setError(null);
         if (genData.aiSource) setAiSource(genData.aiSource);
         if (response.rateLimit) {
           setRoadmapRateLimit(response.rateLimit);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert, User, LogOut, BookOpen, ExternalLink, Sparkles, HelpCircle, X, Award } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert, User, LogOut, BookOpen, ExternalLink, Sparkles, HelpCircle, X, Award, RotateCcw } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -215,9 +215,12 @@ export default function CodingPlatform() {
   const [proctorTerminated, setProctorTerminated] = useState(false);
   const [terminationReason, setTerminationReason] = useState("");
   const [clipboardWarning, setClipboardWarning] = useState("");
+  const [proctorConfirmModal, setProctorConfirmModal] = useState(null); // { title, message, onConfirm, isDanger }
   const proctorArmedRef = useRef(false);
   const proctorViolationsRef = useRef(0);
   const lastViolationTimeRef = useRef(0);
+  const hasAutoSubmittedRef = useRef(false);
+  const hasInitializedAttemptRef = useRef(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -249,11 +252,43 @@ export default function CodingPlatform() {
   // Both Batch Coursework and Practice Problems are monitored under examination proctoring
   const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem);
 
+  const isPracticeArena = !isBatchCoursework && Boolean(
+    String(taskId || '').toLowerCase().startsWith('practice-') ||
+    taskData?.source === 'practice' ||
+    location.state?.source === 'practice' ||
+    taskId
+  );
+
+  const isProctoredSession = isBatchCoursework || isPracticeArena;
+
+  // Helper to determine if current session was launched via browser page reload (F5 / Ctrl+R)
+  const isPageReload = () => {
+    try {
+      const navEntries = window.performance?.getEntriesByType?.('navigation');
+      if (navEntries && navEntries.length > 0) {
+        return navEntries[0].type === 'reload';
+      }
+      return window.performance?.navigation?.type === 1;
+    } catch {
+      return false;
+    }
+  };
+
   // Scoped key generator for proctoring strikes in sessionStorage
   const getProctorStorageKey = () => {
     const sId = user?.userId || user?.id || "guest";
     const tId = String(taskId || taskData?.id || "unknown");
-    return `proctor_strikes_${sId}_${tId}`;
+    return isPracticeArena
+      ? `proctor_strikes_practice_${sId}_${tId}`
+      : `proctor_strikes_${sId}_${tId}`;
+  };
+
+  const getProctorAttemptInitKey = () => {
+    const sId = user?.userId || user?.id || "guest";
+    const tId = String(taskId || taskData?.id || "unknown");
+    return isPracticeArena
+      ? `proctor_initialized_practice_${sId}_${tId}`
+      : `proctor_initialized_${sId}_${tId}`;
   };
 
   const getStoredProctorStrikes = () => {
@@ -275,10 +310,14 @@ export default function CodingPlatform() {
   const clearStoredProctorStrikes = () => {
     try {
       sessionStorage.removeItem(getProctorStorageKey());
+      sessionStorage.removeItem(getProctorAttemptInitKey());
     } catch {}
   };
 
-  // Sync ref with persisted storage on mount/task change
+  // Fix 1: Sync ref with persisted storage on mount/task change.
+  // - If this is a page reload (F5) within the same active attempt, preserve strikes.
+  // - If this is a genuinely new task or practice attempt (navigation), reset stale strikes to zero.
+  // - Do not reset strikes merely because React re-renders or the component remounts during the same attempt.
   useEffect(() => {
     if (isProctoredSession) {
       proctorViolationsRef.current = getStoredProctorStrikes();
@@ -288,7 +327,25 @@ export default function CodingPlatform() {
   const handleProctorViolation = (reason, description) => {
     if (!isProctoredSession || hasSubmitted || !proctorArmedRef.current) return;
 
-    // Debounce to prevent duplicate strikes when blur and visibilitychange or resize fire simultaneously
+    // Fix 2: Only genuine fullscreen exits increment the 3-strike submission counter
+    if (reason !== "exit_fullscreen") {
+      showClipboardToast(`⚠️ Notice: ${description}`);
+      return;
+    }
+
+    // Fix 2: Check actual fullscreen state before processing violations.
+    // Screen sleep, workstation lock or focus events without an actual exit must not count.
+    const isFsNow = Boolean(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+    if (isFsNow) {
+      return;
+    }
+
+    // Debounce to prevent duplicate strikes (1500ms duplicate event protection)
     const now = Date.now();
     if (now - lastViolationTimeRef.current < 1500) {
       return;
@@ -329,6 +386,8 @@ export default function CodingPlatform() {
     : false;
 
   const handlePrevNavigation = () => {
+    clearStoredProctorStrikes();
+    proctorViolationsRef.current = 0;
     if (isBatchCoursework) {
       if (canNavigatePrev && currentBatchIndex > 0) {
         const prevTask = batchTasksList[currentBatchIndex - 1];
@@ -351,6 +410,8 @@ export default function CodingPlatform() {
   };
 
   const handleNextNavigation = () => {
+    clearStoredProctorStrikes();
+    proctorViolationsRef.current = 0;
     if (isBatchCoursework) {
       if (canNavigateNext && currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1) {
         const nextTask = batchTasksList[currentBatchIndex + 1];
@@ -402,23 +463,33 @@ export default function CodingPlatform() {
       const strikes = getStoredProctorStrikes();
       const nextStrike = strikes + 1;
       if (nextStrike < 3) {
-        const confirmExit = window.confirm(
-          `⚠️ Warning: Exiting full-screen mode is an examination violation!\n\nThis will count as Warning ${nextStrike}/2. Are you sure you want to exit?`
-        );
-        if (!confirmExit) return;
-        if (document.fullscreenElement) {
-          document.exitFullscreen?.().catch(() => {});
-        }
-        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+        setProctorConfirmModal({
+          title: "Exit Full-Screen Mode?",
+          message: `Exiting full-screen is an examination violation. This action will count as Warning ${nextStrike}/2. Are you sure you want to proceed?`,
+          isDanger: false,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            } else {
+              handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+            }
+          }
+        });
       } else {
-        const confirmFinal = window.confirm(
-          "⚠️ FINAL WARNING: Exiting full-screen now will exceed your 2 warnings and immediately submit your task.\n\nAre you sure you want to submit and end your task?"
-        );
-        if (!confirmFinal) return;
-        if (document.fullscreenElement) {
-          document.exitFullscreen?.().catch(() => {});
-        }
-        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+        setProctorConfirmModal({
+          title: "Final Warning: Submission Will Trigger",
+          message: "Exiting full-screen now will exceed your 2 allowed warnings. Your task will be ended and your current code will be automatically submitted. Proceed?",
+          isDanger: true,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            } else {
+              handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+            }
+          }
+        });
       }
       return;
     }
@@ -435,9 +506,9 @@ export default function CodingPlatform() {
 
     setConsoleStatus("error");
     const reasonLabel = reason === "exit_fullscreen"
-      ? "⚠️ Full-screen exited! Solution automatically submitted as per proctored coursework policy."
-      : "⚠️ Tab switch detected! Solution automatically submitted as per proctored coursework policy.";
-    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in sandbox...`);
+      ? "⚠️ Full-screen exited! Solution automatically submitted as per exam guidelines."
+      : "⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines.";
+    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);
 
     if (submitRef.current && !isSubmitting) {
       submitRef.current({ isAutoSubmit: true, reason });
@@ -451,7 +522,12 @@ export default function CodingPlatform() {
   // Fullscreen change listener
   useEffect(() => {
     const handleFsChange = () => {
-      const isFs = Boolean(document.fullscreenElement);
+      const isFs = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
       setIsFullscreen(isFs);
 
       if (isProctoredSession && !hasSubmitted && proctorArmedRef.current && !isFs) {
@@ -461,9 +537,13 @@ export default function CodingPlatform() {
 
     document.addEventListener("fullscreenchange", handleFsChange);
     document.addEventListener("webkitfullscreenchange", handleFsChange);
+    document.addEventListener("mozfullscreenchange", handleFsChange);
+    document.addEventListener("MSFullscreenChange", handleFsChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFsChange);
       document.removeEventListener("webkitfullscreenchange", handleFsChange);
+      document.removeEventListener("mozfullscreenchange", handleFsChange);
+      document.removeEventListener("MSFullscreenChange", handleFsChange);
     };
   }, [isProctoredSession, hasSubmitted]);
 
@@ -475,23 +555,27 @@ export default function CodingPlatform() {
     if (isProctorActive && isFullscreen) {
       armTimer = setTimeout(() => {
         proctorArmedRef.current = true;
-      }, 800);
+      }, 2500);
     } else {
       proctorArmedRef.current = false;
     }
 
     const handleTabSwitchEvent = () => {
-      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
-        handleProctorViolation("tab_switch", "Tab switch / Alt+Tab detected!");
-      }
+      showClipboardToast("⚠️ Tab switching / Alt+Tab is detected during proctored tasks.");
     };
 
     const handleVisibilityChange = () => {
-      handleTabSwitchEvent();
+      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+        handleTabSwitchEvent();
+      }
     };
 
     const handleWindowBlur = () => {
-      handleTabSwitchEvent();
+      // Ordinary window blur, workstation lock or screen sleep:
+      // Show notification only; do NOT increment fullscreen strike counter or auto-submit
+      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+        handleTabSwitchEvent();
+      }
     };
 
     const handleKeyDown = (e) => {
@@ -627,7 +711,8 @@ export default function CodingPlatform() {
                   return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
                 });
               }
-              if (t.alreadySubmitted) {
+              const isRetakeActive = Boolean(t.retakeAvailable);
+              if (t.alreadySubmitted && !isRetakeActive) {
                 setHasSubmitted(true);
                 const prevCode = t.submission?.submitted_code || t.submission?.code_submission || t.submission?.code;
                 if (prevCode) {
@@ -649,6 +734,9 @@ export default function CodingPlatform() {
                 source: "batch_task",
                 language: taskLang,
                 alreadySubmitted: Boolean(t.alreadySubmitted),
+                retakeAvailable: isRetakeActive,
+                retakePermission: t.retakePermission || null,
+                submissions: Array.isArray(t.submissions) ? t.submissions : (t.submission ? [t.submission] : []),
                 isExpired: Boolean(t.isExpired),
               });
               return;
@@ -684,6 +772,10 @@ export default function CodingPlatform() {
                   return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
                 });
               }
+              const isRetakeActive = Boolean(p.retakeAvailable);
+              if (isRetakeActive) {
+                setHasSubmitted(false);
+              }
               setTaskData({
                 id: p.id,
                 title: p.title,
@@ -695,6 +787,7 @@ export default function CodingPlatform() {
                 testCases: getDynamicSampleTestCases(p.title, rawCases),
                 source: "practice_problem",
                 language: taskLang,
+                retakeAvailable: isRetakeActive,
                 isExpired: Boolean(p.isExpired || p.is_expired),
               });
               return;
@@ -738,13 +831,14 @@ export default function CodingPlatform() {
   const isLanguageLocked = Boolean(assignedLangKey);
 
   const rawDeadline = taskData?.deadline || location.state?.task?.deadline || location.state?.task?.dueDate || location.state?.task?.due;
+  const isRetakeActive = Boolean(taskData?.retakeAvailable);
   const isDeadlinePassedVal = isDeadlinePassed(rawDeadline);
-  const isTaskExpired = Boolean(
+  const isTaskExpired = !isRetakeActive && Boolean(
     taskData?.isExpired ||
     location.state?.task?.isExpired ||
     (isDeadlinePassedVal && !hasSubmitted)
   );
-  const isCompilerLocked = hasSubmitted || isTaskExpired;
+  const isCompilerLocked = (hasSubmitted || isTaskExpired) && !isRetakeActive;
 
   const handleLanguageChange = (newLang) => {
     if (isLanguageLocked && newLang !== assignedLangKey) {
@@ -850,8 +944,6 @@ export default function CodingPlatform() {
     }
   };
 
-  const hasAutoSubmittedRef = useRef(false);
-
   const handleSubmit = async (opts = {}) => {
     const isAuto = opts?.isAutoSubmit === true;
     const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
@@ -862,7 +954,7 @@ export default function CodingPlatform() {
       setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Submissions are closed.");
       return;
     }
-    if (hasSubmitted) {
+    if (hasSubmitted && !isAuto) {
       setConsoleStatus("error");
       setConsoleOutput(
         isBatch
@@ -993,11 +1085,16 @@ export default function CodingPlatform() {
 
       // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions
       const attemptsCount = result.attempts_used ?? (submissions.length + 1);
-      if (isBatch || attemptsCount >= 3) {
+      if (isBatch || attemptsCount >= 3 || taskData?.retakeAvailable) {
         setHasSubmitted(true);
+        setTaskData(prev => prev ? { ...prev, retakeAvailable: false } : prev);
         clearStoredProctorStrikes();
+        proctorViolationsRef.current = 0;
       } else {
         setHasSubmitted(false);
+        // Fix 1: Reset Practice Arena strikes after each successful manual submission, before the next attempt
+        clearStoredProctorStrikes();
+        proctorViolationsRef.current = 0;
       }
       setActiveTab("submissions");
       loadSubmissions();
@@ -1026,12 +1123,35 @@ export default function CodingPlatform() {
         setSubmissions(matched);
 
         const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
-        if (isBatch) {
-          if (matched.length > 0 || taskData?.alreadySubmitted) {
+        const isRetake = Boolean(taskData?.retakeAvailable);
+
+        let combined = matched;
+        if (isBatch && matched.length === 0 && Array.isArray(taskData?.submissions) && taskData.submissions.length > 0) {
+          combined = taskData.submissions.map((sub, idx) => ({
+            id: sub.id,
+            status: (sub.status || '').toLowerCase(),
+            marks: sub.score ?? sub.marks_obtained ?? 0,
+            score: sub.score ?? sub.marks_obtained ?? 0,
+            percentage: sub.status === 'Passed' ? 100 : 0,
+            passed_test_cases: sub.status === 'Passed' ? (taskData.testCases?.length || 1) : 0,
+            total_test_cases: taskData.testCases?.length || 1,
+            language: taskData.language || 'Java',
+            submitted_at: sub.submitted_at,
+            attempt_number: sub.attempt_number || (idx + 1),
+            is_retake: Boolean(sub.is_retake),
+            feedback: sub.feedback,
+          }));
+        }
+        setSubmissions(combined);
+
+        if (isRetake) {
+          setHasSubmitted(false);
+        } else if (isBatch) {
+          if (combined.length > 0 || taskData?.alreadySubmitted) {
             setHasSubmitted(true);
           }
         } else {
-          if (matched.length >= 3) {
+          if (combined.length >= 3) {
             setHasSubmitted(true);
           } else {
             setHasSubmitted(false);
@@ -1078,7 +1198,35 @@ export default function CodingPlatform() {
             <button 
               type="button" 
               onClick={() => {
+                if (isProctoredSession && !hasSubmitted) {
+                  setProctorConfirmModal({
+                    title: isBatchCoursework ? "Leave Proctored Coursework?" : "Leave Proctored Practice?",
+                    message: isBatchCoursework
+                      ? "Leaving this page will exit the proctored coursework environment. Are you sure you want to return to My Batches?"
+                      : "Leaving this page will exit the proctored practice arena. Are you sure you want to return to Practice?",
+                    isDanger: true,
+                    onConfirm: () => {
+                      setProctorConfirmModal(null);
+                      proctorArmedRef.current = false;
+                      clearStoredProctorStrikes();
+                      proctorViolationsRef.current = 0;
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen?.().catch(() => {});
+                      }
+                      if (isBatchCoursework) {
+                        navigate('/student/batches');
+                      } else if (window.history.length > 2) {
+                        navigate(-1);
+                      } else {
+                        navigate('/student/practice');
+                      }
+                    }
+                  });
+                  return;
+                }
                 proctorArmedRef.current = false;
+                clearStoredProctorStrikes();
+                proctorViolationsRef.current = 0;
                 if (document.fullscreenElement) {
                   document.exitFullscreen?.().catch(() => {});
                 }
@@ -1214,7 +1362,7 @@ export default function CodingPlatform() {
             {isProctoredSession && (
               <div className="cp-proctor-live-badge" title="This task is actively proctored. Exiting full-screen or switching tabs will immediately end your task.">
                 <span className="cp-proctor-live-pulse" />
-                <span>Proctored Task (Anti-Cheat Active)</span>
+                <span>{isBatchCoursework ? "Proctored Task (Anti-Cheat Active)" : "Proctored Practice (Anti-Cheat Active)"}</span>
               </div>
             )}
 
@@ -1442,8 +1590,22 @@ export default function CodingPlatform() {
                               <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
                                 {statusLabel}
                               </span>
-                              <span style={{ fontSize: "11px", fontWeight: 600, padding: "2px 6px", borderRadius: "4px", background: "#f1f5f9", color: "#475569" }}>
-                                Attempt #{attemptNum}
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  padding: "2px 7px",
+                                  borderRadius: "4px",
+                                  background: s.is_retake ? "rgba(245, 158, 11, 0.15)" : "#f1f5f9",
+                                  color: s.is_retake ? "#b45309" : "#475569",
+                                  border: s.is_retake ? "1px solid #fde68a" : "none",
+                                }}
+                              >
+                                {s.is_retake
+                                  ? `Attempt #${s.attempt_number || attemptNum} (Retake)`
+                                  : (submissions.some(sub => sub.is_retake) || submissions.length > 1)
+                                  ? `Attempt #${s.attempt_number || attemptNum} (Original)`
+                                  : `Attempt #${attemptNum}`}
                               </span>
                             </div>
                             <span style={{ fontSize: "12px", color: "#64748b" }}>
@@ -1493,6 +1655,50 @@ export default function CodingPlatform() {
                 <span>
                   🔒 Deadline Expired ({taskData?.deadline || 'Past Due'}) — Submissions and compiler execution have ended.
                 </span>
+              </div>
+            ) : taskData?.retakeAvailable ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                background: '#fffbeb',
+                borderBottom: '1.5px solid #fde68a',
+                color: '#92400e',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <RotateCcw size={16} color="#d97706" />
+                  <span>
+                    🎉 <strong>Retake Granted!</strong> You have permission to reattempt this {taskData?.source === 'batch_task' || taskData?.batch_id ? 'batch task' : 'practice problem'}. The compiler is unlocked.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasSubmitted(false);
+                    try {
+                      sessionStorage.removeItem(getProctorStorageKey());
+                    } catch (_) {}
+                  }}
+                  style={{
+                    padding: '5px 12px',
+                    backgroundColor: '#d97706',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)',
+                  }}
+                >
+                  <RotateCcw size={12} /> Start Retake
+                </button>
               </div>
             ) : hasSubmitted ? (
               <div style={{
@@ -1617,6 +1823,7 @@ export default function CodingPlatform() {
 
         {/* ── Proctored Full-Screen Gate Overlay ── */}
         {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
+        {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
           <div className="proctor-fullscreen-gate-overlay">
             <div className="proctor-gate-card">
               <div className="proctor-gate-badge">
@@ -1630,13 +1837,13 @@ export default function CodingPlatform() {
                 <div className="proctor-rule-item">
                   <span className="proctor-rule-icon">🖥️</span>
                   <div>
-                    <strong>Full-Screen is Mandatory:</strong> Exiting full-screen at any time will automatically submit your code and end the task.
+                    <strong>Full-Screen is Mandatory:</strong> Exiting full-screen will trigger warnings; on the 3rd exit your code is automatically submitted and the session ends.
                   </div>
                 </div>
                 <div className="proctor-rule-item">
                   <span className="proctor-rule-icon">🚫</span>
                   <div>
-                    <strong>Tab Switching Disabled:</strong> Switching tabs, leaving the window, or minimizing will immediately terminate your session.
+                    <strong>Tab Switching Disabled:</strong> Switching tabs, leaving the window, or minimizing will trigger warnings and count toward automatic submission.
                   </div>
                 </div>
                 <div className="proctor-rule-item">
@@ -1648,7 +1855,7 @@ export default function CodingPlatform() {
                 <div className="proctor-rule-item">
                   <span className="proctor-rule-icon">🔒</span>
                   <div>
-                    <strong>Single Submission Attempt:</strong> Once submitted or ended, re-attempts are strictly locked.
+                    <strong>Submission Attempt:</strong> Once submitted or ended due to violations, further changes are locked.
                   </div>
                 </div>
               </div>
@@ -1658,7 +1865,7 @@ export default function CodingPlatform() {
                 className="proctor-gate-btn"
               >
                 <Maximize2 size={18} />
-                <span>Enter Full-Screen & Start Task</span>
+                <span>{isBatchCoursework ? "Enter Full-Screen & Start Task" : "Enter Full-Screen & Start Practice"}</span>
               </button>
             </div>
           </div>
@@ -1674,8 +1881,8 @@ export default function CodingPlatform() {
               <h3 className="proctor-term-title">Session Ended — Proctoring Policy Violation</h3>
               <p className="proctor-term-desc">
                 {terminationReason === "exit_fullscreen"
-                  ? "Full-screen mode was exited during an active assessment. As per proctored examination rules, your session has concluded and your solution has been automatically submitted."
-                  : "Multiple window or tab switches were detected during your proctored assessment. As per examination guidelines, your task has ended and your solution has been automatically submitted."}
+                  ? "You exited full-screen mode during this proctored task. As per examination guidelines, your task has been ended and your current solution was automatically submitted."
+                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your task has been ended and your current solution was automatically submitted."}
               </p>
               <div className="proctor-term-status-box">
                 <div className="proctor-term-status-header">
@@ -1699,6 +1906,40 @@ export default function CodingPlatform() {
                 >
                   <ArrowLeft size={16} />
                   <span>{isBatchCoursework ? "Back to My Batches" : "Back to Practice"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Custom In-App Proctor Confirmation Dialog ── */}
+        {proctorConfirmModal && (
+          <div className="proctor-termination-modal-overlay" style={{ zIndex: 1000001 }}>
+            <div className="proctor-termination-card" style={{ borderColor: proctorConfirmModal.isDanger ? "#fecaca" : "#fed7aa" }}>
+              <div className="proctor-termination-icon-wrap" style={{ background: proctorConfirmModal.isDanger ? "#fee2e2" : "#ffedd5", borderColor: proctorConfirmModal.isDanger ? "#fca5a5" : "#fdba74" }}>
+                <AlertCircle size={36} color={proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c"} />
+              </div>
+              <h3 className="proctor-term-title" style={{ color: proctorConfirmModal.isDanger ? "#991b1b" : "#9a3412" }}>
+                {proctorConfirmModal.title}
+              </h3>
+              <p className="proctor-term-desc">
+                {proctorConfirmModal.message}
+              </p>
+              <div className="proctor-term-btn-row">
+                <button
+                  type="button"
+                  onClick={() => setProctorConfirmModal(null)}
+                  className="proctor-term-btn-review"
+                >
+                  Cancel / Stay in Exam
+                </button>
+                <button
+                  type="button"
+                  onClick={proctorConfirmModal.onConfirm}
+                  className="proctor-term-btn-exit"
+                  style={{ background: proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c" }}
+                >
+                  Confirm
                 </button>
               </div>
             </div>

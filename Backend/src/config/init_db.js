@@ -1147,6 +1147,33 @@ export async function initializeDatabase() {
     try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback TEXT NULL"); } catch (e) {}
     try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_by VARCHAR(255) NULL"); } catch (e) {}
     try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_at DATETIME NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN attempt_number INT DEFAULT 1"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (e) {}
+
+    // 31b. Ensure Coding Retake Permissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS coding_retake_permissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        target_type VARCHAR(20) NOT NULL,
+        target_id INT NOT NULL,
+        batch_id INT NULL,
+        student_id INT NOT NULL,
+        granted_by INT NOT NULL,
+        granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'pending',
+        used_at TIMESTAMP NULL,
+        submission_id INT NULL,
+        reason VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_retake_lookup (target_type, target_id, student_id, status),
+        INDEX idx_retake_student (student_id),
+        INDEX idx_retake_target (target_type, target_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 
 
 
