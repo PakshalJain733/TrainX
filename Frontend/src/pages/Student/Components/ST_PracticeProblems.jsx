@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle, RotateCcw } from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle, RotateCcw, ShieldAlert } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -272,7 +272,7 @@ export default function PracticeProblems() {
       <div id="problems-table-section" className="problems-table-card">
         <div className="table-header-info">
           <h3>All Practice Problems ({filteredProblems.length})</h3>
-          <span className="table-sub">Click 'Solve' to launch live compiler and test cases</span>
+          <span className="table-sub">Click 'Solve' to launch proctored live compiler (Anti-Cheat & Full-Screen active)</span>
         </div>
 
         <div className="problems-table-wrapper">
@@ -331,6 +331,23 @@ export default function PracticeProblems() {
                           >
                             {prob.title}
                           </Link>
+                          <span
+                            style={{
+                              fontSize: "10.5px",
+                              fontWeight: 700,
+                              backgroundColor: "#fef2f2",
+                              color: "#dc2626",
+                              border: "1px solid #fecaca",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px"
+                            }}
+                            title="Monitored Assessment: Anti-Cheat & Full-Screen Proctoring Enforced"
+                          >
+                            <ShieldAlert size={10} /> Proctored
+                          </span>
                           {prob.retakeAvailable && (
                             <span
                               style={{

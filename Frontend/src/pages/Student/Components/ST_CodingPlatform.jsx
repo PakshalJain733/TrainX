@@ -268,8 +268,7 @@ export default function CodingPlatform() {
   const isBatch = isBatchCoursework;
 
   // Both Batch Coursework and Practice Problems are monitored under examination proctoring
-  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
-  const isProctoredSession = Boolean(Boolean(isBatchCoursework || isPracticeProblem || isPracticeProblem || isPracticeArena));
+  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem || isPracticeArena);
 
   // Helper to determine if current session was launched via browser page reload (F5 / Ctrl+R)
   const isPageReload = () => {
@@ -337,22 +336,16 @@ export default function CodingPlatform() {
   const handleProctorViolation = (reason, description) => {
     if (!isProctoredSession || hasSubmitted || !proctorArmedRef.current) return;
 
-    // Fix 2: Only genuine fullscreen exits increment the 3-strike submission counter
-    if (reason !== "exit_fullscreen") {
-      showClipboardToast(`⚠️ Notice: ${description}`);
-      return;
-    }
-
-    // Fix 2: Check actual fullscreen state before processing violations.
-    // Screen sleep, workstation lock or focus events without an actual exit must not count.
-    const isFsNow = Boolean(
-      document.fullscreenElement ||
-      document.webkitFullscreenElement ||
-      document.mozFullScreenElement ||
-      document.msFullscreenElement
-    );
-    if (isFsNow) {
-      return;
+    if (reason === "exit_fullscreen") {
+      const isFsNow = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      if (isFsNow) {
+        return;
+      }
     }
 
     // Debounce to prevent duplicate strikes (1500ms duplicate event protection)
@@ -539,6 +532,9 @@ export default function CodingPlatform() {
         document.msFullscreenElement
       );
       setIsFullscreen(isFs);
+      if (isFs) {
+        setIsProctorActive(true);
+      }
 
       if (isProctoredSession && !hasSubmitted && proctorArmedRef.current && !isFs) {
         handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
@@ -562,16 +558,18 @@ export default function CodingPlatform() {
     if (!isProctoredSession || hasSubmitted) return;
 
     let armTimer = null;
-    if (isProctorActive && isFullscreen) {
+    if (isFullscreen) {
       armTimer = setTimeout(() => {
         proctorArmedRef.current = true;
-      }, 2500);
+      }, 1500);
     } else {
       proctorArmedRef.current = false;
     }
 
     const handleTabSwitchEvent = () => {
-      showClipboardToast("⚠️ Tab switching / Alt+Tab is detected during proctored tasks.");
+      if (proctorArmedRef.current && !hasSubmitted) {
+        handleProctorViolation("tab_switch", "Tab switch or leaving the examination window detected!");
+      }
     };
 
     const handleVisibilityChange = () => {
@@ -581,8 +579,6 @@ export default function CodingPlatform() {
     };
 
     const handleWindowBlur = () => {
-      // Ordinary window blur, workstation lock or screen sleep:
-      // Show notification only; do NOT increment fullscreen strike counter or auto-submit
       if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
         handleTabSwitchEvent();
       }
