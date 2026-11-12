@@ -451,12 +451,11 @@ export default function Batches() {
                     </div>
                   ) : (
                     batchTasksList.map((task, idx) => {
-                      const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
                       const platform = task.platform || "coding";
-                      let taskHref = `/student/coding-platform/${taskSlug}`;
+                      let taskHref = `/student/coding-platform/task-${task.id}`;
                       if (platform === "mcq") taskHref = `/student/quiz`;
                       else if (platform === "gd") taskHref = `/student/ai-interview`;
-                      else if (platform === "submission") taskHref = `/student/coding-platform`;
+                      else if (platform === "submission") taskHref = `/student/coding-platform/task-${task.id}`;
 
                       return (
                         <Link

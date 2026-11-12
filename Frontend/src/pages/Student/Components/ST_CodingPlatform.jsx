@@ -208,6 +208,7 @@ export default function CodingPlatform() {
   const [terminationReason, setTerminationReason] = useState("");
   const [clipboardWarning, setClipboardWarning] = useState("");
   const proctorArmedRef = useRef(false);
+  const tabSwitchViolationsRef = useRef(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -235,7 +236,7 @@ export default function CodingPlatform() {
   const currentBatchIndex = isBatchCoursework && batchTasksList.length > 0
     ? batchTasksList.findIndex((bt) => {
         const slug = String(bt.taskNumber || '').replace(/\s+/g, '-').toLowerCase();
-        return slug === String(taskId || '').toLowerCase() || String(bt.id) === String(taskData?.id);
+        return slug === String(taskId || '').toLowerCase() || `task-${bt.id}` === String(taskId || '').toLowerCase() || String(bt.id) === String(taskData?.id);
       })
     : -1;
 
@@ -251,8 +252,7 @@ export default function CodingPlatform() {
     if (isBatchCoursework) {
       if (canNavigatePrev && currentBatchIndex > 0) {
         const prevTask = batchTasksList[currentBatchIndex - 1];
-        const prevSlug = (prevTask.taskNumber || `task-${currentBatchIndex}`).replace(/\s+/g, '-').toLowerCase();
-        navigate(`/student/coding-platform/${prevSlug}`, {
+        navigate(`/student/coding-platform/task-${prevTask.id}`, {
           state: {
             task: prevTask,
             batchTasks: batchTasksList,
@@ -274,8 +274,7 @@ export default function CodingPlatform() {
     if (isBatchCoursework) {
       if (canNavigateNext && currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1) {
         const nextTask = batchTasksList[currentBatchIndex + 1];
-        const nextSlug = (nextTask.taskNumber || `task-${currentBatchIndex + 2}`).replace(/\s+/g, '-').toLowerCase();
-        navigate(`/student/coding-platform/${nextSlug}`, {
+        navigate(`/student/coding-platform/task-${nextTask.id}`, {
           state: {
             task: nextTask,
             batchTasks: batchTasksList,
@@ -388,16 +387,27 @@ export default function CodingPlatform() {
       proctorArmedRef.current = false;
     }
 
-    const handleVisibilityChange = () => {
+    const handleTabSwitchEvent = () => {
       if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
-        endTaskDueToViolation("tab_switch", "Tab switching detected.");
+        tabSwitchViolationsRef.current += 1;
+        const count = tabSwitchViolationsRef.current;
+        if (count < 3) {
+          const remaining = 3 - count;
+          showClipboardToast(
+            `⚠️ Warning ${count}/2: Tab switch / Alt+Tab detected! You have ${remaining} chance${remaining === 1 ? '' : 's'} left before automatic submission.`
+          );
+        } else {
+          endTaskDueToViolation("tab_switch", "Tab switching detected 3 times.");
+        }
       }
     };
 
+    const handleVisibilityChange = () => {
+      handleTabSwitchEvent();
+    };
+
     const handleWindowBlur = () => {
-      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
-        endTaskDueToViolation("tab_switch", "Window lost focus / tab switched.");
-      }
+      handleTabSwitchEvent();
     };
 
     const handleKeyDown = (e) => {
@@ -539,6 +549,8 @@ export default function CodingPlatform() {
                 if (prevCode) {
                   setCode(prevCode);
                 }
+              } else {
+                setHasSubmitted(false);
               }
               setTaskData({
                 id: t.id,

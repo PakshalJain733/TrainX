@@ -874,9 +874,9 @@ export const getBatchTasks = async (req, res, next) => {
       }
     }
 
-    // 3. Query tasks strictly belonging to this batch_id (NO fallback to all tasks, NO batch_id=0)
+    // 3. Query tasks strictly belonging to this batch_id (ordered chronologically by creation so Task 01 is first created)
     const dbTasks = await query(
-      `SELECT * FROM batch_tasks WHERE batch_id = ? ORDER BY id DESC`,
+      `SELECT * FROM batch_tasks WHERE batch_id = ? ORDER BY id ASC`,
       [cleanId]
     );
 
