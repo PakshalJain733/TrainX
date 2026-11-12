@@ -311,6 +311,9 @@ export default function Batches() {
           setModalSuccess("");
         }, 1200);
       } else {
+        if (data.message && data.message.toLowerCase().includes("already joined")) {
+          fetchMyBatches();
+        }
         setModalError(data.message || "Failed to join batch. Please check code.");
       }
     } catch (err) {
@@ -467,7 +470,7 @@ export default function Batches() {
                       return (
                         <Link
                           to={taskHref}
-                          state={{ task, batchTasks: batchTasksList, batchId: selectedBatch?.id, fromBatchCoursework: true, enterFullscreen: true }}
+                          state={{ task: { ...task, retakeAvailable: Boolean(task.retakeAvailable) }, batchTasks: batchTasksList, batchId: selectedBatch?.id, fromBatchCoursework: true, enterFullscreen: true, isRetake: Boolean(task.retakeAvailable) }}
                           key={idx}
                           className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
                           onClick={async () => {
@@ -896,7 +899,11 @@ export default function Batches() {
 
             <form onSubmit={handleJoinSubmit}>
               <div className="modal-body">
-                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalError && (
+                  <div className={`modal-feedback-alert ${modalError.toLowerCase().includes("already") ? "modal-feedback--warning" : "modal-feedback--error"}`}>
+                    {modalError}
+                  </div>
+                )}
                 {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
 
                 <div className="form-group-admin">

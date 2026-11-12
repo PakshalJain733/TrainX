@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle } from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle, RotateCcw } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -410,7 +410,23 @@ export default function PracticeProblems() {
                           <Button
                             size="sm"
                             className="solve-btn"
-                            onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: { ...prob, isExpired }, source: 'practice' } })}
+                            onClick={async () => {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on retake click:", err);
+                              }
+                              navigate(`/student/coding-platform/practice-${prob.id}`, { 
+                                state: { 
+                                  task: { ...prob, isExpired, retakeAvailable: true }, 
+                                  source: 'practice', 
+                                  isRetake: true, 
+                                  enterFullscreen: true 
+                                } 
+                              });
+                            }}
                             style={{ background: '#4f46e5', color: '#ffffff', borderColor: '#4338ca', fontWeight: 700 }}
                           >
                             <RotateCcw size={14} /> Start Retake

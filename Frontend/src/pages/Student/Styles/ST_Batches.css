@@ -1431,6 +1431,12 @@
   color: #dc2626 !important;
 }
 
+.modal-feedback--warning {
+  background: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+  color: #b45309 !important;
+}
+
 .modal-feedback--success {
   background: #ecfdf5 !important;
   border: 1px solid #a7f3d0 !important;

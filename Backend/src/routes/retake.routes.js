@@ -17,7 +17,11 @@ const staffOrAdmin = authorizeRoles(
   ROLES.COLLEGE_ADMIN,
   ROLES.TRAINER,
   ROLES.MENTOR,
-  ROLES.COORDINATOR
+  ROLES.COORDINATOR,
+  'admin',
+  'superadmin',
+  'super_admin',
+  'college_admin'
 );
 
 // Admin / Staff endpoints
@@ -30,4 +34,3 @@ router.post('/revoke', authenticateToken, staffOrAdmin, revokeRetake);
 router.get('/status', authenticateToken, checkStudentRetakeStatus);
 
 export default router;
-

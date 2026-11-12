@@ -681,6 +681,11 @@ export const joinBatch = async (req, res, next) => {
     const role = (req.user?.role || req.user?.role_name || '').toLowerCase();
     const isTrainerOrMentor = role === 'mentor' || role === 'trainer' || role === 'faculty' || role === 'coordinator' || role === 'admin' || role === 'college_admin';
 
+    const batchIdNum = parseInt(foundBatch.id, 10);
+    const batchIdStr = String(foundBatch.id);
+    const userIdNum = parseInt(userId, 10);
+    const userIdStr = String(userId);
+
     if (isTrainerOrMentor) {
       try {
         await query(`
@@ -692,6 +697,27 @@ export const joinBatch = async (req, res, next) => {
             UNIQUE KEY unique_trainer_batch (user_id, batch_id)
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
+
+        // Check if trainer/mentor already joined this batch
+        const [alreadyTrainer] = await query(
+          `SELECT 1 FROM batch_trainers 
+           WHERE (user_id = ? OR user_id = ?) 
+             AND (batch_id = ? OR batch_id = ?)
+           LIMIT 1`,
+          [userIdNum, userIdStr, batchIdNum, batchIdStr]
+        );
+
+        const [alreadyAssignedTrainer] = await query(
+          `SELECT 1 FROM batches 
+           WHERE (id = ? OR id = ?) 
+             AND (trainer_id = ? OR trainer_id = ?)
+           LIMIT 1`,
+          [batchIdNum, batchIdStr, userIdNum, userIdStr]
+        );
+
+        if (alreadyTrainer || alreadyAssignedTrainer) {
+          return sendError(res, 'Batch already joined.', 400);
+        }
 
         await query(
           `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
@@ -723,6 +749,23 @@ export const joinBatch = async (req, res, next) => {
       } catch (err) {
         console.error('[joinBatch trainer link error]', err.message);
       }
+    }
+
+    // 3b. Check if student has already joined this batch (e.g. joined earlier with an old code or different join code)
+    const [alreadyJoinedStudent] = await query(
+      `SELECT 1 FROM student_batches 
+       WHERE (user_id = ? OR user_id = ?) 
+         AND (batch_id = ? OR batch_id = ?)
+       UNION
+       SELECT 1 FROM students 
+       WHERE (user_id = ? OR user_id = ?) 
+         AND (batch_id = ? OR batch_id = ?)
+       LIMIT 1`,
+      [userIdNum, userIdStr, batchIdNum, batchIdStr, userIdNum, userIdStr, batchIdNum, batchIdStr]
+    );
+
+    if (alreadyJoinedStudent) {
+      return sendError(res, 'Batch already joined.', 400);
     }
 
     // 4. Link student in student_batches join table

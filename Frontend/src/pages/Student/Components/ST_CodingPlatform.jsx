@@ -180,15 +180,24 @@ export default function CodingPlatform() {
     String(taskId || '').startsWith('practice-')
   );
 
+  const isRetakeRequested = Boolean(
+    location.state?.task?.retakeAvailable ||
+    location.state?.isRetake ||
+    location.state?.task?.isRetake
+  );
+
   const initialTask = location.state?.task ? {
     ...location.state.task,
     language: location.state?.task?.language || location.state?.task?.lang || "",
     source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'practice_problem'),
     description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic || location.state.task.category, location.state.task.description),
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
-    alreadySubmitted: isPractice
-      ? Boolean(location.state?.task?.attemptsCount >= 3)
-      : Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
+    alreadySubmitted: isRetakeRequested
+      ? false
+      : (isPractice
+          ? Boolean(location.state?.task?.attemptsCount >= 3)
+          : Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')),
+    retakeAvailable: isRetakeRequested || Boolean(location.state?.task?.retakeAvailable)
   } : null;
 
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
@@ -198,7 +207,7 @@ export default function CodingPlatform() {
   const initialLangKey = normalizeLanguageKey(initialTask?.language) || "java";
   const [selectedLang, setSelectedLang] = useState(initialLangKey);
   const [code, setCode] = useState(() => STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
-  const [hasSubmitted, setHasSubmitted] = useState(Boolean(initialTask?.alreadySubmitted));
+  const [hasSubmitted, setHasSubmitted] = useState(() => Boolean(initialTask?.alreadySubmitted && !initialTask?.retakeAvailable));
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
   const [consoleTab, setConsoleTab] = useState("output");
@@ -224,15 +233,13 @@ export default function CodingPlatform() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
-        setUserMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
+  const user = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
 
   const isBatchCoursework = Boolean(
     location.state?.fromBatchCoursework ||
@@ -249,9 +256,6 @@ export default function CodingPlatform() {
     String(taskId || '').toLowerCase().startsWith('practice')
   );
 
-  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
-  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem);
-
   const isPracticeArena = !isBatchCoursework && Boolean(
     String(taskId || '').toLowerCase().startsWith('practice-') ||
     taskData?.source === 'practice' ||
@@ -259,7 +263,10 @@ export default function CodingPlatform() {
     taskId
   );
 
-  const isProctoredSession = isBatchCoursework || isPracticeArena;
+  const isBatch = isBatchCoursework;
+
+  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
+  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem || isPracticeArena);
 
   // Helper to determine if current session was launched via browser page reload (F5 / Ctrl+R)
   const isPageReload = () => {
@@ -661,14 +668,6 @@ export default function CodingPlatform() {
     };
   }, []);
 
-  const user = (() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
-    } catch {
-      return {};
-    }
-  })();
-
   const getInitials = (name) => {
     if (!name || typeof name !== "string") return "ST";
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -684,7 +683,7 @@ export default function CodingPlatform() {
       const numeric = requested.replace(/[^0-9]/g, '');
 
       // Strict determination: Batch Coursework Task vs Practice Problem
-      const isBatch = Boolean(
+      const isBatchTarget = Boolean(
         location.state?.fromBatchCoursework ||
         location.state?.task?.batch_id ||
         taskData?.source === 'batch_task' ||
@@ -693,7 +692,7 @@ export default function CodingPlatform() {
       );
 
       try {
-        if (isBatch) {
+        if (isBatchTarget) {
           // ── 1. STRICT BATCH TASK PIPELINE ──
           // Never touch practice problems and never fallback to practice problems
           try {
@@ -745,7 +744,7 @@ export default function CodingPlatform() {
             console.warn("Failed fetching batch task detail:", err);
           }
 
-          if (initialTask && (initialTask.source === 'batch_task' || initialTask.batch_id || isBatch)) {
+          if (initialTask && (initialTask.source === 'batch_task' || initialTask.batch_id || isBatchTarget)) {
             setTaskData(initialTask);
             return;
           }
@@ -861,9 +860,8 @@ export default function CodingPlatform() {
       setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Code execution and submissions are closed.");
       return;
     }
-    if (hasSubmitted) {
+    if (hasSubmitted && !isRetakeActive) {
       setConsoleStatus("error");
-      const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
       setConsoleOutput(
         isBatch
           ? "🔒 You have already submitted this batch task. The compiler is locked."
@@ -946,7 +944,6 @@ export default function CodingPlatform() {
 
   const handleSubmit = async (opts = {}) => {
     const isAuto = opts?.isAutoSubmit === true;
-    const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
 
     if (isSubmitting || isRunning) return;
     if (isTaskExpired) {
@@ -954,7 +951,7 @@ export default function CodingPlatform() {
       setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Submissions are closed.");
       return;
     }
-    if (hasSubmitted && !isAuto) {
+    if (hasSubmitted && !isAuto && !isRetakeActive) {
       setConsoleStatus("error");
       setConsoleOutput(
         isBatch
@@ -984,14 +981,14 @@ export default function CodingPlatform() {
       return;
     }
 
-    if (isBatch && (submissions.length >= 1 || taskData?.alreadySubmitted)) {
+    if (isBatch && (submissions.length >= 1 || taskData?.alreadySubmitted) && !isRetakeActive) {
       setHasSubmitted(true);
       setConsoleOutput("🔒 You have already submitted this batch task. The compiler is locked and reattempts are not allowed.");
       setConsoleStatus("error");
       return;
     }
 
-    if (!isBatch && submissions.length >= 3) {
+    if (!isBatch && submissions.length >= 3 && !isRetakeActive) {
       setHasSubmitted(true);
       setConsoleOutput("🔒 Maximum submission limit reached (3/3 attempts used). You cannot submit again for this problem.");
       setConsoleStatus("error");
@@ -1083,16 +1080,16 @@ export default function CodingPlatform() {
         [header, scoreLine, timeLine, "\nTest Cases:", ...tcLines].filter(Boolean).join("\n")
       );
 
-      // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions
+      // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions or after retake attempt
       const attemptsCount = result.attempts_used ?? (submissions.length + 1);
-      if (isBatch || attemptsCount >= 3 || taskData?.retakeAvailable) {
+      if (isBatch || attemptsCount >= 3 || taskData?.retakeAvailable || isRetakeActive) {
         setHasSubmitted(true);
         setTaskData(prev => prev ? { ...prev, retakeAvailable: false } : prev);
         clearStoredProctorStrikes();
         proctorViolationsRef.current = 0;
       } else {
         setHasSubmitted(false);
-        // Fix 1: Reset Practice Arena strikes after each successful manual submission, before the next attempt
+        // Reset Practice Arena strikes after each successful manual submission, before the next attempt
         clearStoredProctorStrikes();
         proctorViolationsRef.current = 0;
       }
@@ -1122,8 +1119,7 @@ export default function CodingPlatform() {
         const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
         setSubmissions(matched);
 
-        const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
-        const isRetake = Boolean(taskData?.retakeAvailable);
+        const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
 
         let combined = matched;
         if (isBatch && matched.length === 0 && Array.isArray(taskData?.submissions) && taskData.submissions.length > 0) {
@@ -1309,8 +1305,8 @@ export default function CodingPlatform() {
               title={
                 isTaskExpired
                   ? "Deadline Expired: Submissions and code execution are closed."
-                  : hasSubmitted 
-                  ? (taskData?.source === 'batch_task' || taskData?.batch_id 
+                  : (hasSubmitted && !isRetakeActive)
+                  ? (isBatch 
                       ? "This batch task has been submitted. Compiler execution is locked." 
                       : "Maximum submission limit reached (3/3 attempts used).")
                   : (!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code")
@@ -1319,7 +1315,7 @@ export default function CodingPlatform() {
             >
               {isTaskExpired ? (
                 <span>Run (Expired)</span>
-              ) : hasSubmitted ? (
+              ) : (hasSubmitted && !isRetakeActive) ? (
                 <span>Run (Locked)</span>
               ) : isRunning ? (
                 <span>Running...</span>
@@ -1336,13 +1332,15 @@ export default function CodingPlatform() {
               title={
                 isTaskExpired
                   ? "Deadline Expired: The submission deadline for this task has passed."
+                  : isRetakeActive
+                  ? "Submit Code (Retake Attempt - 1 attempt remaining)"
                   : hasSubmitted 
-                  ? (taskData?.source === 'batch_task' || taskData?.batch_id 
+                  ? (isBatch 
                       ? "This batch task has already been submitted. Reattempts are strictly disabled." 
                       : `Maximum submission limit reached (${Math.min(submissions.length || 3, 3)}/3 attempts used).`)
                   : (!isModuleActive("codingCompiler") 
                       ? "Code submission is currently disabled by administrator" 
-                      : (taskData?.source === 'batch_task' || taskData?.batch_id 
+                      : (isBatch 
                           ? "Submit Batch Task (Single Attempt Allowed)" 
                           : `Submit Code (${Math.max(0, 3 - submissions.length)} attempts remaining)`))
               }
@@ -1350,12 +1348,14 @@ export default function CodingPlatform() {
             >
               {isTaskExpired ? (
                 <><Lock size={14} /> <span>Deadline Expired</span></>
+              ) : isRetakeActive ? (
+                <><CheckCircle2 size={14} /> <span>Submit Retake (1 chance)</span></>
               ) : hasSubmitted ? (
-                <><CheckCircle2 size={14} /> <span>{taskData?.source === 'batch_task' || taskData?.batch_id ? "Submitted (Locked)" : `${Math.min(submissions.length || 3, 3)}/3 Submitted (Locked)`}</span></>
+                <><CheckCircle2 size={14} /> <span>{isBatch ? "Submitted (Locked)" : `${Math.min(submissions.length || 3, 3)}/3 Submitted (Locked)`}</span></>
               ) : isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? (taskData?.source === 'batch_task' || taskData?.batch_id ? "Submit Task" : `Submit (${Math.min(submissions.length, 3)}/3)`) : "Submit (Off)"}</span></>
+                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? (isBatch ? "Submit Task" : `Submit (${Math.min(submissions.length, 3)}/3)`) : "Submit (Off)"}</span></>
               )}
             </button>
 
@@ -1656,7 +1656,7 @@ export default function CodingPlatform() {
                   🔒 Deadline Expired ({taskData?.deadline || 'Past Due'}) — Submissions and compiler execution have ended.
                 </span>
               </div>
-            ) : taskData?.retakeAvailable ? (
+            ) : isRetakeActive ? (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1671,34 +1671,25 @@ export default function CodingPlatform() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <RotateCcw size={16} color="#d97706" />
                   <span>
-                    🎉 <strong>Retake Granted!</strong> You have permission to reattempt this {taskData?.source === 'batch_task' || taskData?.batch_id ? 'batch task' : 'practice problem'}. The compiler is unlocked.
+                    ⚡ <strong>Retake Active:</strong> You have 1 opportunity to solve, test, and submit this {isBatch ? 'batch task' : 'practice problem'}. The compiler is active and unlocked.
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHasSubmitted(false);
-                    try {
-                      sessionStorage.removeItem(getProctorStorageKey());
-                    } catch (_) {}
-                  }}
+                <span
                   style={{
                     padding: '5px 12px',
                     backgroundColor: '#d97706',
                     color: '#ffffff',
-                    border: 'none',
                     borderRadius: '6px',
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: 700,
-                    cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
                     boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)',
                   }}
                 >
-                  <RotateCcw size={12} /> Start Retake
-                </button>
+                  <RotateCcw size={12} /> 1 Attempt Allowed
+                </span>
               </div>
             ) : hasSubmitted ? (
               <div style={{
@@ -1822,7 +1813,6 @@ export default function CodingPlatform() {
         )}
 
         {/* ── Proctored Full-Screen Gate Overlay ── */}
-        {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
         {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
           <div className="proctor-fullscreen-gate-overlay">
             <div className="proctor-gate-card">

@@ -614,7 +614,11 @@ export default function Overview() {
 
             <form onSubmit={handleJoinSubmit}>
               <div className="modal-body">
-                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalError && (
+                  <div className={`modal-feedback-alert ${modalError.toLowerCase().includes("already") ? "modal-feedback--warning" : "modal-feedback--error"}`}>
+                    {modalError}
+                  </div>
+                )}
                 {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
 
                 <div className="form-group-admin">

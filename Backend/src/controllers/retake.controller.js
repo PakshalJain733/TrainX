@@ -2,6 +2,41 @@ import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 
+let tableEnsured = false;
+export const ensureRetakeTableExists = async () => {
+  if (tableEnsured) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS coding_retake_permissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        target_type VARCHAR(20) NOT NULL,
+        target_id INT NOT NULL,
+        batch_id INT NULL,
+        student_id INT NOT NULL,
+        granted_by INT NOT NULL,
+        granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'pending',
+        used_at TIMESTAMP NULL,
+        submission_id INT NULL,
+        reason VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_retake_lookup (target_type, target_id, student_id, status),
+        INDEX idx_retake_student (student_id),
+        INDEX idx_retake_target (target_type, target_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    try { await query("ALTER TABLE coding_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (_) {}
+    try { await query("ALTER TABLE coding_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (_) {}
+    try { await query("ALTER TABLE task_submissions ADD COLUMN attempt_number INT DEFAULT 1"); } catch (_) {}
+    try { await query("ALTER TABLE task_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (_) {}
+    try { await query("ALTER TABLE task_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (_) {}
+    tableEnsured = true;
+  } catch (err) {
+    console.error("[ensureRetakeTableExists error]", err.message);
+  }
+};
+
 /**
  * GET /api/v1/retakes
  * List all granted retake permissions for a specific task or practice problem.
@@ -9,6 +44,7 @@ import { ROLES } from '../utils/constants.js';
  */
 export const getRetakesByTarget = async (req, res, next) => {
   try {
+    await ensureRetakeTableExists();
     const { target_type, target_id } = req.query;
     const cleanType = String(target_type || '').toLowerCase().trim();
     const cleanId = parseInt(String(target_id).replace(/[^0-9]/g, ''), 10);
@@ -45,6 +81,7 @@ export const getRetakesByTarget = async (req, res, next) => {
  */
 export const getEligibleStudentsForRetake = async (req, res, next) => {
   try {
+    await ensureRetakeTableExists();
     const { target_type, target_id, q: searchTerm } = req.query;
     const cleanType = String(target_type || '').toLowerCase().trim();
     const cleanId = parseInt(String(target_id).replace(/[^0-9]/g, ''), 10);
@@ -63,22 +100,24 @@ export const getEligibleStudentsForRetake = async (req, res, next) => {
         return sendError(res, 'Batch task not found', 404);
       }
 
+      const batchIdNum = parseInt(taskRow.batch_id, 10) || 0;
+      const batchIdStr = String(taskRow.batch_id);
+
       let sql = `
         SELECT DISTINCT u.id, u.name, u.email,
                COALESCE(s.roll_number, s.clg_id, u.id) as roll_number,
-               ts.status as submission_status,
-               ts.score as marks_obtained,
-               ts.submitted_at,
+               (SELECT ts.status FROM task_submissions ts WHERE ts.task_id = ? AND ts.user_id = u.id ORDER BY ts.id DESC LIMIT 1) as submission_status,
+               (SELECT COALESCE(ts.marks_obtained, 0) FROM task_submissions ts WHERE ts.task_id = ? AND ts.user_id = u.id ORDER BY ts.id DESC LIMIT 1) as marks_obtained,
+               (SELECT ts.submitted_at FROM task_submissions ts WHERE ts.task_id = ? AND ts.user_id = u.id ORDER BY ts.id DESC LIMIT 1) as submitted_at,
                (SELECT crp.status FROM coding_retake_permissions crp 
                 WHERE crp.target_type = 'task' AND crp.target_id = ? AND crp.student_id = u.id AND crp.status = 'pending' LIMIT 1) as active_retake_status
         FROM users u
         LEFT JOIN students s ON u.id = s.user_id
         LEFT JOIN student_batches sb ON u.id = sb.user_id
-        LEFT JOIN task_submissions ts ON ts.task_id = ? AND ts.user_id = u.id AND ts.batch_id = ?
-        WHERE u.role = 'student'
-          AND (sb.batch_id = ? OR s.batch_id = ?)
+        WHERE (u.role = 'student' OR u.role IS NULL)
+          AND (sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?)
       `;
-      const params = [cleanId, cleanId, taskRow.batch_id, taskRow.batch_id, taskRow.batch_id];
+      const params = [cleanId, cleanId, cleanId, cleanId, batchIdNum, batchIdStr, batchIdNum, batchIdStr];
 
       if (search) {
         sql += ` AND (u.name LIKE ? OR u.email LIKE ? OR s.roll_number LIKE ?)`;
@@ -87,7 +126,21 @@ export const getEligibleStudentsForRetake = async (req, res, next) => {
       }
 
       sql += ` ORDER BY u.name ASC LIMIT 100`;
-      students = await query(sql, params);
+      const rawStudents = await query(sql, params);
+
+      students = (rawStudents || []).map((st) => ({
+        id: st.id,
+        name: st.name,
+        email: st.email,
+        roll_number: st.roll_number,
+        submission_status: st.submission_status || null,
+        current_status: st.submission_status || null,
+        marks_obtained: st.marks_obtained !== undefined && st.marks_obtained !== null ? Number(st.marks_obtained) : null,
+        current_score: st.marks_obtained !== undefined && st.marks_obtained !== null ? Number(st.marks_obtained) : null,
+        submitted_at: st.submitted_at || null,
+        active_retake_status: st.active_retake_status || null,
+        has_active_retake: st.active_retake_status === 'pending',
+      }));
     } else {
       // 2. Practice problem: Search students in college
       const [probRow] = await query('SELECT id, college_id FROM practice_problems WHERE id = ? LIMIT 1', [cleanId]);
@@ -99,8 +152,8 @@ export const getEligibleStudentsForRetake = async (req, res, next) => {
       let sql = `
         SELECT DISTINCT u.id, u.name, u.email,
                COALESCE(s.roll_number, s.clg_id, u.id) as roll_number,
-               (SELECT cs.status FROM coding_submissions cs WHERE cs.problem_id = ? AND (cs.student_id = u.id) ORDER BY cs.id DESC LIMIT 1) as submission_status,
-               (SELECT cs.score FROM coding_submissions cs WHERE cs.problem_id = ? AND (cs.student_id = u.id) ORDER BY cs.id DESC LIMIT 1) as marks_obtained,
+               (SELECT cs.status FROM coding_submissions cs WHERE cs.problem_id = ? AND cs.student_id = u.id ORDER BY cs.id DESC LIMIT 1) as submission_status,
+               (SELECT cs.score FROM coding_submissions cs WHERE cs.problem_id = ? AND cs.student_id = u.id ORDER BY cs.id DESC LIMIT 1) as marks_obtained,
                (SELECT crp.status FROM coding_retake_permissions crp 
                 WHERE crp.target_type = 'practice' AND crp.target_id = ? AND crp.student_id = u.id AND crp.status = 'pending' LIMIT 1) as active_retake_status
         FROM users u
@@ -121,10 +174,23 @@ export const getEligibleStudentsForRetake = async (req, res, next) => {
       }
 
       sql += ` ORDER BY u.name ASC LIMIT 100`;
-      students = await query(sql, params);
+      const rawStudents = await query(sql, params);
+
+      students = (rawStudents || []).map((st) => ({
+        id: st.id,
+        name: st.name,
+        email: st.email,
+        roll_number: st.roll_number,
+        submission_status: st.submission_status || null,
+        current_status: st.submission_status || null,
+        marks_obtained: st.marks_obtained !== undefined && st.marks_obtained !== null ? Number(st.marks_obtained) : null,
+        current_score: st.marks_obtained !== undefined && st.marks_obtained !== null ? Number(st.marks_obtained) : null,
+        active_retake_status: st.active_retake_status || null,
+        has_active_retake: st.active_retake_status === 'pending',
+      }));
     }
 
-    return sendSuccess(res, 'Eligible students retrieved', students || []);
+    return sendSuccess(res, 'Eligible students retrieved', students);
   } catch (error) {
     next(error);
   }
@@ -137,6 +203,7 @@ export const getEligibleStudentsForRetake = async (req, res, next) => {
  */
 export const grantRetake = async (req, res, next) => {
   try {
+    await ensureRetakeTableExists();
     const { target_type, target_id, student_ids, reason } = req.body;
     const cleanType = String(target_type || '').toLowerCase().trim();
     const cleanId = parseInt(String(target_id).replace(/[^0-9]/g, ''), 10);
@@ -149,7 +216,7 @@ export const grantRetake = async (req, res, next) => {
       return sendError(res, 'Please select at least one student to grant retake permission.', 400);
     }
 
-    const grantedBy = req.user?.userId || req.user?.id;
+    const grantedBy = req.user?.userId || req.user?.id || 1;
     let batchId = null;
 
     if (cleanType === 'task') {
@@ -208,6 +275,7 @@ export const grantRetake = async (req, res, next) => {
  */
 export const revokeRetake = async (req, res, next) => {
   try {
+    await ensureRetakeTableExists();
     const { retake_id } = req.body;
     const cleanRetakeId = parseInt(retake_id, 10);
     if (!cleanRetakeId) {
@@ -249,6 +317,7 @@ export const revokeRetake = async (req, res, next) => {
  */
 export const checkStudentRetakeStatus = async (req, res, next) => {
   try {
+    await ensureRetakeTableExists();
     const { target_type, target_id } = req.query;
     const cleanType = String(target_type || '').toLowerCase().trim();
     const cleanId = parseInt(String(target_id).replace(/[^0-9]/g, ''), 10);

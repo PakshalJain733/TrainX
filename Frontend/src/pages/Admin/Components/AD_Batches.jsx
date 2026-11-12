@@ -66,7 +66,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
     <div className={`admin-batch-select-wrap${isOpen ? ' admin-batch-select-wrap--open' : ''}`} ref={triggerRef}>
       <button type="button" onClick={handleToggle} className={`admin-batch-select-trigger${isOpen ? ' admin-batch-select-trigger--open' : ''}`}>
         {Icon && <Icon className="admin-batch-select-icon" />}
-        <span className="admin-batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="admin-batch-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <ChevronDown className={`admin-batch-select-arrow${isOpen ? ' admin-batch-select-arrow--rotate' : ''}`} />
       </button>
 
@@ -394,13 +394,13 @@ export default function AdminBatches() {
       prev.map((b) =>
         b.id === id
           ? {
-              ...b,
-              code: newCode,
-              joinCode: newCode,
-              join_code: newCode,
-              codeExpiresAt: newExpiresAt,
-              code_expires_at: newExpiresAt,
-            }
+            ...b,
+            code: newCode,
+            joinCode: newCode,
+            join_code: newCode,
+            codeExpiresAt: newExpiresAt,
+            code_expires_at: newExpiresAt,
+          }
           : b
       )
     );
@@ -440,14 +440,14 @@ export default function AdminBatches() {
           prev.map((b) =>
             b.id === id
               ? {
-                  ...b,
-                  ...saved,
-                  code: savedCode,
-                  joinCode: savedCode,
-                  join_code: savedCode,
-                  codeExpiresAt: Number(savedExpires),
-                  code_expires_at: Number(savedExpires),
-                }
+                ...b,
+                ...saved,
+                code: savedCode,
+                joinCode: savedCode,
+                join_code: savedCode,
+                codeExpiresAt: Number(savedExpires),
+                code_expires_at: Number(savedExpires),
+              }
               : b
           )
         );
@@ -1276,11 +1276,14 @@ export default function AdminBatches() {
                               transition: "all 0.15s ease"
                             }}
                           >
-                            <Eye size={15} /> View Submissions
+                            <Eye size={15} /> Submissions
                           </button>
                           <button
                             type="button"
-                            onClick={() => setRetakeModalTarget(t)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRetakeModalTarget(t);
+                            }}
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
@@ -1302,26 +1305,27 @@ export default function AdminBatches() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteTask(t.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(t.id);
+                            }}
                             disabled={deletingTaskId === t.id}
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              gap: "6px",
-                              padding: "8px 12px",
+                              padding: "8px 10px",
                               background: "#fef2f2",
                               color: "#ef4444",
                               border: "1px solid #fecaca",
                               borderRadius: "8px",
-                              fontSize: "12px",
-                              fontWeight: "700",
-                              cursor: "pointer",
-                              transition: "all 0.15s ease"
+                              cursor: deletingTaskId === t.id ? "not-allowed" : "pointer",
+                              transition: "all 0.15s ease",
+                              opacity: deletingTaskId === t.id ? 0.6 : 1
                             }}
-                            title="Delete Task"
+                            title={deletingTaskId === t.id ? "Deleting..." : "Delete Task"}
                           >
-                            <Trash2 size={15} /> {deletingTaskId === t.id ? "Deleting..." : "Delete"}
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
@@ -2351,6 +2355,20 @@ export default function AdminBatches() {
               document.body
             );
           })()}
+
+          {/* Grant Retake Modal for Coursework Tasks */}
+          {retakeModalTarget && (
+            <GrantRetakeModal
+              isOpen={Boolean(retakeModalTarget)}
+              onClose={() => setRetakeModalTarget(null)}
+              targetType="task"
+              targetId={retakeModalTarget.id || retakeModalTarget.taskId}
+              targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id || retakeModalTarget.taskId}`}
+              onRetakeGranted={() => {
+                if (selectedBatch) fetchBatchTasks(selectedBatch.id);
+              }}
+            />
+          )}
         </div>
       </div>
     );
@@ -2590,7 +2608,7 @@ export default function AdminBatches() {
                         </div>
                       </div>
                       <div className="batch-join-code-display">
-                        <span 
+                        <span
                           className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}
                           onClick={() => setEnlargedBatchCode({ code: b.joinCode || b.join_code || b.code || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor, batchId: b.id })}
                           title="Click to enlarge join code"
@@ -2634,7 +2652,7 @@ export default function AdminBatches() {
                     >
                       Visit Batch <ArrowRight size={14} />
                     </Button>
-                    
+
                     {isInactive ? (
                       <button
                         type="button"
@@ -2693,7 +2711,7 @@ export default function AdminBatches() {
 
       {/* Enlarge Batch Code Modal */}
       {enlargedBatchCode && createPortal(
-        <div 
+        <div
           className="batch-enlarge-overlay"
           onClick={() => setEnlargedBatchCode(null)}
           style={{
@@ -2712,7 +2730,7 @@ export default function AdminBatches() {
             animation: "fadeIn 0.2s ease",
           }}
         >
-          <div 
+          <div
             className="batch-enlarge-card"
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -2897,8 +2915,8 @@ export default function AdminBatches() {
           isOpen={Boolean(retakeModalTarget)}
           onClose={() => setRetakeModalTarget(null)}
           targetType="task"
-          targetId={retakeModalTarget.id}
-          targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id}`}
+          targetId={retakeModalTarget.id || retakeModalTarget.taskId}
+          targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id || retakeModalTarget.taskId}`}
           onRetakeGranted={() => {
             if (selectedBatch) fetchBatchTasks(selectedBatch.id);
           }}
