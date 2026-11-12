@@ -60,11 +60,16 @@ export const getColleges = async (req, res, next) => {
     `;
     let params = [];
 
-    // Filter colleges for College Admin users so they only see their assigned college
+    // Filter colleges for College Admin / non-SuperAdmin users so they only see their assigned college
     if (userRole && !userRole.includes('super')) {
-      const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1] : '';
-      sql += ` WHERE LOWER(c.contact_email) = ? OR c.id = ? OR (c.domain IS NOT NULL AND c.domain != '' AND LOWER(c.domain) = ?)`;
-      params = [userEmail, userCollegeId || -1, emailDomain];
+      if (userCollegeId) {
+        sql += ` WHERE c.id = ?`;
+        params = [userCollegeId];
+      } else {
+        const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1] : '';
+        sql += ` WHERE LOWER(c.contact_email) = ? OR (c.domain IS NOT NULL AND c.domain != '' AND LOWER(c.domain) = ?)`;
+        params = [userEmail, emailDomain];
+      }
     }
 
     sql += ` ORDER BY c.id DESC`;

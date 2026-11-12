@@ -566,8 +566,11 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
   if (isBatchTask && batchTaskRecord) {
     const taskStatus = (status === 'accepted' || status === 'passed')
       ? 'Passed'
+      : (passedTests > 0 ? 'Submitted' : 'Failed');
+    const detailLabel = (status === 'accepted' || status === 'passed')
+      ? 'Passed'
       : (passedTests > 0 ? 'Partial' : (overallCompilationError ? 'Compilation Error' : (overallTimedOut ? 'Time Limit Exceeded' : 'Wrong Answer')));
-    const feedbackText = `Passed ${passedTests}/${totalTests} test cases (${percentage}%) - Score: ${score}/${problemTotalMarks} pts`;
+    const feedbackText = `${detailLabel}: Passed ${passedTests}/${totalTests} test cases (${percentage}%) - Score: ${score}/${problemTotalMarks} pts`;
 
     try {
       const existingSub = await query(

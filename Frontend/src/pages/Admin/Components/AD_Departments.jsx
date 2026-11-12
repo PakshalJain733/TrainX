@@ -156,31 +156,46 @@ export default function Departments() {
         departmentAPI.getDepartments(selectedCollegeId === 'all' ? null : selectedCollegeId).catch(() => []),
       ]);
 
-      const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("authUser") || "{}";
+      const rawUser =
+        sessionStorage.getItem("user") ||
+        sessionStorage.getItem("authUser") ||
+        localStorage.getItem("user") ||
+        localStorage.getItem("authUser") ||
+        "{}";
       let currentUser = {};
       try { currentUser = JSON.parse(rawUser); } catch (_) {}
 
       let rawColleges = Array.isArray(collegesData) ? collegesData : [];
       const userRole = (currentUser.role || "").toLowerCase();
+      const userCollegeId = currentUser.college_id || currentUser.collegeId;
 
       if (userRole && !userRole.includes("super")) {
-        const userEmail = (currentUser.email || "").toLowerCase().trim();
-        const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
-        const matched = rawColleges.filter((c) => {
-          const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
-          const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
-          return (
-            String(c.id) === String(currentUser.college_id || currentUser.collegeId) ||
-            colEmail === userEmail ||
-            (emailDomain && colDomain && emailDomain.endsWith(colDomain))
-          );
-        });
-        if (matched.length > 0) rawColleges = matched;
+        if (userCollegeId) {
+          const byId = rawColleges.filter((c) => String(c.id) === String(userCollegeId));
+          if (byId.length > 0) rawColleges = byId;
+        } else {
+          const userEmail = (currentUser.email || "").toLowerCase().trim();
+          const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
+          const matched = rawColleges.filter((c) => {
+            const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
+            const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
+            return (
+              colEmail === userEmail ||
+              (emailDomain && colDomain && emailDomain.endsWith(colDomain))
+            );
+          });
+          if (matched.length > 0) rawColleges = matched;
+        }
       }
 
       setColleges(rawColleges);
       if (rawColleges.length > 0) {
-        setDeptForm(prev => ({ ...prev, collegeId: prev.collegeId || rawColleges[0].id }));
+        setDeptForm(prev => ({
+          ...prev,
+          collegeId: rawColleges.some(c => String(c.id) === String(prev.collegeId))
+            ? prev.collegeId
+            : rawColleges[0].id
+        }));
       }
       setDepartments(Array.isArray(deptsData) ? deptsData : []);
     } catch (err) {
@@ -235,7 +250,7 @@ export default function Departments() {
     }
 
     setIsAddModalOpen(false);
-    setDeptForm({ name: '', code: '', collegeId: '', hodName: '', hodEmail: '' });
+    setDeptForm({ name: '', code: '', collegeId: colleges[0]?.id || '', hodName: '', hodEmail: '' });
   };
 
   const handleEditDepartment = async (e) => {

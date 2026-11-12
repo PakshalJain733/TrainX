@@ -209,7 +209,6 @@ export default function CodingPlatform() {
   const [clipboardWarning, setClipboardWarning] = useState("");
   const proctorArmedRef = useRef(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const userMenuRef = useRef(null);
 
   useEffect(() => {
@@ -980,6 +979,10 @@ export default function CodingPlatform() {
             <button 
               type="button" 
               onClick={() => {
+                proctorArmedRef.current = false;
+                if (document.fullscreenElement) {
+                  document.exitFullscreen?.().catch(() => {});
+                }
                 if (isBatchCoursework) {
                   navigate('/student/batches');
                 } else if (window.history.length > 2) {
@@ -1163,23 +1166,6 @@ export default function CodingPlatform() {
 
                     <div className="cp-popover-divider" />
 
-                    <div className="cp-popover-meta-row">
-                      <div className="cp-popover-meta-item">
-                        <span className="cp-popover-meta-label">Session Mode</span>
-                        <span className="cp-popover-meta-value">
-                          {isBatchCoursework ? "Batch Proctored" : "Practice Arena"}
-                        </span>
-                      </div>
-                      <div className="cp-popover-meta-item">
-                        <span className="cp-popover-meta-label">Active Language</span>
-                        <span className="cp-popover-meta-value" style={{ textTransform: "capitalize" }}>
-                          {selectedLang || "Java"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="cp-popover-divider" />
-
                     <div className="cp-popover-actions">
                       <button
                         type="button"
@@ -1197,30 +1183,6 @@ export default function CodingPlatform() {
                       >
                         <User size={15} />
                         <span>View Student Profile</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cp-popover-action-item"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          setShowShortcutsModal(true);
-                        }}
-                      >
-                        <BookOpen size={15} />
-                        <span>Keyboard Shortcuts & Tips</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="cp-popover-action-item"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          handleToggleFullscreenClick();
-                        }}
-                      >
-                        {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-                        <span>{isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}</span>
                       </button>
 
                       <div className="cp-popover-divider" />
@@ -1633,75 +1595,6 @@ export default function CodingPlatform() {
                   className="proctor-term-btn-exit"
                 >
                   Back to My Batches
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Keyboard Shortcuts Modal */}
-        {showShortcutsModal && (
-          <div className="cp-shortcuts-modal-overlay" onClick={() => setShowShortcutsModal(false)}>
-            <div className="cp-shortcuts-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="cp-shortcuts-header">
-                <div className="cp-shortcuts-header-title">
-                  <BookOpen size={20} color="#2563eb" />
-                  <h4>Coding Platform Shortcuts & Help</h4>
-                </div>
-                <button
-                  type="button"
-                  className="cp-shortcuts-close-btn"
-                  onClick={() => setShowShortcutsModal(false)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="cp-shortcuts-grid">
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Run Code against Sample Cases</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
-                  </div>
-                </div>
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Toggle Fullscreen Mode</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>F11</kbd>
-                  </div>
-                </div>
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Comment / Uncomment Code</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>Ctrl</kbd> + <kbd>/</kbd>
-                  </div>
-                </div>
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Indent Selection</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>Tab</kbd>
-                  </div>
-                </div>
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Outdent Selection</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>Shift</kbd> + <kbd>Tab</kbd>
-                  </div>
-                </div>
-                <div className="cp-shortcut-row">
-                  <span className="cp-shortcut-desc">Format Code</span>
-                  <div className="cp-shortcut-keys">
-                    <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>F</kbd>
-                  </div>
-                </div>
-              </div>
-
-              <div className="cp-shortcuts-footer">
-                <button
-                  type="button"
-                  className="cp-shortcuts-done-btn"
-                  onClick={() => setShowShortcutsModal(false)}
-                >
-                  Got It
                 </button>
               </div>
             </div>

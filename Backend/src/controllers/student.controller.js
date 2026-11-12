@@ -343,9 +343,14 @@ export const getStudentDashboard = async (req, res, next) => {
         const placeholders = enrolledBatchIds.map(() => '?').join(',');
         const taskSql = `
           SELECT bt.id, bt.title, bt.deadline, bt.task_date, bt.topic, bt.difficulty, bt.created_at, bt.batch_id,
-                 ts.status as submission_status
+                 (
+                   SELECT ts.status
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS submission_status
           FROM batch_tasks bt
-          LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ? AND ts.batch_id = bt.batch_id)
           WHERE bt.batch_id IN (${placeholders})
           ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5
         `;
@@ -353,9 +358,8 @@ export const getStudentDashboard = async (req, res, next) => {
         if (batchTaskRows && batchTaskRows.length > 0) {
           batchTaskRows.forEach((t) => {
             const expired = isDeadlineExpired(t.deadline);
-            const status = t.submission_status === 'submitted' || t.submission_status === 'completed' || t.submission_status === 'passed'
-              ? 'Completed'
-              : (expired ? 'Expired' : 'Pending');
+            const hasSubmission = Boolean(t.submission_status && String(t.submission_status).trim());
+            const status = hasSubmission ? 'Completed' : (expired ? 'Expired' : 'Pending');
             const formattedDeadline = t.deadline
               ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
               : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
@@ -1092,8 +1096,8 @@ export const getStudentPerformance = async (req, res, next) => {
 
         if (taskRows && taskRows.length > 0) {
           const parsedTasks = taskRows.map((t) => {
-            const isCompleted = ['submitted', 'completed', 'passed'].includes(String(t.submission_status).toLowerCase());
-            const scoreVal = Number(t.marks_obtained) || Number(t.task_score) || (isCompleted ? 100 : 0);
+            const isCompleted = Boolean(t.submission_status && String(t.submission_status).trim());
+            const scoreVal = Number(t.marks_obtained ?? t.task_score ?? 0);
             return {
               id: t.id || t.task_id,
               title: t.title || 'Coursework Assignment',

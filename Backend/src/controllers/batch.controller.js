@@ -167,15 +167,19 @@ export const getBatches = async (req, res, next) => {
         tu.name AS registeredTrainerName,
         tu.email AS registeredTrainerEmail,
         (
-          SELECT COUNT(*) 
-          FROM students s 
-          WHERE s.batch_id = b.id OR (b.department_id IS NOT NULL AND s.department_id = b.department_id)
+          SELECT COUNT(DISTINCT u_cnt.id)
+          FROM users u_cnt
+          LEFT JOIN students s ON u_cnt.id = s.user_id
+          LEFT JOIN student_batches sb ON sb.user_id = u_cnt.id
+          WHERE u_cnt.role = 'student'
+            AND (sb.batch_id = b.id OR s.batch_id = b.id)
         ) AS dynamicStudentsCount,
         (
           SELECT COALESCE(ROUND(AVG(att.percentage), 0), 0) 
           FROM assessment_attempts att 
           JOIN students st ON att.user_id = st.user_id 
-          WHERE st.batch_id = b.id OR (b.department_id IS NOT NULL AND st.department_id = b.department_id)
+          WHERE st.batch_id = b.id
+             OR EXISTS (SELECT 1 FROM student_batches sb WHERE sb.user_id = st.user_id AND sb.batch_id = b.id)
         ) AS dynamicProgressPct
       FROM batches b
       LEFT JOIN colleges c ON b.college_id = c.id
@@ -807,8 +811,8 @@ export const getMyBatches = async (req, res, next) => {
           const placeholders = taskIds.map(() => '?').join(',');
           const completed = await query(
             `SELECT COUNT(DISTINCT task_id) as count FROM task_submissions 
-             WHERE user_id = ? AND batch_id = ? AND task_id IN (${placeholders}) AND LOWER(status) IN ('completed', 'passed')`,
-            [userId, b.id, ...taskIds]
+             WHERE user_id = ? AND task_id IN (${placeholders})`,
+            [userId, ...taskIds]
           );
           const done = completed && completed[0] ? Number(completed[0].count) : 0;
           progress = Math.round((done / tasks.length) * 100);
@@ -879,11 +883,13 @@ export const getBatchTasks = async (req, res, next) => {
     let studentSubmissions = new Map();
     if (studentId && dbTasks && dbTasks.length > 0) {
       try {
+        const taskIds = dbTasks.map(t => t.id);
+        const taskPlaceholders = taskIds.map(() => '?').join(',');
         const subRows = await query(
           `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score
            FROM task_submissions 
-           WHERE user_id = ? AND batch_id = ?`,
-          [studentId, cleanId]
+           WHERE user_id = ? AND (batch_id = ? OR task_id IN (${taskPlaceholders}))`,
+          [studentId, cleanId, ...taskIds]
         );
         if (Array.isArray(subRows)) {
           subRows.forEach(s => {
@@ -920,14 +926,7 @@ export const getBatchTasks = async (req, res, next) => {
       if (sub) {
         alreadySubmitted = true;
         scoreObtained = sub.marks_obtained ?? sub.score ?? 0;
-        const lower = String(sub.status || '').toLowerCase();
-        if (lower === 'passed' || lower === 'completed' || lower === 'accepted') {
-          taskStatus = 'Completed';
-        } else if (lower === 'partial' || scoreObtained > 0) {
-          taskStatus = 'Partial';
-        } else {
-          taskStatus = 'Submitted';
-        }
+        taskStatus = 'Completed';
       } else if (isExpired) {
         taskStatus = 'Expired';
       }
@@ -1227,7 +1226,7 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // Query students enrolled via student_batches join table, students table, department linkage, or attendance scans
+    // Query only students who joined/enrolled in this specific batch, including earned XP from evaluated batch task submissions
     const enrolledUsers = await query(
       `SELECT DISTINCT 
          u.id, 
@@ -1235,37 +1234,53 @@ export const getBatchStudents = async (req, res, next) => {
          u.email, 
          u.mobile_number, 
          COALESCE(s.roll_number, '') AS rollNo, 
-         COALESCE(s.department, d.name, '') AS department
+         COALESCE(s.department, d.name, '') AS department,
+         COALESCE(xp_stats.batch_xp, 0) AS xp
        FROM users u
        LEFT JOIN students s ON u.id = s.user_id
        LEFT JOIN departments d ON s.department_id = d.id
        LEFT JOIN student_batches sb ON sb.user_id = u.id
        LEFT JOIN attendance att ON att.user_id = u.id AND (att.batch_id = ? OR att.batch_id = ?)
-       LEFT JOIN batches b ON (b.id = ? OR b.id = ?)
+       LEFT JOIN (
+         SELECT best_per_task.user_id, SUM(best_per_task.task_xp) AS batch_xp
+         FROM (
+           SELECT ts.user_id, ts.task_id, MAX(COALESCE(ts.marks_obtained, ts.score, 0)) AS task_xp
+           FROM task_submissions ts
+           LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
+           WHERE (ts.batch_id = ? OR ts.batch_id = ? OR bt.batch_id = ? OR bt.batch_id = ?)
+           GROUP BY ts.user_id, ts.task_id
+         ) best_per_task
+         GROUP BY best_per_task.user_id
+       ) xp_stats ON xp_stats.user_id = u.id
        WHERE (
          sb.batch_id = ? 
          OR sb.batch_id = ? 
          OR s.batch_id = ? 
          OR s.batch_id = ? 
          OR att.batch_id IS NOT NULL
-         OR (b.department_id IS NOT NULL AND s.department_id = b.department_id AND (b.college_id IS NULL OR s.college_id = b.college_id))
        )
        AND u.role = 'student'
-       ORDER BY u.name ASC`,
-      [id, cleanId, id, cleanId, id, cleanId, id, cleanId]
+       ORDER BY xp DESC, u.name ASC`,
+      [id, cleanId, id, cleanId, id, cleanId, id, cleanId, id, cleanId]
     );
 
-    const formatted = (enrolledUsers || []).map((s, idx) => ({
-      id: s.id,
-      user_id: s.id,
-      userId: s.id,
-      studentId: s.id,
-      rollNo: s.rollNo || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
-      name: s.name || s.full_name || "Student User",
-      email: s.email,
-      department: s.department || null,
-      status: true
-    }));
+    const formatted = (enrolledUsers || []).map((s, idx) => {
+      const xpVal = Number(s.xp) || 0;
+      return {
+        id: s.id,
+        user_id: s.id,
+        userId: s.id,
+        studentId: s.id,
+        rollNo: s.rollNo || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
+        name: s.name || s.full_name || "Student User",
+        email: s.email,
+        department: s.department || null,
+        xp: xpVal,
+        points: xpVal,
+        score: xpVal,
+        status: true
+      };
+    });
 
     return sendSuccess(res, 'Batch enrolled students retrieved', formatted);
   } catch (error) {
