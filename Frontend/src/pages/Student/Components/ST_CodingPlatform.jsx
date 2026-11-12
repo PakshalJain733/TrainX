@@ -208,7 +208,8 @@ export default function CodingPlatform() {
   const [terminationReason, setTerminationReason] = useState("");
   const [clipboardWarning, setClipboardWarning] = useState("");
   const proctorArmedRef = useRef(false);
-  const tabSwitchViolationsRef = useRef(0);
+  const proctorViolationsRef = useRef(0);
+  const lastViolationTimeRef = useRef(0);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
@@ -229,6 +230,67 @@ export default function CodingPlatform() {
     taskData?.batch_id ||
     String(taskId || '').toLowerCase().startsWith('task-')
   );
+
+  // Scoped key generator for proctoring strikes in sessionStorage
+  const getProctorStorageKey = () => {
+    const sId = user?.userId || user?.id || "guest";
+    const tId = String(taskId || taskData?.id || "unknown");
+    return `proctor_strikes_${sId}_${tId}`;
+  };
+
+  const getStoredProctorStrikes = () => {
+    try {
+      const val = sessionStorage.getItem(getProctorStorageKey());
+      const num = parseInt(val, 10);
+      return !isNaN(num) && num >= 0 ? num : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const setStoredProctorStrikes = (count) => {
+    try {
+      sessionStorage.setItem(getProctorStorageKey(), String(count));
+    } catch {}
+  };
+
+  const clearStoredProctorStrikes = () => {
+    try {
+      sessionStorage.removeItem(getProctorStorageKey());
+    } catch {}
+  };
+
+  // Sync ref with persisted storage on mount/task change
+  useEffect(() => {
+    if (isBatchCoursework) {
+      proctorViolationsRef.current = getStoredProctorStrikes();
+    }
+  }, [taskId, isBatchCoursework]);
+
+  const handleProctorViolation = (reason, description) => {
+    if (!isBatchCoursework || hasSubmitted || !proctorArmedRef.current) return;
+
+    // Debounce to prevent duplicate strikes when blur and visibilitychange or resize fire simultaneously
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current < 1500) {
+      return;
+    }
+    lastViolationTimeRef.current = now;
+
+    const currentStrikes = getStoredProctorStrikes() + 1;
+    proctorViolationsRef.current = currentStrikes;
+    setStoredProctorStrikes(currentStrikes);
+
+    if (currentStrikes < 3) {
+      const remaining = 3 - currentStrikes;
+      showClipboardToast(
+        `⚠️ Warning ${currentStrikes}/2: ${description} You have ${remaining} chance${remaining === 1 ? '' : 's'} left before automatic submission.`
+      );
+    } else {
+      clearStoredProctorStrikes();
+      endTaskDueToViolation(reason, `${description} Maximum violation limit (2 warnings) reached.`);
+    }
+  };
 
   // Batch tasks list from navigation state (guaranteed isolated from practice problems)
   const batchTasksList = Array.isArray(location.state?.batchTasks) ? location.state.batchTasks : [];
@@ -319,14 +381,27 @@ export default function CodingPlatform() {
 
   const handleToggleFullscreenClick = () => {
     if (isBatchCoursework && !hasSubmitted) {
-      const confirmExit = window.confirm(
-        "⚠️ Warning: Exiting full-screen mode will automatically submit and end this task as per examination rules.\n\nAre you sure you want to exit and end your task?"
-      );
-      if (!confirmExit) return;
-      if (document.fullscreenElement) {
-        document.exitFullscreen?.().catch(() => {});
+      const strikes = getStoredProctorStrikes();
+      const nextStrike = strikes + 1;
+      if (nextStrike < 3) {
+        const confirmExit = window.confirm(
+          `⚠️ Warning: Exiting full-screen mode is an examination violation!\n\nThis will count as Warning ${nextStrike}/2. Are you sure you want to exit?`
+        );
+        if (!confirmExit) return;
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+        }
+        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+      } else {
+        const confirmFinal = window.confirm(
+          "⚠️ FINAL WARNING: Exiting full-screen now will exceed your 2 warnings and immediately submit your task.\n\nAre you sure you want to submit and end your task?"
+        );
+        if (!confirmFinal) return;
+        if (document.fullscreenElement) {
+          document.exitFullscreen?.().catch(() => {});
+        }
+        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
       }
-      endTaskDueToViolation("exit_fullscreen", "Full-screen mode was exited.");
       return;
     }
     toggleFullscreen();
@@ -362,7 +437,7 @@ export default function CodingPlatform() {
       setIsFullscreen(isFs);
 
       if (isBatchCoursework && !hasSubmitted && proctorArmedRef.current && !isFs) {
-        endTaskDueToViolation("exit_fullscreen", "Full-screen mode was exited.");
+        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
       }
     };
 
@@ -389,16 +464,7 @@ export default function CodingPlatform() {
 
     const handleTabSwitchEvent = () => {
       if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
-        tabSwitchViolationsRef.current += 1;
-        const count = tabSwitchViolationsRef.current;
-        if (count < 3) {
-          const remaining = 3 - count;
-          showClipboardToast(
-            `⚠️ Warning ${count}/2: Tab switch / Alt+Tab detected! You have ${remaining} chance${remaining === 1 ? '' : 's'} left before automatic submission.`
-          );
-        } else {
-          endTaskDueToViolation("tab_switch", "Tab switching detected 3 times.");
-        }
+        handleProctorViolation("tab_switch", "Tab switch / Alt+Tab detected!");
       }
     };
 
@@ -909,6 +975,7 @@ export default function CodingPlatform() {
       const attemptsCount = result.attempts_used ?? (submissions.length + 1);
       if (isBatch || attemptsCount >= 3) {
         setHasSubmitted(true);
+        clearStoredProctorStrikes();
       } else {
         setHasSubmitted(false);
       }

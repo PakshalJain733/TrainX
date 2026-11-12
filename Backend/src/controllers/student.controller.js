@@ -342,24 +342,56 @@ export const getStudentDashboard = async (req, res, next) => {
       if (enrolledBatchIds.length > 0) {
         const placeholders = enrolledBatchIds.map(() => '?').join(',');
         const taskSql = `
-          SELECT bt.id, bt.title, bt.deadline, bt.task_date, bt.topic, bt.difficulty, bt.created_at, bt.batch_id,
+          SELECT bt.id, bt.title, bt.deadline, bt.task_date, bt.topic, bt.difficulty, bt.created_at, bt.batch_id, bt.points,
                  (
                    SELECT ts.status
                    FROM task_submissions ts
                    WHERE ts.task_id = bt.id AND ts.user_id = ?
                    ORDER BY ts.id DESC
                    LIMIT 1
-                 ) AS submission_status
+                 ) AS submission_status,
+                 (
+                   SELECT COALESCE(ts.marks_obtained, ts.score, 0)
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS marks_obtained,
+                 (
+                   SELECT ts.feedback
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS submission_feedback
           FROM batch_tasks bt
           WHERE bt.batch_id IN (${placeholders})
           ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5
         `;
-        const batchTaskRows = await query(taskSql, [callerId, ...enrolledBatchIds]);
+        const batchTaskRows = await query(taskSql, [callerId, callerId, callerId, ...enrolledBatchIds]);
         if (batchTaskRows && batchTaskRows.length > 0) {
           batchTaskRows.forEach((t) => {
             const expired = isDeadlineExpired(t.deadline);
-            const hasSubmission = Boolean(t.submission_status && String(t.submission_status).trim());
-            const status = hasSubmission ? 'Completed' : (expired ? 'Expired' : 'Pending');
+            const rawStatus = String(t.submission_status || '').toLowerCase().trim();
+            const totalPoints = Number(t.points || 0);
+            const scoreVal = Number(t.marks_obtained || 0);
+            const hasFeedback = Boolean(t.submission_feedback && String(t.submission_feedback).trim());
+            const isPartialByFeedback = hasFeedback && String(t.submission_feedback).toLowerCase().startsWith('partial');
+
+            let status = 'Pending';
+            if (rawStatus) {
+              if (rawStatus === 'passed' || rawStatus === 'completed' || rawStatus === 'accepted' || (totalPoints > 0 && scoreVal >= totalPoints)) {
+                status = 'Completed';
+              } else if (rawStatus === 'partial' || isPartialByFeedback || (totalPoints > 0 && scoreVal > 0 && scoreVal < totalPoints)) {
+                status = 'Partial';
+              } else if (rawStatus === 'failed') {
+                status = 'Failed';
+              } else {
+                status = 'Submitted';
+              }
+            } else if (expired) {
+              status = 'Expired';
+            }
             const formattedDeadline = t.deadline
               ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
               : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
@@ -1069,9 +1101,9 @@ export const getStudentPerformance = async (req, res, next) => {
         if (enrolledBatchIds.length > 0) {
           const placeholders = enrolledBatchIds.map(() => '?').join(',');
           taskRows = await query(
-            `SELECT bt.id, bt.title, bt.topic, bt.difficulty, bt.deadline, bt.task_date, bt.created_at,
+            `SELECT bt.id, bt.title, bt.topic, bt.difficulty, bt.deadline, bt.task_date, bt.created_at, bt.points,
                     b.name as batch_name,
-                    ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.created_at as submitted_at
+                    ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.feedback as submission_feedback, ts.created_at as submitted_at
              FROM batch_tasks bt
              LEFT JOIN batches b ON bt.batch_id = b.id
              LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ? AND ts.batch_id = bt.batch_id)
@@ -1083,8 +1115,8 @@ export const getStudentPerformance = async (req, res, next) => {
 
         if (!taskRows || taskRows.length === 0) {
           taskRows = await query(
-            `SELECT ts.id, ts.task_id, ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.created_at as submitted_at,
-                    bt.title, bt.topic, bt.difficulty, bt.deadline, b.name as batch_name
+            `SELECT ts.id, ts.task_id, ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.feedback as submission_feedback, ts.created_at as submitted_at,
+                    bt.title, bt.topic, bt.difficulty, bt.deadline, bt.points, b.name as batch_name
              FROM task_submissions ts
              LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
              LEFT JOIN batches b ON ts.batch_id = b.id
@@ -1096,8 +1128,27 @@ export const getStudentPerformance = async (req, res, next) => {
 
         if (taskRows && taskRows.length > 0) {
           const parsedTasks = taskRows.map((t) => {
-            const isCompleted = Boolean(t.submission_status && String(t.submission_status).trim());
+            const rawStatus = String(t.submission_status || '').toLowerCase().trim();
+            const totalPoints = Number(t.points || 0);
             const scoreVal = Number(t.marks_obtained ?? t.task_score ?? 0);
+            const hasFeedback = Boolean(t.submission_feedback && String(t.submission_feedback).trim());
+            const isPartialByFeedback = hasFeedback && String(t.submission_feedback).toLowerCase().startsWith('partial');
+
+            let computedStatus = 'Pending';
+            if (rawStatus) {
+              if (rawStatus === 'passed' || rawStatus === 'completed' || rawStatus === 'accepted' || (totalPoints > 0 && scoreVal >= totalPoints)) {
+                computedStatus = 'Completed';
+              } else if (rawStatus === 'partial' || isPartialByFeedback || (totalPoints > 0 && scoreVal > 0 && scoreVal < totalPoints)) {
+                computedStatus = 'Partial';
+              } else if (rawStatus === 'failed') {
+                computedStatus = 'Failed';
+              } else {
+                computedStatus = 'Submitted';
+              }
+            } else if (isDeadlineExpired(t.deadline)) {
+              computedStatus = 'Overdue';
+            }
+
             return {
               id: t.id || t.task_id,
               title: t.title || 'Coursework Assignment',
@@ -1105,9 +1156,9 @@ export const getStudentPerformance = async (req, res, next) => {
               batchName: t.batch_name || 'Enrolled Batch',
               difficulty: t.difficulty || 'Medium',
               deadline: t.deadline || 'Flexible',
-              status: isCompleted ? 'Completed' : (isDeadlineExpired(t.deadline) ? 'Overdue' : 'Pending'),
-              score: isCompleted ? scoreVal : 0,
-              submittedAt: t.submitted_at ? new Date(t.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (isCompleted ? 'Submitted' : '—'),
+              status: computedStatus,
+              score: (computedStatus === 'Completed' || computedStatus === 'Partial' || computedStatus === 'Submitted') ? scoreVal : 0,
+              submittedAt: t.submitted_at ? new Date(t.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (rawStatus ? 'Submitted' : '—'),
             };
           });
 
