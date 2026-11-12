@@ -1973,7 +1973,8 @@ export default function AIRoadmap() {
     const practice = getActivePractice(targetM, role, index);
     const lang = practice?.language || resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
-    setCompilerCode(practice?.starterCode || STARTER_TEMPLATES[lang] || "");
+    const initialStarter = practice?.starter_templates?.[lang] || practice?.starterCode || STARTER_TEMPLATES[lang] || "";
+    setCompilerCode(initialStarter);
     setCompilerOutput("");
     setCompilerStatus("idle");
     setCustomInput(practice?.sampleInput || "");
@@ -1989,7 +1990,9 @@ export default function AIRoadmap() {
     setCompilerLanguage(newLang);
     const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === newLang && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[newLang]) {
+      setCompilerCode(currentPractice.starter_templates[newLang]);
+    } else if (currentPractice?.language === newLang && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[newLang] || "");
@@ -2006,7 +2009,9 @@ export default function AIRoadmap() {
   const handleResetCompilerCode = () => {
     const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[compilerLanguage]) {
+      setCompilerCode(currentPractice.starter_templates[compilerLanguage]);
+    } else if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[compilerLanguage] || "");
@@ -2275,7 +2280,8 @@ export default function AIRoadmap() {
         body: JSON.stringify({
           language: compilerLanguage,
           code: compilerCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          stdin: typeof stdin === "string" ? stdin : String(stdin ?? ""),
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -2368,17 +2374,30 @@ export default function AIRoadmap() {
     }
     setCompilerActiveTab("terminal");
 
-    const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
+    const activeTestCases = Array.isArray(currentPractice?.testCases) && currentPractice.testCases.length > 0
+      ? currentPractice.testCases.map((tc, idx) => ({
+          id: tc.id || idx + 1,
+          input: tc.input || "",
+          expected_output: tc.expected_output || tc.output || tc.expectedOutput || "",
+          is_hidden: Boolean(tc.is_hidden || tc.isHidden),
+        }))
+      : [
+          { id: 1, input: currentPractice?.sampleInput || "sample", expected_output: currentPractice?.sampleOutput || "sample", is_hidden: false },
+          { id: 2, input: (currentPractice?.sampleInput || "sample") + " 2", expected_output: (currentPractice?.sampleOutput || "sample") + " 2", is_hidden: false },
+          { id: 3, input: (currentPractice?.sampleInput || "sample") + " 3", expected_output: (currentPractice?.sampleOutput || "sample") + " 3", is_hidden: true },
+          { id: 4, input: (currentPractice?.sampleInput || "sample") + " 4", expected_output: (currentPractice?.sampleOutput || "sample") + " 4", is_hidden: true },
+        ];
 
     try {
       const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/code/run`, {
+      const res = await fetch(`${baseUrl}/code/evaluate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           language: compilerLanguage,
           code: currentCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          test_cases: activeTestCases,
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -2389,46 +2408,58 @@ export default function AIRoadmap() {
         return;
       }
 
-      const result = data.data || data;
+      const evalData = data.data || data;
+      const passed = evalData.passed_test_cases || 0;
+      const total = evalData.total_test_cases || activeTestCases.length;
+      const percentage = evalData.percentage ?? (total > 0 ? Math.round((passed / total) * 100) : 0);
 
-      if (result.compilationError) {
-        recordPracticeScore(0);
+      recordPracticeScore(percentage);
+
+      if (evalData.compilation_error) {
         setCompilerStatus("ce");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Cannot Submit Solution: Compilation Error"}\n\n${result.stderr || "Check your syntax."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Compilation Error"}\n\nPlease check your syntax and language compatibility.`);
         return;
       }
-      if (result.timedOut) {
-        recordPracticeScore(0);
+      if (evalData.timed_out) {
         setCompilerStatus("tle");
-        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Cannot Submit Solution: Time Limit Exceeded"} (${result.executionTime || 5000}ms)`);
+        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Time Limit Exceeded"}\n\nExecution exceeded sandbox timeout (5000ms).`);
         return;
       }
-      if (result.exitCode !== 0 && result.exitCode !== undefined) {
-        recordPracticeScore(0);
+      if (evalData.runtime_error && passed === 0) {
         setCompilerStatus("error");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Cannot Submit Solution: Runtime Error"} (exit code ${result.exitCode})\n\n${result.stderr || "Execution failed."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Runtime Error"}\n\nCheck for unhandled exceptions or out-of-bounds access.`);
         return;
       }
 
-      const outputText = result.stdout?.trim() || "";
-      const evalResult = evaluatePracticeSubmission(currentCode, outputText, currentPractice?.sampleOutput, currentPractice?.sampleInput, compilerLanguage);
+      const results = Array.isArray(evalData.results) ? evalData.results : [];
+      let breakdownLines = [];
+      results.forEach((r, idx) => {
+        const isHidden = Boolean(r.is_hidden);
+        const icon = r.passed ? "✅" : "❌";
+        if (isHidden) {
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Hidden): ${r.passed ? "Passed" : "Wrong Answer"}`);
+        } else {
+          const detail = r.passed
+            ? "Passed"
+            : `Failed (Expected: "${r.expected_output}", Got: "${(r.actual_output || "").trim()}")`;
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Visible): ${detail}`);
+        }
+      });
 
-      recordPracticeScore(evalResult.score);
-
-      if (evalResult.passed) {
+      if (percentage === 100) {
         setCompilerStatus("success");
         setCompilerOutput(
-          `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText || "(No console output)"}\n\nScore: ${evalResult.score}% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\n${evalResult.reason}\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
+          `🎉 Solution Accepted! (Passed ${passed}/${total} Test Cases in ${evalData.execution_time_ms || 0}ms)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nScore Awarded: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz to unlock.`
         );
       } else {
         setCompilerStatus("error");
         setCompilerOutput(
-          `❌ Submission Evaluated: Solution Incorrect (Score: ${evalResult.score}%)\n\nStandard Output:\n${outputText || "(No console output)"}\n\nExpected Output:\n${currentPractice?.sampleOutput || "Valid output required"}\n\nFeedback: ${evalResult.reason}\nPlease refine your solution to match the expected output before retrying.`
+          `❌ Solution Not Accepted (Verdict: ${(evalData.status || "wrong_answer").toUpperCase()})\nPassed: ${passed}/${total} Test Cases (${percentage}% Score)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nPlease review the failed test cases and refine your implementation before retrying.`
         );
       }
     } catch (err) {
       setCompilerStatus("error");
-      setCompilerOutput(`❌ Network error submitting to Docker sandbox: ${err.message}`);
+      setCompilerOutput(`❌ Network error submitting to evaluation engine: ${err.message}`);
     }
   };
 

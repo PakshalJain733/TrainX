@@ -733,20 +733,49 @@ export function validateAndSanitizePracticeProblem(problem, context = {}) {
     }
 
     // Sanitize test cases: ensure each expectedOutput is the actual reversed string of its input
-    if (Array.isArray(problem.testCases)) {
+    const fallbackWords = ['hello', 'world', 'TrainX', '12345'];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
       problem.testCases = problem.testCases.map((tc, idx) => {
         let tcInput = String(tc.input || '').trim();
         const tcMatch = tcInput.match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
-        const tcWord = (tcMatch && tcMatch[1]) ? tcMatch[1].trim() : (tcInput || (idx === 0 ? 'hello' : idx === 1 ? 'world' : 'TrainX'));
+        const tcWord = (tcMatch && tcMatch[1]) ? tcMatch[1].trim() : (tcInput || fallbackWords[idx % fallbackWords.length]);
         const tcReversed = tcWord.split('').reverse().join('');
         return {
-          ...tc,
-          input: tcWord,
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
           output: tcReversed,
+          expected_output: tcReversed,
           expectedOutput: tcReversed,
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
           description: `Reverses "${tcWord}" to "${tcReversed}"`
         };
       });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const w = fallbackWords[idx % fallbackWords.length];
+        const rev = w.split('').reverse().join('');
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${w}"`,
+          output: rev,
+          expected_output: rev,
+          expectedOutput: rev,
+          is_hidden: true,
+          isHidden: true,
+          description: `Reverses "${w}" to "${rev}"`
+        });
+      }
+    } else {
+      problem.testCases = fallbackWords.map((w, idx) => ({
+        id: idx + 1,
+        input: `"${w}"`,
+        output: w.split('').reverse().join(''),
+        expected_output: w.split('').reverse().join(''),
+        expectedOutput: w.split('').reverse().join(''),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+      }));
     }
   }
 
@@ -765,19 +794,54 @@ export function validateAndSanitizePracticeProblem(problem, context = {}) {
     }
 
     // Sanitize test cases to be strictly boolean
-    if (Array.isArray(problem.testCases)) {
+    const palWords = [
+      { word: 'racecar', isPal: true },
+      { word: 'hello', isPal: false },
+      { word: 'A man, a plan, a canal: Panama', isPal: true },
+      { word: 'TrainX', isPal: false },
+    ];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
       problem.testCases = problem.testCases.map((tc, idx) => {
-        const tcWord = String(tc.input || (idx % 2 === 0 ? 'racecar' : 'hello')).replace(/["']/g, '').trim();
+        const fallback = palWords[idx % palWords.length];
+        const tcWord = String(tc.input || fallback.word).replace(/["']/g, '').trim();
         const tcClean = tcWord.toLowerCase().replace(/[^a-z0-9]/g, '');
         const tcIsPal = tcClean === tcClean.split('').reverse().join('');
         return {
-          ...tc,
-          input: tcWord,
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
           output: String(tcIsPal),
+          expected_output: String(tcIsPal),
           expectedOutput: String(tcIsPal),
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
           description: `Checks whether "${tcWord}" is a palindrome (${tcIsPal})`
         };
       });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const item = palWords[idx % palWords.length];
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${item.word}"`,
+          output: String(item.isPal),
+          expected_output: String(item.isPal),
+          expectedOutput: String(item.isPal),
+          is_hidden: true,
+          isHidden: true,
+          description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+        });
+      }
+    } else {
+      problem.testCases = palWords.map((item, idx) => ({
+        id: idx + 1,
+        input: `"${item.word}"`,
+        output: String(item.isPal),
+        expected_output: String(item.isPal),
+        expectedOutput: String(item.isPal),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+        description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+      }));
     }
   }
 
@@ -793,6 +857,52 @@ export function validateAndSanitizePracticeProblem(problem, context = {}) {
         problem.sampleOutput = cleanWord.toLowerCase();
       }
     }
+  }
+
+  // 4. UNIFIED LEETCODE COMPILER METADATA (Function Signatures & Test Cases)
+  if (!problem.function_name) {
+    if (isStringReversalProblem) problem.function_name = 'reverseString';
+    else if (isPalindromeProblem) problem.function_name = 'isPalindrome';
+    else if (isCaseConversionProblem) problem.function_name = 'convertCase';
+    else {
+      const fnMatch = String(problem.starterCode || '').match(/(?:function|def)\s+([a-zA-Z0-9_]+)/);
+      problem.function_name = fnMatch ? fnMatch[1] : 'solve';
+    }
+  }
+
+  const fnName = problem.function_name;
+
+  if (!problem.starter_templates) {
+    problem.starter_templates = {
+      node: `// Implement the function\nfunction ${fnName}(input) {\n  // Write your code here\n  \n}\n`,
+      python: `# Implement the function\ndef ${fnName}(input):\n    # Write your code here\n    pass\n`,
+      java: `class Solution {\n    public String ${fnName}(String input) {\n        // Write your code here\n        return "";\n    }\n}\n`,
+      cpp: `class Solution {\npublic:\n    string ${fnName}(string input) {\n        // Write your code here\n        return "";\n    }\n};\n`
+    };
+  }
+
+  // Ensure testCases has at least 4 test cases (2 visible + 2 hidden)
+  if (!Array.isArray(problem.testCases) || problem.testCases.length < 4) {
+    const sIn = problem.sampleInput || 'sample';
+    const sOut = problem.sampleOutput || 'sample';
+    const existing = Array.isArray(problem.testCases) ? problem.testCases : [];
+    const baseCases = [
+      ...existing,
+      { input: `"${sIn}"`, output: sOut, expected_output: sOut, is_hidden: false },
+      { input: `"${sIn} 2"`, output: `${sOut} 2`, expected_output: `${sOut} 2`, is_hidden: false },
+      { input: `"${sIn} hidden 1"`, output: `${sOut} hidden 1`, expected_output: `${sOut} hidden 1`, is_hidden: true },
+      { input: `"${sIn} hidden 2"`, output: `${sOut} hidden 2`, expected_output: `${sOut} hidden 2`, is_hidden: true },
+    ].slice(0, 4);
+
+    problem.testCases = baseCases.map((tc, idx) => ({
+      id: tc.id || idx + 1,
+      input: tc.input,
+      output: tc.output || tc.expected_output,
+      expected_output: tc.expected_output || tc.output,
+      expectedOutput: tc.expected_output || tc.output,
+      is_hidden: idx >= 2,
+      isHidden: idx >= 2,
+    }));
   }
 
   return problem;

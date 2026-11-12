@@ -184,6 +184,8 @@ export default function CodingPlatform() {
     ...location.state.task,
     language: location.state?.task?.language || location.state?.task?.lang || "",
     source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'practice_problem'),
+    function_name: location.state?.task?.function_name || location.state?.task?.functionName || null,
+    starter_templates: location.state?.task?.starter_templates || null,
     description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic || location.state.task.category, location.state.task.description),
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
     alreadySubmitted: isPractice
@@ -197,7 +199,7 @@ export default function CodingPlatform() {
   const [notFound, setNotFound] = useState(false);
   const initialLangKey = normalizeLanguageKey(initialTask?.language) || "java";
   const [selectedLang, setSelectedLang] = useState(initialLangKey);
-  const [code, setCode] = useState(() => STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
+  const [code, setCode] = useState(() => initialTask?.starter_templates?.[initialLangKey] || initialTask?.starterCode || STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
   const [hasSubmitted, setHasSubmitted] = useState(Boolean(initialTask?.alreadySubmitted));
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
@@ -894,7 +896,12 @@ export default function CodingPlatform() {
       const res = await fetch(`${API_BASE}/code/run`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ language: selectedLang, code: typeof code === "string" ? code : String(code ?? ""), stdin }),
+        body: JSON.stringify({
+          language: selectedLang,
+          code: typeof code === "string" ? code : String(code ?? ""),
+          stdin,
+          function_name: taskData?.function_name || taskData?.functionName || null,
+        }),
       });
       const data = await res.json();
 
@@ -1014,6 +1021,7 @@ export default function CodingPlatform() {
           problem_id: taskData.id,
           task_id: taskId,
           source: isBatch ? 'batch_task' : 'practice_problem',
+          function_name: taskData?.function_name || taskData?.functionName || null,
         }),
       });
       const data = await res.json();
