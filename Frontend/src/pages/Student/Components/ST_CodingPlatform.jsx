@@ -249,9 +249,6 @@ export default function CodingPlatform() {
     String(taskId || '').toLowerCase().startsWith('practice')
   );
 
-  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
-  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem);
-
   const isPracticeArena = !isBatchCoursework && Boolean(
     String(taskId || '').toLowerCase().startsWith('practice-') ||
     taskData?.source === 'practice' ||
@@ -259,7 +256,8 @@ export default function CodingPlatform() {
     taskId
   );
 
-  const isProctoredSession = isBatchCoursework || isPracticeArena;
+  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
+  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem || isPracticeArena);
 
   // Helper to determine if current session was launched via browser page reload (F5 / Ctrl+R)
   const isPageReload = () => {
@@ -1822,7 +1820,6 @@ export default function CodingPlatform() {
         )}
 
         {/* ── Proctored Full-Screen Gate Overlay ── */}
-        {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
         {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
           <div className="proctor-fullscreen-gate-overlay">
             <div className="proctor-gate-card">

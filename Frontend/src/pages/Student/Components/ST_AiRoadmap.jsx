@@ -684,6 +684,22 @@ function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, samp
     return { score: 100, passed: true, reason: "Output matches expected result exactly." };
   }
 
+  // Dedicated check for string reversal & transformation consistency
+  if (sampleInput && typeof sampleInput === "string" && sampleInput.trim().length > 1) {
+    const rawInputWord = sampleInput.replace(/["']/g, "").trim();
+    if (rawInputWord.length > 1) {
+      const reversed = rawInputWord.split("").reverse().join("").toLowerCase();
+      // If student correctly produced the reversed string
+      if (normActual === reversed || normActual.includes(reversed)) {
+        return { score: 100, passed: true, reason: `Reversed string "${reversed}" verified.` };
+      }
+      // Reject boolean outputs for string reversal
+      if (normActual === "true" || normActual === "false") {
+        return { score: 0, passed: false, reason: "Output was a boolean (true/false) instead of the required reversed string." };
+      }
+    }
+  }
+
   // Numerical value check
   const expectedNumbers = (normExpected.match(/\b\d+(\.\d+)?\b/g) || []);
   const actualNumbers = (normActual.match(/\b\d+(\.\d+)?\b/g) || []);
@@ -727,7 +743,56 @@ function getPracticeQuestionForMilestone(m, targetRole, milestoneIndex) {
   const lang = resolveLanguageForRole(role, title);
   const lower = `${title} ${role}`.toLowerCase();
 
-  // 1. React / Frontend Hooks & UI
+  // 1. String Manipulation / Reversal / Palindrome
+  if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
+    const isPal = lower.includes("palindrome");
+    if (isPal) {
+      return {
+        title: `Hands-on Challenge: Palindrome Verification (${title})`,
+        prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+        sampleInput: `racecar`,
+        sampleOutput: `true`,
+        starterCode: `// Palindrome Verification for: ${title}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+        solutionCode: `// Complete Palindrome solution`,
+        language: "node",
+        milestoneIndex: mIdx,
+        difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+      };
+    }
+
+    // String Reversal: Strictly return reversed string, NEVER boolean
+    return {
+      title: `Hands-on Challenge: String Reversal (${title})`,
+      prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+      sampleInput: `hello`,
+      sampleOutput: `olleh`,
+      starterCode: `// String Reversal for: ${title}
+function reverseString(str) {
+  if (typeof str !== "string") return "";
+  return str.split("").reverse().join("");
+}
+
+// Test execution:
+const result = reverseString("hello");
+console.log(result);
+`,
+      solutionCode: `// Complete String Reversal solution`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+    };
+  }
+
+  // 2. React / Frontend Hooks & UI
   if (lang === "react" || lower.includes("react") || lower.includes("hook") || lower.includes("component")) {
     if (mIdx === 1) {
       return {
@@ -1543,6 +1608,45 @@ export default function AIRoadmap() {
     }
   };
 
+  const sanitizeClientPractice = (problem, contextTitle = "") => {
+    if (!problem || typeof problem !== "object") return problem;
+    const text = `${problem.title || ""} ${problem.prompt || ""} ${contextTitle || ""}`.toLowerCase();
+    const isPal = text.includes("palindrome");
+    const isReversal = (text.includes("reverse") || text.includes("reversal")) && !isPal;
+    const outputStr = String(problem.sampleOutput || "").trim().toLowerCase();
+    const isBoolOutput = outputStr === "true" || outputStr === "false" || outputStr === "boolean";
+
+    if (isReversal && isBoolOutput) {
+      let inputStr = "hello";
+      if (problem.sampleInput) {
+        const match = String(problem.sampleInput).match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+        if (match && match[1]) inputStr = match[1].trim();
+      }
+      const reversed = inputStr.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: reversed,
+        starterCode: problem.starterCode
+          ? problem.starterCode.replace(/console\.log\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*===?\s*[^)]+\)/g, "console.log($1($2))")
+          : problem.starterCode
+      };
+    }
+
+    if (isPal && !outputStr.includes("true") && !outputStr.includes("false")) {
+      const inputStr = String(problem.sampleInput || "racecar").replace(/["']/g, "").trim();
+      const clean = inputStr.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isPalVal = clean === clean.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: String(isPalVal)
+      };
+    }
+
+    return problem;
+  };
+
   const getPracticeCacheKey = (title, role, mIdx) => {
     const cleanTitle = String(title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim().toLowerCase();
     const cleanRole = String(role || "").trim().toLowerCase();
@@ -1556,7 +1660,8 @@ export default function AIRoadmap() {
     const idx = Math.max(1, parseInt(parsedIdx || (typeof mIdx === "number" ? mIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
     const targetRole = role || currentRoadmap?.targetRole || goalInput || "Software Engineering";
     const key = getPracticeCacheKey(currentM?.title, targetRole, idx);
-    return aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+    const rawPractice = aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+    return sanitizeClientPractice(rawPractice, currentM?.title);
   };
 
   const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false, milestoneObj = null, milestoneIdx = null) => {
@@ -1598,18 +1703,19 @@ export default function AIRoadmap() {
       });
 
       if (res && res.data && res.data.title && res.data.prompt) {
+        const sanitized = sanitizeClientPractice(res.data, cleanTitle);
         setAiPracticeCache((prev) => ({
           ...prev,
-          [cacheKey]: res.data,
+          [cacheKey]: sanitized,
         }));
-        if (res.data.language) {
-          setCompilerLanguage(res.data.language);
+        if (sanitized.language) {
+          setCompilerLanguage(sanitized.language);
         }
-        if (res.data.starterCode) {
-          setCompilerCode((prevCode) => (prevCode ? prevCode : res.data.starterCode));
+        if (sanitized.starterCode) {
+          setCompilerCode((prevCode) => (prevCode ? prevCode : sanitized.starterCode));
         }
-        if (res.data.sampleInput) {
-          setCustomInput(res.data.sampleInput);
+        if (sanitized.sampleInput) {
+          setCustomInput(sanitized.sampleInput);
         }
       }
     } catch (err) {
