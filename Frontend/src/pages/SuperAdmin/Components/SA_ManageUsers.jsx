@@ -1032,6 +1032,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           const dept = String(row["Department"] || row["department"] || row["dept"] || "COMPS").trim();
           const year = String(row["Academic Year"] || row["year"] || row["Year"] || "FE").trim();
           const div = String(row["Division"] || row["division"] || row["div"] || "A").trim();
+          const password = String(row["Password"] || row["password"] || "").trim();
 
           let isValid = true;
           let issue = "";
@@ -1052,6 +1053,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
             department: dept,
             year,
             division: div,
+            ...(password ? { password } : {}),
             isValid,
             issue,
           };
