@@ -344,7 +344,7 @@ export default function CodingPlatform() {
     const reasonLabel = reason === "exit_fullscreen"
       ? "⚠️ Full-screen exited! Solution automatically submitted as per proctored coursework policy."
       : "⚠️ Tab switch detected! Solution automatically submitted as per proctored coursework policy.";
-    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);
+    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in sandbox...`);
 
     if (submitRef.current && !isSubmitting) {
       submitRef.current({ isAutoSubmit: true, reason });
@@ -824,9 +824,9 @@ export default function CodingPlatform() {
     setIsSubmitting(true);
     setConsoleStatus("running");
     if (isAuto) {
-      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test cases in Docker sandbox...");
+      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test xases in sandbox...");
     } else {
-      setConsoleOutput("Evaluating all test cases in Docker sandbox...");
+      setConsoleOutput("Evaluating all test cases in sandbox...");
     }
     setMobileView("code");
 
@@ -1582,31 +1582,36 @@ export default function CodingPlatform() {
           <div className="proctor-termination-modal-overlay">
             <div className="proctor-termination-card">
               <div className="proctor-termination-icon-wrap">
-                <AlertCircle size={38} color="#dc2626" />
+                <ShieldAlert size={36} color="#dc2626" />
               </div>
-              <h3 className="proctor-term-title">Task Ended — Exam Policy Violation</h3>
+              <h3 className="proctor-term-title">Session Ended — Proctoring Policy Violation</h3>
               <p className="proctor-term-desc">
                 {terminationReason === "exit_fullscreen"
-                  ? "You exited full-screen mode during this proctored task. As per examination guidelines, your task has been ended and your current solution was automatically submitted."
-                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your task has been ended and your current solution was automatically submitted."}
+                  ? "Full-screen mode was exited during an active assessment. As per proctored examination rules, your session has concluded and your solution has been automatically submitted."
+                  : "Multiple window or tab switches were detected during your proctored assessment. As per examination guidelines, your task has ended and your solution has been automatically submitted."}
               </p>
               <div className="proctor-term-status-box">
-                <span>🔒 The compiler is now locked. Your code has been submitted to Docker evaluation and marks will be recorded.</span>
+                <div className="proctor-term-status-header">
+                  <Lock size={15} className="proctor-term-status-icon" />
+                  <span>Compiler Locked & Auto-Submitted</span>
+                </div>
+                <p className="proctor-term-status-sub">
+                  Your code has been submitted to the Docker evaluation sandbox. Your results and marks will be recorded on your batch dashboard.
+                </p>
               </div>
               <div className="proctor-term-btn-row">
                 <button
                   type="button"
-                  onClick={() => setProctorTerminated(false)}
-                  className="proctor-term-btn-review"
-                >
-                  Review Code & Test Results
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/student/batches')}
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen?.().catch(() => {});
+                    }
+                    navigate('/student/batches');
+                  }}
                   className="proctor-term-btn-exit"
                 >
-                  Back to My Batches
+                  <ArrowLeft size={16} />
+                  <span>Back to My Batches</span>
                 </button>
               </div>
             </div>
