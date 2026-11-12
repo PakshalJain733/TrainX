@@ -520,6 +520,9 @@ export default function CodingPlatform() {
 
     setConsoleStatus("error");
     const reasonLabel = reason === "exit_fullscreen"
+      ? "⚠️ Full-screen exited! Solution automatically submitted as per proctored coursework policy."
+      : "⚠️ Tab switch detected! Solution automatically submitted as per proctored coursework policy.";
+    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in sandbox...`);
       ? "⚠️ Full-screen exited! Solution automatically submitted as per exam guidelines."
       : "⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines.";
     setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);
@@ -1014,9 +1017,9 @@ export default function CodingPlatform() {
     setIsSubmitting(true);
     setConsoleStatus("running");
     if (isAuto) {
-      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test cases in Docker sandbox...");
+      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test xases in sandbox...");
     } else {
-      setConsoleOutput("Evaluating all test cases in Docker sandbox...");
+      setConsoleOutput("Evaluating all test cases in sandbox...");
     }
     setMobileView("code");
 
@@ -1905,16 +1908,22 @@ export default function CodingPlatform() {
           <div className="proctor-termination-modal-overlay">
             <div className="proctor-termination-card">
               <div className="proctor-termination-icon-wrap">
-                <AlertCircle size={38} color="#dc2626" />
+                <ShieldAlert size={36} color="#dc2626" />
               </div>
-              <h3 className="proctor-term-title">Task Ended — Exam Policy Violation</h3>
+              <h3 className="proctor-term-title">Session Ended — Proctoring Policy Violation</h3>
               <p className="proctor-term-desc">
                 {terminationReason === "exit_fullscreen"
-                  ? "You exited full-screen mode during this proctored session. As per examination guidelines, your session has been ended and your current solution was automatically submitted."
-                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your session has been ended and your current solution was automatically submitted."}
+                  ? "You exited full-screen mode during this proctored task. As per examination guidelines, your task has been ended and your current solution was automatically submitted."
+                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your task has been ended and your current solution was automatically submitted."}
               </p>
               <div className="proctor-term-status-box">
-                <span>🔒 The compiler is now locked. Your code has been submitted to Docker evaluation and marks will be recorded.</span>
+                <div className="proctor-term-status-header">
+                  <Lock size={15} className="proctor-term-status-icon" />
+                  <span>Compiler Locked & Auto-Submitted</span>
+                </div>
+                <p className="proctor-term-status-sub">
+                  Your code has been submitted to the Docker evaluation sandbox. Your results and marks will be recorded on your batch dashboard.
+                </p>
               </div>
               <div className="proctor-term-btn-row">
                 <button
@@ -1926,10 +1935,10 @@ export default function CodingPlatform() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate(isBatchCoursework ? '/student/batches' : '/student/practice')}
+                  onClick={() => navigate('/student/batches')}
                   className="proctor-term-btn-exit"
                 >
-                  {isBatchCoursework ? "Back to My Batches" : "Back to Practice"}
+                  Back to My Batches
                 </button>
               </div>
             </div>
