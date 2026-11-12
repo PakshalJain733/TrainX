@@ -1926,15 +1926,15 @@ export default function CodingPlatform() {
                   onClick={() => setProctorConfirmModal(null)}
                   className="proctor-term-btn-review"
                 >
-                  Cancel / Stay in Exam
+                  Stay in Assessment
                 </button>
                 <button
                   type="button"
                   onClick={proctorConfirmModal.onConfirm}
                   className="proctor-term-btn-exit"
-                  style={{ background: proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c" }}
+                  style={{ background: proctorConfirmModal.isDanger ? "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" : "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)" }}
                 >
-                  Confirm
+                  Confirm Exit
                 </button>
               </div>
             </div>
