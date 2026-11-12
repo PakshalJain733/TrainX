@@ -1,7 +1,10 @@
+import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import ExcelJS from 'exceljs';
 import { query, pool } from '../src/config/db.js';
+
+const require = createRequire(import.meta.url);
+const XLSX = require('xlsx');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BACKEND_ROOT = path.resolve(__dirname, '..');
@@ -56,22 +59,11 @@ const stats = {
   warnings: [],
 };
 
-const wb = new ExcelJS.Workbook();
-await wb.xlsx.readFile(FILE);
+const wb = XLSX.readFile(FILE);
 function sheetRows(sheetName, headerIdx) {
-  const ws = wb.getWorksheet(sheetName);
-  if (!ws) return [];
-  const rows = [];
-  ws.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-    if (rowNumber <= headerIdx) return;
-    const vals = [];
-    for (let c = 1; c <= ws.columnCount; c++) {
-      const cellText = row.getCell(c).text ?? '';
-      vals.push(String(cellText));
-    }
-    if (normID(vals[2])) rows.push(vals);
-  });
-  return rows;
+  return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '', raw: false })
+    .slice(headerIdx)
+    .filter((r) => r && normID(r[2]));
 }
 
 const registered = sheetRows('Registered Students', 5);
