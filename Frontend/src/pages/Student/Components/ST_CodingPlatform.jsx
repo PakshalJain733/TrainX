@@ -520,9 +520,6 @@ export default function CodingPlatform() {
 
     setConsoleStatus("error");
     const reasonLabel = reason === "exit_fullscreen"
-      ? "⚠️ Full-screen exited! Solution automatically submitted as per proctored coursework policy."
-      : "⚠️ Tab switch detected! Solution automatically submitted as per proctored coursework policy.";
-    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in sandbox...`);
       ? "⚠️ Full-screen exited! Solution automatically submitted as per exam guidelines."
       : "⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines.";
     setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);

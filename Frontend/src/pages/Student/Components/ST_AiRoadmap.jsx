@@ -1619,15 +1619,13 @@ export default function AIRoadmap() {
     resetQuizState();
   };
 
-  const recordPracticeScore = async (score) => {
+  const recordPracticeSuccess = async () => {
     const activeM = milestones[activeMilestoneIdx];
     const mKey = activeM?.id || `m_${activeMilestoneIdx}`;
-    const safeScore = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-    setPracticeScores((prev) => ({ ...prev, [mKey]: safeScore }));
+    setPracticeScores((prev) => ({ ...prev, [mKey]: 100 }));
 
     if (activeM && activeM.status !== "completed") {
-      const practiceContribution = Math.round((safeScore / 100) * 50);
-      const newProgress = Math.max(activeM.progress || 0, practiceContribution);
+      const newProgress = Math.max(activeM.progress || 0, 50);
       const updatedMilestonesRaw = milestones.map((m, idx) =>
         idx === activeMilestoneIdx
           ? {
@@ -1759,7 +1757,7 @@ export default function AIRoadmap() {
     });
 
     const quizPct = Math.round((correctCount / Math.max(questions.length, 1)) * 100);
-    const practicePct = practiceScores[mKey] !== undefined ? practiceScores[mKey] : 0;
+    const practicePct = practiceScores[mKey] !== undefined ? practiceScores[mKey] : (compilerStatus === "success" ? 100 : 0);
     const combinedScore = Math.round((practicePct + quizPct) / 2);
     const isPassed = combinedScore >= 50;
 
