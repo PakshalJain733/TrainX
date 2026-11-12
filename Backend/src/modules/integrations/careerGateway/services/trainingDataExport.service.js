@@ -329,8 +329,8 @@ export async function collectTrainingExportRecords(options = {}) {
          MAX(COALESCE(r.updated_at, r.created_at)) as last_roadmap_activity
        FROM roadmaps r
        JOIN roadmap_items ri ON ri.roadmap_id = r.id
-       WHERE (r.student_id = ? OR r.user_id = ?)`,
-      [userId, userId]
+       WHERE r.student_id = ?`,
+      [userId]
     );
 
     // Task submissions completion

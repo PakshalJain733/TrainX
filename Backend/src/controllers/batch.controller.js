@@ -886,7 +886,7 @@ export const getBatchTasks = async (req, res, next) => {
         const taskIds = dbTasks.map(t => t.id);
         const taskPlaceholders = taskIds.map(() => '?').join(',');
         const subRows = await query(
-          `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score
+          `SELECT task_id, status, COALESCE(marks_obtained, score, 0) as marks_obtained, COALESCE(score, marks_obtained, 0) as score, feedback
            FROM task_submissions 
            WHERE user_id = ? AND (batch_id = ? OR task_id IN (${taskPlaceholders}))`,
           [studentId, cleanId, ...taskIds]
@@ -926,7 +926,20 @@ export const getBatchTasks = async (req, res, next) => {
       if (sub) {
         alreadySubmitted = true;
         scoreObtained = sub.marks_obtained ?? sub.score ?? 0;
-        taskStatus = 'Completed';
+        const rawStatus = String(sub.status || '').toLowerCase().trim();
+        const totalPoints = Number(parsed.points ?? t.points ?? 0);
+        const hasFeedback = Boolean(sub.feedback && String(sub.feedback).trim());
+        const isPartialByFeedback = hasFeedback && String(sub.feedback).toLowerCase().startsWith('partial');
+
+        if (rawStatus === 'passed' || rawStatus === 'completed' || rawStatus === 'accepted' || (totalPoints > 0 && scoreObtained >= totalPoints)) {
+          taskStatus = 'Completed';
+        } else if (rawStatus === 'partial' || isPartialByFeedback || (totalPoints > 0 && scoreObtained > 0 && scoreObtained < totalPoints)) {
+          taskStatus = 'Partial';
+        } else if (rawStatus === 'failed') {
+          taskStatus = 'Failed';
+        } else {
+          taskStatus = 'Submitted';
+        }
       } else if (isExpired) {
         taskStatus = 'Expired';
       }

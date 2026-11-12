@@ -479,7 +479,7 @@ export default function Batches() {
                             <span className="cw-task-num-badge">{task.taskNumber}</span>
                             {task.status === "Completed" ? (
                               <CheckCircle2 size={18} className="cw-item-icon-done" />
-                            ) : task.status === "Expired" ? (
+                            ) : (task.status === "Expired" || task.status === "Failed") ? (
                               <AlertCircle size={18} style={{ color: "#dc2626" }} />
                             ) : (
                               <Clock3 size={18} className="cw-item-icon-pending" />
@@ -512,7 +512,7 @@ export default function Batches() {
                               variant={
                                 task.status === "Completed"
                                   ? "success"
-                                  : task.status === "Expired"
+                                  : (task.status === "Expired" || task.status === "Failed")
                                   ? "danger"
                                   : task.status === "Partial"
                                   ? "warning"
