@@ -652,13 +652,117 @@ function getTheoryForMilestone(m, targetRole) {
   };
 }
 
-function getPracticeQuestionForMilestone(m, targetRole) {
+function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, sampleInput, language) {
+  const cleanCode = (userCode || "").trim();
+  if (!cleanCode) {
+    return { score: 0, passed: false, reason: "Empty code submitted." };
+  }
+
+  // Visual/markup environments (HTML / React)
+  if (language === "html" || language === "react") {
+    const isMinimalLength = cleanCode.length > 30;
+    const hasComponentOrTag = language === "react"
+      ? (cleanCode.includes("function") || cleanCode.includes("return") || cleanCode.includes("=>")) && cleanCode.includes("<")
+      : cleanCode.includes("<") && cleanCode.includes(">");
+    if (isMinimalLength && hasComponentOrTag) {
+      return { score: 100, passed: true, reason: "Component structure verified." };
+    }
+    return { score: 0, passed: false, reason: "Incomplete HTML or React component structure." };
+  }
+
+  const cleanActual = (actualOutput || "").trim();
+  const cleanExpected = (expectedOutput || "").trim();
+
+  if (!cleanExpected || cleanExpected === "null") {
+    return { score: 100, passed: true, reason: "Execution completed successfully." };
+  }
+
+  const normActual = cleanActual.toLowerCase().replace(/\r\n/g, "\n").trim();
+  const normExpected = cleanExpected.toLowerCase().replace(/\r\n/g, "\n").trim();
+
+  if (normActual === normExpected || normActual.includes(normExpected)) {
+    return { score: 100, passed: true, reason: "Output matches expected result exactly." };
+  }
+
+  // Numerical value check
+  const expectedNumbers = (normExpected.match(/\b\d+(\.\d+)?\b/g) || []);
+  const actualNumbers = (normActual.match(/\b\d+(\.\d+)?\b/g) || []);
+
+  if (expectedNumbers.length > 0) {
+    const matchedNumbers = expectedNumbers.filter(num => actualNumbers.includes(num));
+    const numRatio = matchedNumbers.length / expectedNumbers.length;
+    if (numRatio === 0) {
+      return { score: 0, passed: false, reason: "Output numbers did not match expected results." };
+    } else if (numRatio === 1) {
+      return { score: 100, passed: true, reason: "All output numerical values match expected results." };
+    } else if (numRatio >= 0.3) {
+      return { score: 50, passed: false, reason: `Partially correct (${Math.round(numRatio * 100)}% of numerical values matched).` };
+    }
+  }
+
+  // Check matching tokens / values
+  const expectedTokens = normExpected
+    .replace(/[{}()[\],:"]/g, " ")
+    .split(/\s+/)
+    .filter(t => t.length > 1);
+
+  if (expectedTokens.length > 0) {
+    const matchedTokens = expectedTokens.filter(t => normActual.includes(t));
+    const ratio = matchedTokens.length / expectedTokens.length;
+    if (ratio >= 0.8) {
+      return { score: 100, passed: true, reason: "Output verified with expected data values." };
+    } else if (ratio >= 0.4) {
+      return { score: 50, passed: false, reason: `Partially correct (${Math.round(ratio * 100)}% token match with sample expected).` };
+    }
+  }
+
+  return { score: 0, passed: false, reason: "Output does not match sample expected output." };
+}
+
+function getPracticeQuestionForMilestone(m, targetRole, milestoneIndex) {
   const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
   const role = targetRole || "Software Engineering";
+  const parsedIdx = m?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+  const mIdx = Math.max(1, parseInt(parsedIdx || m?.milestoneIndex || milestoneIndex, 10) || 1);
   const lang = resolveLanguageForRole(role, title);
   const lower = `${title} ${role}`.toLowerCase();
 
+  // 1. React / Frontend Hooks & UI
   if (lang === "react" || lower.includes("react") || lower.includes("hook") || lower.includes("component")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on React Challenge: Milestone 1 Component Basics (${title})`,
+        prompt: `Create a clean, functional React component for ${title} that displays a user greeting card with a name, role badge, and active status. Verify your component renders properly in the Live Preview pane.`,
+        sampleInput: `Props: { name: 'Alex Johnson', role: '${role}', status: 'Active' }`,
+        sampleOutput: `Live Web Preview: Renders styled greeting card with user information and badge`,
+        starterCode: `// React Milestone 1: Component Fundamentals for: ${title}
+import React from 'react';
+
+export default function UserCard() {
+  const user = {
+    name: "Alex Johnson",
+    role: "${role}",
+    status: "Active"
+  };
+
+  return (
+    <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '380px', margin: '20px auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Milestone 1 • Fundamentals</span>
+      <h3 style={{ margin: '8px 0 4px', color: '#1e293b' }}>{user.name}</h3>
+      <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>Target Role: <strong>{user.role}</strong></p>
+      <div style={{ display: 'inline-block', padding: '4px 10px', background: '#dcfce7', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+        Status: {user.status}
+      </div>
+    </div>
+  );
+}`,
+        solutionCode: `// Milestone 1 React solution`,
+        language: "react",
+        milestoneIndex: 1,
+        difficulty: "Beginner"
+      };
+    }
+
     return {
       title: `Hands-on React Challenge: Build an Interactive Component for ${title}`,
       prompt: `Develop a functional React component demonstrating ${title}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset), and verify the live interactive UI in the Live Preview pane.`,
@@ -697,13 +801,17 @@ export default function InteractiveApp() {
     </div>
   );
 }`,
-      language: "react"
+      solutionCode: `// React State Solution`,
+      language: "react",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 2 ? "Elementary" : mIdx === 3 ? "Intermediate" : "Advanced"
     };
   }
 
+  // 2. HTML / CSS
   if (lang === "html" || lower.includes("html") || lower.includes("css") || lower.includes("flexbox") || lower.includes("grid")) {
     return {
-      title: `Hands-on Web Design Challenge: ${title}`,
+      title: `Hands-on Web Design Challenge: Milestone ${mIdx} Layout (${title})`,
       prompt: `Write clean HTML5 markup and modern CSS3 styles for ${title}. Structure the page elements with semantic tags, apply Flexbox or Grid for alignment, and preview your layout live in the Live Web Preview pane.`,
       sampleInput: `HTML5 semantic markup with CSS Flexbox styles`,
       sampleOutput: `Live Web Preview: Displays a polished, responsive styled UI card with hover effects`,
@@ -763,18 +871,55 @@ export default function InteractiveApp() {
 </head>
 <body>
   <article class="card">
-    <span class="badge">TOPIC MODULE</span>
+    <span class="badge">MILESTONE ${mIdx}</span>
     <h2>${title}</h2>
     <p>Semantic HTML5 and CSS3 styling demonstration for ${role}. Flexbox provides flexible alignment across viewport sizes.</p>
     <a href="#" class="btn">Explore Module</a>
   </article>
 </body>
 </html>`,
-      language: "html"
+      solutionCode: `<!-- HTML solution -->`,
+      language: "html",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 1 ? "Beginner" : "Elementary"
     };
   }
 
+  // 3. SQL / Database
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on SQL Challenge: Milestone 1 Basic Filtering (${title})`,
+        prompt: `Write a basic database query logic for ${title}. Filter all active records from a collection and project only id, name, and role.`,
+        sampleInput: `users = [{id: 1, name: 'Alice', active: true, role: 'Developer'}, {id: 2, name: 'Bob', active: false, role: 'Designer'}]`,
+        sampleOutput: `Expected: [{ id: 1, name: 'Alice', role: 'Developer' }]`,
+        starterCode: `// SQL Milestone 1: Basic Selection & Projection for: ${title}
+
+function queryActiveUsers(users) {
+  if (!Array.isArray(users)) return [];
+  return users
+    .filter(u => u.active === true)
+    .map(u => ({ id: u.id, name: u.name, role: u.role }));
+}
+
+// Sample Test Data
+const sampleUsers = [
+  { id: 1, name: "Alice", active: true, role: "Developer" },
+  { id: 2, name: "Bob", active: false, role: "Designer" },
+  { id: 3, name: "Charlie", active: true, role: "QA Engineer" }
+];
+
+console.log("Executing Milestone 1 Query for: ${title}...");
+const result = queryActiveUsers(sampleUsers);
+console.log("Query Result:", JSON.stringify(result));
+`,
+        solutionCode: `// Milestone 1 SQL solution`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Beginner"
+      };
+    }
+
     return {
       title: `Hands-on SQL Challenge: Relational Queries for ${title}`,
       prompt: `Write a database manipulation algorithm for ${title}. Perform an inner join between sample users and orders datasets, calculating total order amounts per user.`,
@@ -783,7 +928,6 @@ export default function InteractiveApp() {
       starterCode: `// Relational Data Query Challenge for: ${title}
 
 function executeRelationalJoin(users, orders) {
-  // Aggregate orders by user ID
   return users.map(user => {
     const userOrders = orders.filter(o => o.userId === user.id);
     const total = userOrders.reduce((acc, curr) => acc + curr.amount, 0);
@@ -804,11 +948,76 @@ console.log("Executing Query for: ${title}...");
 const result = executeRelationalJoin(users, orders);
 console.log("Query Result:", JSON.stringify(result, null, 2));
 `,
-      language: "node"
+      solutionCode: `// Reference SQL solution`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: mIdx <= 2 ? "Elementary" : "Intermediate"
     };
   }
 
+  // 4. Python
   if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 1 Basics & Variables (${title})`,
+        prompt: `Write a beginner Python program for ${title}. Calculate the total price of items including sales tax (8%). Define unit_price and quantity, compute subtotal and total, and print a formatted summary.`,
+        sampleInput: `price = 20.0, quantity = 2, tax_rate = 0.08`,
+        sampleOutput: `Bill Summary: {'subtotal': 40.0, 'tax': 3.2, 'total': 43.2, 'status': 'CALCULATED'}`,
+        starterCode: `# Python Milestone 1: Beginner Fundamentals for: ${title}
+def calculate_bill(price: float, quantity: int, tax_rate: float = 0.08) -> dict:
+    subtotal = round(price * quantity, 2)
+    tax = round(subtotal * tax_rate, 2)
+    total = round(subtotal + tax, 2)
+    return {
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": total,
+        "status": "CALCULATED"
+    }
+
+# Test execution:
+result = calculate_bill(20.0, 2)
+print("Bill Summary:", result)
+`,
+        solutionCode: `# Milestone 1 Python solution`,
+        language: "python",
+        milestoneIndex: 1,
+        difficulty: "Beginner"
+      };
+    }
+
+    if (mIdx === 2) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 2 Functions & Loops (${title})`,
+        prompt: `Write a Python function for ${title} that filters numbers above a given threshold from a list and computes their average.`,
+        sampleInput: `numbers = [10, 25, 40, 15, 60], threshold = 20`,
+        sampleOutput: `Filtered Summary: {'filtered_count': 3, 'average': 41.67, 'status': 'PROCESSED'}`,
+        starterCode: `# Python Milestone 2: Functions & Iterations for: ${title}
+from typing import List, Dict, Any
+
+def filter_and_average(numbers: List[float], threshold: float) -> Dict[str, Any]:
+    filtered = [n for n in numbers if n > threshold]
+    if not filtered:
+        return {"filtered_count": 0, "average": 0.0, "status": "EMPTY"}
+    avg = round(sum(filtered) / len(filtered), 2)
+    return {
+        "filtered_count": len(filtered),
+        "average": avg,
+        "status": "PROCESSED"
+    }
+
+# Test execution:
+test_nums = [10, 25, 40, 15, 60]
+result = filter_and_average(test_nums, 20)
+print("Filtered Summary:", result)
+`,
+        solutionCode: `# Milestone 2 Python solution`,
+        language: "python",
+        milestoneIndex: 2,
+        difficulty: "Elementary"
+      };
+    }
+
     return {
       title: `Hands-on Python Challenge: ${title}`,
       prompt: `Implement a clean Python data processing function for ${title}. Your code should validate input entries, compute statistical aggregations, and return a structured summary.`,
@@ -838,17 +1047,85 @@ print("Running Python Pipeline for: ${title}...")
 result = process_metrics_pipeline(test_data)
 print("Result Summary:", result)
 `,
-      language: "python"
+      solutionCode: `# Reference solution`,
+      language: "python",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 3 ? "Intermediate" : "Advanced"
+    };
+  }
+
+  // 5. Default General JavaScript
+  if (mIdx === 1) {
+    return {
+      title: `Practice Challenge: Milestone 1 Fundamentals (${title})`,
+      prompt: `Write a foundational JavaScript function for ${title} that checks whether a numerical test score meets the passing threshold (>= 60) and returns a structured evaluation object.`,
+      sampleInput: `score = 75`,
+      sampleOutput: `Evaluation Result: {"score":75,"status":"PASSED","verdict":"Requirement Met"}`,
+      starterCode: `// Milestone 1: Beginner Fundamentals for: ${title}
+// Target Role: ${role}
+
+function evaluateScore(score) {
+  const isPassing = typeof score === "number" && score >= 60;
+  return {
+    score: score,
+    status: isPassing ? "PASSED" : "FAILED",
+    verdict: isPassing ? "Requirement Met" : "Needs Retake"
+  };
+}
+
+// Sample test run
+const testScore = 75;
+console.log("Executing Milestone 1 task for ${title}...");
+const output = evaluateScore(testScore);
+console.log("Evaluation Result:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 1 solution`,
+      language: "node",
+      milestoneIndex: 1,
+      difficulty: "Beginner"
+    };
+  }
+
+  if (mIdx === 2) {
+    return {
+      title: `Practice Challenge: Milestone 2 Logic & Functions (${title})`,
+      prompt: `Write a JavaScript function for ${title} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum.`,
+      sampleInput: `transactions = [50, 120, 30, 200, 80], threshold = 100`,
+      sampleOutput: `Summary: {"count":2,"total":320,"status":"PROCESSED"}`,
+      starterCode: `// Milestone 2: Elementary Logic for: ${title}
+// Target Role: ${role}
+
+function summarizeHighValueTransactions(transactions, threshold) {
+  if (!Array.isArray(transactions)) return { count: 0, total: 0 };
+  const filtered = transactions.filter(t => t > threshold);
+  const total = filtered.reduce((acc, curr) => acc + curr, 0);
+  return {
+    count: filtered.length,
+    total: total,
+    status: "PROCESSED"
+  };
+}
+
+// Sample test run
+const sampleTransactions = [50, 120, 30, 200, 80];
+console.log("Executing Milestone 2 task for ${title}...");
+const output = summarizeHighValueTransactions(sampleTransactions, 100);
+console.log("Summary:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 2 solution`,
+      language: "node",
+      milestoneIndex: 2,
+      difficulty: "Elementary"
     };
   }
 
   return {
-    title: `Practice Challenge: Implement ${title} Logic`,
+    title: `Practice Challenge: Milestone ${mIdx} Algorithm (${title})`,
     prompt: `Write a program that processes data applying the core principles of ${title} for ${role}. Your code should handle edge cases, calculate metrics, and return structured results.`,
     sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
     sampleOutput: `Expected: { topic: "${title}", processedCount: 7, minValue: 7, maxValue: 89, status: "VERIFIED" }`,
     starterCode: `// Algorithmic Challenge for: ${title}
-// Target Role: ${role}
+// Target Role: ${role} (Milestone ${mIdx})
 
 function executeModuleTask(items) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -873,7 +1150,10 @@ console.log("Executing task for ${title}...");
 const output = executeModuleTask(testInput);
 console.log("Output Result:", JSON.stringify(output, null, 2));
 `,
-    language: lang
+    solutionCode: `// Solution code`,
+    language: lang,
+    milestoneIndex: mIdx,
+    difficulty: mIdx >= 4 ? "Advanced" : "Intermediate"
   };
 }
 
@@ -1181,15 +1461,15 @@ export default function AIRoadmap() {
 
       loadAITheoryForMilestone(title, role);
       loadMilestoneVideo(title, role);
-      loadAIPracticeForMilestone(title, role);
+      loadAIPracticeForMilestone(title, role, false, activeMilestone, activeMilestoneIdx);
       loadAIQuizForMilestone(title, role);
 
       // Auto-detect and set appropriate language & starter code for this milestone practice
-      const practice = getPracticeQuestionForMilestone(activeMilestone, role);
+      const practice = getActivePractice(activeMilestone, role, activeMilestoneIdx);
       const promptText = practice?.prompt || "";
-      const lang = resolveLanguageForRole(role, title, promptText);
+      const lang = practice?.language || resolveLanguageForRole(role, title, promptText);
       setCompilerLanguage(lang);
-      setCompilerCode("");
+      setCompilerCode(practice?.starterCode || "");
       setCompilerOutput("");
       setCompilerStatus("idle");
       if (lang === "html" || lang === "react") {
@@ -1263,15 +1543,43 @@ export default function AIRoadmap() {
     }
   };
 
-  const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false) => {
+  const getPracticeCacheKey = (title, role, mIdx) => {
+    const cleanTitle = String(title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim().toLowerCase();
+    const cleanRole = String(role || "").trim().toLowerCase();
+    const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+    return `m${idx}__${cleanTitle}__${cleanRole}`;
+  };
+
+  const getActivePractice = (m = null, role = null, mIdx = null) => {
+    const currentM = m || (activeMilestoneIdx !== null && milestones ? milestones[activeMilestoneIdx] : null) || activeMilestone;
+    const parsedIdx = currentM?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+    const idx = Math.max(1, parseInt(parsedIdx || (typeof mIdx === "number" ? mIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
+    const targetRole = role || currentRoadmap?.targetRole || goalInput || "Software Engineering";
+    const key = getPracticeCacheKey(currentM?.title, targetRole, idx);
+    return aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+  };
+
+  const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false, milestoneObj = null, milestoneIdx = null) => {
     if (!milestoneTitle) return;
     const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
     const cleanRole = String(targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentM = milestoneObj || (activeMilestoneIdx !== null && milestones ? milestones[activeMilestoneIdx] : null) || activeMilestone;
+    const parsedIdx = currentM?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+    const mIdx = Math.max(1, parseInt(parsedIdx || (typeof milestoneIdx === "number" ? milestoneIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
+    const cacheKey = getPracticeCacheKey(cleanTitle, cleanRole, mIdx);
 
     if (!forceRefresh && aiPracticeCache[cacheKey]) {
       return;
     }
+
+    const difficultyMap = {
+      1: "Beginner",
+      2: "Elementary",
+      3: "Intermediate",
+      4: "Advanced",
+      5: "Expert"
+    };
+    const difficulty = difficultyMap[mIdx] || (mIdx > 5 ? "Expert" : "Intermediate");
 
     setIsPracticeLoading(true);
     try {
@@ -1281,6 +1589,10 @@ export default function AIRoadmap() {
           milestoneTitle: cleanTitle,
           targetRole: cleanRole || currentRoadmap?.targetRole || goalInput,
           topic: cleanTitle,
+          milestoneIndex: mIdx,
+          difficulty,
+          topics: currentM?.topics || [],
+          description: currentM?.desc || "",
           forceRefresh: Boolean(forceRefresh),
         }),
       });
@@ -1552,11 +1864,7 @@ export default function AIRoadmap() {
     // Initialize compiler code for the selected milestone topic
     const role = currentRoadmap?.targetRole || goalInput || "Topic Practice";
     const title = targetM.title || "Topic";
-    const cleanTitle = String(title).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(role).trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const cachedPractice = aiPracticeCache[cacheKey];
-    const practice = cachedPractice || getPracticeQuestionForMilestone(targetM, role);
+    const practice = getActivePractice(targetM, role, index);
     const lang = practice?.language || resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
     setCompilerCode(practice?.starterCode || STARTER_TEMPLATES[lang] || "");
@@ -1573,11 +1881,7 @@ export default function AIRoadmap() {
 
   const handleCompilerLanguageChange = (newLang) => {
     setCompilerLanguage(newLang);
-    const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     if (currentPractice?.language === newLang && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
@@ -1594,11 +1898,7 @@ export default function AIRoadmap() {
   };
 
   const handleResetCompilerCode = () => {
-    const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
@@ -1619,12 +1919,12 @@ export default function AIRoadmap() {
     resetQuizState();
   };
 
-  const recordPracticeSuccess = async () => {
+  const recordPracticeScore = async (score) => {
     const activeM = milestones[activeMilestoneIdx];
     const mKey = activeM?.id || `m_${activeMilestoneIdx}`;
-    setPracticeScores((prev) => ({ ...prev, [mKey]: 100 }));
+    setPracticeScores((prev) => ({ ...prev, [mKey]: score }));
 
-    if (activeM && activeM.status !== "completed") {
+    if (score >= 70 && activeM && activeM.status !== "completed") {
       const newProgress = Math.max(activeM.progress || 0, 50);
       const updatedMilestonesRaw = milestones.map((m, idx) =>
         idx === activeMilestoneIdx
@@ -1644,6 +1944,8 @@ export default function AIRoadmap() {
       saveProgressToServer(currentRoadmap, updatedMilestones, activeM.id, newProgress, "in-progress");
     }
   };
+
+  const recordPracticeSuccess = () => recordPracticeScore(100);
 
   const handleGenerate = async (e) => {
     if (e) e.preventDefault();
@@ -1855,10 +2157,7 @@ export default function AIRoadmap() {
     const startTime = Date.now();
 
     const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
 
@@ -1939,15 +2238,19 @@ export default function AIRoadmap() {
     }
 
     const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     if (compilerLanguage === "html" || compilerLanguage === "react") {
-      recordPracticeSuccess();
-      setCompilerStatus("success");
-      setCompilerOutput(`✅ Practice Challenge Solution Accepted!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
+      const evalResult = evaluatePracticeSubmission(currentCode, "", currentPractice?.sampleOutput, currentPractice?.sampleInput, compilerLanguage);
+      if (evalResult.passed) {
+        recordPracticeScore(evalResult.score);
+        setCompilerStatus("success");
+        setCompilerOutput(`✅ Practice Challenge Solution Accepted!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
+      } else {
+        recordPracticeScore(0);
+        setCompilerStatus("error");
+        setCompilerOutput(`❌ Incomplete Solution (Score: 0%)\n\nReason: ${evalResult.reason}\nPlease write a valid, complete component before submitting.`);
+      }
       return;
     }
 
@@ -1983,28 +2286,40 @@ export default function AIRoadmap() {
       const result = data.data || data;
 
       if (result.compilationError) {
+        recordPracticeScore(0);
         setCompilerStatus("ce");
         setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Cannot Submit Solution: Compilation Error"}\n\n${result.stderr || "Check your syntax."}`);
         return;
       }
       if (result.timedOut) {
+        recordPracticeScore(0);
         setCompilerStatus("tle");
         setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Cannot Submit Solution: Time Limit Exceeded"} (${result.executionTime || 5000}ms)`);
         return;
       }
       if (result.exitCode !== 0 && result.exitCode !== undefined) {
+        recordPracticeScore(0);
         setCompilerStatus("error");
         setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Cannot Submit Solution: Runtime Error"} (exit code ${result.exitCode})\n\n${result.stderr || "Execution failed."}`);
         return;
       }
 
-      // Execution passed cleanly in Docker container!
-      recordPracticeSuccess();
-      setCompilerStatus("success");
-      const outputText = result.stdout?.trim() || "(No console output)";
-      setCompilerOutput(
-        `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText}\n\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
-      );
+      const outputText = result.stdout?.trim() || "";
+      const evalResult = evaluatePracticeSubmission(currentCode, outputText, currentPractice?.sampleOutput, currentPractice?.sampleInput, compilerLanguage);
+
+      recordPracticeScore(evalResult.score);
+
+      if (evalResult.passed) {
+        setCompilerStatus("success");
+        setCompilerOutput(
+          `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText || "(No console output)"}\n\nScore: ${evalResult.score}% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\n${evalResult.reason}\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
+        );
+      } else {
+        setCompilerStatus("error");
+        setCompilerOutput(
+          `❌ Submission Evaluated: Solution Incorrect (Score: ${evalResult.score}%)\n\nStandard Output:\n${outputText || "(No console output)"}\n\nExpected Output:\n${currentPractice?.sampleOutput || "Valid output required"}\n\nFeedback: ${evalResult.reason}\nPlease refine your solution to match the expected output before retrying.`
+        );
+      }
     } catch (err) {
       setCompilerStatus("error");
       setCompilerOutput(`❌ Network error submitting to Docker sandbox: ${err.message}`);
@@ -2842,11 +3157,13 @@ export default function AIRoadmap() {
 
               {/* ── PART 3: PRACTICE QUESTION & LIVE COMPILER ── */}
               {activeSection === "practice" && (() => {
+                const practice = getActivePractice();
                 const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
                 const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-                const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+                const parsedIdx = activeMilestone?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+                const mIdx = Math.max(1, parseInt(parsedIdx || (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1), 10) || 1);
+                const cacheKey = getPracticeCacheKey(cleanTitle, cleanRole, mIdx);
                 const aiPractice = aiPracticeCache[cacheKey];
-                const practice = aiPractice || getPracticeQuestionForMilestone(activeMilestone, currentRoadmap.targetRole);
                 return (
                   <div className="roadmap-section-card">
                     <div>
