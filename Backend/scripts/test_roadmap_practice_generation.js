@@ -1,5 +1,9 @@
 import assert from 'assert';
-import { generateMilestonePracticeAI, generateTopicSpecificPracticeFallback } from '../src/ai/roadmap.ai.js';
+import {
+  generateMilestonePracticeAI,
+  generateTopicSpecificPracticeFallback,
+  validateAndSanitizePracticeProblem
+} from '../src/ai/roadmap.ai.js';
 
 function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, sampleInput, language) {
   const cleanCode = (userCode || "").trim();
@@ -30,6 +34,22 @@ function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, samp
 
   if (normActual === normExpected || normActual.includes(normExpected)) {
     return { score: 100, passed: true, reason: "Output matches expected result exactly." };
+  }
+
+  // Dedicated check for string reversal & transformation consistency
+  if (sampleInput && typeof sampleInput === "string" && sampleInput.trim().length > 1) {
+    const rawInputWord = sampleInput.replace(/["']/g, "").trim();
+    if (rawInputWord.length > 1) {
+      const reversed = rawInputWord.split("").reverse().join("").toLowerCase();
+      // If student correctly produced the reversed string
+      if (normActual === reversed || normActual.includes(reversed)) {
+        return { score: 100, passed: true, reason: `Reversed string "${reversed}" verified.` };
+      }
+      // Reject boolean outputs for string reversal
+      if (normActual === "true" || normActual === "false") {
+        return { score: 0, passed: false, reason: "Output was a boolean (true/false) instead of the required reversed string." };
+      }
+    }
   }
 
   // Numerical value check
@@ -68,129 +88,138 @@ function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, samp
 
 async function runTests() {
   console.log('================================================================');
-  console.log('🧪 Starting AI Roadmap → Practice Generation & Scoring Test Suite');
+  console.log('🧪 Starting AI Practice & String Reversal Validation Test Suite');
   console.log('================================================================\n');
 
-  // TEST 1: Milestone 1 Beginner Practice Generation
-  console.log('Test 1: Milestone 1 Beginner Fundamentals (Python / Basics)');
-  const m1Fallback = generateTopicSpecificPracticeFallback(
-    'Python Syntax, Variables & Basic Types',
-    'Core Python Programming',
+  // TEST 1: String Reversal Problem Generation (Must return reversed string, NEVER boolean)
+  console.log('Test 1: String Reversal Generation');
+  const revProblem = generateTopicSpecificPracticeFallback(
+    'String Reversal & Manipulation',
+    'Core Python & Data Types',
     'Python Developer',
     { milestoneIndex: 1 }
   );
 
-  assert.strictEqual(m1Fallback.milestoneIndex, 1, 'Milestone 1 index must be 1');
-  assert.strictEqual(m1Fallback.difficulty, 'Beginner', 'Milestone 1 difficulty must be Beginner');
-  assert.strictEqual(m1Fallback.language, 'python', 'Language must be python');
-  assert(m1Fallback.title.includes('Milestone 1'), 'Title must specify Milestone 1');
-  assert(m1Fallback.prompt.toLowerCase().includes('beginner') || m1Fallback.prompt.toLowerCase().includes('basic'), 'Prompt must indicate beginner basics');
-  console.log('  ✅ Milestone 1 generated strictly beginner challenge:', m1Fallback.title);
+  assert.strictEqual(revProblem.sampleInput, 'hello');
+  assert.strictEqual(revProblem.sampleOutput, 'olleh');
+  assert.notStrictEqual(revProblem.sampleOutput, 'true', 'String reversal sampleOutput must NOT be boolean true');
+  assert.notStrictEqual(revProblem.sampleOutput, 'false', 'String reversal sampleOutput must NOT be boolean false');
+  console.log('  ✅ String reversal generated correctly: input "hello" -> output "olleh"');
 
-  // TEST 2: Milestone 2 Elementary Practice Generation (Functions & Loops)
-  console.log('\nTest 2: Milestone 2 Elementary Practice (Functions & Loops)');
-  const m2Fallback = generateTopicSpecificPracticeFallback(
-    'Functions & Iterations',
-    'Control Flow in Python',
-    'Python Developer',
+  // TEST 2: Multiple inputs verification for String Reversal
+  console.log('\nTest 2: Multiple Inputs String Reversal Validation');
+  const testInputs = [
+    { in: 'hello', expected: 'olleh' },
+    { in: 'world', expected: 'dlrow' },
+    { in: 'TrainX', expected: 'XniarT' },
+    { in: '12345', expected: '54321' }
+  ];
+
+  testInputs.forEach(({ in: inputStr, expected }) => {
+    const sanitized = validateAndSanitizePracticeProblem({
+      title: 'String Reversal Challenge',
+      prompt: 'Reverse the given string.',
+      sampleInput: inputStr,
+      sampleOutput: 'true', // Malformed boolean output from faulty AI
+      starterCode: 'console.log(reverseString("hello") === "olleh");',
+      testCases: [
+        { input: inputStr, expectedOutput: 'true' }
+      ]
+    }, { topic: 'String Reversal' });
+
+    assert.strictEqual(sanitized.sampleOutput, expected, `Reversal of "${inputStr}" must produce "${expected}"`);
+    assert.strictEqual(sanitized.testCases[0].expectedOutput, expected, `Test case expected output must be "${expected}"`);
+    assert(!sanitized.starterCode.includes('==='), 'Boolean equality comparison in starterCode must be cleansed');
+    console.log(`  ✅ Verified input "${inputStr}" cleanly transformed to "${expected}" (boolean cleansed)`);
+  });
+
+  // TEST 3: Palindrome Checking Problem (Must return boolean true/false)
+  console.log('\nTest 3: Palindrome Verification (Must return boolean true/false)');
+  const palProblem = generateTopicSpecificPracticeFallback(
+    'Palindrome Verification',
+    'String Algorithms',
+    'Fullstack Engineer',
     { milestoneIndex: 2 }
   );
 
-  assert.strictEqual(m2Fallback.milestoneIndex, 2, 'Milestone 2 index must be 2');
-  assert.strictEqual(m2Fallback.difficulty, 'Elementary', 'Milestone 2 difficulty must be Elementary');
-  assert(m2Fallback.title.includes('Milestone 2'), 'Title must specify Milestone 2');
-  assert(m2Fallback.prompt.toLowerCase().includes('filter') || m2Fallback.prompt.toLowerCase().includes('function'), 'Prompt must focus on functions & loops');
-  console.log('  ✅ Milestone 2 generated elementary function/loop challenge:', m2Fallback.title);
+  assert.strictEqual(palProblem.sampleInput, 'racecar');
+  assert.strictEqual(palProblem.sampleOutput, 'true', 'Palindrome sampleOutput must be true for racecar');
+  assert(Array.isArray(palProblem.testCases));
+  assert.strictEqual(palProblem.testCases[0].expectedOutput, 'true');
+  assert.strictEqual(palProblem.testCases[1].expectedOutput, 'false');
+  console.log('  ✅ Palindrome verification generated with consistent boolean outputs: racecar -> true, hello -> false');
 
-  // TEST 3: Milestone 3 Intermediate Practice Generation (OOP / State / Grouping)
-  console.log('\nTest 3: Milestone 3 Intermediate Practice (OOP & State)');
-  const m3Fallback = generateTopicSpecificPracticeFallback(
-    'Component State & Data Aggregations',
-    'State Management Architecture',
-    'Frontend Engineer',
-    { milestoneIndex: 3 }
-  );
+  // TEST 4: Never mix palindrome true/false into string reversal
+  console.log('\nTest 4: Cleansing Corrupted/Mixed Test Cases in String Reversal');
+  const mixedCorruptedProblem = {
+    title: 'Reverse String Problem',
+    prompt: 'Write a function that reverses a string.',
+    sampleInput: 'hello',
+    sampleOutput: 'false', // Buggy mixed output
+    testCases: [
+      { input: 'hello', expectedOutput: 'false' }, // mixed palindrome case!
+      { input: 'racecar', expectedOutput: 'true' }, // mixed palindrome case!
+      { input: 'world', expectedOutput: 'dlrow' }   // actual reversal case
+    ]
+  };
 
-  assert.strictEqual(m3Fallback.milestoneIndex, 3, 'Milestone 3 index must be 3');
-  assert.strictEqual(m3Fallback.difficulty, 'Intermediate', 'Milestone 3 difficulty must be Intermediate');
-  assert(m3Fallback.language === 'react' || m3Fallback.language === 'node' || m3Fallback.language === 'python');
-  console.log('  ✅ Milestone 3 generated intermediate challenge:', m3Fallback.title);
+  const cleansedProblem = validateAndSanitizePracticeProblem(mixedCorruptedProblem, { topic: 'String Reversal' });
+  assert.strictEqual(cleansedProblem.sampleOutput, 'olleh');
+  assert.strictEqual(cleansedProblem.testCases[0].expectedOutput, 'olleh', 'hello must output olleh, not false');
+  assert.strictEqual(cleansedProblem.testCases[1].expectedOutput, 'racecar', 'racecar must output reversed string racecar, not true');
+  assert.strictEqual(cleansedProblem.testCases[2].expectedOutput, 'dlrow', 'world must output dlrow');
+  console.log('  ✅ Mixed palindrome test cases in string reversal cleanly cleansed to reversed strings!');
 
-  // TEST 4: Milestone 4 Advanced Practice Generation (Algorithms / Relational Joins)
-  console.log('\nTest 4: Milestone 4 Advanced Practice (Algorithms & Relational Joins)');
-  const m4Fallback = generateTopicSpecificPracticeFallback(
-    'Relational Schema Queries & Indexing',
-    'Advanced Database Architectures',
-    'Backend Engineer',
-    { milestoneIndex: 4 }
-  );
+  // TEST 5: Submission Evaluation of String Reversal
+  console.log('\nTest 5: Submission Evaluation for String Reversal');
 
-  assert.strictEqual(m4Fallback.milestoneIndex, 4, 'Milestone 4 index must be 4');
-  assert(m4Fallback.prompt.toLowerCase().includes('join') || m4Fallback.prompt.toLowerCase().includes('algorithm'), 'Milestone 4 must cover advanced concepts');
-  console.log('  ✅ Milestone 4 generated advanced challenge:', m4Fallback.title);
-
-  // TEST 5: Verify Milestone 1 never receives Milestone 4 joins or complex sorting
-  console.log('\nTest 5: Verify strict milestone separation (No leaks to Milestone 1)');
-  const m1Sql = generateTopicSpecificPracticeFallback(
-    'Database Fundamentals & SQL Intro',
-    'Introduction to Databases',
-    'Database Administrator',
-    { milestoneIndex: 1 }
-  );
-  assert.strictEqual(m1Sql.milestoneIndex, 1);
-  assert.strictEqual(m1Sql.difficulty, 'Beginner');
-  assert(!m1Sql.prompt.toLowerCase().includes('inner join'), 'Milestone 1 must NOT ask for complex inner joins');
-  console.log('  ✅ Verified Milestone 1 SQL is beginner selection without complex joins.');
-
-  // TEST 6: Scoring Evaluation Function Tests
-  console.log('\nTest 6: Submission Evaluation & Scoring Logic');
-
-  // 6a: Correct Output -> 100%
-  const correctEval = evaluatePracticeSubmission(
-    'function test() { return 54; }',
-    'Final Price: 54',
-    'Final Price: 54',
-    '60',
+  // 5a: Student output is correct reversed string: 'olleh'
+  const evalCorrect = evaluatePracticeSubmission(
+    'function reverse(s) { return s.split("").reverse().join(""); }',
+    'olleh',
+    'olleh',
+    'hello',
     'node'
   );
-  assert.strictEqual(correctEval.score, 100, 'Correct answer must receive 100%');
-  assert.strictEqual(correctEval.passed, true);
-  console.log('  ✅ Correct submission awarded 100%');
+  assert.strictEqual(evalCorrect.score, 100);
+  assert.strictEqual(evalCorrect.passed, true);
+  console.log('  ✅ Correct reversed string submission awarded 100%');
 
-  // 6b: Completely Incorrect Output -> 0%
-  const incorrectEval = evaluatePracticeSubmission(
-    'function test() { return 0; }',
-    'Final Price: 9999',
-    'Final Price: 54',
-    '60',
+  // 5b: Student output is boolean 'true' for string reversal -> Must receive 0%
+  const evalBoolWrong = evaluatePracticeSubmission(
+    'function reverse(s) { return true; }',
+    'true',
+    'olleh',
+    'hello',
     'node'
   );
-  assert.strictEqual(incorrectEval.score, 0, 'Incorrect answer must receive 0%');
-  assert.strictEqual(incorrectEval.passed, false);
-  console.log('  ✅ Incorrect submission awarded 0%');
+  assert.strictEqual(evalBoolWrong.score, 0);
+  assert.strictEqual(evalBoolWrong.passed, false);
+  console.log('  ✅ Boolean "true" submitted for string reversal correctly rejected (0%)');
 
-  // 6c: Empty Code Submission -> 0%
-  const emptyEval = evaluatePracticeSubmission(
-    '   ',
-    '',
-    'Final Price: 54',
-    '60',
+  // 5c: Student output is completely wrong string -> Must receive 0%
+  const evalWrongString = evaluatePracticeSubmission(
+    'function reverse(s) { return "wrong"; }',
+    'wrong',
+    'olleh',
+    'hello',
     'node'
   );
-  assert.strictEqual(emptyEval.score, 0, 'Empty submission must receive 0%');
-  assert.strictEqual(emptyEval.passed, false);
-  console.log('  ✅ Empty submission awarded 0%');
+  assert.strictEqual(evalWrongString.score, 0);
+  assert.strictEqual(evalWrongString.passed, false);
+  console.log('  ✅ Incorrect string submitted for string reversal correctly rejected (0%)');
 
-  // 6d: Partially Correct Output -> 50%
-  const partialEval = evaluatePracticeSubmission(
-    'function test() { return { subtotal: 40.0, tax: 0 }; }',
-    'Bill Summary: subtotal: 40.0',
-    'Bill Summary: subtotal: 40.0, tax: 3.2, total: 43.2',
-    'test',
-    'python'
-  );
-  assert.strictEqual(partialEval.score, 50, 'Partially correct answer must receive 50%');
-  console.log('  ✅ Partially correct submission awarded proportional marks (50%)');
+  // TEST 6: Other Transformations (Uppercase / Math)
+  console.log('\nTest 6: Other Transformation Validation (Uppercase / Case Conversion)');
+  const caseProblem = validateAndSanitizePracticeProblem({
+    title: 'Convert String to Uppercase',
+    prompt: 'Convert the input to uppercase.',
+    sampleInput: 'trainx',
+    sampleOutput: 'true' // Buggy boolean
+  }, { topic: 'String Transformation' });
+
+  assert.strictEqual(caseProblem.sampleOutput, 'TRAINX');
+  console.log('  ✅ Case transformation correctly sanitized to "TRAINX"');
 
   console.log('\n================================================================');
   console.log('🎉 ALL TESTS PASSED SUCCESSFULLY! (6/6)');

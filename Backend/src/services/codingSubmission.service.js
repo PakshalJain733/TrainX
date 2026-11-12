@@ -21,7 +21,8 @@ import { query } from '../config/db.js';
  * read-only root, non-root user). Hidden expected outputs are never included
  * in the returned results.
  */
-export const evaluateCodeInSandbox = async ({ submittedCode: code, language, testCases = [] }) => {
+export const evaluateCodeInSandbox = async ({ submittedCode: code, language, testCases = [], function_name, functionName }) => {
+  const effectiveFunctionName = function_name || functionName || null;
   if (testCases.length === 0) {
     return {
       sandbox: 'docker',
@@ -53,6 +54,7 @@ export const evaluateCodeInSandbox = async ({ submittedCode: code, language, tes
         code,
         stdin: tc.input || '',
         timeoutSeconds: 5,
+        function_name: effectiveFunctionName,
       });
     } catch (error) {
       if (error.statusCode) throw error;
@@ -135,7 +137,7 @@ export const evaluateCodeInSandbox = async ({ submittedCode: code, language, tes
  * Hidden expected outputs are never included in the payload returned to the
  * client.
  */
-export const submitCodeAndSaveService = async ({ student_id, problem_id, code, language, source = null, task_id = null }) => {
+export const submitCodeAndSaveService = async ({ student_id, problem_id, code, language, source = null, task_id = null, function_name = null, functionName = null }) => {
   if (!problem_id) {
     const error = new Error('problem_id is required');
     error.statusCode = 400;
@@ -857,10 +859,12 @@ export const saveCodingSubmissionService = async ({
     resolvedPassedTestCases = parseInt(passed_test_cases, 10);
   } else {
     // If passed_test_cases is not provided, evaluate using the structured sandbox adapter
+    const effectiveFn = function_name || functionName || problem.function_name || problem.functionName || null;
     const evalResult = await evaluateCodeInSandbox({
       submittedCode: submitted_code,
       language,
       testCases,
+      function_name: effectiveFn,
     });
     resolvedPassedTestCases = evalResult.passed_test_cases;
     resolvedExecutionDetails = evalResult;

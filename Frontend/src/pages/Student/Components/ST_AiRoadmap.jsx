@@ -684,6 +684,22 @@ function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, samp
     return { score: 100, passed: true, reason: "Output matches expected result exactly." };
   }
 
+  // Dedicated check for string reversal & transformation consistency
+  if (sampleInput && typeof sampleInput === "string" && sampleInput.trim().length > 1) {
+    const rawInputWord = sampleInput.replace(/["']/g, "").trim();
+    if (rawInputWord.length > 1) {
+      const reversed = rawInputWord.split("").reverse().join("").toLowerCase();
+      // If student correctly produced the reversed string
+      if (normActual === reversed || normActual.includes(reversed)) {
+        return { score: 100, passed: true, reason: `Reversed string "${reversed}" verified.` };
+      }
+      // Reject boolean outputs for string reversal
+      if (normActual === "true" || normActual === "false") {
+        return { score: 0, passed: false, reason: "Output was a boolean (true/false) instead of the required reversed string." };
+      }
+    }
+  }
+
   // Numerical value check
   const expectedNumbers = (normExpected.match(/\b\d+(\.\d+)?\b/g) || []);
   const actualNumbers = (normActual.match(/\b\d+(\.\d+)?\b/g) || []);
@@ -727,7 +743,56 @@ function getPracticeQuestionForMilestone(m, targetRole, milestoneIndex) {
   const lang = resolveLanguageForRole(role, title);
   const lower = `${title} ${role}`.toLowerCase();
 
-  // 1. React / Frontend Hooks & UI
+  // 1. String Manipulation / Reversal / Palindrome
+  if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
+    const isPal = lower.includes("palindrome");
+    if (isPal) {
+      return {
+        title: `Hands-on Challenge: Palindrome Verification (${title})`,
+        prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+        sampleInput: `racecar`,
+        sampleOutput: `true`,
+        starterCode: `// Palindrome Verification for: ${title}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+        solutionCode: `// Complete Palindrome solution`,
+        language: "node",
+        milestoneIndex: mIdx,
+        difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+      };
+    }
+
+    // String Reversal: Strictly return reversed string, NEVER boolean
+    return {
+      title: `Hands-on Challenge: String Reversal (${title})`,
+      prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+      sampleInput: `hello`,
+      sampleOutput: `olleh`,
+      starterCode: `// String Reversal for: ${title}
+function reverseString(str) {
+  if (typeof str !== "string") return "";
+  return str.split("").reverse().join("");
+}
+
+// Test execution:
+const result = reverseString("hello");
+console.log(result);
+`,
+      solutionCode: `// Complete String Reversal solution`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+    };
+  }
+
+  // 2. React / Frontend Hooks & UI
   if (lang === "react" || lower.includes("react") || lower.includes("hook") || lower.includes("component")) {
     if (mIdx === 1) {
       return {
@@ -1543,6 +1608,45 @@ export default function AIRoadmap() {
     }
   };
 
+  const sanitizeClientPractice = (problem, contextTitle = "") => {
+    if (!problem || typeof problem !== "object") return problem;
+    const text = `${problem.title || ""} ${problem.prompt || ""} ${contextTitle || ""}`.toLowerCase();
+    const isPal = text.includes("palindrome");
+    const isReversal = (text.includes("reverse") || text.includes("reversal")) && !isPal;
+    const outputStr = String(problem.sampleOutput || "").trim().toLowerCase();
+    const isBoolOutput = outputStr === "true" || outputStr === "false" || outputStr === "boolean";
+
+    if (isReversal && isBoolOutput) {
+      let inputStr = "hello";
+      if (problem.sampleInput) {
+        const match = String(problem.sampleInput).match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+        if (match && match[1]) inputStr = match[1].trim();
+      }
+      const reversed = inputStr.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: reversed,
+        starterCode: problem.starterCode
+          ? problem.starterCode.replace(/console\.log\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*===?\s*[^)]+\)/g, "console.log($1($2))")
+          : problem.starterCode
+      };
+    }
+
+    if (isPal && !outputStr.includes("true") && !outputStr.includes("false")) {
+      const inputStr = String(problem.sampleInput || "racecar").replace(/["']/g, "").trim();
+      const clean = inputStr.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isPalVal = clean === clean.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: String(isPalVal)
+      };
+    }
+
+    return problem;
+  };
+
   const getPracticeCacheKey = (title, role, mIdx) => {
     const cleanTitle = String(title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim().toLowerCase();
     const cleanRole = String(role || "").trim().toLowerCase();
@@ -1556,7 +1660,8 @@ export default function AIRoadmap() {
     const idx = Math.max(1, parseInt(parsedIdx || (typeof mIdx === "number" ? mIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
     const targetRole = role || currentRoadmap?.targetRole || goalInput || "Software Engineering";
     const key = getPracticeCacheKey(currentM?.title, targetRole, idx);
-    return aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+    const rawPractice = aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+    return sanitizeClientPractice(rawPractice, currentM?.title);
   };
 
   const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false, milestoneObj = null, milestoneIdx = null) => {
@@ -1598,18 +1703,19 @@ export default function AIRoadmap() {
       });
 
       if (res && res.data && res.data.title && res.data.prompt) {
+        const sanitized = sanitizeClientPractice(res.data, cleanTitle);
         setAiPracticeCache((prev) => ({
           ...prev,
-          [cacheKey]: res.data,
+          [cacheKey]: sanitized,
         }));
-        if (res.data.language) {
-          setCompilerLanguage(res.data.language);
+        if (sanitized.language) {
+          setCompilerLanguage(sanitized.language);
         }
-        if (res.data.starterCode) {
-          setCompilerCode((prevCode) => (prevCode ? prevCode : res.data.starterCode));
+        if (sanitized.starterCode) {
+          setCompilerCode((prevCode) => (prevCode ? prevCode : sanitized.starterCode));
         }
-        if (res.data.sampleInput) {
-          setCustomInput(res.data.sampleInput);
+        if (sanitized.sampleInput) {
+          setCustomInput(sanitized.sampleInput);
         }
       }
     } catch (err) {
@@ -1867,7 +1973,8 @@ export default function AIRoadmap() {
     const practice = getActivePractice(targetM, role, index);
     const lang = practice?.language || resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
-    setCompilerCode(practice?.starterCode || STARTER_TEMPLATES[lang] || "");
+    const initialStarter = practice?.starter_templates?.[lang] || practice?.starterCode || STARTER_TEMPLATES[lang] || "";
+    setCompilerCode(initialStarter);
     setCompilerOutput("");
     setCompilerStatus("idle");
     setCustomInput(practice?.sampleInput || "");
@@ -1883,7 +1990,9 @@ export default function AIRoadmap() {
     setCompilerLanguage(newLang);
     const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === newLang && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[newLang]) {
+      setCompilerCode(currentPractice.starter_templates[newLang]);
+    } else if (currentPractice?.language === newLang && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[newLang] || "");
@@ -1900,7 +2009,9 @@ export default function AIRoadmap() {
   const handleResetCompilerCode = () => {
     const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[compilerLanguage]) {
+      setCompilerCode(currentPractice.starter_templates[compilerLanguage]);
+    } else if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[compilerLanguage] || "");
@@ -2169,7 +2280,8 @@ export default function AIRoadmap() {
         body: JSON.stringify({
           language: compilerLanguage,
           code: compilerCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          stdin: typeof stdin === "string" ? stdin : String(stdin ?? ""),
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -2262,17 +2374,30 @@ export default function AIRoadmap() {
     }
     setCompilerActiveTab("terminal");
 
-    const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
+    const activeTestCases = Array.isArray(currentPractice?.testCases) && currentPractice.testCases.length > 0
+      ? currentPractice.testCases.map((tc, idx) => ({
+          id: tc.id || idx + 1,
+          input: tc.input || "",
+          expected_output: tc.expected_output || tc.output || tc.expectedOutput || "",
+          is_hidden: Boolean(tc.is_hidden || tc.isHidden),
+        }))
+      : [
+          { id: 1, input: currentPractice?.sampleInput || "sample", expected_output: currentPractice?.sampleOutput || "sample", is_hidden: false },
+          { id: 2, input: (currentPractice?.sampleInput || "sample") + " 2", expected_output: (currentPractice?.sampleOutput || "sample") + " 2", is_hidden: false },
+          { id: 3, input: (currentPractice?.sampleInput || "sample") + " 3", expected_output: (currentPractice?.sampleOutput || "sample") + " 3", is_hidden: true },
+          { id: 4, input: (currentPractice?.sampleInput || "sample") + " 4", expected_output: (currentPractice?.sampleOutput || "sample") + " 4", is_hidden: true },
+        ];
 
     try {
       const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/code/run`, {
+      const res = await fetch(`${baseUrl}/code/evaluate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           language: compilerLanguage,
           code: currentCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          test_cases: activeTestCases,
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -2283,46 +2408,58 @@ export default function AIRoadmap() {
         return;
       }
 
-      const result = data.data || data;
+      const evalData = data.data || data;
+      const passed = evalData.passed_test_cases || 0;
+      const total = evalData.total_test_cases || activeTestCases.length;
+      const percentage = evalData.percentage ?? (total > 0 ? Math.round((passed / total) * 100) : 0);
 
-      if (result.compilationError) {
-        recordPracticeScore(0);
+      recordPracticeScore(percentage);
+
+      if (evalData.compilation_error) {
         setCompilerStatus("ce");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Cannot Submit Solution: Compilation Error"}\n\n${result.stderr || "Check your syntax."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Compilation Error"}\n\nPlease check your syntax and language compatibility.`);
         return;
       }
-      if (result.timedOut) {
-        recordPracticeScore(0);
+      if (evalData.timed_out) {
         setCompilerStatus("tle");
-        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Cannot Submit Solution: Time Limit Exceeded"} (${result.executionTime || 5000}ms)`);
+        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Time Limit Exceeded"}\n\nExecution exceeded sandbox timeout (5000ms).`);
         return;
       }
-      if (result.exitCode !== 0 && result.exitCode !== undefined) {
-        recordPracticeScore(0);
+      if (evalData.runtime_error && passed === 0) {
         setCompilerStatus("error");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Cannot Submit Solution: Runtime Error"} (exit code ${result.exitCode})\n\n${result.stderr || "Execution failed."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Runtime Error"}\n\nCheck for unhandled exceptions or out-of-bounds access.`);
         return;
       }
 
-      const outputText = result.stdout?.trim() || "";
-      const evalResult = evaluatePracticeSubmission(currentCode, outputText, currentPractice?.sampleOutput, currentPractice?.sampleInput, compilerLanguage);
+      const results = Array.isArray(evalData.results) ? evalData.results : [];
+      let breakdownLines = [];
+      results.forEach((r, idx) => {
+        const isHidden = Boolean(r.is_hidden);
+        const icon = r.passed ? "✅" : "❌";
+        if (isHidden) {
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Hidden): ${r.passed ? "Passed" : "Wrong Answer"}`);
+        } else {
+          const detail = r.passed
+            ? "Passed"
+            : `Failed (Expected: "${r.expected_output}", Got: "${(r.actual_output || "").trim()}")`;
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Visible): ${detail}`);
+        }
+      });
 
-      recordPracticeScore(evalResult.score);
-
-      if (evalResult.passed) {
+      if (percentage === 100) {
         setCompilerStatus("success");
         setCompilerOutput(
-          `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText || "(No console output)"}\n\nScore: ${evalResult.score}% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\n${evalResult.reason}\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
+          `🎉 Solution Accepted! (Passed ${passed}/${total} Test Cases in ${evalData.execution_time_ms || 0}ms)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nScore Awarded: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz to unlock.`
         );
       } else {
         setCompilerStatus("error");
         setCompilerOutput(
-          `❌ Submission Evaluated: Solution Incorrect (Score: ${evalResult.score}%)\n\nStandard Output:\n${outputText || "(No console output)"}\n\nExpected Output:\n${currentPractice?.sampleOutput || "Valid output required"}\n\nFeedback: ${evalResult.reason}\nPlease refine your solution to match the expected output before retrying.`
+          `❌ Solution Not Accepted (Verdict: ${(evalData.status || "wrong_answer").toUpperCase()})\nPassed: ${passed}/${total} Test Cases (${percentage}% Score)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nPlease review the failed test cases and refine your implementation before retrying.`
         );
       }
     } catch (err) {
       setCompilerStatus("error");
-      setCompilerOutput(`❌ Network error submitting to Docker sandbox: ${err.message}`);
+      setCompilerOutput(`❌ Network error submitting to evaluation engine: ${err.message}`);
     }
   };
 

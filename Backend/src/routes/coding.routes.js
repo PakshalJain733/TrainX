@@ -1,5 +1,5 @@
 import express from 'express';
-import { runCodeController, submitCodeController, mySubmissionsController } from '../controllers/coding.controller.js';
+import { runCodeController, submitCodeController, evaluateCodeController, mySubmissionsController } from '../controllers/coding.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
@@ -8,10 +8,12 @@ const router = express.Router();
 /**
  * Secure coding execution endpoints (require authentication).
  * POST /api/v1/code/run             - execute a single snippet
+ * POST /api/v1/code/evaluate        - evaluate against arbitrary/generated test cases (e.g. AI Roadmap)
  * POST /api/v1/code/submit          - evaluate against stored test cases and save
  * GET  /api/v1/code/submissions/my  - get authenticated student's own submissions
  */
 router.post('/run', authenticateToken, requireFeature('codingCompiler'), runCodeController);
+router.post('/evaluate', authenticateToken, requireFeature('codingCompiler'), evaluateCodeController);
 router.post('/submit', authenticateToken, requireFeature('codingCompiler'), submitCodeController);
 router.get('/submissions/my', authenticateToken, mySubmissionsController);
 

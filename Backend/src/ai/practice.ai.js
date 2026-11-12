@@ -1,4 +1,5 @@
 import { generateJSON, describeProvider } from './aiClient.js';
+import { validateAndSanitizePracticeProblem } from './roadmap.ai.js';
 
 /**
  * Provider-agnostic AI Coding Practice Problem Generator
@@ -69,7 +70,7 @@ DO NOT include markdown code blocks or backticks. Return the JSON object directl
     });
 
     if (res && res.title && res.description) {
-      return {
+      const parsedProblem = {
         title: String(res.title).trim(),
         category: res.category || cleanTopic,
         topic: res.category || cleanTopic,
@@ -92,6 +93,7 @@ DO NOT include markdown code blocks or backticks. Return the JSON object directl
           description: tc.description || `Test case ${idx + 1}`,
         })) : [],
       };
+      return validateAndSanitizePracticeProblem(parsedProblem, { topic: cleanTopic });
     }
   } catch (err) {
     console.warn(`[Practice AI] Live AI problem generation warning for "${cleanTopic}": ${err.message}`);

@@ -698,6 +698,216 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
 /**
  * Generates an in-depth, hands-on practice coding challenge for a milestone topic using AI
  */
+/**
+ * Validates and sanitizes generated practice problems and test cases for strict logical consistency.
+ * Prevents mixing of problem types (e.g. palindrome true/false outputs on string-reversal problems).
+ */
+export function validateAndSanitizePracticeProblem(problem, context = {}) {
+  if (!problem || typeof problem !== 'object') return problem;
+
+  const combinedText = `${problem.title || ''} ${problem.prompt || ''} ${problem.description || ''} ${context.topic || ''} ${context.title || ''}`.toLowerCase();
+  
+  const isPalindromeProblem = combinedText.includes('palindrome');
+  const isStringReversalProblem = (combinedText.includes('reverse') || combinedText.includes('reversal')) && !isPalindromeProblem;
+  const isCaseConversionProblem = (combinedText.includes('uppercase') || combinedText.includes('lowercase') || combinedText.includes('capitalize')) && !isPalindromeProblem;
+
+  // 1. STRING REVERSAL SANITIZATION
+  if (isStringReversalProblem) {
+    let currentInput = String(problem.sampleInput || 'hello').trim();
+    const cleanedInputMatch = currentInput.match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+    const cleanWord = (cleanedInputMatch && cleanedInputMatch[1]) ? cleanedInputMatch[1].trim() : 'hello';
+    const reversedWord = cleanWord.split('').reverse().join('');
+
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+    // If output is boolean (true/false) or does not contain the reversed string, replace with actual reversed string
+    if (outputStr === 'true' || outputStr === 'false' || outputStr === 'boolean' || (!outputStr.includes(reversedWord.toLowerCase()) && (outputStr.includes('true') || outputStr.includes('false')))) {
+      problem.sampleInput = cleanWord;
+      problem.sampleOutput = reversedWord;
+    }
+
+    // Fix starterCode if it has boolean comparison e.g. console.log(reverseString("hello") === "olleh")
+    if (problem.starterCode) {
+      problem.starterCode = problem.starterCode
+        .replace(/console\.log\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*===?\s*[^)]+\)/g, 'console.log($1($2))')
+        .replace(/print\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*==\s*[^)]+\)/g, 'print($1($2))');
+    }
+
+    // Sanitize test cases: ensure each expectedOutput is the actual reversed string of its input
+    const fallbackWords = ['hello', 'world', 'TrainX', '12345'];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
+      problem.testCases = problem.testCases.map((tc, idx) => {
+        let tcInput = String(tc.input || '').trim();
+        const tcMatch = tcInput.match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+        const tcWord = (tcMatch && tcMatch[1]) ? tcMatch[1].trim() : (tcInput || fallbackWords[idx % fallbackWords.length]);
+        const tcReversed = tcWord.split('').reverse().join('');
+        return {
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
+          output: tcReversed,
+          expected_output: tcReversed,
+          expectedOutput: tcReversed,
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
+          description: `Reverses "${tcWord}" to "${tcReversed}"`
+        };
+      });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const w = fallbackWords[idx % fallbackWords.length];
+        const rev = w.split('').reverse().join('');
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${w}"`,
+          output: rev,
+          expected_output: rev,
+          expectedOutput: rev,
+          is_hidden: true,
+          isHidden: true,
+          description: `Reverses "${w}" to "${rev}"`
+        });
+      }
+    } else {
+      problem.testCases = fallbackWords.map((w, idx) => ({
+        id: idx + 1,
+        input: `"${w}"`,
+        output: w.split('').reverse().join(''),
+        expected_output: w.split('').reverse().join(''),
+        expectedOutput: w.split('').reverse().join(''),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+      }));
+    }
+  }
+
+  // 2. PALINDROME PROBLEM SANITIZATION
+  if (isPalindromeProblem) {
+    let currentInput = String(problem.sampleInput || 'racecar').trim();
+    const cleanWord = currentInput.replace(/["']/g, '').trim() || 'racecar';
+    const cleanAlphanum = cleanWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isPal = cleanAlphanum === cleanAlphanum.split('').reverse().join('');
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+
+    // Palindrome check MUST return boolean true or false
+    if (!outputStr.includes('true') && !outputStr.includes('false')) {
+      problem.sampleInput = cleanWord;
+      problem.sampleOutput = String(isPal);
+    }
+
+    // Sanitize test cases to be strictly boolean
+    const palWords = [
+      { word: 'racecar', isPal: true },
+      { word: 'hello', isPal: false },
+      { word: 'A man, a plan, a canal: Panama', isPal: true },
+      { word: 'TrainX', isPal: false },
+    ];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
+      problem.testCases = problem.testCases.map((tc, idx) => {
+        const fallback = palWords[idx % palWords.length];
+        const tcWord = String(tc.input || fallback.word).replace(/["']/g, '').trim();
+        const tcClean = tcWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const tcIsPal = tcClean === tcClean.split('').reverse().join('');
+        return {
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
+          output: String(tcIsPal),
+          expected_output: String(tcIsPal),
+          expectedOutput: String(tcIsPal),
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
+          description: `Checks whether "${tcWord}" is a palindrome (${tcIsPal})`
+        };
+      });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const item = palWords[idx % palWords.length];
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${item.word}"`,
+          output: String(item.isPal),
+          expected_output: String(item.isPal),
+          expectedOutput: String(item.isPal),
+          is_hidden: true,
+          isHidden: true,
+          description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+        });
+      }
+    } else {
+      problem.testCases = palWords.map((item, idx) => ({
+        id: idx + 1,
+        input: `"${item.word}"`,
+        output: String(item.isPal),
+        expected_output: String(item.isPal),
+        expectedOutput: String(item.isPal),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+        description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+      }));
+    }
+  }
+
+  // 3. CASE CONVERSION SANITIZATION
+  if (isCaseConversionProblem) {
+    let currentInput = String(problem.sampleInput || 'hello world').trim();
+    const cleanWord = currentInput.replace(/["']/g, '').trim();
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+    if (outputStr === 'true' || outputStr === 'false') {
+      if (combinedText.includes('uppercase')) {
+        problem.sampleOutput = cleanWord.toUpperCase();
+      } else if (combinedText.includes('lowercase')) {
+        problem.sampleOutput = cleanWord.toLowerCase();
+      }
+    }
+  }
+
+  // 4. UNIFIED LEETCODE COMPILER METADATA (Function Signatures & Test Cases)
+  if (!problem.function_name) {
+    if (isStringReversalProblem) problem.function_name = 'reverseString';
+    else if (isPalindromeProblem) problem.function_name = 'isPalindrome';
+    else if (isCaseConversionProblem) problem.function_name = 'convertCase';
+    else {
+      const fnMatch = String(problem.starterCode || '').match(/(?:function|def)\s+([a-zA-Z0-9_]+)/);
+      problem.function_name = fnMatch ? fnMatch[1] : 'solve';
+    }
+  }
+
+  const fnName = problem.function_name;
+
+  if (!problem.starter_templates) {
+    problem.starter_templates = {
+      node: `// Implement the function\nfunction ${fnName}(input) {\n  // Write your code here\n  \n}\n`,
+      python: `# Implement the function\ndef ${fnName}(input):\n    # Write your code here\n    pass\n`,
+      java: `class Solution {\n    public String ${fnName}(String input) {\n        // Write your code here\n        return "";\n    }\n}\n`,
+      cpp: `class Solution {\npublic:\n    string ${fnName}(string input) {\n        // Write your code here\n        return "";\n    }\n};\n`
+    };
+  }
+
+  // Ensure testCases has at least 4 test cases (2 visible + 2 hidden)
+  if (!Array.isArray(problem.testCases) || problem.testCases.length < 4) {
+    const sIn = problem.sampleInput || 'sample';
+    const sOut = problem.sampleOutput || 'sample';
+    const existing = Array.isArray(problem.testCases) ? problem.testCases : [];
+    const baseCases = [
+      ...existing,
+      { input: `"${sIn}"`, output: sOut, expected_output: sOut, is_hidden: false },
+      { input: `"${sIn} 2"`, output: `${sOut} 2`, expected_output: `${sOut} 2`, is_hidden: false },
+      { input: `"${sIn} hidden 1"`, output: `${sOut} hidden 1`, expected_output: `${sOut} hidden 1`, is_hidden: true },
+      { input: `"${sIn} hidden 2"`, output: `${sOut} hidden 2`, expected_output: `${sOut} hidden 2`, is_hidden: true },
+    ].slice(0, 4);
+
+    problem.testCases = baseCases.map((tc, idx) => ({
+      id: tc.id || idx + 1,
+      input: tc.input,
+      output: tc.output || tc.expected_output,
+      expected_output: tc.expected_output || tc.output,
+      expectedOutput: tc.expected_output || tc.output,
+      is_hidden: idx >= 2,
+      isHidden: idx >= 2,
+    }));
+  }
+
+  return problem;
+}
+
 export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '', topic = '', options = {}) => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
   const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
@@ -728,12 +938,6 @@ CRITICAL REQUIREMENTS:
    ${topicsList ? `- Milestone Topic Outline: ${topicsList}` : ''}
    - The challenge MUST strictly and exclusively focus on concepts covered within Milestone ${mIdx} ("${cleanTitle}").
    - DO NOT introduce, test, or mix topics from other milestones or advanced tiers.
-   - For example:
-     * Milestone 1 is strictly for BEGINNER FUNDAMENTALS (basic syntax, variables, simple arithmetic calculations, basic boolean/if-else logic, basic string formatting/greeting, or basic markup/profile elements). NEVER ask for complex sorting algorithms, recursion, OOP hierarchies, database joins, or complex architectures in Milestone 1!
-     * Milestone 2 is for ELEMENTARY CONCEPTS (functions, loops, list/array transformations, basic filtering).
-     * Milestone 3 is for INTERMEDIATE CONCEPTS (OOP classes/records, dictionaries/maps, state management, basic queries).
-     * Milestone 4 is for ADVANCED CONCEPTS (algorithms, async/await, REST API integration, indexing/joins).
-     * Milestone 5+ is for EXPERT CONCEPTS (architectures, system scalability, end-to-end patterns).
 
 2. DOMAIN & LANGUAGE ALIGNMENT:
    - The challenge MUST directly test practical implementation of "${cleanTopic}" at the Milestone ${mIdx} difficulty tier.
@@ -749,8 +953,14 @@ CRITICAL REQUIREMENTS:
 3. REALISTIC PROBLEM STATEMENT:
    - Provide a clear, engaging 2-3 sentence problem description with requirements and constraints strictly matching Milestone ${mIdx}.
 
-4. CONCRETE SAMPLE INPUT & EXPECTED OUTPUT:
-   - Provide realistic sample input and expected sample output.
+4. STRICT PROBLEM-TYPE AND EXPECTED OUTPUT CONSISTENCY:
+   - Every sampleInput and expected sampleOutput MUST strictly match the exact problem statement.
+   - STRING REVERSAL: If the problem asks to reverse a string (e.g. reverseString("hello")), the expected output MUST ALWAYS be the reversed string ("olleh"), NEVER a boolean true/false!
+     * Example: Input "hello" -> Output "olleh". Input "world" -> Output "dlrow". Input "TrainX" -> Output "XniarT".
+   - PALINDROME CHECK: If the problem asks to check whether a string is a palindrome (e.g. isPalindrome("racecar")), the output MUST be boolean true/false.
+   - NEVER MIX EXAMPLES, TEST CASES, OR EXPECTED OUTPUTS FROM DIFFERENT PROBLEM TYPES. A string reversal challenge must NEVER contain palindrome true/false outputs.
+   - TRANSFORMATION PROBLEMS: For any transformation, formatting, or math (case conversion, sorting, calculating totals), the expected output must be the transformed result itself, NEVER boolean validation flags.
+   - The starterCode test invocation must print the actual return value (e.g. console.log(reverseString("hello"))), NEVER a boolean comparison assertion like console.log(reverseString("hello") === "olleh").
 
 5. WORKING STARTER CODE & SOLUTION CODE:
    - Provide boilerplate code with function signature, helpful inline comments, and a runnable test invocation at the bottom so clicking "Run Code" produces clean console output immediately.
@@ -761,7 +971,7 @@ Output ONLY valid JSON strictly matching this schema without markdown backticks:
   "title": "Hands-on Challenge: Specific Topic Title for ${cleanTopic}",
   "prompt": "Detailed challenge statement explaining what function/component to build...",
   "sampleInput": "Concrete input data...",
-  "sampleOutput": "Concrete expected output...",
+  "sampleOutput": "Concrete expected output matching the problem requirements...",
   "starterCode": "// Starter code with instructions\\nfunction solve() {\\n  // Your implementation\\n}\\n",
   "solutionCode": "// Reference solution...",
   "language": "node",
@@ -771,25 +981,85 @@ Output ONLY valid JSON strictly matching this schema without markdown backticks:
 
   try {
     const parsed = await generateJSON(prompt, {
-      system: 'You are an AI coding exercise generator. Output valid JSON strictly matching the practice challenge schema with 100% topic and milestone difficulty relevance.',
+      system: 'You are an AI coding exercise generator. Output valid JSON strictly matching the practice challenge schema with 100% topic, milestone difficulty, and expected output consistency.',
       temperature: 0.7,
       maxTokens: 3000,
       timeoutMs: 45000,
     });
 
     if (parsed && parsed.title && parsed.prompt) {
-      return parsed;
+      return validateAndSanitizePracticeProblem(parsed, { topic: cleanTopic, title: cleanTitle });
     }
   } catch (err) {
     console.warn(`[AI Engine] Practice generation warning for Milestone ${mIdx} ("${cleanTopic}"): ${err.message}`);
   }
 
-  return generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, { milestoneIndex: mIdx, difficulty });
+  const fallback = generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, { milestoneIndex: mIdx, difficulty });
+  return validateAndSanitizePracticeProblem(fallback, { topic: cleanTopic, title: cleanTitle });
 };
 
 export function generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, options = {}) {
   const mIdx = Math.max(1, parseInt(options?.milestoneIndex, 10) || 1);
   const lower = `${cleanTopic} ${cleanTitle} ${cleanRole}`.toLowerCase();
+
+  // 1. String Manipulation / Reversal / Palindrome
+  if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
+    const isPal = lower.includes("palindrome");
+    if (isPal) {
+      return {
+        title: `Hands-on Challenge: Palindrome Verification (${cleanTopic})`,
+        prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+        sampleInput: `racecar`,
+        sampleOutput: `true`,
+        starterCode: `// Palindrome Verification for: ${cleanTopic}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+        solutionCode: `// Complete Palindrome solution`,
+        language: "node",
+        milestoneIndex: mIdx,
+        difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+        testCases: [
+          { input: "racecar", expectedOutput: "true", isHidden: false, description: "Standard palindrome" },
+          { input: "hello", expectedOutput: "false", isHidden: false, description: "Non-palindrome" },
+          { input: "madam", expectedOutput: "true", isHidden: true, description: "Word palindrome" }
+        ]
+      };
+    }
+
+    // String Reversal: Strictly return reversed string, NEVER boolean
+    return {
+      title: `Hands-on Challenge: String Reversal (${cleanTopic})`,
+      prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+      sampleInput: `hello`,
+      sampleOutput: `olleh`,
+      starterCode: `// String Reversal for: ${cleanTopic}
+function reverseString(str) {
+  if (typeof str !== "string") return "";
+  return str.split("").reverse().join("");
+}
+
+// Test execution:
+const result = reverseString("hello");
+console.log(result);
+`,
+      solutionCode: `// Complete String Reversal solution`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+      testCases: [
+        { input: "hello", expectedOutput: "olleh", isHidden: false, description: "Reverse hello" },
+        { input: "world", expectedOutput: "dlrow", isHidden: false, description: "Reverse world" },
+        { input: "TrainX", expectedOutput: "XniarT", isHidden: true, description: "Reverse TrainX" }
+      ]
+    };
+  }
 
   // 1. React / Frontend Hooks & UI
   if (lower.includes("react") || lower.includes("hook") || lower.includes("state") || lower.includes("component")) {
