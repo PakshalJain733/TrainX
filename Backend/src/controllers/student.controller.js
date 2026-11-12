@@ -676,6 +676,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
     });
 
     let submissionMap = new Map();
+    let attemptsMap = new Map(); // tracks attempt count per problem
     if (callerId) {
       try {
         const solvedRows = await query(
@@ -688,6 +689,8 @@ export const getStudentPracticeProblems = async (req, res, next) => {
         if (Array.isArray(solvedRows)) {
           solvedRows.forEach(r => {
             const pId = Number(r.problem_id);
+            // Count every row as an attempt
+            attemptsMap.set(pId, (attemptsMap.get(pId) || 0) + 1);
             const prev = submissionMap.get(pId);
             const rScore = parseFloat(r.marks ?? r.score ?? 0);
             if (!prev || rScore >= prev.score) {
@@ -742,6 +745,9 @@ export const getStudentPracticeProblems = async (req, res, next) => {
           score_obtained: sub ? sub.score : null,
           marks_obtained: sub ? sub.score : null,
           percentage: sub ? sub.percentage : null,
+          attempts_count: attemptsMap.get(Number(p.id)) || 0,
+          attemptsCount: attemptsMap.get(Number(p.id)) || 0,
+          max_attempts: 3,
         };
       });
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);

@@ -164,11 +164,18 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     throw error;
   }
 
-  // ── ATTEMPT LIMIT: Maximum 3 submissions allowed per problem ──
+  const numericProblemId = parseInt(problem_id, 10);
+  const cleanTaskId = task_id ? String(task_id).replace(/[^0-9]/g, '') : null;
+  const numericTaskId = cleanTaskId ? parseInt(cleanTaskId, 10) : null;
+
+  const isExplicitPractice = source === 'practice' || source === 'practice_problem' || String(task_id || '').toLowerCase().startsWith('practice');
+  const isExplicitBatch = source === 'batch_task' || String(task_id || '').toLowerCase().startsWith('task-');
+
+  // ── ATTEMPT LIMIT: Maximum 3 submissions allowed per practice problem ──
   const targetStudentId = student.id || student_id;
   const targetProbId = parseInt(problem_id, 10);
   let attemptCount = 0;
-  if (!isNaN(targetProbId)) {
+  if (!isExplicitBatch && !isNaN(targetProbId)) {
     try {
       const prevSubmissions = await query(
         `SELECT COUNT(*) as cnt FROM coding_submissions WHERE student_id = ? AND problem_id = ?`,
@@ -193,18 +200,36 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
   let isBatchTask = false;
   let batchTaskRecord = null;
 
-  const numericProblemId = parseInt(problem_id, 10);
-  const cleanTaskId = task_id ? String(task_id).replace(/[^0-9]/g, '') : null;
-  const numericTaskId = cleanTaskId ? parseInt(cleanTaskId, 10) : null;
+  // 1. If explicit practice problem, look in practice_problems FIRST and NEVER treat as batch task
+  if (isExplicitPractice) {
+    try {
+      const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
+      if (pRows && pRows.length > 0) {
+        problem = {
+          id: pRows[0].id,
+          title: pRows[0].title,
+          description: pRows[0].description,
+          total_marks: pRows[0].points || 100,
+          time_limit_ms: 3000,
+        };
+        const tcRows = await query('SELECT * FROM coding_test_cases WHERE problem_id = ? ORDER BY id ASC', [numericProblemId]);
+        if (tcRows && tcRows.length > 0) {
+          testCases = tcRows;
+        }
+      }
+    } catch (e) {
+      console.warn('[submitCodeAndSaveService] practice_problems lookup:', e.message);
+    }
+  }
 
-  // 1. Check if this is a coursework batch task from batch_tasks table
-  if (source === 'batch_task' || numericTaskId || !isNaN(numericProblemId)) {
+  // 2. If explicit batch task, look in batch_tasks
+  if (!problem && isExplicitBatch) {
     try {
       const candidates = [numericTaskId, numericProblemId].filter((v) => v && !isNaN(v));
       if (candidates.length > 0) {
         const placeholders = candidates.map(() => '?').join(',');
         const bRows = await query(`SELECT * FROM batch_tasks WHERE id IN (${placeholders}) LIMIT 1`, candidates);
-        if (bRows && bRows.length > 0 && (source === 'batch_task' || numericTaskId || bRows[0].id === numericProblemId)) {
+        if (bRows && bRows.length > 0) {
           batchTaskRecord = bRows[0];
           isBatchTask = true;
           problem = {
@@ -239,8 +264,8 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     }
   }
 
-  // 2. If not a batch task, check practice_problems
-  if (!problem && (source === 'practice_problem' || !isNaN(numericProblemId))) {
+  // 3. Fallback: check practice_problems if not checked yet and not an explicit batch task
+  if (!problem && !isExplicitBatch) {
     try {
       const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
       if (pRows && pRows.length > 0) {
@@ -257,11 +282,11 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         }
       }
     } catch (e) {
-      console.warn('[submitCodeAndSaveService] practice_problems lookup fallback:', e.message);
+      console.warn('[submitCodeAndSaveService] practice_problems fallback:', e.message);
     }
   }
 
-  // 3. Fallback to standard coding_problems table
+  // 4. Fallback to standard coding_problems table
   if (!problem) {
     problem = await findCodingProblemById(problem_id);
     if (!problem) {
@@ -272,15 +297,9 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     testCases = await findCodingTestCasesByProblemId(problem_id);
   }
 
-  // If a batch task has no test cases configured at all, synthesize 1 basic test case
+  // If problem has no test cases configured at all, synthesize 1 basic test case
   if (!testCases || testCases.length === 0) {
-    if (isBatchTask) {
-      testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
-    } else {
-      const error = new Error(`No test cases configured for problem ID ${problem_id}`);
-      error.statusCode = 409;
-      throw error;
-    }
+    testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
   }
 
   // Enforce batch enrollment and single-submission rule for batch tasks

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X } from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -46,6 +46,8 @@ export default function PracticeProblems() {
           dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
           rawDueDate: p.due_date || p.dueDate || null,
           isExpired: Boolean(p.isExpired || p.is_expired || (p.due_date && isDeadlinePassed(p.due_date))),
+          attemptsCount: p.attempts_count ?? p.attemptsCount ?? 0,
+          maxAttempts: p.max_attempts ?? 3,
         }));
         setProblemsList(mapped);
       } catch (err) {
@@ -297,14 +299,34 @@ export default function PracticeProblems() {
                   const isPartial = prob.solveStatus === "Partial";
                   const hasAttempted = prob.solveStatus === "Attempted";
                   const isExpired = !isSolved && (Boolean(prob.isExpired) || (prob.dueDate && isDeadlinePassed(prob.dueDate)));
+                  const attemptsUsed = prob.attemptsCount || 0;
+                  const maxAttempts = prob.maxAttempts || 3;
+                  const attemptsExhausted = attemptsUsed >= maxAttempts && !isSolved;
+
+                  // Determine action button label
+                  let btnLabel = "Solve";
+                  if (isSolved) btnLabel = "Review";
+                  else if (isExpired) btnLabel = "Expired";
+                  else if (attemptsExhausted) btnLabel = `${maxAttempts}/${maxAttempts} Used`;
+                  else if (attemptsUsed > 0) btnLabel = `Resume (${attemptsUsed}/${maxAttempts})`;
+
                   return (
                     <tr key={prob.id} className="problem-row">
                       <td>
                         <div className="prob-title-box">
                           <Link
                             to={`/student/coding-platform/practice-${prob.id}`}
-                            state={{ task: { ...prob, isExpired }, source: 'practice' }}
+                            state={{ task: { ...prob, isExpired }, source: 'practice', enterFullscreen: true }}
                             className="prob-title-link"
+                            onClick={async () => {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on practice title click:", err);
+                              }
+                            }}
                           >
                             {prob.title}
                           </Link>
@@ -320,27 +342,40 @@ export default function PracticeProblems() {
                         </span>
                       </td>
                       <td>
-                        {isSolved ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "3px 8px", borderRadius: "6px" }}>
-                            <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : `${prob.points}/${prob.points}`}
-                          </span>
-                        ) : isExpired ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: "6px" }}>
-                            <span>🔒</span> Expired
-                          </span>
-                        ) : isPartial ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: "6px" }}>
-                            <span>⚠️</span> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : "Partial"}
-                          </span>
-                        ) : hasAttempted ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: "6px" }}>
-                            <span>❌</span> 0/{prob.points}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: "#64748b" }}>
-                            Unsolved ({prob.points} pts)
-                          </span>
-                        )}
+                        <div className="pp-status-col">
+                          {isSolved ? (
+                            <span className="pp-status-badge solved">
+                              <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points} pts` : `${prob.points}/${prob.points} pts`}
+                            </span>
+                          ) : isExpired ? (
+                            <span className="pp-status-badge expired">
+                              <Lock size={12} /> Expired
+                            </span>
+                          ) : isPartial ? (
+                            <span className="pp-status-badge partial">
+                              <AlertCircle size={12} /> Partial • {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points} pts` : "Partial"}
+                            </span>
+                          ) : hasAttempted ? (
+                            <span className="pp-status-badge attempted">
+                              <X size={12} strokeWidth={2.5} /> Attempted • 0/{prob.points} pts
+                            </span>
+                          ) : (
+                            <span className="pp-status-badge unsolved">
+                              Unsolved ({prob.points} pts)
+                            </span>
+                          )}
+
+                          {/* Attempt tracking indicator */}
+                          {attemptsUsed > 0 ? (
+                            <span className={`pp-attempts-pill ${attemptsExhausted ? "exhausted" : "active"}`}>
+                              <span style={{ fontSize: "8px" }}>●</span> {attemptsUsed}/{maxAttempts} attempts used
+                            </span>
+                          ) : (
+                            <span className="pp-attempts-pill empty">
+                              0/{maxAttempts} attempts used
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span style={{ color: isExpired ? '#dc2626' : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8'), fontWeight: isExpired ? 700 : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400), fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
@@ -355,10 +390,29 @@ export default function PracticeProblems() {
                         <Button
                           size="sm"
                           className="solve-btn"
-                          onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: { ...prob, isExpired }, source: 'practice' } })}
-                          style={isExpired ? { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' } : {}}
+                          disabled={attemptsExhausted}
+                          onClick={async () => {
+                            if (attemptsExhausted) return;
+                            try {
+                              if (!document.fullscreenElement) {
+                                await document.documentElement.requestFullscreen?.();
+                              }
+                            } catch (err) {
+                              console.warn("Fullscreen request error on solve click:", err);
+                            }
+                            navigate(`/student/coding-platform/practice-${prob.id}`, { 
+                              state: { task: { ...prob, isExpired }, source: 'practice', enterFullscreen: true } 
+                            });
+                          }}
+                          style={
+                            attemptsExhausted
+                              ? { background: '#f1f5f9', color: '#94a3b8', borderColor: '#e2e8f0', cursor: 'not-allowed' }
+                              : isExpired
+                              ? { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                              : {}
+                          }
                         >
-                          <Terminal size={14} /> {isSolved ? "Review" : isExpired ? "Expired" : isPartial ? "Resume" : "Solve"}
+                          <Terminal size={14} /> {btnLabel}
                         </Button>
                       </td>
                     </tr>

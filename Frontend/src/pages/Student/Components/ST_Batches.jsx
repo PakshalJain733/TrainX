@@ -164,9 +164,15 @@ export default function Batches() {
             let foundSelf = false;
             const mapped = stData.data.map((st, idx) => {
               const isSelf = Boolean(
-                (st.name && currentUserName && st.name.trim().toLowerCase() === currentUserName.trim().toLowerCase()) ||
-                (currentSessionUser?.email && st.email && currentSessionUser.email.trim().toLowerCase() === st.email.trim().toLowerCase()) ||
-                (currentSessionUser?.id && (st.id === currentSessionUser.id || st.user_id === currentSessionUser.id || st.userId === currentSessionUser.id))
+                // Primary: match by user ID (most reliable)
+                (currentSessionUser?.id && (
+                  String(st.id) === String(currentSessionUser.id) ||
+                  String(st.user_id) === String(currentSessionUser.id) ||
+                  String(st.userId) === String(currentSessionUser.id)
+                )) ||
+                // Fallback: match by email only if ID is unavailable — never use name (causes false positives)
+                (!currentSessionUser?.id && currentSessionUser?.email && st.email &&
+                  currentSessionUser.email.trim().toLowerCase() === st.email.trim().toLowerCase())
               );
 
               if (isSelf) foundSelf = true;

@@ -174,13 +174,21 @@ export default function CodingPlatform() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isPractice = Boolean(
+    location.state?.source === 'practice' ||
+    location.state?.task?.source === 'practice_problem' ||
+    String(taskId || '').startsWith('practice-')
+  );
+
   const initialTask = location.state?.task ? {
     ...location.state.task,
     language: location.state?.task?.language || location.state?.task?.lang || "",
     source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'practice_problem'),
     description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic || location.state.task.category, location.state.task.description),
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
-    alreadySubmitted: Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
+    alreadySubmitted: isPractice
+      ? Boolean(location.state?.task?.attemptsCount >= 3)
+      : Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
   } : null;
 
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
@@ -231,6 +239,16 @@ export default function CodingPlatform() {
     String(taskId || '').toLowerCase().startsWith('task-')
   );
 
+  const isPracticeProblem = Boolean(
+    location.state?.source === 'practice' ||
+    location.state?.task?.source === 'practice_problem' ||
+    taskData?.source === 'practice_problem' ||
+    String(taskId || '').toLowerCase().startsWith('practice')
+  );
+
+  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
+  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem);
+
   // Scoped key generator for proctoring strikes in sessionStorage
   const getProctorStorageKey = () => {
     const sId = user?.userId || user?.id || "guest";
@@ -262,13 +280,13 @@ export default function CodingPlatform() {
 
   // Sync ref with persisted storage on mount/task change
   useEffect(() => {
-    if (isBatchCoursework) {
+    if (isProctoredSession) {
       proctorViolationsRef.current = getStoredProctorStrikes();
     }
-  }, [taskId, isBatchCoursework]);
+  }, [taskId, isProctoredSession]);
 
   const handleProctorViolation = (reason, description) => {
-    if (!isBatchCoursework || hasSubmitted || !proctorArmedRef.current) return;
+    if (!isProctoredSession || hasSubmitted || !proctorArmedRef.current) return;
 
     // Debounce to prevent duplicate strikes when blur and visibilitychange or resize fire simultaneously
     const now = Date.now();
@@ -358,7 +376,7 @@ export default function CodingPlatform() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
       setIsFullscreen(true);
-      if (isBatchCoursework) setIsProctorActive(true);
+      if (isProctoredSession) setIsProctorActive(true);
     } else {
       document.exitFullscreen?.().catch(() => {});
       setIsFullscreen(false);
@@ -380,7 +398,7 @@ export default function CodingPlatform() {
   };
 
   const handleToggleFullscreenClick = () => {
-    if (isBatchCoursework && !hasSubmitted) {
+    if (isProctoredSession && !hasSubmitted) {
       const strikes = getStoredProctorStrikes();
       const nextStrike = strikes + 1;
       if (nextStrike < 3) {
@@ -436,7 +454,7 @@ export default function CodingPlatform() {
       const isFs = Boolean(document.fullscreenElement);
       setIsFullscreen(isFs);
 
-      if (isBatchCoursework && !hasSubmitted && proctorArmedRef.current && !isFs) {
+      if (isProctoredSession && !hasSubmitted && proctorArmedRef.current && !isFs) {
         handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
       }
     };
@@ -447,11 +465,11 @@ export default function CodingPlatform() {
       document.removeEventListener("fullscreenchange", handleFsChange);
       document.removeEventListener("webkitfullscreenchange", handleFsChange);
     };
-  }, [isBatchCoursework, hasSubmitted]);
+  }, [isProctoredSession, hasSubmitted]);
 
   // Tab switching, blur, and anti-cheat keyboard shortcuts
   useEffect(() => {
-    if (!isBatchCoursework || hasSubmitted) return;
+    if (!isProctoredSession || hasSubmitted) return;
 
     let armTimer = null;
     if (isProctorActive && isFullscreen) {
@@ -522,7 +540,7 @@ export default function CodingPlatform() {
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [isBatchCoursework, hasSubmitted, isProctorActive, isFullscreen]);
+  }, [isProctoredSession, hasSubmitted, isProctorActive, isFullscreen]);
 
   // Global clipboard and drag/drop blockers (strict compiler anti-cheat)
   useEffect(() => {
@@ -905,20 +923,23 @@ export default function CodingPlatform() {
           code: currentCode,
           problem_id: taskData.id,
           task_id: taskId,
-          source: taskData.source || (taskData.batch_id ? 'batch_task' : undefined),
+          source: isBatch ? 'batch_task' : 'practice_problem',
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setConsoleStatus("error");
-        if (data?.message?.includes("Maximum submission limit") || data?.message?.includes("already been submitted") || res.status === 403) {
+        const msg = String(data?.message || "");
+        const isMaxLimit = msg.toLowerCase().includes("maximum submission limit") || Boolean(data?.attemptsUsed >= 3);
+        const isBatchLocked = isBatch && (msg.toLowerCase().includes("already") || Boolean(data?.isBatchLocked));
+        if (isMaxLimit || isBatchLocked) {
           setHasSubmitted(true);
-          setConsoleOutput(`🔒 ${data.message || "Maximum submission limit reached (3 attempts allowed per problem)."}`);
-        } else if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
+          setConsoleOutput(`🔒 ${msg || "Maximum submission limit reached."}`);
+        } else if (msg.includes("Docker") || msg.includes("unavailable")) {
           setConsoleOutput(`⚠️ Compiler service is currently unavailable. Please try again later.`);
         } else {
-          setConsoleOutput(`❌ Submission failed: ${data.message || "Unknown error"}`);
+          setConsoleOutput(`❌ Submission failed: ${msg || "Unknown error"}`);
         }
         return;
       }
@@ -971,7 +992,6 @@ export default function CodingPlatform() {
       );
 
       // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions
-      const isBatch = taskData?.source === 'batch_task' || Boolean(taskData?.batch_id);
       const attemptsCount = result.attempts_used ?? (submissions.length + 1);
       if (isBatch || attemptsCount >= 3) {
         setHasSubmitted(true);
@@ -1171,7 +1191,7 @@ export default function CodingPlatform() {
                   : hasSubmitted 
                   ? (taskData?.source === 'batch_task' || taskData?.batch_id 
                       ? "This batch task has already been submitted. Reattempts are strictly disabled." 
-                      : "Maximum submission limit reached (3/3 attempts used).")
+                      : `Maximum submission limit reached (${Math.min(submissions.length || 3, 3)}/3 attempts used).`)
                   : (!isModuleActive("codingCompiler") 
                       ? "Code submission is currently disabled by administrator" 
                       : (taskData?.source === 'batch_task' || taskData?.batch_id 
@@ -1183,7 +1203,7 @@ export default function CodingPlatform() {
               {isTaskExpired ? (
                 <><Lock size={14} /> <span>Deadline Expired</span></>
               ) : hasSubmitted ? (
-                <><CheckCircle2 size={14} /> <span>{taskData?.source === 'batch_task' || taskData?.batch_id ? "Submitted (Locked)" : "3/3 Submitted"}</span></>
+                <><CheckCircle2 size={14} /> <span>{taskData?.source === 'batch_task' || taskData?.batch_id ? "Submitted (Locked)" : `${Math.min(submissions.length || 3, 3)}/3 Submitted (Locked)`}</span></>
               ) : isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
@@ -1191,7 +1211,7 @@ export default function CodingPlatform() {
               )}
             </button>
 
-            {isBatchCoursework && (
+            {isProctoredSession && (
               <div className="cp-proctor-live-badge" title="This task is actively proctored. Exiting full-screen or switching tabs will immediately end your task.">
                 <span className="cp-proctor-live-pulse" />
                 <span>Proctored Task (Anti-Cheat Active)</span>
@@ -1204,7 +1224,7 @@ export default function CodingPlatform() {
               type="button"
               className="cp-fs-toggle-btn"
               onClick={handleToggleFullscreenClick}
-              title={isFullscreen ? (isBatchCoursework && !hasSubmitted ? "Locked Full-Screen (Exiting Ends Task)" : "Exit Full Screen") : "Full Screen"}
+              title={isFullscreen ? (isProctoredSession && !hasSubmitted ? "Locked Full-Screen (Exiting Ends Task)" : "Exit Full Screen") : "Full Screen"}
             >
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
@@ -1251,8 +1271,8 @@ export default function CodingPlatform() {
                         className="cp-popover-action-item"
                         onClick={() => {
                           setUserMenuOpen(false);
-                          if (isBatchCoursework && !hasSubmitted) {
-                            if (window.confirm("You are currently inside a proctored batch assignment. Navigating away may mark your attempt as finished. Are you sure you want to view profile?")) {
+                          if (isProctoredSession && !hasSubmitted) {
+                            if (window.confirm("You are currently inside a proctored session. Navigating away may mark your attempt as finished. Are you sure you want to view profile?")) {
                               navigate("/student/profile");
                             }
                           } else {
@@ -1271,7 +1291,7 @@ export default function CodingPlatform() {
                         className="cp-popover-action-item cp-popover-action-item--danger"
                         onClick={() => {
                           setUserMenuOpen(false);
-                          if (isBatchCoursework && !hasSubmitted) {
+                          if (isProctoredSession && !hasSubmitted) {
                             if (!window.confirm("You have an active proctored task. Signing out will terminate the session. Proceed to sign out?")) {
                               return;
                             }
@@ -1596,15 +1616,15 @@ export default function CodingPlatform() {
         )}
 
         {/* ── Proctored Full-Screen Gate Overlay ── */}
-        {isBatchCoursework && !hasSubmitted && !isFullscreen && !proctorTerminated && (
+        {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
           <div className="proctor-fullscreen-gate-overlay">
             <div className="proctor-gate-card">
               <div className="proctor-gate-badge">
-                <Lock size={14} /> PROCTORED COURSEWORK ASSESSMENT
+                <Lock size={14} /> {isBatchCoursework ? "PROCTORED COURSEWORK ASSESSMENT" : "PROCTORED PRACTICE ASSESSMENT"}
               </div>
               <h2 className="proctor-gate-title">Full-Screen Mode Required</h2>
               <p className="proctor-gate-subtitle">
-                This batch task is monitored under examination mode. Once started, strict proctoring is enforced:
+                This {isBatchCoursework ? "batch task" : "practice problem"} is monitored under examination mode. Once started, strict proctoring is enforced:
               </p>
               <div className="proctor-gate-rules">
                 <div className="proctor-rule-item">
@@ -1673,12 +1693,12 @@ export default function CodingPlatform() {
                     if (document.fullscreenElement) {
                       document.exitFullscreen?.().catch(() => {});
                     }
-                    navigate('/student/batches');
+                    navigate(isBatchCoursework ? '/student/batches' : '/student/practice');
                   }}
                   className="proctor-term-btn-exit"
                 >
                   <ArrowLeft size={16} />
-                  <span>Back to My Batches</span>
+                  <span>{isBatchCoursework ? "Back to My Batches" : "Back to Practice"}</span>
                 </button>
               </div>
             </div>
