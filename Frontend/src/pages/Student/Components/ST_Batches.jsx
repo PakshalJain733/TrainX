@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2, Sparkles, ArrowRight, Medal, Crown, Zap } from "lucide-react";
+import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2, Sparkles, ArrowRight, Medal, Crown, Zap, RotateCcw } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 import "../Styles/ST_Batches.css";
@@ -138,6 +138,7 @@ export default function Batches() {
             points: Number(t.points) || 100,
             scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
             alreadySubmitted: Boolean(t.alreadySubmitted),
+            retakeAvailable: Boolean(t.retakeAvailable),
             language: t.language || "",
             description: t.description || t.desc || "",
             testCases: t.testCases || t.test_cases || [],
@@ -503,6 +504,24 @@ export default function Batches() {
                           </div>
 
                           <div className="cw-item-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {task.retakeAvailable && (
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  backgroundColor: "#fef3c7",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <RotateCcw size={11} /> Retake Available
+                              </span>
+                            )}
                             {task.scoreObtained != null && (
                               <span style={{ fontSize: "12px", fontWeight: 700, color: task.status === "Completed" ? "#16a34a" : "#d97706" }}>
                                 {task.scoreObtained} / {task.points} pts

@@ -168,14 +168,28 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
   const targetStudentId = student.id || student_id;
   const targetProbId = parseInt(problem_id, 10);
   let attemptCount = 0;
+  let activePracticeRetake = null;
+  let activeBatchRetake = null;
+
   if (!isNaN(targetProbId)) {
     try {
+      // Check if student has a pending retake permission for this practice problem
+      const retakeRows = await query(
+        `SELECT id, status FROM coding_retake_permissions 
+         WHERE target_type = 'practice' AND target_id = ? AND student_id = ? AND status = 'pending' 
+         ORDER BY id DESC LIMIT 1`,
+        [targetProbId, targetStudentId]
+      );
+      if (retakeRows && retakeRows.length > 0) {
+        activePracticeRetake = retakeRows[0];
+      }
+
       const prevSubmissions = await query(
         `SELECT COUNT(*) as cnt FROM coding_submissions WHERE student_id = ? AND problem_id = ?`,
         [targetStudentId, targetProbId]
       );
       attemptCount = (prevSubmissions && prevSubmissions[0]) ? parseInt(prevSubmissions[0].cnt, 10) : 0;
-      if (attemptCount >= 3) {
+      if (attemptCount >= 3 && !activePracticeRetake) {
         const limitError = new Error('Maximum submission limit reached (3 attempts allowed per problem). You cannot submit again.');
         limitError.statusCode = 403;
         limitError.attemptsUsed = attemptCount;
@@ -304,6 +318,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     }
 
     try {
+      const retakeRows = await query(
+        `SELECT id, status FROM coding_retake_permissions 
+         WHERE target_type = 'task' AND target_id = ? AND student_id = ? AND status = 'pending' 
+         ORDER BY id DESC LIMIT 1`,
+        [batchTaskRecord.id, sId]
+      );
+      if (retakeRows && retakeRows.length > 0) {
+        activeBatchRetake = retakeRows[0];
+      }
+
       const existingTask = await query(
         `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND (user_id = ? OR user_id = ?) AND batch_id = ? LIMIT 1`,
         [batchTaskRecord.id, sId, sId, batchTaskRecord.batch_id]
@@ -312,7 +336,7 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         `SELECT id FROM coding_submissions WHERE problem_id = ? AND (student_id = ? OR student_id = ?) LIMIT 1`,
         [batchTaskRecord.id, student.id || student_id, student_id]
       );
-      if ((existingTask && existingTask.length > 0) || (existingCode && existingCode.length > 0)) {
+      if (((existingTask && existingTask.length > 0) || (existingCode && existingCode.length > 0)) && !activeBatchRetake) {
         const error = new Error('You have already submitted this batch task. The compiler is locked and reattempts are not allowed.');
         error.statusCode = 403;
         error.isBatchLocked = true;
@@ -560,7 +584,22 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         execution_time_ms: totalExecutionMs,
         results: executed,
       },
+      is_retake: !!activePracticeRetake,
+      retake_permission_id: activePracticeRetake ? activePracticeRetake.id : null,
     });
+
+    if (activePracticeRetake && submissionRecord?.id) {
+      try {
+        await query(
+          `UPDATE coding_retake_permissions 
+           SET status = 'used', used_at = NOW(), submission_id = ? 
+           WHERE id = ?`,
+          [submissionRecord.id, activePracticeRetake.id]
+        );
+      } catch (rErr) {
+        console.warn('[submitCodeAndSaveService] retake mark used notice:', rErr.message);
+      }
+    }
   }
 
   if (isBatchTask && batchTaskRecord) {
@@ -573,39 +612,21 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     const feedbackText = `${detailLabel}: Passed ${passedTests}/${totalTests} test cases (${percentage}%) - Score: ${score}/${problemTotalMarks} pts`;
 
     try {
-      const existingSub = await query(
-        `SELECT id FROM task_submissions WHERE task_id = ? AND user_id = ? AND batch_id = ? LIMIT 1`,
-        [batchTaskRecord.id, student.id || student_id, batchTaskRecord.batch_id]
-      );
-
-      if (existingSub && existingSub.length > 0) {
-        await query(
-          `UPDATE task_submissions 
-           SET status = ?, 
-               score = ?, 
-               marks_obtained = ?, 
-               submitted_code = ?, 
-               code_submission = ?, 
-               batch_id = COALESCE(?, batch_id), 
-               feedback = ?, 
-               submitted_at = NOW()
-           WHERE id = ?`,
-          [
-            taskStatus,
-            score,
-            score,
-            code,
-            code,
-            batchTaskRecord.batch_id || null,
-            feedbackText,
-            existingSub[0].id,
-          ]
+      if (activeBatchRetake) {
+        // Multi-attempt retake: calculate next attempt number and preserve original submission
+        let nextAttempt = 2;
+        const maxAttRow = await query(
+          `SELECT COALESCE(MAX(attempt_number), 1) + 1 AS next_att FROM task_submissions WHERE task_id = ? AND user_id = ?`,
+          [batchTaskRecord.id, student.id || student_id]
         );
-      } else {
-        await query(
+        if (maxAttRow && maxAttRow[0] && maxAttRow[0].next_att) {
+          nextAttempt = parseInt(maxAttRow[0].next_att, 10);
+        }
+
+        const insRes = await query(
           `INSERT INTO task_submissions 
-            (task_id, user_id, batch_id, status, score, marks_obtained, submitted_code, code_submission, feedback, submitted_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            (task_id, user_id, batch_id, status, score, marks_obtained, submitted_code, code_submission, feedback, attempt_number, is_retake, retake_permission_id, submitted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW())`,
           [
             batchTaskRecord.id,
             student.id || student_id,
@@ -616,8 +637,65 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
             code,
             code,
             feedbackText,
+            nextAttempt,
+            activeBatchRetake.id,
           ]
         );
+
+        const newSubId = insRes?.insertId;
+        await query(
+          `UPDATE coding_retake_permissions 
+           SET status = 'used', used_at = NOW(), submission_id = ? 
+           WHERE id = ?`,
+          [newSubId || null, activeBatchRetake.id]
+        );
+      } else {
+        const existingSub = await query(
+          `SELECT id FROM task_submissions WHERE task_id = ? AND user_id = ? AND batch_id = ? LIMIT 1`,
+          [batchTaskRecord.id, student.id || student_id, batchTaskRecord.batch_id]
+        );
+
+        if (existingSub && existingSub.length > 0) {
+          await query(
+            `UPDATE task_submissions 
+             SET status = ?, 
+                 score = ?, 
+                 marks_obtained = ?, 
+                 submitted_code = ?, 
+                 code_submission = ?, 
+                 batch_id = COALESCE(?, batch_id), 
+                 feedback = ?, 
+                 submitted_at = NOW()
+             WHERE id = ?`,
+            [
+              taskStatus,
+              score,
+              score,
+              code,
+              code,
+              batchTaskRecord.batch_id || null,
+              feedbackText,
+              existingSub[0].id,
+            ]
+          );
+        } else {
+          await query(
+            `INSERT INTO task_submissions 
+              (task_id, user_id, batch_id, status, score, marks_obtained, submitted_code, code_submission, feedback, attempt_number, is_retake, submitted_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, NOW())`,
+            [
+              batchTaskRecord.id,
+              student.id || student_id,
+              batchTaskRecord.batch_id || null,
+              taskStatus,
+              score,
+              score,
+              code,
+              code,
+              feedbackText,
+            ]
+          );
+        }
       }
     } catch (e) {
       console.warn('[task_submissions save error]', e.message);

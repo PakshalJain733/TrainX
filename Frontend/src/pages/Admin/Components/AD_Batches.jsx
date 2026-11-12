@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, MessageSquare, PowerOff, FileSpreadsheet } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, RotateCcw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, MessageSquare, PowerOff, FileSpreadsheet } from "lucide-react";
+import GrantRetakeModal from "../../../components/Common/GrantRetakeModal";
 import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
@@ -189,6 +190,7 @@ export default function AdminBatches() {
 
   // Task Submissions Modal state
   const [activeTaskForSubmissions, setActiveTaskForSubmissions] = useState(null);
+  const [retakeModalTarget, setRetakeModalTarget] = useState(null);
   const [taskSubmissions, setTaskSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
@@ -1275,6 +1277,28 @@ export default function AdminBatches() {
                             }}
                           >
                             <Eye size={15} /> View Submissions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRetakeModalTarget(t)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "6px",
+                              padding: "8px 12px",
+                              background: "#f0fdf4",
+                              color: "#16a34a",
+                              border: "1px solid #bbf7d0",
+                              borderRadius: "8px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                            title="Grant Retake to Specific Students"
+                          >
+                            <RotateCcw size={14} /> Grant Retake
                           </button>
                           <button
                             type="button"
@@ -2865,6 +2889,20 @@ export default function AdminBatches() {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Grant Retake Modal */}
+      {retakeModalTarget && (
+        <GrantRetakeModal
+          isOpen={Boolean(retakeModalTarget)}
+          onClose={() => setRetakeModalTarget(null)}
+          targetType="task"
+          targetId={retakeModalTarget.id}
+          targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id}`}
+          onRetakeGranted={() => {
+            if (selectedBatch) fetchBatchTasks(selectedBatch.id);
+          }}
+        />
       )}
     </div>
   );
