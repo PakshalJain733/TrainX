@@ -162,20 +162,22 @@ export default function Batches() {
           const stData = await stRes.json();
 
           if (stData && stData.success && Array.isArray(stData.data) && stData.data.length > 0) {
+            const myIds = new Set(
+              [currentSessionUser?.id, currentSessionUser?.userId, currentSessionUser?.user_id, currentSessionUser?.student_id]
+                .filter(Boolean)
+                .map(String)
+            );
+            const myEmail = (currentSessionUser?.email || "").trim().toLowerCase();
+            const myName = (currentUserName || currentSessionUser?.name || "").trim().toLowerCase();
+
             let foundSelf = false;
             const mapped = stData.data.map((st, idx) => {
-              const isSelf = Boolean(
-                // Primary: match by user ID (most reliable)
-                (currentSessionUser?.id && (
-                  String(st.id) === String(currentSessionUser.id) ||
-                  String(st.user_id) === String(currentSessionUser.id) ||
-                  String(st.userId) === String(currentSessionUser.id)
-                )) ||
-                // Fallback: match by email only if ID is unavailable — never use name (causes false positives)
-                (!currentSessionUser?.id && currentSessionUser?.email && st.email &&
-                  currentSessionUser.email.trim().toLowerCase() === st.email.trim().toLowerCase())
-              );
+              const stIds = [st.id, st.user_id, st.userId, st.student_id].filter(Boolean).map(String);
+              const hasIdMatch = stIds.some(id => myIds.has(id));
+              const hasEmailMatch = Boolean(myEmail && st.email && myEmail === st.email.trim().toLowerCase());
+              const hasNameMatch = Boolean(myName && st.name && myName === st.name.trim().toLowerCase());
 
+              const isSelf = hasIdMatch || hasEmailMatch || hasNameMatch;
               if (isSelf) foundSelf = true;
 
               const studentXp = isSelf
@@ -186,6 +188,7 @@ export default function Batches() {
                 id: st.id || idx + 1,
                 name: isSelf ? `${st.name || currentUserName} (You)` : (st.name || `Student ${idx + 1}`),
                 rawName: st.name || currentUserName,
+                email: st.email || "",
                 xp: studentXp,
                 initials: getInitials(st.name || currentUserName),
                 self: isSelf,
@@ -195,20 +198,57 @@ export default function Batches() {
             });
 
             if (!foundSelf) {
-              mapped.push({
-                id: currentSessionUser?.id || "me",
-                name: `${currentUserName} (You)`,
-                rawName: currentUserName,
-                xp: completedXp,
-                initials: getInitials(currentUserName),
-                self: true,
-                department: currentSessionUser?.department || "Enrolled Student",
-                rollNo: currentSessionUser?.roll_number || "Self",
-              });
+              const alreadyExists = mapped.some(m => 
+                (myName && m.rawName && myName === m.rawName.trim().toLowerCase()) ||
+                (myEmail && m.email && myEmail === m.email.trim().toLowerCase())
+              );
+              if (alreadyExists) {
+                const item = mapped.find(m => 
+                  (myName && m.rawName && myName === m.rawName.trim().toLowerCase()) ||
+                  (myEmail && m.email && myEmail === m.email.trim().toLowerCase())
+                );
+                if (item) {
+                  item.self = true;
+                  item.name = `${item.rawName || currentUserName} (You)`;
+                  item.xp = Math.max(completedXp, Number(item.xp || 0));
+                }
+              } else {
+                mapped.push({
+                  id: currentSessionUser?.id || "me",
+                  name: `${currentUserName} (You)`,
+                  rawName: currentUserName,
+                  email: myEmail,
+                  xp: completedXp,
+                  initials: getInitials(currentUserName),
+                  self: true,
+                  department: currentSessionUser?.department || "Enrolled Student",
+                  rollNo: currentSessionUser?.roll_number || "Self",
+                });
+              }
             }
 
-            mapped.sort((a, b) => b.xp - a.xp);
-            finalLeaderboard = mapped.map((item, i) => ({
+            // Strict deduplication: no student can ever be listed twice
+            const uniqueMap = new Map();
+            for (const item of mapped) {
+              const normName = (item.rawName || item.name || "").replace(/\s*\(you\)$/i, "").trim().toLowerCase();
+              const emailKey = item.email ? item.email.trim().toLowerCase() : "";
+              const key = emailKey || normName || String(item.id);
+
+              if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, item);
+              } else {
+                const existing = uniqueMap.get(key);
+                if (item.self) {
+                  uniqueMap.set(key, { ...item, xp: Math.max(item.xp, existing.xp) });
+                } else {
+                  existing.xp = Math.max(existing.xp, item.xp);
+                }
+              }
+            }
+
+            const dedupedList = Array.from(uniqueMap.values());
+            dedupedList.sort((a, b) => b.xp - a.xp);
+            finalLeaderboard = dedupedList.map((item, i) => ({
               ...item,
               rank: i + 1,
             }));
@@ -442,7 +482,7 @@ export default function Batches() {
         {/* Split Arena */}
         <div className="cw-content-split-grid">
           <div className="cw-left-pane">
-            <div className="cw-unified-container">
+            <div className={`cw-unified-container ${batchTasksList.length === 0 ? "cw-unified-container--empty" : ""}`}>
               <div className="cw-unified-header">
                 <div className="cw-unified-title-wrap">
                   <BookOpen size={20} className="cw-unified-title-icon" />
@@ -452,11 +492,11 @@ export default function Batches() {
               </div>
 
               <div className="cw-unified-modules-stack">
-                <div className="cw-module-items-stack">
+                <div className={`cw-module-items-stack ${batchTasksList.length === 0 ? "cw-module-items-stack--empty" : ""}`}>
                   {batchTasksList.length === 0 ? (
-                    <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
+                    <div className="admin-empty-state-card" style={{ padding: "30px 20px", minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                       <BookOpen size={36} className="admin-empty-state-icon" style={{ margin: "0 auto 8px" }} />
-                      <p className="admin-empty-state-title">No tasks assigned to this batch yet</p>
+                      <p className="admin-empty-state-title">No tasks assigned</p>
                       <p className="admin-empty-state-sub">Your mentor/admin will post new problem sets and assignments here.</p>
                     </div>
                   ) : (
@@ -562,7 +602,7 @@ export default function Batches() {
           </div>
 
           <div className="cw-right-pane">
-            <div className="cw-leaderboard-card">
+            <div className={`cw-leaderboard-card ${(!selectedBatch.leaderboard || selectedBatch.leaderboard.length === 0) ? "cw-leaderboard-card--empty" : ""}`}>
               <div className="cw-section-header-row">
                 <div className="cw-lb-title-wrap">
                   <div className="cw-lb-trophy-pill">

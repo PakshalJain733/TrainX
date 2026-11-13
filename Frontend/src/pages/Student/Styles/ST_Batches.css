@@ -606,14 +606,21 @@
   margin: 0;
 }
 
-/* Module Tasks & Lessons Stack */
 .cw-module-items-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 330px;
+  max-height: 405px;
   overflow-y: auto;
   padding: 2px 4px 2px 2px;
+}
+
+.cw-module-items-stack--empty {
+  max-height: 380px;
+}
+
+.cw-unified-container--empty {
+  max-height: 380px;
 }
 
 .cw-module-items-stack::-webkit-scrollbar {
@@ -735,6 +742,10 @@
   overflow: hidden;
 }
 
+.cw-leaderboard-card--empty {
+  max-height: 350px;
+}
+
 .cw-section-header-row {
   display: flex;
   align-items: center;
@@ -798,7 +809,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 360px;
+  max-height: 312px;
   overflow-y: auto;
   padding-right: 2px;
 }
@@ -988,6 +999,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 180px;
 }
 
 .cw-lb-empty-icon {
