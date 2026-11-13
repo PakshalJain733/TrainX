@@ -23,7 +23,7 @@ export default function AdminProfile() {
         email: stored.email || "",
         phone: stored.mobile_number || stored.phone || "",
         role: stored.role || "College Administrator",
-        department: stored.department || "",
+        department: stored.department || "TPO",
         college: stored.college_name || stored.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
         location: stored.city || "Mumbai, Maharashtra",
         notifSystemAlerts: true,
@@ -36,7 +36,7 @@ export default function AdminProfile() {
         email: "",
         phone: "",
         role: "College Administrator",
-        department: "",
+        department: "TPO",
         college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
         location: "Mumbai, Maharashtra",
         notifSystemAlerts: true,
@@ -96,7 +96,7 @@ export default function AdminProfile() {
           email: u.email || prev.email,
           phone: u.mobile_number || u.phone || prev.phone,
           role: u.role ? (u.role.toLowerCase().includes("super") ? "Super Administrator" : "College Administrator") : prev.role,
-          department: u.department || prev.department,
+          department: u.department || prev.department || "TPO",
           college: u.college_name || u.college || prev.college,
         }));
       }
@@ -221,7 +221,7 @@ export default function AdminProfile() {
               <Briefcase size={16} className="profile-detail-icon" />
               <div>
                 <span className="profile-detail-label">Department</span>
-                <p className="profile-detail-value">{form.department}</p>
+                <p className="profile-detail-value">{form.department || "TPO"}</p>
               </div>
             </div>
 
@@ -359,16 +359,14 @@ export default function AdminProfile() {
 
               <div className="profile-field mobile-field-full">
                 <label className="profile-label">Department</label>
-                <CustomSelect
-                  value={form.department}
-                  options={deptOptions}
+                <input
+                  type="text"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
+                  value={form.department || "TPO"}
+                  onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
+                  placeholder="e.g. TPO"
+                  readOnly={!isEditing}
                   disabled={!isEditing}
-                  onChange={(val) => {
-                    const matched = deptOptions.find(d => d.value === val || d.code === val || d.name === val);
-                    setForm((p) => ({ ...p, department: val, department_id: matched?.id || p.department_id }));
-                  }}
-                  placeholder="Select Department"
-                  icon={Building}
                 />
               </div>
 

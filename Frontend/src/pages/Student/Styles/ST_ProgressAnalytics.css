@@ -160,19 +160,744 @@
   padding: 20px;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   HERO MULTI-PARAMETER PROGRESS TRACKING DASHBOARD (LINE GRAPH & CARDS)
+   ══════════════════════════════════════════════════════════════════ */
+.progress-hero-container {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 22px;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+
+.progress-hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.progress-hero-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.progress-hero-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eff6ff, #e0e7ff);
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.12);
+}
+
+.progress-hero-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-hero-bullet {
+  color: #cbd5e1;
+}
+
+.progress-hero-weights-note {
+  color: #64748b;
+  font-weight: 600;
+  text-transform: none;
+  font-size: 11.5px;
+}
+
+.progress-hero-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 3px 0 2px 0;
+}
+
+.progress-hero-desc {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.progress-hero-header__right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Timeframe Selector Pills (Weekly / Monthly / Overall) */
+.progress-view-pills {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.progress-pill-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.progress-pill-btn:hover {
+  color: #0f172a;
+}
+
+.progress-pill-btn--active {
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  font-weight: 800;
+}
+
+.progress-hero-score-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 4px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+
+.score-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #1e40af;
+  line-height: 1.1;
+}
+
+.score-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #3b82f6;
+  letter-spacing: 0.3px;
+}
+
+/* Interactive SVG Line Graph Canvas */
+.progress-line-chart-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 14px;
+  padding: 12px 10px;
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.progress-line-chart-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+}
+
+.progress-line-svg {
+  overflow: visible;
+}
+
+.progress-line-area-fill {
+  transition: all 0.3s ease;
+}
+
+.progress-line-stroke {
+  transition: all 0.3s ease;
+}
+
+.progress-crosshair-line {
+  pointer-events: none;
+}
+
+.progress-line-marker-group {
+  transition: transform 0.2s ease;
+}
+
+/* Floating Rich Tooltip (Light Theme) */
+.progress-chart-floating-tooltip {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  color: #0f172a;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  width: 270px;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.progress-chart-floating-tooltip--right {
+  transform: translate(16px, -50%);
+}
+
+.progress-chart-floating-tooltip--left {
+  transform: translate(calc(-100% - 16px), -50%);
+}
+
+.pct-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.pct-tooltip-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.pct-tooltip-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pct-tooltip-date {
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pct-tooltip-score-badge {
+  font-size: 11.5px;
+  font-weight: 800;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.pct-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pct-tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  gap: 8px;
+}
+
+.pct-tooltip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pct-tooltip-name {
+  color: #475569;
+  font-weight: 500;
+  flex: 1;
+}
+
+.pct-tooltip-val {
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Split Layout: Left Line Chart (~55%) + Right 6 Square Cards 2-col (~45%)
+   ══════════════════════════════════════════════════════════════════════════ */
+.progress-hero-body-split {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.progress-hero-left-chart {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.progress-hero-right-cards {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  justify-content: center;
+}
+
+.progress-activity-cards-grid-2col,
+.progress-activity-cards-vertical {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  height: 100%;
+}
+
+/* Square Card Form */
+.progress-activity-card--square,
+.progress-activity-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  min-height: 98px;
+}
+
+.progress-activity-card--square:hover,
+.progress-activity-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.progress-act-square-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.progress-act-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.progress-act-pct {
+  font-size: 13.5px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.progress-act-square-middle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 3px 0;
+}
+
+.progress-act-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-act-ratio {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-act-square-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.progress-act-bar-track {
+  width: 100%;
+  height: 4.5px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-act-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+
+.progress-act-subtext {
+  font-size: 9.5px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fallback for grid view if used elsewhere */
+.progress-activity-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
 /* Charts Grid */
 .progress-charts-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
-.progress-charts-grid--two {
-  grid-template-columns: 1fr 1fr;
+.progress-charts-grid--dual {
+  grid-template-columns: 1fr 1.35fr;
+  gap: 20px;
+  align-items: stretch;
 }
 
 @media (max-width: 992px) {
-  .progress-charts-grid {
+  .progress-charts-grid--dual {
+    grid-template-columns: 1fr;
+  }
+}
+
+.progress-chart-card--quiz {
+  width: 100%;
+}
+
+/* Quiz Benchmark Comparison Header & Meter */
+.quiz-chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.quiz-benchmark-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.quiz-benchmark-badge--pass {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+
+.quiz-benchmark-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.quiz-benchmark-meter__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.quiz-benchmark-meter__track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.quiz-benchmark-meter__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #4f46e5);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.quiz-benchmark-meter__target-line {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2.5px;
+  background: #059669;
+  z-index: 2;
+  border-radius: 2px;
+}
+
+.quiz-meter-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.quiz-meter-target-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #a7f3d0;
+}
+
+.quiz-benchmark-meter__row--sub {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.quiz-sub-stat {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Weekly Coursework Tasks Bar Chart Styles */
+.progress-chart-card--tasks-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tasks-bar-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  gap: 14px;
+}
+
+.tasks-bar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tasks-bar-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tasks-bar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.tasks-bar-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.tasks-bar-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 205px;
+}
+
+.tasks-bar-svg {
+  overflow: visible;
+}
+
+.tasks-bar-rect {
+  transition: all 0.25s ease;
+}
+
+.tasks-bar-col-group:hover .tasks-bar-rect {
+  filter: brightness(1.08);
+}
+
+.tasks-bar-tooltip {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.tasks-bar-tooltip__title {
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: #f8fafc;
+  font-size: 11.5px;
+}
+
+.tasks-bar-tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.tasks-bar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.tasks-bar-tooltip__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 5px 0;
+}
+
+.tasks-bar-tooltip__total {
+  font-size: 10px;
+  color: #cbd5e1;
+}
+
+.tasks-bar-footer-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.tasks-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.tasks-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tasks-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+@media (max-width: 1024px) {
+  .progress-hero-body-split {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .progress-activity-cards-grid-2col,
+  .progress-activity-cards-vertical {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .progress-activity-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-hero-container {
+    padding: 16px 14px;
+  }
+  .progress-activity-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .progress-activity-cards-grid-2col,
+  .progress-activity-cards-vertical {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .progress-view-pills {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .progress-pill-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-activity-cards-grid-2col,
+  .progress-activity-cards-vertical {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .progress-activity-cards-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -189,16 +914,18 @@
 }
 
 .progress-chart-title {
-  font-size: 15.5px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: #0f172a;
-  margin: 0;
+  margin: 0 0 3px 0;
+  line-height: 1.25;
 }
 
 .progress-chart-desc {
-  font-size: 12.5px;
+  font-size: 12px;
   color: #64748b;
-  margin: -10px 0 6px 0;
+  margin: 0;
+  line-height: 1.35;
 }
 
 .progress-chart-container {
@@ -213,14 +940,96 @@
 .progress-donut-container {
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   height: auto;
+  padding: 8px 0;
 }
 
 .progress-donut-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.donut-segment {
+  cursor: pointer;
+  transition: stroke-width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke-dasharray 0.6s ease;
+}
+
+.donut-segment:hover,
+.donut-segment--active {
+  stroke-width: 24px !important;
+}
+
+/* Floating Donut Segment Tooltip (App Standard Sleek UI) */
+.donut-segment-tooltip {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+  user-select: none;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.45), 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transform: translate(-50%, -100%);
+  animation: donutTooltipFadeTop 0.14s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.donut-segment-tooltip__arrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  margin-left: -3.5px;
+  width: 7px;
+  height: 7px;
+  background: #0f172a;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  transform: rotate(45deg);
+}
+
+.donut-segment-tooltip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.donut-segment-tooltip__label {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.donut-segment-tooltip__score {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+@keyframes donutTooltipFadeTop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(3px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(0) scale(1);
+  }
 }
 
 .progress-donut-legend {
@@ -1177,6 +1986,89 @@
 .spa-table-responsive {
   width: 100%;
   overflow-x: auto;
+}
+
+/* Scrollable table containers - exactly 5 items visible, rest scrolled */
+.spa-table-responsive--scroll-tasks,
+.spa-table-responsive--scroll-quizzes,
+.spa-table-responsive--scroll-coding,
+.spa-table-responsive--scroll-attendance,
+.spa-table-responsive--scroll-interview {
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.spa-table-responsive--scroll-tasks::-webkit-scrollbar,
+.spa-table-responsive--scroll-quizzes::-webkit-scrollbar,
+.spa-table-responsive--scroll-coding::-webkit-scrollbar,
+.spa-table-responsive--scroll-attendance::-webkit-scrollbar,
+.spa-table-responsive--scroll-interview::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.spa-table-responsive--scroll-tasks::-webkit-scrollbar-track,
+.spa-table-responsive--scroll-quizzes::-webkit-scrollbar-track,
+.spa-table-responsive--scroll-coding::-webkit-scrollbar-track,
+.spa-table-responsive--scroll-attendance::-webkit-scrollbar-track,
+.spa-table-responsive--scroll-interview::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.spa-table-responsive--scroll-tasks::-webkit-scrollbar-thumb,
+.spa-table-responsive--scroll-quizzes::-webkit-scrollbar-thumb,
+.spa-table-responsive--scroll-coding::-webkit-scrollbar-thumb,
+.spa-table-responsive--scroll-attendance::-webkit-scrollbar-thumb,
+.spa-table-responsive--scroll-interview::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.spa-table-responsive--scroll-tasks::-webkit-scrollbar-thumb:hover,
+.spa-table-responsive--scroll-quizzes::-webkit-scrollbar-thumb:hover,
+.spa-table-responsive--scroll-coding::-webkit-scrollbar-thumb:hover,
+.spa-table-responsive--scroll-attendance::-webkit-scrollbar-thumb:hover,
+.spa-table-responsive--scroll-interview::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Sticky table header so columns remain visible when scrolling through items */
+.spa-table-responsive--scroll-tasks thead th,
+.spa-table-responsive--scroll-quizzes thead th,
+.spa-table-responsive--scroll-coding thead th,
+.spa-table-responsive--scroll-attendance thead th,
+.spa-table-responsive--scroll-interview thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #f8fafc;
+  box-shadow: 0 1.5px 0 #e2e8f0;
+}
+
+/* Height constraints for exactly 5 visible rows */
+.spa-table-responsive--scroll-tasks {
+  max-height: 350px;
+}
+
+.spa-table-responsive--scroll-quizzes {
+  max-height: 320px;
+}
+
+.spa-table-responsive--scroll-coding {
+  max-height: 320px;
+}
+
+.spa-table-responsive--scroll-attendance {
+  max-height: 285px;
+}
+
+.spa-table-responsive--scroll-interview {
+  max-height: 340px;
 }
 
 .spa-table {

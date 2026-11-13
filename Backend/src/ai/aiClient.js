@@ -154,7 +154,7 @@ export const generateText = async (prompt, options = {}) => {
     temperature = 0.4,
     maxTokens = 2048,
     json = false,
-    timeoutMs = 6000,
+    timeoutMs = 25000,
   } = options;
 
   const availableProviders = getAllAvailableProviders();

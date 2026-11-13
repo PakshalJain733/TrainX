@@ -158,15 +158,11 @@ async function fetchApiQuizzes() {
       };
     });
 
-    const existingTitles = new Set(dbList.map(q => (q.title || '').trim().toLowerCase()));
     const existingIds = new Set(dbList.map(q => String(q.id)));
 
     const shared = await getSharedQuizzes([]);
     const sharedMapped = shared
-      .filter(s => {
-        const sTitle = (s.title || '').trim().toLowerCase();
-        return !existingIds.has(String(s.id)) && !existingTitles.has(sTitle);
-      })
+      .filter(s => !existingIds.has(String(s.id)))
       .map(s => {
         const pastAttempt = attemptMap[String(s.id)];
         const localCompleted = typeof window !== 'undefined' && localStorage.getItem(`quiz_completed_${s.id}`) === 'true';
@@ -192,12 +188,13 @@ async function fetchApiQuizzes() {
         };
       });
 
-    const seen = new Set();
+    // Preserve every quiz distinctly by its unique ID
+    const seenIds = new Set();
     const uniqueList = [];
     for (const q of [...dbList, ...sharedMapped]) {
-      const key = (q.title || '').trim().toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
+      const idKey = String(q.id);
+      if (!seenIds.has(idKey)) {
+        seenIds.add(idKey);
         uniqueList.push(q);
       }
     }
@@ -497,10 +494,6 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
     } else {
       handleSubmit({ isAutoSubmit: true, reason });
     }
-
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {});
-    }
   };
 
   const handleProctorViolation = (reason, description) => {
@@ -529,14 +522,24 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
     }
   };
 
+  const exitFullscreenSafely = () => {
+    try {
+      if (typeof document !== "undefined") {
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+          (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen)?.call(document).catch(() => {});
+        }
+      }
+    } catch (_) {}
+    setIsFullscreen(false);
+  };
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {});
       setIsFullscreen(true);
       if (!isReview) setIsProctorActive(true);
     } else {
-      document.exitFullscreen?.().catch(() => {});
-      setIsFullscreen(false);
+      exitFullscreenSafely();
     }
   };
 
@@ -727,10 +730,17 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   const [finalScoreText, setFinalScoreText] = useState(null);
 
   async function handleSubmit(opts = {}) {
-    const isAuto = opts?.isAutoSubmit === true;
+    const isAuto = Boolean(opts && opts.isAutoSubmit === true);
     if (submitted && !isAuto) return;
     setSubmitted(true);
     setWasSubmitted(true);
+    proctorArmedRef.current = false;
+    setIsProctorActive(false);
+
+    // After the user clicks on submit, only then leave full screen
+    if (!isAuto) {
+      exitFullscreenSafely();
+    }
 
     const calculatedScore = questions.reduce(
       (acc, qItem, i) => acc + (isAnswerCorrect(answers[i], qItem) ? 1 : 0),
@@ -1080,15 +1090,24 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
             ) : submitted ? (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit qp-nav-arrow--finish"
-                onClick={() => onExit(true)}
-                
+                onClick={() => {
+                  try {
+                    if (typeof document !== "undefined" && (document.fullscreenElement || document.webkitFullscreenElement)) {
+                      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document).catch(() => {});
+                    }
+                  } catch (_) {}
+                  onExit(true);
+                }}
               >
                 <CheckCircle2 size={16} /> Finish & Return to Dashboard
               </button>
             ) : (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
-                onClick={handleSubmit}
+                onClick={() => {
+                  exitFullscreenSafely();
+                  handleSubmit({ userInitiated: true });
+                }}
               >
                 <Send size={16} /> Submit Quiz
               </button>
@@ -1346,7 +1365,20 @@ export default function AcademicQuiz() {
                 </div>
 
                 <div className="quiz-main-info">
-                  <h3 className="quiz-title">{quiz.title}</h3>
+                  <h3 className="quiz-title">
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      fontFamily: 'ui-monospace, monospace',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      padding: '1.5px 6px',
+                      borderRadius: '5px',
+                      marginRight: '6px'
+                    }}>ID #{quiz.id}</span>
+                    {quiz.title}
+                  </h3>
                   <p className="quiz-subject">{quiz.subject} • {quiz.topic}</p>
                 </div>
 

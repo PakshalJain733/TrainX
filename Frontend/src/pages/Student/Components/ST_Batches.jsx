@@ -457,7 +457,7 @@ export default function Batches() {
             <div className="cw-stat-info-col">
               <p className="cw-stat-label">Task Completion Rate</p>
               <h4 className="cw-stat-value">
-                {totalBatchTasks > 0 ? Math.round((selectedBatch.stats.completedTasks / totalBatchTasks) * 100) : 100}%
+                {totalBatchTasks > 0 ? Math.round((selectedBatch.stats.completedTasks / totalBatchTasks) * 100) : 0}%
               </h4>
             </div>
           </div>

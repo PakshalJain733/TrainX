@@ -1,6 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
-import { generateQuizQuestionsAI, verifyQuizQuestions } from '../ai/quiz.ai.js';
+import { generateQuizQuestionsAI, verifyQuizQuestions, buildFallbackQuestions } from '../ai/quiz.ai.js';
 import { filterContentByMentorAssignment, canStudentAccessMentorItem } from '../utils/mentorStudentHelper.js';
 
 let mockAssessments = [];
@@ -37,13 +37,15 @@ export const getAssessments = async (req, res, next) => {
           const attemptCounts = await query(
             `SELECT assessment_id, COUNT(*) as count 
              FROM assessment_attempts 
-             WHERE status = 'completed' OR submitted_at IS NOT NULL OR score IS NOT NULL OR marks_obtained IS NOT NULL
+             WHERE status != 'in_progress' 
+               AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL)
              GROUP BY assessment_id`
           ).catch(() => []);
           if (Array.isArray(attemptCounts)) {
             attemptCounts.forEach(row => {
-              if (row.assessment_id) {
-                submissionCounts[row.assessment_id] = (submissionCounts[row.assessment_id] || 0) + Number(row.count);
+              if (row.assessment_id !== null && row.assessment_id !== undefined) {
+                const k = String(row.assessment_id);
+                submissionCounts[k] = (submissionCounts[k] || 0) + Number(row.count);
               }
             });
           }
@@ -55,9 +57,10 @@ export const getAssessments = async (req, res, next) => {
           ).catch(() => []);
           if (Array.isArray(compCounts)) {
             compCounts.forEach(row => {
-              if (row.assessment_id) {
-                const curr = submissionCounts[row.assessment_id] || 0;
-                submissionCounts[row.assessment_id] = Math.max(curr, Number(row.count));
+              if (row.assessment_id !== null && row.assessment_id !== undefined) {
+                const k = String(row.assessment_id);
+                const curr = submissionCounts[k] || 0;
+                submissionCounts[k] = Math.max(curr, Number(row.count));
               }
             });
           }
@@ -66,10 +69,11 @@ export const getAssessments = async (req, res, next) => {
         }
 
         const rawResult = dbRows.map(r => {
-          const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === String(r.id));
-          const memoryQs = mockQuestionsByAssessment[r.id] || [];
+          const idKey = String(r.id);
+          const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === idKey);
+          const memoryQs = mockQuestionsByAssessment[r.id] || mockQuestionsByAssessment[idKey] || [];
           const combinedQs = qsForThis.length > 0 ? qsForThis : memoryQs;
-          const subCount = submissionCounts[r.id] || 0;
+          const subCount = submissionCounts[idKey] !== undefined ? submissionCounts[idKey] : (submissionCounts[r.id] || 0);
           return {
             ...r,
             category: r.category || (r.description?.includes('AI Generated') ? 'AI Generated' : r.description?.includes('Bulk Upload') ? 'Bulk Upload' : 'Manual'),
@@ -81,16 +85,8 @@ export const getAssessments = async (req, res, next) => {
           };
         });
 
-        // Deduplicate assessments by normalized title and batch
-        const seenQuizzes = new Set();
-        result = rawResult.filter(r => {
-          const normTitle = (r.title || '').trim().toLowerCase();
-          const normBatch = (r.batch_name || 'All Batches').trim().toLowerCase();
-          const key = `${normTitle}__${normBatch}`;
-          if (seenQuizzes.has(key)) return false;
-          seenQuizzes.add(key);
-          return true;
-        });
+        // Return each quiz distinctly by its unique ID. Quizzes with identical names are fully preserved!
+        result = rawResult;
       }
     } catch (e) {
       console.warn('[DB getAssessments fallback]', e.message);
@@ -280,18 +276,13 @@ export const deleteAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     try {
-      const rows = await query(`SELECT title FROM assessments WHERE id = ?`, [id]);
-      const title = rows && rows.length > 0 ? rows[0].title : null;
       await query(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE assessment_id = ?)`, [id]).catch(() => {});
       await query(`DELETE FROM assessment_attempts WHERE assessment_id = ?`, [id]).catch(() => {});
       await query(`DELETE FROM assessment_questions WHERE assessment_id = ?`, [id]).catch(() => {});
       await query(`DELETE FROM assessments WHERE id = ?`, [id]);
-      if (title) {
-        await query(`DELETE FROM shared_content WHERE type = 'quiz' AND (title = ? OR id = ?)`, [title, id]).catch(() => {});
-        await query(`DELETE FROM student_quiz_completions WHERE quiz_id = ? OR quiz_title = ?`, [id, title]).catch(() => {});
-      } else {
-        await query(`DELETE FROM shared_content WHERE type = 'quiz' AND id = ?`, [id]).catch(() => {});
-      }
+      // Strictly delete by assessment ID so other quizzes with the same name are NOT deleted
+      await query(`DELETE FROM shared_content WHERE type = 'quiz' AND id = ?`, [id]).catch(() => {});
+      await query(`DELETE FROM student_quiz_completions WHERE quiz_id = ?`, [id]).catch(() => {});
     } catch (e) {
       console.warn('[DB deleteAssessment fallback]', e.message);
     }
@@ -318,98 +309,12 @@ export const generateAIQuestions = async (req, res, next) => {
     }
 
     if (!rawQuestions || rawQuestions.length === 0) {
-      const questionTemplates = [
-        {
-          question_text: `What is the core performance characteristic of ${topicName}?`,
-          option_a: "O(1) Constant Lookup Time",
-          option_b: "O(n^2) Quadratic Processing",
-          option_c: "Asynchronous I/O Latency",
-          option_d: "Thread Concurrency Lock",
-          correct_option: "a"
-        },
-        {
-          question_text: `Which architectural design pattern is recommended for ${topicName}?`,
-          option_a: "Singleton Pattern",
-          option_b: "Factory Method",
-          option_c: "Event-Driven Microservices",
-          option_d: "Decorator Pattern",
-          correct_option: "c"
-        },
-        {
-          question_text: `What primary data structure handles operations in ${topicName}?`,
-          option_a: "Linked List",
-          option_b: "Hash Table / Map",
-          option_c: "Binary Search Tree",
-          option_d: "Queue",
-          correct_option: "b"
-        },
-        {
-          question_text: `What is the primary trade-off when scaling ${topicName}?`,
-          option_a: "Latency vs Throughput",
-          option_b: "Memory Space vs Time Complexity",
-          option_c: "CPU Cache vs Network Bandwidth",
-          option_d: "Read Lock vs Write Lock",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which mechanism ensures thread safety in ${topicName}?`,
-          option_a: "Mutex Locks & Semaphore Synchronization",
-          option_b: "Garbage Collector Triggers",
-          option_c: "Asynchronous Promises",
-          option_d: "Buffer Overflows",
-          correct_option: "a"
-        },
-        {
-          question_text: `What is the recommended error handling strategy in ${topicName}?`,
-          option_a: "Silent Error Suppression",
-          option_b: "Structured Exception Handling & Contextual Logging",
-          option_c: "Immediate Process Termination",
-          option_d: "Global Retry Loop without backoff",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which database indexing technique accelerates queries in ${topicName}?`,
-          option_a: "Linear Scan",
-          option_b: "B-Tree / B+ Tree Indexing",
-          option_c: "Randomized Hashing",
-          option_d: "Heap Tree Storage",
-          correct_option: "b"
-        },
-        {
-          question_text: `What is the role of caching in ${topicName} systems?`,
-          option_a: "To eliminate database writes permanently",
-          option_b: "To reduce read latency for frequently accessed data",
-          option_c: "To compress memory consumption",
-          option_d: "To enforce strict ACID properties",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which protocols are commonly used for network communication in ${topicName}?`,
-          option_a: "HTTP/2, gRPC & WebSockets",
-          option_b: "FTP & Telnet",
-          option_c: "SMTP & POP3",
-          option_d: "DNS & DHCP",
-          correct_option: "a"
-        },
-        {
-          question_text: `What is the purpose of unit testing in ${topicName} development?`,
-          option_a: "To verify individual components in isolation",
-          option_b: "To measure production network speed",
-          option_c: "To compile binary executables",
-          option_d: "To manage cloud server provisioning",
-          correct_option: "a"
-        }
-      ];
-
-      rawQuestions = Array.from({ length: num }, (_, i) => {
-        const t = questionTemplates[i % questionTemplates.length];
-        return {
-          id: Date.now() + i,
-          text: t.question_text,
-          options: { a: t.option_a, b: t.option_b, c: t.option_c, d: t.option_d },
-          correct: t.correct_option
-        };
-      });
+      rawQuestions = buildFallbackQuestions(topicName, num, topicDescription, 0);
+    } else if (rawQuestions.length < num) {
+      const extra = buildFallbackQuestions(topicName, num - rawQuestions.length, topicDescription, rawQuestions.length);
+      rawQuestions = [...rawQuestions, ...extra];
+    } else if (rawQuestions.length > num) {
+      rawQuestions = rawQuestions.slice(0, num);
     }
 
     const formatted = rawQuestions.map((q, idx) => {
@@ -528,7 +433,7 @@ export const getAssessmentResults = async (req, res, next) => {
         } catch (_) {}
       }
 
-      // Query assessment attempts
+      // Query assessment attempts strictly for this assessment and only completed/submitted attempts
       const attempts = await query(
         `SELECT a.*, 
                 COALESCE(u.name, 'Student') as student_name, 
@@ -536,9 +441,10 @@ export const getAssessmentResults = async (req, res, next) => {
          FROM assessment_attempts a
          LEFT JOIN users u ON a.user_id = u.id
          WHERE a.assessment_id = ?
-            OR (a.assessment_id IN (SELECT id FROM assessments WHERE title = ? AND ? != ''))
+           AND a.status != 'in_progress'
+           AND (a.submitted_at IS NOT NULL OR a.completed_at IS NOT NULL)
          ORDER BY a.id DESC`,
-        [id, assessTitle, assessTitle]
+        [id]
       );
       if (Array.isArray(attempts) && attempts.length > 0) {
         results = attempts.map(a => {
@@ -555,7 +461,7 @@ export const getAssessmentResults = async (req, res, next) => {
             total_marks: total,
             percentage: pct,
             status: pct >= 50 || a.status === 'passed' ? 'passed' : 'failed',
-            submitted_at: a.submitted_at || a.completed_at || a.created_at || new Date().toISOString()
+            submitted_at: a.submitted_at || a.completed_at
           };
         });
       }
@@ -569,10 +475,8 @@ export const getAssessmentResults = async (req, res, next) => {
            FROM student_quiz_completions c
            LEFT JOIN users u ON c.user_id = u.id
            WHERE c.quiz_id = ? 
-              OR (c.quiz_title = ? AND ? != '')
-              OR (c.quiz_id IN (SELECT id FROM assessments WHERE title = ? AND ? != ''))
            ORDER BY c.id DESC`,
-          [id, assessTitle, assessTitle, assessTitle, assessTitle]
+          [id]
         );
         if (Array.isArray(compResults) && compResults.length > 0) {
           const existingUserIds = new Set(results.map(r => String(r.user_id)));
@@ -792,7 +696,11 @@ export const getMyAttempts = async (req, res, next) => {
     try {
       if (userId) {
         attempts = await query(
-          `SELECT * FROM assessment_attempts WHERE user_id = ? ORDER BY id DESC`,
+          `SELECT * FROM assessment_attempts 
+           WHERE user_id = ? 
+             AND status != 'in_progress' 
+             AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL) 
+           ORDER BY id DESC`,
           [userId]
         );
         try {
@@ -805,7 +713,12 @@ export const getMyAttempts = async (req, res, next) => {
           }
         } catch (ce) {}
       } else {
-        attempts = await query(`SELECT * FROM assessment_attempts ORDER BY id DESC`);
+        attempts = await query(
+          `SELECT * FROM assessment_attempts 
+           WHERE status != 'in_progress' 
+             AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL) 
+           ORDER BY id DESC`
+        );
       }
     } catch (e) {
       console.warn('[DB getMyAttempts fallback]', e.message);

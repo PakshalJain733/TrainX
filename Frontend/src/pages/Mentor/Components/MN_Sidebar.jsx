@@ -67,7 +67,7 @@ const navGroups = [
 ];
 
 const footerNavItems = [
-  { title: "Support Ticket", url: "/mentor/help", icon: HelpCircle, moduleKey: "mentorHelp" },
+  { title: "Help & FAQ", url: "/mentor/help", icon: HelpCircle, moduleKey: "mentorHelp" },
 ];
 
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {

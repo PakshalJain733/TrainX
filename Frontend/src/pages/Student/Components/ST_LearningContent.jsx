@@ -12,6 +12,68 @@ export default function LearningContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All resources");
   const [viewerModal, setViewerModal] = useState(null);
+  const [blobDocUrl, setBlobDocUrl] = useState(null);
+  const [blobLoading, setBlobLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!viewerModal?.url) {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+      return;
+    }
+
+    const url = viewerModal.url;
+    const isPdfOrDoc = url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)($|\?)/i) || viewerModal.type === "document";
+
+    if (isPdfOrDoc && url.startsWith("http")) {
+      setBlobLoading(true);
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP error " + res.status);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!active) return;
+          const mimeType = url.match(/\.pdf($|\?)/i) ? "application/pdf" : (blob.type || "application/octet-stream");
+          const newBlobUrl = URL.createObjectURL(new Blob([blob], { type: mimeType }));
+          setBlobDocUrl(newBlobUrl);
+          setBlobLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.warn("[ST_LearningContent] Direct blob fetch failed, falling back to embedded viewer:", err.message);
+          setBlobDocUrl(null);
+          setBlobLoading(false);
+        });
+    } else {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+    }
+
+    return () => {
+      active = false;
+      if (blobDocUrl) {
+        URL.revokeObjectURL(blobDocUrl);
+      }
+    };
+  }, [viewerModal?.url]);
+
+  const effectiveDocSrc = useMemo(() => {
+    if (!viewerModal) return "";
+    if (blobDocUrl) return blobDocUrl;
+
+    const url = viewerModal.url;
+    if (
+      url.startsWith("http") &&
+      !url.includes("localhost") &&
+      !url.includes("127.0.0.1") &&
+      url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx)($|\?)/i)
+    ) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  }, [viewerModal, blobDocUrl]);
 
   const loadResources = async () => {
     setLoading(true);
@@ -412,11 +474,19 @@ export default function LearningContent() {
                 ) : viewerModal.url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video controls autoPlay src={viewerModal.url} className="lc-viewer-video" />
                 ) : (
-                  <iframe
-                    src={viewerModal.url}
-                    title={viewerModal.title}
-                    className="lc-viewer-iframe"
-                  />
+                  <>
+                    {blobLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: '14px', gap: '8px' }}>
+                        Loading document...
+                      </div>
+                    )}
+                    <iframe
+                      src={effectiveDocSrc}
+                      title={viewerModal.title}
+                      className="lc-viewer-iframe"
+                      style={blobLoading ? { display: 'none' } : {}}
+                    />
+                  </>
                 )
               )}
             </div>

@@ -530,7 +530,7 @@
 }
 
 .roadmap-regen-btn {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
   border: none;
 }
@@ -2660,7 +2660,7 @@
 }
 
 .roadmap-quiz-submit-btn {
-  background: #059669;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -2669,6 +2669,14 @@
   font-weight: 800;
   cursor: pointer;
   width: 100%;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: all 0.2s ease;
+}
+
+.roadmap-quiz-submit-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
 }
 
 .roadmap-quiz-result-banner {
@@ -2968,7 +2976,7 @@
 }
 
 .roadmap-quiz-submit-btn.btn-ready {
-  background: #059669;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   cursor: pointer;
 }
 
