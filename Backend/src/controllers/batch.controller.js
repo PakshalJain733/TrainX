@@ -337,12 +337,12 @@ export const createBatch = async (req, res, next) => {
       }
     }
 
-    // 3. Resolve trainerId
+    // 3. Resolve trainerId (support mentor, trainer, faculty roles)
     let trainerId = trainer_id ? parseInt(trainer_id, 10) : null;
-    if (!trainerId && batchTrainer && batchTrainer !== 'Faculty Instructor') {
+    if (!trainerId && batchTrainer && !['faculty instructor', 'unassigned', 'mentor'].includes(batchTrainer.toLowerCase())) {
       try {
         const [trainerUser] = await query(
-          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role = 'trainer' LIMIT 1",
+          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role IN ('mentor', 'trainer', 'faculty') LIMIT 1",
           [batchTrainer, batchTrainer]
         );
         if (trainerUser) {
@@ -379,6 +379,11 @@ export const createBatch = async (req, res, next) => {
       try {
         await query(
           `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+          [trainerId, insertedId]
+        );
+        await query(
+          `INSERT INTO mentor_assignments (mentor_id, batch_id) VALUES (?, ?)
+           ON DUPLICATE KEY UPDATE mentor_id = VALUES(mentor_id)`,
           [trainerId, insertedId]
         );
       } catch (_) {}
@@ -482,10 +487,10 @@ export const updateBatch = async (req, res, next) => {
       ]
     );
 
-    if (effectiveTrainer) {
+    if (effectiveTrainer && !['faculty instructor', 'unassigned', 'mentor'].includes(effectiveTrainer.toLowerCase())) {
       try {
         const [trainerUser] = await query(
-          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role = 'trainer' LIMIT 1",
+          "SELECT id, name FROM users WHERE (name = ? OR email = ?) AND role IN ('mentor', 'trainer', 'faculty') LIMIT 1",
           [effectiveTrainer, effectiveTrainer]
         );
         if (trainerUser) {
@@ -495,6 +500,11 @@ export const updateBatch = async (req, res, next) => {
           );
           await query(
             `INSERT IGNORE INTO batch_trainers (user_id, batch_id) VALUES (?, ?)`,
+            [trainerUser.id, cleanId]
+          );
+          await query(
+            `INSERT INTO mentor_assignments (mentor_id, batch_id) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE mentor_id = VALUES(mentor_id)`,
             [trainerUser.id, cleanId]
           );
         }

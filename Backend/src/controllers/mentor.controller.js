@@ -135,18 +135,24 @@ const loadMentorStudents = async (mentorId) => {
          JOIN batches b ON (s.batch_id = b.id OR s.user_id IN (SELECT sb.user_id FROM student_batches sb WHERE sb.batch_id = b.id))
          LEFT JOIN departments d ON d.id = s.department_id
          LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
-         WHERE (b.mentor = ? OR b.trainer = ? OR b.mentor = ?)
-                      AND COALESCE(u.is_active, 1) = 1
+         WHERE (
+           b.trainer_id = ?
+           OR EXISTS (SELECT 1 FROM batch_trainers bt WHERE bt.batch_id = b.id AND bt.user_id = ?)
+           OR EXISTS (SELECT 1 FROM mentor_assignments ma WHERE ma.batch_id = b.id AND ma.mentor_id = ?)
+           OR (b.mentor = ? AND b.mentor NOT IN ('Faculty Instructor', 'Faculty Mentor', 'Mentor', 'Unassigned'))
+           OR (b.trainer = ? AND b.trainer NOT IN ('Faculty Instructor', 'Faculty Mentor', 'Mentor', 'Unassigned'))
+         )
+         AND COALESCE(u.is_active, 1) = 1
          ORDER BY b.name ASC, u.name ASC`,
-        [mentorUser.name, mentorUser.name, mentorUser.email]
+        [mentorId, mentorId, mentorId, mentorUser.name, mentorUser.name]
       )) || [];
     } catch (e) {
       // batch query fallback
     }
 
-    // 3. Admin mentor_assignments table
+    // 3. Batch-assigned students via mentor_assignments
     try {
-      adminAssignedRows = (await query(
+      const batchAssignedStudents = (await query(
         `SELECT
            u.id AS user_id,
            u.name,
@@ -165,18 +171,24 @@ const loadMentorStudents = async (mentorId) => {
            COALESCE(s.college_id, u.college_id) AS college_id,
            c.name AS college_name
          FROM mentor_assignments ma
-         JOIN users u ON (u.id = ma.student_id OR CAST(u.id AS CHAR) = ma.student_id)
+         JOIN batches b ON b.id = ma.batch_id
+         JOIN (
+           SELECT s2.user_id, s2.batch_id FROM students s2 WHERE s2.batch_id IS NOT NULL
+           UNION
+           SELECT sb2.user_id, sb2.batch_id FROM student_batches sb2
+         ) bs ON bs.batch_id = b.id
+         JOIN users u ON u.id = bs.user_id
          LEFT JOIN students s ON s.user_id = u.id
          LEFT JOIN departments d ON d.id = s.department_id
-         LEFT JOIN batches b ON b.id = s.batch_id
          LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
-         WHERE (ma.mentor_id = ? OR ma.mentor_name = ? OR ma.mentor_email = ? OR LOWER(ma.mentor_name) = LOWER(?) OR LOWER(ma.mentor_email) = LOWER(?))
-                      AND COALESCE(u.is_active, 1) = 1
+         WHERE ma.mentor_id = ?
+           AND COALESCE(u.is_active, 1) = 1
          ORDER BY u.name ASC`,
-        [mentorId, mentorUser.name, mentorUser.email, mentorUser.name, mentorUser.email]
+        [mentorId]
       )) || [];
+      adminAssignedRows.push(...batchAssignedStudents);
     } catch (e) {
-      // table not present or fallback
+      // fallback
     }
 
     // 4. Students directly assigned via students table mentor_id or mentor_name
@@ -615,7 +627,6 @@ export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
   } catch (_) {}
 
   const conditions = [
-    'b.mentor_id = ?',
     'b.trainer_id = ?',
     'EXISTS (SELECT 1 FROM batch_trainers bt WHERE bt.batch_id = b.id AND bt.user_id = ?)',
     'EXISTS (SELECT 1 FROM mentor_assignments ma WHERE ma.batch_id = b.id AND ma.mentor_id = ?)',
@@ -628,7 +639,6 @@ export const getMentorAssignedBatchIds = async (mentorId, collegeId = null) => {
   const queryParams = [
     targetCollegeId,
     targetCollegeId,
-    mentorId,
     mentorId,
     mentorId,
     mentorId,
