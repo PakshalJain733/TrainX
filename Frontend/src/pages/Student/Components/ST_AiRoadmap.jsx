@@ -2023,8 +2023,10 @@ export default function AIRoadmap() {
     }
   };
 
-  const loadAllRoadmaps = async () => {
-    setIsLoading(true);
+  const loadAllRoadmaps = async (isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     try {
       const [res, lockRes] = await Promise.all([
         apiFetch("/roadmaps/all"),
@@ -2040,11 +2042,31 @@ export default function AIRoadmap() {
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         const processed = res.data.map((rm) => mergeCachedProgress(rm));
         setAllRoadmaps(processed);
-        // Default select latest roadmap and set active milestone to Milestone 1
-        setCurrentRoadmap(processed[0]);
-        if (processed[0]?.milestones?.length > 0) {
-          setActiveMilestoneIdx(0);
-        }
+
+        setCurrentRoadmap((prevCurrent) => {
+          if (!prevCurrent) {
+            // First initialization
+            if (processed[0]?.milestones?.length > 0) {
+              setActiveMilestoneIdx(0);
+            }
+            return processed[0];
+          }
+
+          // Check if currently selected roadmap exists in latest processed list
+          const matchingRm = processed.find(
+            (r) => r.id === prevCurrent.id || (r.targetRole && prevCurrent.targetRole && r.targetRole.trim().toLowerCase() === prevCurrent.targetRole.trim().toLowerCase())
+          );
+
+          if (matchingRm) {
+            // Check if milestones or updated dates changed before replacing to avoid re-rendering
+            const isUpdated = matchingRm.updatedAt !== prevCurrent.updatedAt ||
+              JSON.stringify(matchingRm.milestones) !== JSON.stringify(prevCurrent.milestones);
+            return isUpdated ? matchingRm : prevCurrent;
+          }
+
+          // If a brand new roadmap was generated and student was on previous default
+          return processed[0] || prevCurrent;
+        });
       } else {
         // Fetch active single roadmap
         const resSingle = await apiFetch("/roadmaps");
@@ -2054,16 +2076,25 @@ export default function AIRoadmap() {
         if (resSingle && resSingle.data && resSingle.data.milestones) {
           const rm = mergeCachedProgress(resSingle.data);
           setAllRoadmaps([rm]);
-          setCurrentRoadmap(rm);
-          if (rm.milestones?.length > 0) {
-            setActiveMilestoneIdx(0);
-          }
+          setCurrentRoadmap((prevCurrent) => {
+            if (!prevCurrent) {
+              if (rm.milestones?.length > 0) {
+                setActiveMilestoneIdx(0);
+              }
+              return rm;
+            }
+            const isUpdated = rm.id !== prevCurrent.id ||
+              JSON.stringify(rm.milestones) !== JSON.stringify(prevCurrent.milestones);
+            return isUpdated ? rm : prevCurrent;
+          });
         }
       }
     } catch (err) {
       console.error("Error loading roadmaps:", err);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -2644,6 +2675,64 @@ export default function AIRoadmap() {
   }, [activeSection, activeMilestoneIdx, milestones, practiceScores, compilerStatus]);
 
   const overallProgress = calculateRoadmapProgress(milestones);
+
+  // Auto-refresh polling (every 20s) and immediate tab focus / visibility refetch
+  const loadAllRoadmapsRef = useRef(loadAllRoadmaps);
+  useEffect(() => {
+    loadAllRoadmapsRef.current = loadAllRoadmaps;
+  });
+
+  useEffect(() => {
+    let intervalId = null;
+
+    const executeSilentRefresh = () => {
+      if (document.visibilityState === "visible") {
+        if (typeof loadAllRoadmapsRef.current === "function") {
+          loadAllRoadmapsRef.current(true);
+        }
+      }
+    };
+
+    const startPolling = () => {
+      if (!intervalId && document.visibilityState === "visible") {
+        intervalId = setInterval(() => {
+          if (document.visibilityState === "visible") {
+            executeSilentRefresh();
+          }
+        }, 20000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        executeSilentRefresh();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    // Start polling initially if page is visible
+    if (document.visibilityState === "visible") {
+      startPolling();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+    };
+  }, []);
 
   return (
     <div className="roadmap-container stack-6">

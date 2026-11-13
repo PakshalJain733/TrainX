@@ -558,7 +558,9 @@ export default function CodingPlatform() {
     if (!isProctoredSession || hasSubmitted) return;
 
     let armTimer = null;
-    if (isFullscreen) {
+    // For batch coursework tasks, arm proctoring after initialization even if browser is not native fullscreen.
+    // For practice sessions, keep fullscreen-based arming.
+    if (isFullscreen || isBatchCoursework) {
       armTimer = setTimeout(() => {
         proctorArmedRef.current = true;
       }, 1500);
@@ -579,7 +581,8 @@ export default function CodingPlatform() {
     };
 
     const handleWindowBlur = () => {
-      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+      // Window blur indicates focus left the examination window (e.g. switching windows, floating overlay interactions)
+      if (proctorArmedRef.current && !hasSubmitted) {
         handleTabSwitchEvent();
       }
     };
@@ -630,7 +633,7 @@ export default function CodingPlatform() {
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [isProctoredSession, hasSubmitted, isProctorActive, isFullscreen]);
+  }, [isProctoredSession, hasSubmitted, isProctorActive, isFullscreen, isBatchCoursework]);
 
   // Global clipboard and drag/drop blockers (strict compiler anti-cheat)
   useEffect(() => {
@@ -706,7 +709,8 @@ export default function CodingPlatform() {
                 setSelectedLang(taskNormKey);
                 setCode((prevCode) => {
                   const prev = typeof prevCode === "string" ? prevCode : "";
-                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
                 });
               }
               const isRetakeActive = Boolean(t.retakeAvailable);
@@ -767,7 +771,8 @@ export default function CodingPlatform() {
                 setSelectedLang(taskNormKey);
                 setCode((prevCode) => {
                   const prev = typeof prevCode === "string" ? prevCode : "";
-                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
                 });
               }
               const isRetakeActive = Boolean(p.retakeAvailable);
@@ -884,7 +889,9 @@ export default function CodingPlatform() {
     setConsoleOutput("Running code...");
     setMobileView("code");
 
-    // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
+    if (isPractice) {
+      setConsoleTab("output");
+    }
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
       .find((tc) => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
     const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
@@ -898,6 +905,9 @@ export default function CodingPlatform() {
           code: typeof code === "string" ? code : String(code ?? ""),
           stdin,
           function_name: taskData?.function_name || taskData?.functionName || null,
+          problem_id: taskData?.id,
+          source: isBatch ? 'batch_task' : 'practice_problem',
+          task_id: taskId,
         }),
       });
       const data = await res.json();
@@ -1098,6 +1108,25 @@ export default function CodingPlatform() {
         clearStoredProctorStrikes();
         proctorViolationsRef.current = 0;
       }
+      // Immediately inject current submission result so the submissions tab is populated without delay
+      if (isBatch && result) {
+        const currentBatchSub = {
+          id: result.submission?.id || Date.now(),
+          status: String(result.status || 'submitted').toLowerCase(),
+          marks: result.marks ?? result.score ?? 0,
+          score: result.marks ?? result.score ?? 0,
+          percentage: result.percentage ?? 0,
+          passed_test_cases: result.passed_tests ?? 0,
+          total_test_cases: result.total_tests ?? (taskData?.testCases?.length || 1),
+          language: selectedLang || taskData?.language || 'Java',
+          submitted_at: new Date().toISOString(),
+          attempt_number: result.attempts_used || 1,
+          is_retake: Boolean(isRetakeActive),
+          feedback: `${result.status === 'accepted' ? 'Passed' : 'Failed'}: Passed ${result.passed_tests ?? 0}/${result.total_tests ?? 1} test cases (${result.percentage ?? 0}%) - Score: ${result.score ?? 0}/${taskData?.points || 100} pts`,
+        };
+        setSubmissions([currentBatchSub]);
+      }
+
       setActiveTab("submissions");
       loadSubmissions();
 
@@ -1117,18 +1146,39 @@ export default function CodingPlatform() {
   const loadSubmissions = async () => {
     setSubmissionsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/code/submissions/my`, { headers: getAuthHeaders() });
-      const data = await res.json();
-      if (res.ok && data?.data?.submissions) {
-        const problemId = String(taskData?.id || "");
-        const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
-        setSubmissions(matched);
+      if (isBatch) {
+        // Batch Tasks store submissions in task_submissions via the batch tasks detail endpoint
+        const targetTaskId = taskData?.id || String(taskId || '').replace(/[^0-9]/g, '') || taskId;
+        let batchSubmissions = [];
 
-        const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
+        try {
+          const res = await fetch(`${API_BASE}/batches/tasks/detail/${targetTaskId}`, { headers: getAuthHeaders() });
+          const data = await res.json();
+          if (res.ok && data?.success && data?.data) {
+            const t = data.data;
+            const subs = Array.isArray(t.submissions) ? t.submissions : (t.submission ? [t.submission] : []);
+            batchSubmissions = subs.map((sub, idx) => ({
+              id: sub.id,
+              status: (sub.status || '').toLowerCase(),
+              marks: sub.score ?? sub.marks_obtained ?? 0,
+              score: sub.score ?? sub.marks_obtained ?? 0,
+              percentage: sub.status === 'Passed' ? 100 : (sub.status === 'Partial' ? 50 : 0),
+              passed_test_cases: sub.status === 'Passed' ? (taskData?.testCases?.length || 1) : 0,
+              total_test_cases: taskData?.testCases?.length || 1,
+              language: taskData?.language || 'Java',
+              submitted_at: sub.submitted_at,
+              attempt_number: sub.attempt_number || (idx + 1),
+              is_retake: Boolean(sub.is_retake),
+              feedback: sub.feedback,
+            }));
+          }
+        } catch (err) {
+          console.warn("[loadSubmissions] Failed fetching batch task submissions:", err);
+        }
 
-        let combined = matched;
-        if (isBatch && matched.length === 0 && Array.isArray(taskData?.submissions) && taskData.submissions.length > 0) {
-          combined = taskData.submissions.map((sub, idx) => ({
+        // Fallback to taskData?.submissions if detail fetch returned empty
+        if (batchSubmissions.length === 0 && Array.isArray(taskData?.submissions) && taskData.submissions.length > 0) {
+          batchSubmissions = taskData.submissions.map((sub, idx) => ({
             id: sub.id,
             status: (sub.status || '').toLowerCase(),
             marks: sub.score ?? sub.marks_obtained ?? 0,
@@ -1143,16 +1193,27 @@ export default function CodingPlatform() {
             feedback: sub.feedback,
           }));
         }
-        setSubmissions(combined);
 
+        setSubmissions(batchSubmissions);
+        const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
         if (isRetake) {
           setHasSubmitted(false);
-        } else if (isBatch) {
-          if (combined.length > 0 || taskData?.alreadySubmitted) {
-            setHasSubmitted(true);
-          }
-        } else {
-          if (combined.length >= 3) {
+        } else if (batchSubmissions.length > 0 || taskData?.alreadySubmitted) {
+          setHasSubmitted(true);
+        }
+      } else {
+        // Practice Problems store submissions in coding_submissions
+        const res = await fetch(`${API_BASE}/code/submissions/my`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data?.data?.submissions) {
+          const problemId = String(taskData?.id || "");
+          const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
+          setSubmissions(matched);
+
+          const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
+          if (isRetake) {
+            setHasSubmitted(false);
+          } else if (matched.length >= 3) {
             setHasSubmitted(true);
           } else {
             setHasSubmitted(false);

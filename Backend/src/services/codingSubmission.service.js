@@ -10,6 +10,7 @@ import {
   runCodeInSandbox,
   normalizeOutput,
   deriveSubmissionStatus,
+  getCanonicalLanguage,
 } from './code.executor.service.js';
 import { query } from '../config/db.js';
 
@@ -221,6 +222,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     try {
       const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
       if (pRows && pRows.length > 0) {
+        const requiredLang = pRows[0].language;
+        const canonicalRequired = getCanonicalLanguage(requiredLang);
+        if (canonicalRequired) {
+          const canonicalSubmitted = getCanonicalLanguage(language);
+          if (canonicalSubmitted !== canonicalRequired) {
+            const error = new Error(`This problem is restricted to ${requiredLang}. Submissions in ${language} are not permitted.`);
+            error.statusCode = 400;
+            throw error;
+          }
+        }
         problem = {
           id: pRows[0].id,
           title: pRows[0].title,
@@ -234,6 +245,7 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         }
       }
     } catch (e) {
+      if (e.statusCode) throw e;
       console.warn('[submitCodeAndSaveService] practice_problems lookup:', e.message);
     }
   }
@@ -285,6 +297,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     try {
       const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
       if (pRows && pRows.length > 0) {
+        const requiredLang = pRows[0].language;
+        const canonicalRequired = getCanonicalLanguage(requiredLang);
+        if (canonicalRequired) {
+          const canonicalSubmitted = getCanonicalLanguage(language);
+          if (canonicalSubmitted !== canonicalRequired) {
+            const error = new Error(`This problem is restricted to ${requiredLang}. Submissions in ${language} are not permitted.`);
+            error.statusCode = 400;
+            throw error;
+          }
+        }
         problem = {
           id: pRows[0].id,
           title: pRows[0].title,
@@ -298,6 +320,7 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         }
       }
     } catch (e) {
+      if (e.statusCode) throw e;
       console.warn('[submitCodeAndSaveService] practice_problems fallback:', e.message);
     }
   }
@@ -313,9 +336,18 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     testCases = await findCodingTestCasesByProblemId(problem_id);
   }
 
-  // If problem has no test cases configured at all, synthesize 1 basic test case
+  // If problem has no test cases configured at all
   if (!testCases || testCases.length === 0) {
-    testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
+    if (!isBatchTask) {
+      // In Coding Practice, reject evaluation with a clear informative error to prevent misleading results/marks
+      const unconfiguredError = new Error('This problem is not configured for evaluation yet. Please contact your Mentor.');
+      unconfiguredError.statusCode = 400;
+      unconfiguredError.unconfigured = true;
+      throw unconfiguredError;
+    } else {
+      // Fallback for batch coursework if any legacy task has no test cases
+      testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
+    }
   }
 
   // Enforce batch enrollment and single-submission rule for batch tasks

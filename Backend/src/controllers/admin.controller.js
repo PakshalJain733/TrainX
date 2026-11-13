@@ -1491,27 +1491,53 @@ export const updateAdminPracticeProblem = async (req, res, next) => {
     }
 
     const tagsStr = Array.isArray(tags) ? tags.join(', ') : (Array.isArray(companies) ? companies.join(', ') : (tags || companies || ''));
-    const langVal = language || lang || null;
+    const hasLangInBody = (language !== undefined || lang !== undefined);
+    let resolvedLang = null;
+    if (hasLangInBody) {
+      const rawLang = language !== undefined ? language : lang;
+      if (rawLang && rawLang !== 'All' && rawLang !== 'Any' && String(rawLang).trim() !== '') {
+        resolvedLang = String(rawLang).trim();
+      } else {
+        resolvedLang = null;
+      }
+    }
     const batchVal = batch || batchName || null;
     let validBatchId = batch_id ? parseInt(batch_id, 10) : null;
     if (isNaN(validBatchId)) validBatchId = null;
 
     try {
-      await query(
-        `UPDATE practice_problems
-         SET title = COALESCE(?, title),
-             description = COALESCE(?, description),
-             difficulty = COALESCE(?, difficulty),
-             category = COALESCE(?, category),
-             tags = COALESCE(?, tags),
-             points = COALESCE(?, points),
-             due_date = ?,
-             language = COALESCE(?, language),
-             batch_name = COALESCE(?, batch_name),
-             batch_id = COALESCE(?, batch_id)
-         WHERE id = ?`,
-        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, langVal, batchVal, validBatchId, id]
-      );
+      if (hasLangInBody) {
+        await query(
+          `UPDATE practice_problems
+           SET title = COALESCE(?, title),
+               description = COALESCE(?, description),
+               difficulty = COALESCE(?, difficulty),
+               category = COALESCE(?, category),
+               tags = COALESCE(?, tags),
+               points = COALESCE(?, points),
+               due_date = ?,
+               language = ?,
+               batch_name = COALESCE(?, batch_name),
+               batch_id = COALESCE(?, batch_id)
+           WHERE id = ?`,
+          [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, resolvedLang, batchVal, validBatchId, id]
+        );
+      } else {
+        await query(
+          `UPDATE practice_problems
+           SET title = COALESCE(?, title),
+               description = COALESCE(?, description),
+               difficulty = COALESCE(?, difficulty),
+               category = COALESCE(?, category),
+               tags = COALESCE(?, tags),
+               points = COALESCE(?, points),
+               due_date = ?,
+               batch_name = COALESCE(?, batch_name),
+               batch_id = COALESCE(?, batch_id)
+           WHERE id = ?`,
+          [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, batchVal, validBatchId, id]
+        );
+      }
     } catch (err) {
       await query(
         `UPDATE practice_problems
