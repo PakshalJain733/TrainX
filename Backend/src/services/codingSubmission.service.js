@@ -336,9 +336,18 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     testCases = await findCodingTestCasesByProblemId(problem_id);
   }
 
-  // If problem has no test cases configured at all, synthesize 1 basic test case
+  // If problem has no test cases configured at all
   if (!testCases || testCases.length === 0) {
-    testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
+    if (!isBatchTask) {
+      // In Coding Practice, reject evaluation with a clear informative error to prevent misleading results/marks
+      const unconfiguredError = new Error('This problem is not configured for evaluation yet. Please contact your Mentor.');
+      unconfiguredError.statusCode = 400;
+      unconfiguredError.unconfigured = true;
+      throw unconfiguredError;
+    } else {
+      // Fallback for batch coursework if any legacy task has no test cases
+      testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
+    }
   }
 
   // Enforce batch enrollment and single-submission rule for batch tasks
