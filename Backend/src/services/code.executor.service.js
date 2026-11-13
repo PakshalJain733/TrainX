@@ -51,6 +51,20 @@ export const LANGUAGE_ALIASES = {
 export const isLanguageSupported = (language) =>
   typeof language === 'string' && Boolean(LANGUAGE_ALIASES[language.toLowerCase()]);
 
+export const getCanonicalLanguage = (lang) => {
+  if (!lang) return null;
+  const l = String(lang).toLowerCase().trim();
+  if (['all', 'any', 'any language', 'none', ''].includes(l)) return null;
+  if (l.includes('py')) return 'python';
+  if (l.includes('java') && !l.includes('script')) return 'java';
+  if (l.includes('c++') || l.includes('cpp')) return 'cpp';
+  if (l === 'c') return 'c';
+  if (l.includes('node') || l.includes('js') || l.includes('script') || l.includes('ts') || l.includes('type')) return 'node';
+  if (l.includes('sql')) return 'sql';
+  if (l.includes('go')) return 'go';
+  return LANGUAGE_ALIASES[l] || l;
+};
+
 const SOURCE_FILENAMES = {
   c: 'main.c',
   cpp: 'main.cpp',

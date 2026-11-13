@@ -10,6 +10,7 @@ import {
   runCodeInSandbox,
   normalizeOutput,
   deriveSubmissionStatus,
+  getCanonicalLanguage,
 } from './code.executor.service.js';
 import { query } from '../config/db.js';
 
@@ -221,6 +222,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     try {
       const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
       if (pRows && pRows.length > 0) {
+        const requiredLang = pRows[0].language;
+        const canonicalRequired = getCanonicalLanguage(requiredLang);
+        if (canonicalRequired) {
+          const canonicalSubmitted = getCanonicalLanguage(language);
+          if (canonicalSubmitted !== canonicalRequired) {
+            const error = new Error(`This problem is restricted to ${requiredLang}. Submissions in ${language} are not permitted.`);
+            error.statusCode = 400;
+            throw error;
+          }
+        }
         problem = {
           id: pRows[0].id,
           title: pRows[0].title,
@@ -234,6 +245,7 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         }
       }
     } catch (e) {
+      if (e.statusCode) throw e;
       console.warn('[submitCodeAndSaveService] practice_problems lookup:', e.message);
     }
   }
@@ -285,6 +297,16 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     try {
       const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
       if (pRows && pRows.length > 0) {
+        const requiredLang = pRows[0].language;
+        const canonicalRequired = getCanonicalLanguage(requiredLang);
+        if (canonicalRequired) {
+          const canonicalSubmitted = getCanonicalLanguage(language);
+          if (canonicalSubmitted !== canonicalRequired) {
+            const error = new Error(`This problem is restricted to ${requiredLang}. Submissions in ${language} are not permitted.`);
+            error.statusCode = 400;
+            throw error;
+          }
+        }
         problem = {
           id: pRows[0].id,
           title: pRows[0].title,
@@ -298,6 +320,7 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
         }
       }
     } catch (e) {
+      if (e.statusCode) throw e;
       console.warn('[submitCodeAndSaveService] practice_problems fallback:', e.message);
     }
   }

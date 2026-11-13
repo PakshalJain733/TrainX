@@ -706,7 +706,8 @@ export default function CodingPlatform() {
                 setSelectedLang(taskNormKey);
                 setCode((prevCode) => {
                   const prev = typeof prevCode === "string" ? prevCode : "";
-                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
                 });
               }
               const isRetakeActive = Boolean(t.retakeAvailable);
@@ -767,7 +768,8 @@ export default function CodingPlatform() {
                 setSelectedLang(taskNormKey);
                 setCode((prevCode) => {
                   const prev = typeof prevCode === "string" ? prevCode : "";
-                  return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
                 });
               }
               const isRetakeActive = Boolean(p.retakeAvailable);
@@ -884,7 +886,9 @@ export default function CodingPlatform() {
     setConsoleOutput("Running code...");
     setMobileView("code");
 
-    // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
+    if (isPractice) {
+      setConsoleTab("output");
+    }
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
       .find((tc) => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
     const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
@@ -898,6 +902,9 @@ export default function CodingPlatform() {
           code: typeof code === "string" ? code : String(code ?? ""),
           stdin,
           function_name: taskData?.function_name || taskData?.functionName || null,
+          problem_id: taskData?.id,
+          source: isBatch ? 'batch_task' : 'practice_problem',
+          task_id: taskId,
         }),
       });
       const data = await res.json();

@@ -1,6 +1,7 @@
 import { sendSuccess, sendError } from '../utils/response.js';
-import { runCodeInSandbox, isLanguageSupported } from '../services/code.executor.service.js';
+import { runCodeInSandbox, isLanguageSupported, getCanonicalLanguage } from '../services/code.executor.service.js';
 import { submitCodeAndSaveService, getStudentSubmissionsService, evaluateCodeInSandbox } from '../services/codingSubmission.service.js';
+import { query } from '../config/db.js';
 
 /**
  * POST /api/v1/code/run
@@ -8,13 +9,32 @@ import { submitCodeAndSaveService, getStudentSubmissionsService, evaluateCodeInS
  */
 export const runCodeController = async (req, res, next) => {
   try {
-    const { language, code, stdin = '', function_name, functionName } = req.body || {};
+    const { language, code, stdin = '', function_name, functionName, problem_id, source, task_id } = req.body || {};
 
     if (!language || !isLanguageSupported(language)) {
       return sendError(res, 'Unsupported or missing language', 400);
     }
     if (!code || typeof code !== 'string' || code.trim() === '') {
       return sendError(res, 'code is required', 400);
+    }
+
+    const isPractice = source === 'practice' || source === 'practice_problem' || String(task_id || '').toLowerCase().startsWith('practice');
+    const numericProblemId = parseInt(problem_id, 10);
+    if (!isNaN(numericProblemId) && isPractice) {
+      try {
+        const pRows = await query('SELECT language FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
+        if (pRows && pRows.length > 0 && pRows[0].language) {
+          const canonicalRequired = getCanonicalLanguage(pRows[0].language);
+          if (canonicalRequired) {
+            const canonicalRun = getCanonicalLanguage(language);
+            if (canonicalRun !== canonicalRequired) {
+              return sendError(res, `This problem is restricted to ${pRows[0].language}. Code execution in ${language} is not permitted.`, 400);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[runCodeController] practice problem language check warning:', err.message);
+      }
     }
 
     const result = await runCodeInSandbox({
