@@ -905,7 +905,63 @@ export function validateAndSanitizePracticeProblem(problem, context = {}) {
     }));
   }
 
+  // 5. Standardize difficulty tier strictly into: 'Very Easy' | 'Easy' | 'Medium' | 'Hard' | 'Very Hard'
+  const mIdx = Math.max(1, parseInt(problem.milestoneIndex || context.milestoneIndex || context.mIdx, 10) || 1);
+  const rawDiff = String(problem.difficulty || '').trim().toLowerCase();
+  if (rawDiff.includes('very easy') || rawDiff === 'beginner') {
+    problem.difficulty = 'Very Easy';
+  } else if (rawDiff.includes('very hard') || rawDiff === 'expert') {
+    problem.difficulty = 'Very Hard';
+  } else if (rawDiff === 'easy' || rawDiff === 'elementary') {
+    problem.difficulty = 'Easy';
+  } else if (rawDiff === 'medium' || rawDiff === 'intermediate') {
+    problem.difficulty = 'Medium';
+  } else if (rawDiff === 'hard' || rawDiff === 'advanced') {
+    problem.difficulty = 'Hard';
+  } else {
+    problem.difficulty = resolveMilestoneDifficultyTier(mIdx);
+  }
+  problem.milestoneIndex = mIdx;
+
+  // 6. Pedagogical HTML & UI Challenge Sanitization
+  const isHtmlTopic = problem.language === 'html' || 
+    String(problem.starterCode || '').includes('<!DOCTYPE html>') ||
+    String(problem.title || '').toLowerCase().includes('html') ||
+    String(context.topic || '').toLowerCase().includes('html');
+
+  if (isHtmlTopic) {
+    problem.language = 'html';
+    const sInput = String(problem.sampleInput || '').trim();
+    if (sInput.startsWith('[') || sInput.startsWith('{')) {
+      problem.sampleInput = "Direct HTML5 Markup (No stdin required)";
+    }
+    if (problem.prompt && (problem.prompt.toLowerCase().includes('function') || problem.prompt.toLowerCase().includes('return')) && problem.prompt.includes('HTML')) {
+      problem.prompt = `Write clean, semantic HTML5 markup for the requested structure. Use standard semantic elements (<section>, <article>, <h2>, <p>) to build the UI, and check your live output in the Live Web Preview tab.`;
+    }
+  }
+
   return problem;
+}
+
+export const ROADMAP_PRACTICE_TIERS = {
+  1: 'Very Easy',
+  2: 'Easy',
+  3: 'Medium',
+  4: 'Hard',
+  5: 'Very Hard',
+};
+
+export const ROADMAP_TIER_DESCRIPTIONS = {
+  1: 'Very Easy (Absolute Beginner: zero prior knowledge assumed. Basic variables, simple print/return, direct arithmetic, trivial starter exercises)',
+  2: 'Easy (Elementary: basic conditionals, simple helper functions, single loops, elementary array or string operations)',
+  3: 'Medium (Intermediate: combining loops + conditionals, data structures, objects/dictionaries, standard filtering or aggregations)',
+  4: 'Hard (Advanced: multi-step logic, algorithmic reasoning, edge cases, nested structures, data processing)',
+  5: 'Very Hard (Expert: complex algorithms, optimal time/space complexity, high-performance edge cases, production architecture)',
+};
+
+export function resolveMilestoneDifficultyTier(mIdx) {
+  const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+  return ROADMAP_PRACTICE_TIERS[idx] || (idx > 5 ? 'Very Hard' : 'Medium');
 }
 
 export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '', topic = '', options = {}) => {
@@ -915,14 +971,11 @@ export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '
   const { milestoneIndex = 1, difficulty: customDifficulty, topics = [], description = '' } = options || {};
   const mIdx = Math.max(1, parseInt(milestoneIndex, 10) || 1);
 
-  const difficultyMap = {
-    1: 'Beginner (Syntax, Variables, Basic Conditionals & Fundamentals)',
-    2: 'Elementary (Functions, Loops, Control Flow & Basic Data Collections)',
-    3: 'Intermediate (Data Structures, Object-Oriented Principles & Component State)',
-    4: 'Advanced (Algorithms, Asynchronous Logic, APIs & Relational Integrity)',
-    5: 'Expert (Architecture, Optimizations, Resiliency & Production Systems)',
-  };
-  const difficulty = customDifficulty || difficultyMap[mIdx] || (mIdx > 5 ? 'Expert' : 'Intermediate');
+  const tierName = resolveMilestoneDifficultyTier(mIdx);
+  const difficultyDesc = ROADMAP_TIER_DESCRIPTIONS[mIdx] || ROADMAP_TIER_DESCRIPTIONS[5];
+  const difficulty = customDifficulty && (customDifficulty.includes('Easy') || customDifficulty.includes('Medium') || customDifficulty.includes('Hard'))
+    ? customDifficulty
+    : tierName;
 
   const topicsList = Array.isArray(topics) && topics.length > 0
     ? topics.map(t => typeof t === 'string' ? t : (t.title || JSON.stringify(t))).join('; ')
@@ -931,29 +984,47 @@ export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '
   const prompt = `You are a Principal Coding Instructor and Technical Curriculum Architect.
 Create a highly specific, authentic, hands-on coding challenge strictly focused on Milestone ${mIdx}: "${cleanTopic}" (from module: "${cleanTitle}") tailored for a student aspiring to become a "${cleanRole}".
 
-CRITICAL REQUIREMENTS:
-1. STRICT MILESTONE CONFINEMENT & DIFFICULTY CALIBRATION:
-   - Target Milestone Level: Milestone ${mIdx} (Difficulty: ${difficulty}).
+CRITICAL PEDAGOGICAL DIFFICULTY & PROGRESSION RULES:
+1. STRICT PROGRESSION FROM ZERO KNOWLEDGE (PEDAGOGICAL CALIBRATION):
+   - The student begins with ZERO initial knowledge of "${cleanTopic}".
+   - Practice challenges MUST strictly follow an authentic 5-tier graduated progression:
+     * Milestone 1 MUST BE "Very Easy": Complete beginner friendly. Trivial assignment, basic arithmetic, single-line string/number return, or elementary print output. Assume ZERO prior exposure. NEVER expect complex loops, multi-step logic, or advanced abstractions.
+     * Milestone 2 MUST BE "Easy": Straightforward helper function, single conditional (if/else), basic loop, or simple collection lookup.
+     * Milestone 3 MUST BE "Medium": Combining loops, conditionals, objects, or arrays with standard transformations or filtering.
+     * Milestone 4 MUST BE "Hard": Multi-step algorithmic problem solving, handling boundary cases, and structured nested data.
+     * Milestone 5+ MUST BE "Very Hard": Complex algorithmic challenge, edge case robustness, and optimal time/space complexity.
+   - Target Milestone Level: Milestone ${mIdx}
+   - Target Difficulty Tier: "${tierName}" (${difficultyDesc})
+   - In your JSON response, set the "difficulty" field EXACTLY to "${tierName}".
+
+2. STRICT MILESTONE CONFINEMENT:
    ${description ? `- Milestone Scope / Objectives: "${description}"` : ''}
    ${topicsList ? `- Milestone Topic Outline: ${topicsList}` : ''}
    - The challenge MUST strictly and exclusively focus on concepts covered within Milestone ${mIdx} ("${cleanTitle}").
-   - DO NOT introduce, test, or mix topics from other milestones or advanced tiers.
+   - DO NOT introduce, test, or mix topics from later milestones or advanced tiers.
 
-2. DOMAIN & LANGUAGE ALIGNMENT:
-   - The challenge MUST directly test practical implementation of "${cleanTopic}" at the Milestone ${mIdx} difficulty tier.
+3. DOMAIN & LANGUAGE ALIGNMENT:
+   - The challenge MUST directly test practical implementation of "${cleanTopic}" at the Milestone ${mIdx} difficulty tier ("${tierName}").
    - NEVER provide a generic "iterate through numbers array" problem.
    - If topic relates to React / State / Hooks: Ask to write a functional React component calibrated to milestone level. Language: "react".
-   - If topic relates to HTML5 / CSS3 / Flexbox: Ask to build a modern responsive layout or UI element. Language: "html".
+   - If topic relates to HTML5 / CSS3 / Web Design / Flexbox:
+     * The student writes DIRECT semantic HTML & CSS in the editor.
+     * DO NOT ask the student to write a JavaScript function or string concatenator that parses JSON into HTML!
+     * "sampleInput": Must be "Direct HTML5 Markup (No stdin required)".
+     * "sampleOutput": A clean, readable snippet of the expected semantic HTML layout (properly formatted with newlines and indentation) or "Rendered Web Preview: Semantic layout with headings, articles, and styled cards."
+     * "starterCode": Must be a clean HTML5 skeleton (<!DOCTYPE html><html lang="en"><head><style>...</style></head><body>...</body></html>) with helpful comments.
+     * Milestone 1 (Very Easy) MUST be basic introductory HTML (e.g. creating a basic page with <h1>, <h2>, <p>, <img>, or <section> tags).
+     * Language: "html".
    - If topic relates to SQL / Relational Databases: Ask to write a SQL query (selection/filtering for early milestones, JOINs/aggregations for later milestones). Language: "sql" or "node".
    - If topic relates to Python / Data / AI: Ask to solve a Python data processing challenge with variables/arithmetic for M1, functions/loops for M2, dictionaries/OOP for M3, algorithms for M4+. Language: "python".
    - If topic relates to Java / OOP: Ask to implement a class or method matching the milestone difficulty. Language: "java".
    - If topic relates to Data Structures & Algorithms: Ask to solve a canonical problem matching the milestone tier. Language: "node", "python", "cpp", or "java".
    - If topic relates to Backend / APIs / Node.js: Ask to implement a request handler, middleware, or data validation logic. Language: "node".
 
-3. REALISTIC PROBLEM STATEMENT:
+4. REALISTIC PROBLEM STATEMENT:
    - Provide a clear, engaging 2-3 sentence problem description with requirements and constraints strictly matching Milestone ${mIdx}.
 
-4. STRICT PROBLEM-TYPE AND EXPECTED OUTPUT CONSISTENCY:
+5. STRICT PROBLEM-TYPE AND EXPECTED OUTPUT CONSISTENCY:
    - Every sampleInput and expected sampleOutput MUST strictly match the exact problem statement.
    - STRING REVERSAL: If the problem asks to reverse a string (e.g. reverseString("hello")), the expected output MUST ALWAYS be the reversed string ("olleh"), NEVER a boolean true/false!
      * Example: Input "hello" -> Output "olleh". Input "world" -> Output "dlrow". Input "TrainX" -> Output "XniarT".
@@ -962,7 +1033,7 @@ CRITICAL REQUIREMENTS:
    - TRANSFORMATION PROBLEMS: For any transformation, formatting, or math (case conversion, sorting, calculating totals), the expected output must be the transformed result itself, NEVER boolean validation flags.
    - The starterCode test invocation must print the actual return value (e.g. console.log(reverseString("hello"))), NEVER a boolean comparison assertion like console.log(reverseString("hello") === "olleh").
 
-5. WORKING STARTER CODE & SOLUTION CODE:
+6. WORKING STARTER CODE & SOLUTION CODE:
    - Provide boilerplate code with function signature, helpful inline comments, and a runnable test invocation at the bottom so clicking "Run Code" produces clean console output immediately.
    - Solution code must be complete, correct, and directly solve the challenge.
 
@@ -976,7 +1047,7 @@ Output ONLY valid JSON strictly matching this schema without markdown backticks:
   "solutionCode": "// Reference solution...",
   "language": "node",
   "milestoneIndex": ${mIdx},
-  "difficulty": "${difficulty}"
+  "difficulty": "${tierName}"
 }`;
 
   try {
@@ -1000,6 +1071,7 @@ Output ONLY valid JSON strictly matching this schema without markdown backticks:
 
 export function generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, options = {}) {
   const mIdx = Math.max(1, parseInt(options?.milestoneIndex, 10) || 1);
+  const tier = resolveMilestoneDifficultyTier(mIdx);
   const lower = `${cleanTopic} ${cleanTitle} ${cleanRole}`.toLowerCase();
 
   // 1. String Manipulation / Reversal / Palindrome
@@ -1011,7 +1083,7 @@ export function generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cl
         prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
         sampleInput: `racecar`,
         sampleOutput: `true`,
-        starterCode: `// Palindrome Verification for: ${cleanTopic}
+        starterCode: `// Palindrome Verification (${tier}) for: ${cleanTopic}
 function isPalindrome(str) {
   if (typeof str !== "string") return false;
   const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -1021,14 +1093,44 @@ function isPalindrome(str) {
 // Test execution:
 console.log(isPalindrome("racecar"));
 `,
-        solutionCode: `// Complete Palindrome solution`,
+        solutionCode: `function isPalindrome(str) {\n  if (typeof str !== "string") return false;\n  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");\n  return clean === clean.split("").reverse().join("");\n}`,
         language: "node",
         milestoneIndex: mIdx,
-        difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+        difficulty: tier,
         testCases: [
           { input: "racecar", expectedOutput: "true", isHidden: false, description: "Standard palindrome" },
           { input: "hello", expectedOutput: "false", isHidden: false, description: "Non-palindrome" },
           { input: "madam", expectedOutput: "true", isHidden: true, description: "Word palindrome" }
+        ]
+      };
+    }
+
+    const isReversal = lower.includes("reverse") || lower.includes("reversal");
+    if (!isReversal && mIdx === 1) {
+      // General String Milestone 1: Very Easy — Absolute Beginner string fundamentals
+      return {
+        title: `Hands-on Challenge: String Concatenation & Greeting (${cleanTopic})`,
+        prompt: `Write a beginner-friendly function createGreeting(name) that takes a user's name as input and returns a warm greeting message: "Hello, " followed by the name and an exclamation mark "!". For example, createGreeting("Alice") returns "Hello, Alice!". This introduces fundamental string operations for complete beginners.`,
+        sampleInput: `Alice`,
+        sampleOutput: `Hello, Alice!`,
+        starterCode: `// String Fundamentals (Very Easy) for: ${cleanTopic}
+function createGreeting(name) {
+  // Return "Hello, " + name + "!"
+  return "Hello, " + (name || "Learner") + "!";
+}
+
+// Test execution:
+console.log(createGreeting("Alice"));
+`,
+        solutionCode: `function createGreeting(name) {\n  return "Hello, " + (name || "Learner") + "!";\n}`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Very Easy",
+        testCases: [
+          { input: "Alice", expectedOutput: "Hello, Alice!", isHidden: false, description: "Greeting for Alice" },
+          { input: "Bob", expectedOutput: "Hello, Bob!", isHidden: false, description: "Greeting for Bob" },
+          { input: "Developer", expectedOutput: "Hello, Developer!", isHidden: true, description: "Greeting for Developer" },
+          { input: "TrainX", expectedOutput: "Hello, TrainX!", isHidden: true, description: "Greeting for TrainX" }
         ]
       };
     }
@@ -1039,7 +1141,7 @@ console.log(isPalindrome("racecar"));
       prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
       sampleInput: `hello`,
       sampleOutput: `olleh`,
-      starterCode: `// String Reversal for: ${cleanTopic}
+      starterCode: `// String Reversal (${tier}) for: ${cleanTopic}
 function reverseString(str) {
   if (typeof str !== "string") return "";
   return str.split("").reverse().join("");
@@ -1049,10 +1151,10 @@ function reverseString(str) {
 const result = reverseString("hello");
 console.log(result);
 `,
-      solutionCode: `// Complete String Reversal solution`,
+      solutionCode: `function reverseString(str) {\n  if (typeof str !== "string") return "";\n  return str.split("").reverse().join("");\n}`,
       language: "node",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+      difficulty: tier,
       testCases: [
         { input: "hello", expectedOutput: "olleh", isHidden: false, description: "Reverse hello" },
         { input: "world", expectedOutput: "dlrow", isHidden: false, description: "Reverse world" },
@@ -1061,15 +1163,15 @@ console.log(result);
     };
   }
 
-  // 1. React / Frontend Hooks & UI
+  // 2. React / Frontend Hooks & UI
   if (lower.includes("react") || lower.includes("hook") || lower.includes("state") || lower.includes("component")) {
     if (mIdx === 1) {
       return {
         title: `Hands-on React Challenge: Milestone 1 Component Basics (${cleanTopic})`,
-        prompt: `Create a clean, functional React component for ${cleanTopic} that displays a user greeting card with a name, role badge, and active status. Verify your component renders properly in the Live Preview pane.`,
+        prompt: `Create a clean, beginner-friendly functional React component for ${cleanTopic} that displays a user greeting card with a name, role badge, and active status. Verify your component renders properly in the Live Preview pane.`,
         sampleInput: `Props: { name: 'Alex Johnson', role: '${cleanRole}', status: 'Active' }`,
         sampleOutput: `Live Web Preview: Renders styled greeting card with user information and badge`,
-        starterCode: `// React Milestone 1: Component Fundamentals for: ${cleanTopic}
+        starterCode: `// React Milestone 1: Component Fundamentals (Very Easy) for: ${cleanTopic}
 import React from 'react';
 
 export default function UserCard() {
@@ -1081,7 +1183,7 @@ export default function UserCard() {
 
   return (
     <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '380px', margin: '20px auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
-      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Milestone 1 • Fundamentals</span>
+      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Milestone 1 • Fundamentals (Very Easy)</span>
       <h3 style={{ margin: '8px 0 4px', color: '#1e293b' }}>{user.name}</h3>
       <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>Target Role: <strong>{user.role}</strong></p>
       <div style={{ display: 'inline-block', padding: '4px 10px', background: '#dcfce7', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
@@ -1093,7 +1195,7 @@ export default function UserCard() {
         solutionCode: `// Complete Milestone 1 React Component`,
         language: "react",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
@@ -1102,7 +1204,7 @@ export default function UserCard() {
       prompt: `Develop a functional React component demonstrating ${cleanTopic}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset or filtering), and verify the live interactive UI in the Live Preview pane.`,
       sampleInput: `Interactive button clicks & user input state transitions`,
       sampleOutput: `Live Web Preview: Renders responsive styled React component with real-time state feedback`,
-      starterCode: `// React Interactive Playground for: ${cleanTopic}
+      starterCode: `// React Interactive Playground (${tier}) for: ${cleanTopic}
 import React, { useState } from 'react';
 
 export default function InteractiveApp() {
@@ -1138,11 +1240,11 @@ export default function InteractiveApp() {
       solutionCode: `// Complete solution for React State management`,
       language: "react",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 2 ? "Elementary" : mIdx === 3 ? "Intermediate" : "Advanced"
+      difficulty: tier
     };
   }
 
-  // 2. HTML / CSS / Responsive Layouts
+  // 3. HTML / CSS / Responsive Layouts
   if (lower.includes("html") || lower.includes("css") || lower.includes("flexbox") || lower.includes("grid") || lower.includes("layout")) {
     return {
       title: `Hands-on Web Design Challenge: Milestone ${mIdx} Layout (${cleanTopic})`,
@@ -1205,7 +1307,7 @@ export default function InteractiveApp() {
 </head>
 <body>
   <article class="card">
-    <span class="badge">MILESTONE ${mIdx}</span>
+    <span class="badge">MILESTONE ${mIdx} • ${tier.toUpperCase()}</span>
     <h2>${cleanTopic}</h2>
     <p>Semantic HTML5 and CSS3 styling demonstration for ${cleanRole}. Flexbox provides flexible alignment across viewport sizes.</p>
     <a href="#" class="btn">Explore Module</a>
@@ -1215,19 +1317,19 @@ export default function InteractiveApp() {
       solutionCode: `<!-- Solution code for HTML/CSS flexbox -->`,
       language: "html",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 1 ? "Beginner" : "Elementary"
+      difficulty: tier
     };
   }
 
-  // 3. SQL / Database
+  // 4. SQL / Database
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join") || lower.includes("table")) {
     if (mIdx === 1) {
       return {
         title: `Hands-on SQL Challenge: Milestone 1 Basic Filtering (${cleanTopic})`,
-        prompt: `Write a basic database query logic for ${cleanTopic}. Filter all active records from a collection and project only id, name, and role.`,
+        prompt: `Write a basic, foundational database query logic for ${cleanTopic}. Filter all active records from a collection and project only id, name, and role. Perfect for complete beginners.`,
         sampleInput: `users = [{id: 1, name: 'Alice', active: true, role: 'Developer'}, {id: 2, name: 'Bob', active: false, role: 'Designer'}]`,
         sampleOutput: `Expected: [{ id: 1, name: 'Alice', role: 'Developer' }]`,
-        starterCode: `// SQL Milestone 1: Basic Selection & Projection for: ${cleanTopic}
+        starterCode: `// SQL Milestone 1: Basic Selection & Projection (Very Easy) for: ${cleanTopic}
 
 function queryActiveUsers(users) {
   if (!Array.isArray(users)) return [];
@@ -1250,7 +1352,7 @@ console.log("Query Result:", JSON.stringify(result));
         solutionCode: `// Milestone 1 SQL solution`,
         language: "node",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
@@ -1259,7 +1361,7 @@ console.log("Query Result:", JSON.stringify(result));
       prompt: `Write a database query or data manipulation function for ${cleanTopic}. The function should take records from two related datasets (e.g., users and orders) and perform an inner join, computing the total transaction value per user.`,
       sampleInput: `users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}], orders = [{userId: 1, amount: 250}, {userId: 1, amount: 150}, {userId: 2, amount: 400}]`,
       sampleOutput: `Expected: [{ userId: 1, name: 'Alice', totalSpent: 400 }, { userId: 2, name: 'Bob', totalSpent: 400 }]`,
-      starterCode: `// SQL / Relational Data Processing Challenge: ${cleanTopic}
+      starterCode: `// SQL / Relational Data Processing Challenge (${tier}): ${cleanTopic}
 
 function executeRelationalJoin(users, orders) {
   const result = [];
@@ -1299,19 +1401,19 @@ console.log("Query Result:", JSON.stringify(report, null, 2));
       solutionCode: `// Reference solution`,
       language: "node",
       milestoneIndex: mIdx,
-      difficulty: mIdx <= 2 ? "Elementary" : "Intermediate"
+      difficulty: tier
     };
   }
 
-  // 4. Python / AI / Data Processing
+  // 5. Python / AI / Data Processing
   if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
     if (mIdx === 1) {
       return {
         title: `Hands-on Python Challenge: Milestone 1 Basics & Variables (${cleanTopic})`,
-        prompt: `Write a beginner Python program for ${cleanTopic}. Calculate the total price of items including sales tax (8%). Define unit_price and quantity, compute subtotal and total, and print a formatted summary.`,
+        prompt: `Write a beginner Python program for ${cleanTopic}. Calculate the total price of items including sales tax (8%). Define unit_price and quantity, compute subtotal and total, and print a formatted summary. Assumes zero prior knowledge.`,
         sampleInput: `price = 20.0, quantity = 2, tax_rate = 0.08`,
         sampleOutput: `Bill Summary: {'subtotal': 40.0, 'tax': 3.2, 'total': 43.2, 'status': 'CALCULATED'}`,
-        starterCode: `# Python Milestone 1: Beginner Fundamentals for: ${cleanTopic}
+        starterCode: `# Python Milestone 1: Beginner Fundamentals (Very Easy) for: ${cleanTopic}
 def calculate_bill(price: float, quantity: int, tax_rate: float = 0.08) -> dict:
     subtotal = round(price * quantity, 2)
     tax = round(subtotal * tax_rate, 2)
@@ -1330,17 +1432,17 @@ print("Bill Summary:", result)
         solutionCode: `# Complete Milestone 1 solution`,
         language: "python",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
     if (mIdx === 2) {
       return {
         title: `Hands-on Python Challenge: Milestone 2 Functions & Loops (${cleanTopic})`,
-        prompt: `Write a Python function for ${cleanTopic} that filters numbers above a given threshold from a list and computes their average.`,
+        prompt: `Write a Python function for ${cleanTopic} that filters numbers above a given threshold from a list and computes their average. Straightforward single-loop logic for elementary learners.`,
         sampleInput: `numbers = [10, 25, 40, 15, 60], threshold = 20`,
         sampleOutput: `Filtered Summary: {'filtered_count': 3, 'average': 41.67, 'status': 'PROCESSED'}`,
-        starterCode: `# Python Milestone 2: Functions & Iterations for: ${cleanTopic}
+        starterCode: `# Python Milestone 2: Functions & Iterations (Easy) for: ${cleanTopic}
 from typing import List, Dict, Any
 
 def filter_and_average(numbers: List[float], threshold: float) -> Dict[str, Any]:
@@ -1362,7 +1464,7 @@ print("Filtered Summary:", result)
         solutionCode: `# Milestone 2 solution`,
         language: "python",
         milestoneIndex: 2,
-        difficulty: "Elementary"
+        difficulty: "Easy"
       };
     }
 
@@ -1371,7 +1473,7 @@ print("Filtered Summary:", result)
       prompt: `Implement a clean Python function that processes data for ${cleanTopic}. Your code should validate input entries, compute statistical aggregations (count, average, top frequency), and return a structured dictionary summary.`,
       sampleInput: `Data records: [15, 22, 15, 45, 22, 15, 60, 30]`,
       sampleOutput: `{'total_count': 8, 'average': 28.0, 'most_frequent': 15, 'status': 'OPTIMIZED'}`,
-      starterCode: `# Python Implementation for: ${cleanTopic}
+      starterCode: `# Python Implementation (${tier}) for: ${cleanTopic}
 from typing import List, Dict, Any
 from collections import Counter
 
@@ -1404,18 +1506,18 @@ print("Result Summary:", result)
       solutionCode: `# Reference solution`,
       language: "python",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 3 ? "Intermediate" : "Advanced"
+      difficulty: tier
     };
   }
 
-  // 5. Default Specialized Engineering Challenge
+  // 6. Default Specialized Engineering Challenge (Node / JS)
   if (mIdx === 1) {
     return {
       title: `Hands-on Challenge: Milestone 1 Fundamentals (${cleanTopic})`,
-      prompt: `Write a foundational JavaScript function for ${cleanTopic} that checks whether a numerical test score meets the passing threshold (>= 60) and returns a structured evaluation object.`,
+      prompt: `Write a foundational JavaScript function for ${cleanTopic} that checks whether a numerical test score meets the passing threshold (>= 60) and returns a structured evaluation object. Designed for absolute beginners.`,
       sampleInput: `score = 75`,
       sampleOutput: `Evaluation Result: {"score":75,"status":"PASSED","verdict":"Requirement Met"}`,
-      starterCode: `// Milestone 1: Beginner Fundamentals for: ${cleanTopic}
+      starterCode: `// Milestone 1: Beginner Fundamentals (Very Easy) for: ${cleanTopic}
 // Role: ${cleanRole}
 
 function evaluateScore(score) {
@@ -1436,17 +1538,17 @@ console.log("Evaluation Result:", JSON.stringify(output));
       solutionCode: `// Milestone 1 solution`,
       language: "node",
       milestoneIndex: 1,
-      difficulty: "Beginner"
+      difficulty: "Very Easy"
     };
   }
 
   if (mIdx === 2) {
     return {
       title: `Hands-on Challenge: Milestone 2 Logic & Functions (${cleanTopic})`,
-      prompt: `Write a JavaScript function for ${cleanTopic} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum.`,
+      prompt: `Write a JavaScript function for ${cleanTopic} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum. Straightforward single-loop logic.`,
       sampleInput: `transactions = [50, 120, 30, 200, 80], threshold = 100`,
       sampleOutput: `Summary: {"count":2,"total":320,"status":"PROCESSED"}`,
-      starterCode: `// Milestone 2: Elementary Logic for: ${cleanTopic}
+      starterCode: `// Milestone 2: Elementary Logic (Easy) for: ${cleanTopic}
 // Role: ${cleanRole}
 
 function summarizeHighValueTransactions(transactions, threshold) {
@@ -1469,7 +1571,7 @@ console.log("Summary:", JSON.stringify(output));
       solutionCode: `// Milestone 2 solution`,
       language: "node",
       milestoneIndex: 2,
-      difficulty: "Elementary"
+      difficulty: "Easy"
     };
   }
 
@@ -1478,7 +1580,7 @@ console.log("Summary:", JSON.stringify(output));
     prompt: `Develop a solution applying the principles of ${cleanTopic} for ${cleanRole}. Your function should accept input parameters, handle edge cases, and return the processed result with clean console output.`,
     sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
     sampleOutput: `Expected: { topic: "${cleanTopic}", processedCount: 7, maxValue: 89, minValue: 7, sorted: [7, 12, 23, 34, 45, 56, 89] }`,
-    starterCode: `// Algorithmic Challenge for: ${cleanTopic}
+    starterCode: `// Algorithmic Challenge (${tier}) for: ${cleanTopic}
 // Role: ${cleanRole} (Milestone ${mIdx})
 
 function executeModuleTask(items) {
@@ -1510,7 +1612,7 @@ console.log("Output Result:", JSON.stringify(output, null, 2));
     solutionCode: `// Solution code`,
     language: "node",
     milestoneIndex: mIdx,
-    difficulty: mIdx >= 4 ? "Advanced" : "Intermediate"
+    difficulty: tier
   };
 }
 

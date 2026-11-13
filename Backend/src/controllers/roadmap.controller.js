@@ -7,7 +7,13 @@ import {
   updateMilestoneProgress,
   saveRoadmapProgress,
 } from '../services/roadmap.service.js';
-import { generateTopicQuizAI, generateMilestoneTheoryAI, generateMilestonePracticeAI, validateAndSanitizePracticeProblem } from '../ai/roadmap.ai.js';
+import {
+  generateTopicQuizAI,
+  generateMilestoneTheoryAI,
+  generateMilestonePracticeAI,
+  validateAndSanitizePracticeProblem,
+  resolveMilestoneDifficultyTier
+} from '../ai/roadmap.ai.js';
 import {
   getCachedTopicQuiz,
   saveCachedTopicQuiz,
@@ -259,8 +265,12 @@ export const generateMilestonePractice = async (req, res, next) => {
     if (!forceRefresh) {
       const rawCached = await getCachedMilestonePractice(cleanTitle, cleanRole, cleanTopic, mIdx);
       if (rawCached && rawCached.title && rawCached.prompt) {
-        const cached = validateAndSanitizePracticeProblem(rawCached, { topic: cleanTopic, title: cleanTitle });
-        console.log(`[Practice Controller] DB Cache Hit for Milestone ${mIdx} practice challenge "${cleanTopic}". Returning stored challenge.`);
+        const cached = validateAndSanitizePracticeProblem(rawCached, { topic: cleanTopic, title: cleanTitle, milestoneIndex: mIdx });
+        const expectedDiff = resolveMilestoneDifficultyTier(mIdx);
+        if (cached.difficulty !== expectedDiff) {
+          cached.difficulty = expectedDiff;
+        }
+        console.log(`[Practice Controller] DB Cache Hit for Milestone ${mIdx} practice challenge "${cleanTopic}" (Difficulty: ${cached.difficulty}). Returning stored challenge.`);
         return sendSuccess(res, 'Milestone practice challenge retrieved from DB cache', cached);
       }
     }
@@ -273,7 +283,7 @@ export const generateMilestonePractice = async (req, res, next) => {
       topics,
       description,
     });
-    const challenge = validateAndSanitizePracticeProblem(rawChallenge, { topic: cleanTopic, title: cleanTitle });
+    const challenge = validateAndSanitizePracticeProblem(rawChallenge, { topic: cleanTopic, title: cleanTitle, milestoneIndex: mIdx });
 
     // 3. Save to DB cache scoped by milestone index
     await saveCachedMilestonePractice(cleanTitle, cleanRole, cleanTopic, challenge, mIdx);

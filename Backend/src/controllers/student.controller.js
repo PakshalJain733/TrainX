@@ -1066,23 +1066,36 @@ export const getStudentPerformance = async (req, res, next) => {
           `SELECT aa.id, aa.assessment_id, COALESCE(a.title, CONCAT('Quiz #', aa.assessment_id)) as title,
                   COALESCE(a.category, 'Technical Quiz') as category,
                   aa.marks_obtained, aa.total_marks, aa.score, aa.percentage, aa.status,
-                  COALESCE(aa.completed_at, aa.created_at) as attempt_date
+                  COALESCE(aa.completed_at, aa.submitted_at, aa.created_at) as attempt_date
            FROM assessment_attempts aa 
            LEFT JOIN assessments a ON aa.assessment_id = a.id 
            WHERE aa.user_id = ?
-           ORDER BY aa.id DESC LIMIT 25`,
+             AND (
+               aa.status IN ('completed', 'finished', 'passed', 'failed', 'reviewed')
+               OR aa.completed_at IS NOT NULL
+               OR aa.submitted_at IS NOT NULL
+             )
+           ORDER BY aa.id DESC LIMIT 50`,
           [userId]
         );
         if (qRows && qRows.length > 0) {
-          const completedAttempts = qRows.filter(r => ['completed', 'finished', 'passed'].includes(String(r.status).toLowerCase()));
-          const totalPct = (completedAttempts.length > 0 ? completedAttempts : qRows).reduce((acc, r) => {
+          // Deduplicate by assessment_id so each distinct quiz shows only its latest/definitive completed attempt
+          const seenAssessments = new Map();
+          for (const r of qRows) {
+            const key = r.assessment_id ? String(r.assessment_id) : String(r.title);
+            if (!seenAssessments.has(key)) {
+              seenAssessments.set(key, r);
+            }
+          }
+          const deduplicatedRows = Array.from(seenAssessments.values());
+
+          const totalPct = deduplicatedRows.reduce((acc, r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
             return acc + sc;
           }, 0);
-          const divisor = completedAttempts.length > 0 ? completedAttempts.length : qRows.length;
-          quizScore = Math.round(totalPct / divisor);
+          quizScore = deduplicatedRows.length > 0 ? Math.round(totalPct / deduplicatedRows.length) : 0;
 
-          const attemptsList = qRows.map((r) => {
+          const attemptsList = deduplicatedRows.map((r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
             const isPassed = sc >= 50 || String(r.status).toLowerCase() === 'passed';
             return {
@@ -1100,11 +1113,11 @@ export const getStudentPerformance = async (req, res, next) => {
 
           const passedAttempts = attemptsList.filter(a => a.status === 'Passed').length;
           quizDetails = {
-            totalAttempted: qRows.length,
+            totalAttempted: attemptsList.length,
             passedCount: passedAttempts,
-            failedCount: qRows.length - passedAttempts,
+            failedCount: attemptsList.length - passedAttempts,
             meanScore: quizScore,
-            passRate: Math.round((passedAttempts / qRows.length) * 100),
+            passRate: attemptsList.length > 0 ? Math.round((passedAttempts / attemptsList.length) * 100) : 0,
             attempts: attemptsList,
           };
 

@@ -298,7 +298,9 @@ export default function GlobalHeaderSearch({ role }) {
                     </div>
                     <div className="global-header-search-item-info">
                       <span className="global-header-search-item-title">{item.title}</span>
-                      <span className="global-header-search-item-cat">{item.category} &bull; {item.path}</span>
+                      {item.category && (
+                        <span className="global-header-search-item-cat">{item.category}</span>
+                      )}
                     </div>
                   </button>
                 );

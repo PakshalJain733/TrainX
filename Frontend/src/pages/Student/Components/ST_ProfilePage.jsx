@@ -12,7 +12,10 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
+  const selected = safeOptions.find(o => 
+    String(o.value).toLowerCase() === String(value || '').toLowerCase() ||
+    String(o.label).toLowerCase() === String(value || '').toLowerCase()
+  );
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -33,7 +36,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
       {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
           {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
+            const isSel = String(opt.value).toLowerCase() === String(value || '').toLowerCase() || String(opt.label).toLowerCase() === String(value || '').toLowerCase();
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-prof-select-option${isSel ? ' student-prof-select-option--selected' : ''}`}>
                 <span className="student-prof-select-option-label">{opt.label}</span>
@@ -152,6 +155,65 @@ export const CAREER_TRACK_OPTIONS = [
   "Game Development",
 ];
 
+export const YEAR_SEMESTER_MAP = {
+  FE: [
+    { value: "Semester 1", label: "Semester 1" },
+    { value: "Semester 2", label: "Semester 2" },
+  ],
+  SE: [
+    { value: "Semester 3", label: "Semester 3" },
+    { value: "Semester 4", label: "Semester 4" },
+  ],
+  TE: [
+    { value: "Semester 5", label: "Semester 5" },
+    { value: "Semester 6", label: "Semester 6" },
+  ],
+  BE: [
+    { value: "Semester 7", label: "Semester 7" },
+    { value: "Semester 8", label: "Semester 8" },
+  ],
+};
+
+export const ALL_SEMESTERS = [
+  { value: "Semester 1", label: "Semester 1" },
+  { value: "Semester 2", label: "Semester 2" },
+  { value: "Semester 3", label: "Semester 3" },
+  { value: "Semester 4", label: "Semester 4" },
+  { value: "Semester 5", label: "Semester 5" },
+  { value: "Semester 6", label: "Semester 6" },
+  { value: "Semester 7", label: "Semester 7" },
+  { value: "Semester 8", label: "Semester 8" },
+];
+
+export function getSemestersForYear(year) {
+  if (!year) return ALL_SEMESTERS;
+  const yStr = String(year).trim().toUpperCase();
+  if (yStr.startsWith("FE") || yStr.includes("FIRST") || yStr === "1") {
+    return YEAR_SEMESTER_MAP.FE;
+  }
+  if (yStr.startsWith("SE") || yStr.includes("SECOND") || yStr === "2") {
+    return YEAR_SEMESTER_MAP.SE;
+  }
+  if (yStr.startsWith("TE") || yStr.includes("THIRD") || yStr === "3") {
+    return YEAR_SEMESTER_MAP.TE;
+  }
+  if (yStr.startsWith("BE") || yStr.includes("FINAL") || yStr.includes("FOURTH") || yStr === "4") {
+    return YEAR_SEMESTER_MAP.BE;
+  }
+  return ALL_SEMESTERS;
+}
+
+export function normalizeSemester(sem) {
+  if (!sem) return "";
+  const s = String(sem).trim();
+  const match = s.match(/(\d+)/);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (num >= 1 && num <= 8) return `Semester ${num}`;
+  }
+  return s;
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -200,6 +262,14 @@ export default function ProfilePage() {
       if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
     }
 
+    let rawSem = normalizeSemester(sp.semester || u.semester || "");
+    if (rawYear) {
+      const validSems = getSemestersForYear(rawYear);
+      if (rawSem && !validSems.some(s => s.value === rawSem)) {
+        rawSem = "";
+      }
+    }
+
     return {
       name: u.name || "",
       email: u.email || "",
@@ -211,7 +281,7 @@ export default function ProfilePage() {
       gender: sp.gender || u.gender || "",
       city: sp.city || u.city || "",
       guardianContact: sp.emergency_contact || u.emergency_contact || "",
-      semester: sp.semester || u.semester || "",
+      semester: rawSem,
       cgpa: sp.cgpa || u.cgpa || "",
       skills: sp.skills || u.skills || "",
       profileCompleted: true,
@@ -260,12 +330,18 @@ export default function ProfilePage() {
             if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
           }
 
-          let derivedSem = sp.semester || user.semester || uSp.semester || uStored.semester;
+          let derivedSem = normalizeSemester(sp.semester || user.semester || uSp.semester || uStored.semester);
           if (!derivedSem && rawYear) {
             if (rawYear === 'FE') derivedSem = 'Semester 1';
             else if (rawYear === 'SE') derivedSem = 'Semester 3';
             else if (rawYear === 'TE') derivedSem = 'Semester 5';
             else if (rawYear === 'BE') derivedSem = 'Semester 7';
+          }
+          if (rawYear) {
+            const validSems = getSemestersForYear(rawYear);
+            if (derivedSem && !validSems.some(s => s.value === derivedSem)) {
+              derivedSem = "";
+            }
           }
 
           const fetchedCollege = user.college_name || user.college || sp.college_name || sp.college || uStored.college_name || uStored.college || "";
@@ -740,7 +816,19 @@ export default function ProfilePage() {
                     { value: "TE", label: "TE (Third Year)" },
                     { value: "BE", label: "BE (Final Year)" },
                   ]}
-                  onChange={(val) => setForm((p) => ({ ...p, year: val }))}
+                  onChange={(val) => {
+                    setForm((p) => {
+                      const validSems = getSemestersForYear(val);
+                      const isCurrentSemValid = validSems.some(
+                        (s) => String(s.value).toLowerCase() === String(p.semester || "").toLowerCase()
+                      );
+                      return {
+                        ...p,
+                        year: val,
+                        semester: isCurrentSemValid ? p.semester : "",
+                      };
+                    });
+                  }}
                 />
               </div>
 
@@ -767,16 +855,8 @@ export default function ProfilePage() {
                 <StudentProfSelect
                   value={form.semester}
                   disabled={!isEditing}
-                  options={[
-                    { value: "Semester 1", label: "Semester 1" },
-                    { value: "Semester 2", label: "Semester 2" },
-                    { value: "Semester 3", label: "Semester 3" },
-                    { value: "Semester 4", label: "Semester 4" },
-                    { value: "Semester 5", label: "Semester 5" },
-                    { value: "Semester 6", label: "Semester 6" },
-                    { value: "Semester 7", label: "Semester 7" },
-                    { value: "Semester 8", label: "Semester 8" },
-                  ]}
+                  placeholder={form.year ? "Select Semester..." : "Select..."}
+                  options={getSemestersForYear(form.year)}
                   onChange={(val) => setForm((p) => ({ ...p, semester: val }))}
                 />
               </div>

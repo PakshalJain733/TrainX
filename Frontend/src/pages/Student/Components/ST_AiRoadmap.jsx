@@ -147,6 +147,59 @@ function getPreviewDocument(lang, code) {
   return code || `<!DOCTYPE html><html><body style="background:#0f172a;color:#94a3b8;padding:20px;font-family:sans-serif;"><p>Write HTML & CSS in the editor to see live web preview.</p></body></html>`;
 }
 
+export function formatHtmlTags(htmlStr) {
+  if (typeof htmlStr !== "string") return htmlStr || "";
+  if (!htmlStr.includes("<") || !htmlStr.includes(">")) return htmlStr;
+  try {
+    const voidTags = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+    const lines = htmlStr.replace(/>\s*</g, ">\n<").split("\n").map(s => s.trim()).filter(Boolean);
+    let indent = 0;
+    const formatted = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith("</")) {
+        indent = Math.max(0, indent - 1);
+        formatted.push("  ".repeat(indent) + line);
+      } else {
+        const isSelfClosing = line.endsWith("/>");
+        const match = line.match(/^<([a-zA-Z0-9]+)/);
+        const tag = match ? match[1].toLowerCase() : "";
+        const isVoid = isSelfClosing || voidTags.has(tag);
+        formatted.push("  ".repeat(indent) + line);
+        if (!isVoid && line.startsWith("<") && !line.startsWith("<!") && !line.startsWith("<?")) {
+          indent++;
+        }
+      }
+    }
+    return formatted.join("\n");
+  } catch {
+    return htmlStr;
+  }
+}
+
+export function formatSampleCode(text, type = "input") {
+  if (text === null || text === undefined) return type === "input" ? "None" : "";
+  const str = String(text).trim();
+  if (!str) return type === "input" ? "None" : "";
+
+  // 1. JSON formatting
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.startsWith("[") && str.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(str);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // not valid JSON, proceed
+    }
+  }
+
+  // 2. HTML formatting
+  if (str.includes("<") && str.includes(">")) {
+    return formatHtmlTags(str);
+  }
+
+  return str;
+}
+
 /* ── Topic & Resource Helpers ── */
 function getTopicsForMilestone(m, targetRole) {
   if (Array.isArray(m?.topics) && m.topics.length > 0) {
@@ -735,47 +788,59 @@ function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, samp
   return { score: 0, passed: false, reason: "Output does not match sample expected output." };
 }
 
+export const MILESTONE_PRACTICE_TIERS = {
+  1: "Very Easy",
+  2: "Easy",
+  3: "Medium",
+  4: "Hard",
+  5: "Very Hard"
+};
+
+export function getMilestoneTier(mIdx) {
+  const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+  return MILESTONE_PRACTICE_TIERS[idx] || (idx > 5 ? "Very Hard" : "Medium");
+}
+
 function getPracticeQuestionForMilestone(m, targetRole, milestoneIndex) {
   const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
   const role = targetRole || "Software Engineering";
   const parsedIdx = m?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
   const mIdx = Math.max(1, parseInt(parsedIdx || m?.milestoneIndex || milestoneIndex, 10) || 1);
+  const tier = getMilestoneTier(mIdx);
   const lang = resolveLanguageForRole(role, title);
   const lower = `${title} ${role}`.toLowerCase();
 
   // 1. String Manipulation / Reversal / Palindrome
   if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
-    const isPal = lower.includes("palindrome");
-    if (isPal) {
+    if (mIdx === 1) {
       return {
-        title: `Hands-on Challenge: Palindrome Verification (${title})`,
-        prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
-        sampleInput: `racecar`,
-        sampleOutput: `true`,
-        starterCode: `// Palindrome Verification for: ${title}
-function isPalindrome(str) {
-  if (typeof str !== "string") return false;
-  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return clean === clean.split("").reverse().join("");
+        title: `Hands-on Challenge: String Concatenation & Greeting (${title})`,
+        prompt: `Write a beginner-friendly function createGreeting(name) that takes a user's name as input and returns a warm greeting message: "Hello, " followed by the name and an exclamation mark "!". For example, createGreeting("Alice") returns "Hello, Alice!". This introduces core string operations for complete beginners.`,
+        sampleInput: `Alice`,
+        sampleOutput: `Hello, Alice!`,
+        starterCode: `// String Fundamentals (Very Easy) for: ${title}
+function createGreeting(name) {
+  // Return "Hello, " + name + "!"
+  return "Hello, " + (name || "Learner") + "!";
 }
 
 // Test execution:
-console.log(isPalindrome("racecar"));
+console.log(createGreeting("Alice"));
 `,
-        solutionCode: `// Complete Palindrome solution`,
+        solutionCode: `function createGreeting(name) {\n  return "Hello, " + (name || "Learner") + "!";\n}`,
         language: "node",
-        milestoneIndex: mIdx,
-        difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+        milestoneIndex: 1,
+        difficulty: "Very Easy",
       };
     }
 
-    // String Reversal: Strictly return reversed string, NEVER boolean
-    return {
-      title: `Hands-on Challenge: String Reversal (${title})`,
-      prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
-      sampleInput: `hello`,
-      sampleOutput: `olleh`,
-      starterCode: `// String Reversal for: ${title}
+    if (mIdx === 2) {
+      return {
+        title: `Hands-on Challenge: String Reversal (${title})`,
+        prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+        sampleInput: `hello`,
+        sampleOutput: `olleh`,
+        starterCode: `// String Reversal (Easy) for: ${title}
 function reverseString(str) {
   if (typeof str !== "string") return "";
   return str.split("").reverse().join("");
@@ -785,10 +850,33 @@ function reverseString(str) {
 const result = reverseString("hello");
 console.log(result);
 `,
-      solutionCode: `// Complete String Reversal solution`,
+        solutionCode: `function reverseString(str) {\n  if (typeof str !== "string") return "";\n  return str.split("").reverse().join("");\n}`,
+        language: "node",
+        milestoneIndex: 2,
+        difficulty: "Easy",
+      };
+    }
+
+    // Milestone 3+: Palindrome verification (Medium, Hard, Very Hard)
+    return {
+      title: `Hands-on Challenge: Palindrome Verification (${title})`,
+      prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+      sampleInput: `racecar`,
+      sampleOutput: `true`,
+      starterCode: `// Palindrome Verification (${tier}) for: ${title}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+      solutionCode: `function isPalindrome(str) {\n  if (typeof str !== "string") return false;\n  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");\n  return clean === clean.split("").reverse().join("");\n}`,
       language: "node",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 1 ? "Beginner" : "Elementary",
+      difficulty: tier,
     };
   }
 
@@ -824,7 +912,7 @@ export default function UserCard() {
         solutionCode: `// Milestone 1 React solution`,
         language: "react",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
@@ -833,7 +921,7 @@ export default function UserCard() {
       prompt: `Develop a functional React component demonstrating ${title}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset), and verify the live interactive UI in the Live Preview pane.`,
       sampleInput: `Interactive button clicks & user input state transitions`,
       sampleOutput: `Live Web Preview: Renders responsive styled React component with real-time state feedback`,
-      starterCode: `// React Interactive Playground for: ${title}
+      starterCode: `// React Interactive Playground (${tier}) for: ${title}
 import React, { useState } from 'react';
 
 export default function InteractiveApp() {
@@ -869,7 +957,7 @@ export default function InteractiveApp() {
       solutionCode: `// React State Solution`,
       language: "react",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 2 ? "Elementary" : mIdx === 3 ? "Intermediate" : "Advanced"
+      difficulty: tier
     };
   }
 
@@ -936,7 +1024,7 @@ export default function InteractiveApp() {
 </head>
 <body>
   <article class="card">
-    <span class="badge">MILESTONE ${mIdx}</span>
+    <span class="badge">MILESTONE ${mIdx} • ${tier.toUpperCase()}</span>
     <h2>${title}</h2>
     <p>Semantic HTML5 and CSS3 styling demonstration for ${role}. Flexbox provides flexible alignment across viewport sizes.</p>
     <a href="#" class="btn">Explore Module</a>
@@ -946,7 +1034,7 @@ export default function InteractiveApp() {
       solutionCode: `<!-- HTML solution -->`,
       language: "html",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 1 ? "Beginner" : "Elementary"
+      difficulty: tier
     };
   }
 
@@ -981,7 +1069,7 @@ console.log("Query Result:", JSON.stringify(result));
         solutionCode: `// Milestone 1 SQL solution`,
         language: "node",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
@@ -1016,7 +1104,7 @@ console.log("Query Result:", JSON.stringify(result, null, 2));
       solutionCode: `// Reference SQL solution`,
       language: "node",
       milestoneIndex: mIdx,
-      difficulty: mIdx <= 2 ? "Elementary" : "Intermediate"
+      difficulty: tier
     };
   }
 
@@ -1047,17 +1135,17 @@ print("Bill Summary:", result)
         solutionCode: `# Milestone 1 Python solution`,
         language: "python",
         milestoneIndex: 1,
-        difficulty: "Beginner"
+        difficulty: "Very Easy"
       };
     }
 
     if (mIdx === 2) {
       return {
         title: `Hands-on Python Challenge: Milestone 2 Functions & Loops (${title})`,
-        prompt: `Write a Python function for ${title} that filters numbers above a given threshold from a list and computes their average.`,
+        prompt: `Write a Python function for ${title} that filters numbers above a given threshold from a list and computes their average. Straightforward loop logic for elementary learners.`,
         sampleInput: `numbers = [10, 25, 40, 15, 60], threshold = 20`,
         sampleOutput: `Filtered Summary: {'filtered_count': 3, 'average': 41.67, 'status': 'PROCESSED'}`,
-        starterCode: `# Python Milestone 2: Functions & Iterations for: ${title}
+        starterCode: `# Python Milestone 2: Functions & Iterations (Easy) for: ${title}
 from typing import List, Dict, Any
 
 def filter_and_average(numbers: List[float], threshold: float) -> Dict[str, Any]:
@@ -1079,7 +1167,7 @@ print("Filtered Summary:", result)
         solutionCode: `# Milestone 2 Python solution`,
         language: "python",
         milestoneIndex: 2,
-        difficulty: "Elementary"
+        difficulty: "Easy"
       };
     }
 
@@ -1088,7 +1176,7 @@ print("Filtered Summary:", result)
       prompt: `Implement a clean Python data processing function for ${title}. Your code should validate input entries, compute statistical aggregations, and return a structured summary.`,
       sampleInput: `values = [15, 22, 15, 45, 22, 15, 60, 30]`,
       sampleOutput: `{'topic': '${title}', 'total_count': 8, 'average': 28.0, 'status': 'SUCCESS'}`,
-      starterCode: `# Python Implementation for: ${title}
+      starterCode: `# Python Implementation (${tier}) for: ${title}
 from typing import List, Dict, Any
 
 def process_metrics_pipeline(values: List[int]) -> Dict[str, Any]:
@@ -1115,7 +1203,7 @@ print("Result Summary:", result)
       solutionCode: `# Reference solution`,
       language: "python",
       milestoneIndex: mIdx,
-      difficulty: mIdx === 3 ? "Intermediate" : "Advanced"
+      difficulty: tier
     };
   }
 
@@ -1147,17 +1235,17 @@ console.log("Evaluation Result:", JSON.stringify(output));
       solutionCode: `// Milestone 1 solution`,
       language: "node",
       milestoneIndex: 1,
-      difficulty: "Beginner"
+      difficulty: "Very Easy"
     };
   }
 
   if (mIdx === 2) {
     return {
       title: `Practice Challenge: Milestone 2 Logic & Functions (${title})`,
-      prompt: `Write a JavaScript function for ${title} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum.`,
+      prompt: `Write a JavaScript function for ${title} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum. Straightforward single-loop logic.`,
       sampleInput: `transactions = [50, 120, 30, 200, 80], threshold = 100`,
       sampleOutput: `Summary: {"count":2,"total":320,"status":"PROCESSED"}`,
-      starterCode: `// Milestone 2: Elementary Logic for: ${title}
+      starterCode: `// Milestone 2: Elementary Logic (Easy) for: ${title}
 // Target Role: ${role}
 
 function summarizeHighValueTransactions(transactions, threshold) {
@@ -1180,7 +1268,7 @@ console.log("Summary:", JSON.stringify(output));
       solutionCode: `// Milestone 2 solution`,
       language: "node",
       milestoneIndex: 2,
-      difficulty: "Elementary"
+      difficulty: "Easy"
     };
   }
 
@@ -1189,7 +1277,7 @@ console.log("Summary:", JSON.stringify(output));
     prompt: `Write a program that processes data applying the core principles of ${title} for ${role}. Your code should handle edge cases, calculate metrics, and return structured results.`,
     sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
     sampleOutput: `Expected: { topic: "${title}", processedCount: 7, minValue: 7, maxValue: 89, status: "VERIFIED" }`,
-    starterCode: `// Algorithmic Challenge for: ${title}
+    starterCode: `// Algorithmic Challenge (${tier}) for: ${title}
 // Target Role: ${role} (Milestone ${mIdx})
 
 function executeModuleTask(items) {
@@ -1218,7 +1306,7 @@ console.log("Output Result:", JSON.stringify(output, null, 2));
     solutionCode: `// Solution code`,
     language: lang,
     milestoneIndex: mIdx,
-    difficulty: mIdx >= 4 ? "Advanced" : "Intermediate"
+    difficulty: tier
   };
 }
 
@@ -1644,6 +1732,44 @@ export default function AIRoadmap() {
       };
     }
 
+    // Standardize difficulty tier into: 'Very Easy' | 'Easy' | 'Medium' | 'Hard' | 'Very Hard'
+    const rawDiff = String(problem.difficulty || "").trim().toLowerCase();
+    let stdDiff = "";
+    if (rawDiff.includes("very easy") || rawDiff === "beginner") {
+      stdDiff = "Very Easy";
+    } else if (rawDiff.includes("very hard") || rawDiff === "expert") {
+      stdDiff = "Very Hard";
+    } else if (rawDiff === "easy" || rawDiff === "elementary") {
+      stdDiff = "Easy";
+    } else if (rawDiff === "medium" || rawDiff === "intermediate") {
+      stdDiff = "Medium";
+    } else if (rawDiff === "hard" || rawDiff === "advanced") {
+      stdDiff = "Hard";
+    } else if (problem.milestoneIndex) {
+      stdDiff = getMilestoneTier(problem.milestoneIndex);
+    }
+    if (stdDiff) {
+      problem.difficulty = stdDiff;
+    }
+
+    // Pedagogical HTML & UI Challenge Sanitization
+    const isHtml = problem.language === "html" || 
+                   String(problem.starterCode || "").includes("<!DOCTYPE html>") || 
+                   text.includes("html") || 
+                   text.includes("web design") || 
+                   text.includes("css3");
+
+    if (isHtml) {
+      problem.language = "html";
+      const sampleInputStr = String(problem.sampleInput || "").trim();
+      if (sampleInputStr.startsWith("[") || sampleInputStr.startsWith("{")) {
+        problem.sampleInput = "Direct HTML5 Markup (No stdin required)";
+      }
+      if (problem.prompt && (problem.prompt.toLowerCase().includes("function") || problem.prompt.toLowerCase().includes("return")) && problem.prompt.includes("HTML")) {
+        problem.prompt = "Write clean semantic HTML5 markup. Structure the document using standard semantic tags like <section>, <article>, <h2>, and <p>. View your layout live in the Live Web Preview tab.";
+      }
+    }
+
     return problem;
   };
 
@@ -1678,13 +1804,13 @@ export default function AIRoadmap() {
     }
 
     const difficultyMap = {
-      1: "Beginner",
-      2: "Elementary",
-      3: "Intermediate",
-      4: "Advanced",
-      5: "Expert"
+      1: "Very Easy",
+      2: "Easy",
+      3: "Medium",
+      4: "Hard",
+      5: "Very Hard"
     };
-    const difficulty = difficultyMap[mIdx] || (mIdx > 5 ? "Expert" : "Intermediate");
+    const difficulty = difficultyMap[mIdx] || (mIdx > 5 ? "Very Hard" : "Medium");
 
     setIsPracticeLoading(true);
     try {
@@ -3177,17 +3303,6 @@ export default function AIRoadmap() {
                       })}
                     </div>
 
-                    {/* Code / Workflow Syntax Block */}
-                    {theoryData.codeExample && (
-                      <div>
-                        <h4 className="roadmap-section-subheading">
-                          Syntax
-                        </h4>
-                        <div className="vscode-editor-container roadmap-editor-padded">
-                          <VSCodeCodeHighlighter code={formatPureSyntaxCode(theoryData.codeExample)} />
-                        </div>
-                      </div>
-                    )}
 
                     {/* Best Practices */}
                     {Array.isArray(theoryData.bestPractices) && theoryData.bestPractices.length > 0 && (
@@ -3312,6 +3427,9 @@ export default function AIRoadmap() {
                           <Code2 size={13} />
                           <span>{aiPractice ? "AI Tailored Practice Challenge" : "Hands-on Practice & Compiler"}</span>
                         </span>
+                        <span className={`roadmap-diff-pill diff-${String(practice?.difficulty || getMilestoneTier(mIdx)).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+                          🎯 {practice?.difficulty || getMilestoneTier(mIdx)}
+                        </span>
                         {isPracticeLoading && !aiPractice && (
                           <span className="roadmap-meta-text" style={{ fontSize: "11px", color: "#818cf8" }}>
                             Generating AI challenge for this topic...
@@ -3326,9 +3444,49 @@ export default function AIRoadmap() {
                       </p>
                     </div>
 
-                    <div className="roadmap-sample-box">
-                      <div className="roadmap-sample-input">{practice.sampleInput}</div>
-                      <div className="roadmap-sample-output">{practice.sampleOutput}</div>
+                    {/* Modern Pedagogical Sample Test Case / Example Card */}
+                    <div className="roadmap-example-card">
+                      <div className="roadmap-example-header">
+                        <div className="roadmap-example-header-left">
+                          <Terminal size={14} className="roadmap-example-icon" />
+                          <span className="roadmap-example-title">Sample Test Case & Expected Result</span>
+                        </div>
+                        <span className="roadmap-example-badge">
+                          {compilerLanguage === 'html' || compilerLanguage === 'react' ? 'Visual UI Preview' : 'Standard I/O'}
+                        </span>
+                      </div>
+
+                      <div className="roadmap-example-body">
+                        {/* Sample Input */}
+                        <div className="roadmap-example-row">
+                          <div className="roadmap-example-meta">
+                            <span className="roadmap-example-key">Sample Input:</span>
+                            <span className="roadmap-example-hint">
+                              {compilerLanguage === 'html' || compilerLanguage === 'react' ? '(Direct Markup / Component)' : '(stdin)'}
+                            </span>
+                          </div>
+                          <div className="roadmap-example-code-box roadmap-example-code-box--input">
+                            <pre className="roadmap-example-pre">
+                              <code>{formatSampleCode(practice.sampleInput, 'input')}</code>
+                            </pre>
+                          </div>
+                        </div>
+
+                        {/* Sample Output */}
+                        <div className="roadmap-example-row">
+                          <div className="roadmap-example-meta">
+                            <span className="roadmap-example-key roadmap-example-key--output">Expected Output:</span>
+                            <span className="roadmap-example-hint">
+                              {compilerLanguage === 'html' || compilerLanguage === 'react' ? '(Rendered DOM / Web Preview)' : '(stdout)'}
+                            </span>
+                          </div>
+                          <div className="roadmap-example-code-box roadmap-example-code-box--output">
+                            <pre className="roadmap-example-pre">
+                              <code>{formatSampleCode(practice.sampleOutput, 'output')}</code>
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Upgraded Spacious Code IDE & Live Web Preview Box */}

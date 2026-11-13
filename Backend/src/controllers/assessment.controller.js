@@ -843,12 +843,22 @@ export const startAssessment = async (req, res, next) => {
     let attemptId = Date.now();
 
     try {
-      const insertResult = await query(
-        `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
+      // Reuse existing in_progress attempt if already created for this user & assessment to avoid ghost duplicate attempts
+      const existing = await query(
+        `SELECT id FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? AND status = 'in_progress' ORDER BY id DESC LIMIT 1`,
         [id, userId]
-      );
-      if (insertResult && insertResult.insertId) {
-        attemptId = insertResult.insertId;
+      ).catch(() => []);
+
+      if (Array.isArray(existing) && existing.length > 0 && existing[0].id) {
+        attemptId = existing[0].id;
+      } else {
+        const insertResult = await query(
+          `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
+          [id, userId]
+        );
+        if (insertResult && insertResult.insertId) {
+          attemptId = insertResult.insertId;
+        }
       }
     } catch (e) {
       console.warn('[DB startAssessment fallback]', e.message);

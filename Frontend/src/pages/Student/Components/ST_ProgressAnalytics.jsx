@@ -464,7 +464,20 @@ export default function ProgressAnalytics() {
     return (t.title || "").toLowerCase().includes(searchQ) || (t.topic || "").toLowerCase().includes(searchQ) || (t.batchName || "").toLowerCase().includes(searchQ);
   });
 
-  const filteredQuizzes = (stats.quizDetails?.attempts || []).filter((q) => {
+  const uniqueQuizzes = React.useMemo(() => {
+    const raw = stats.quizDetails?.attempts || [];
+    const seen = new Map();
+    for (const q of raw) {
+      if (!q || q.status === "in_progress") continue;
+      const key = q.assessmentId ? String(q.assessmentId) : String(q.title);
+      if (!seen.has(key)) {
+        seen.set(key, q);
+      }
+    }
+    return Array.from(seen.values());
+  }, [stats.quizDetails?.attempts]);
+
+  const filteredQuizzes = uniqueQuizzes.filter((q) => {
     if (!searchQ) return true;
     return (q.title || "").toLowerCase().includes(searchQ) || (q.category || "").toLowerCase().includes(searchQ);
   });
@@ -748,7 +761,7 @@ export default function ProgressAnalytics() {
               onClick={() => setActiveTrackTab("quizzes")}
             >
               <GraduationCap size={15} />
-              <span>Quizzes ({stats.quizDetails?.attempts?.length || 0})</span>
+              <span>Quizzes ({uniqueQuizzes.length})</span>
             </button>
             <button
               type="button"
