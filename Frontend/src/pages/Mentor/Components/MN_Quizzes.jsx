@@ -502,38 +502,29 @@ export default function MentorQuizzes() {
         }));
       }
 
-      // Strictly deduplicate by normalized title AND normalized batch
-      // This permanently stops "one quiz many times"
-      const seen = new Map();
+      // Preserve each quiz distinctly by its unique ID
+      const seenIds = new Set();
+      const uniqueQuizzes = [];
       for (const q of combined) {
-        const normTitle = (q.title || '').trim().toLowerCase();
-        const normBatch = (q.batch || 'all batches').trim().toLowerCase();
-        const key = `${normTitle}__${normBatch}`;
-
-        if (!seen.has(key)) {
-          seen.set(key, q);
-        } else {
-          // If a duplicate exists, retain the entry with more questions or richer data
-          const existing = seen.get(key);
-          if ((existing.questionsCount || 0) < (q.questionsCount || 0)) {
-            seen.set(key, q);
-          }
+        const idKey = String(q.id);
+        if (!seenIds.has(idKey)) {
+          seenIds.add(idKey);
+          uniqueQuizzes.push(q);
         }
       }
-      setQuizzes(Array.from(seen.values()));
+      setQuizzes(uniqueQuizzes);
     } catch {
       const shared = await getSharedQuizzes([]);
       if (shared && shared.length > 0) {
-        const seen = new Map();
+        const seenIds = new Set();
+        const fallbackList = [];
         for (const s of shared) {
-          const sTitle = (s.title || '').trim();
-          const normTitle = sTitle.toLowerCase();
-          const normBatch = (s.batch_name || s.data?.batch || "All Batches").trim().toLowerCase();
-          const key = `${normTitle}__${normBatch}`;
-          if (!seen.has(key)) {
-            seen.set(key, {
+          const idKey = String(s.id);
+          if (!seenIds.has(idKey)) {
+            seenIds.add(idKey);
+            fallbackList.push({
               id: s.id,
-              title: sTitle,
+              title: (s.title || '').trim(),
               batch: s.batch_name || s.data?.batch || "All Batches",
               questionsCount: s.data?.questionsCount || (Array.isArray(s.data?.questions) ? s.data.questions.length : 10),
               type: "Manual",
@@ -545,7 +536,7 @@ export default function MentorQuizzes() {
             });
           }
         }
-        setQuizzes(Array.from(seen.values()));
+        setQuizzes(fallbackList);
       }
     } finally {
       setLoading(false);
@@ -1141,7 +1132,20 @@ export default function MentorQuizzes() {
                         <GraduationCap size={18} />
                       </div>
                       <div>
-                        <div className="mq-quiz-name">{q.title}</div>
+                        <div className="mq-quiz-name">
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            fontFamily: 'ui-monospace, monospace',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
+                            padding: '1px 6px',
+                            borderRadius: '5px',
+                            marginRight: '6px'
+                          }}>ID #{q.id}</span>
+                          {q.title}
+                        </div>
                         <div className="mq-quiz-sub" title={q.description}>
                           {q.description || 'Standard technical assessment'}
                         </div>

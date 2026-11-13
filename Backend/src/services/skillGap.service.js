@@ -251,96 +251,376 @@ export const getStudentSkillGapAnalysis = async (studentId, customData = null) =
 
   const numericId = parseInt(studentId, 10) || 1;
 
-  // 2. Query actual assessment, coding, task & interview performance from DB
+  // 1. Student identity and enrolled batch
   let user = null;
   try {
     user = await findUserById(numericId);
   } catch (e) {}
-
   const studentName = user ? (user.name || user.fullName || 'Student') : 'Student';
-  const quizMarks = {};
-  const codingMarks = {};
-  const interviewScores = {};
-  const milestoneProgress = {};
 
-  // 2a. Quizzes (Assessment attempts)
+  let batchName = 'Core Technical';
+  let batchId = null;
+  let enrolledBatchIds = [];
   try {
-    const attempts = await query(
-      `SELECT a.percentage, a.correct_count, a.total_questions, q.title 
-       FROM assessment_attempts a 
-       LEFT JOIN assessments q ON a.assessment_id = q.id 
-       WHERE a.user_id = ? AND a.status IN ('completed', 'finished', 'passed', 'failed')`,
-      [numericId]
-    );
+    const studentBatches = await query(`
+      SELECT sb.batch_id, b.name as batch_name
+      FROM student_batches sb
+      JOIN batches b ON sb.batch_id = b.id
+      WHERE sb.user_id = ?
+      ORDER BY sb.id ASC
+    `, [numericId]);
 
-    if (Array.isArray(attempts) && attempts.length > 0) {
-      for (const att of attempts) {
-        const topic = att.title || 'Technical Quiz';
-        const pct = att.percentage !== undefined ? att.percentage : (att.total_questions ? Math.round((att.correct_count / att.total_questions) * 100) : 50);
-        quizMarks[topic] = Math.round(pct);
+    if (studentBatches && studentBatches.length > 0) {
+      enrolledBatchIds = studentBatches.map(b => b.batch_id);
+      batchName = studentBatches[0].batch_name;
+      batchId = studentBatches[0].batch_id;
+    } else {
+      const [stu] = await query(`
+        SELECT s.batch_id, b.name as batch_name 
+        FROM students s
+        LEFT JOIN batches b ON s.batch_id = b.id
+        WHERE s.user_id = ? LIMIT 1
+      `, [numericId]);
+      if (stu && stu.batch_name) {
+        batchName = stu.batch_name;
+        batchId = stu.batch_id;
+        if (batchId) enrolledBatchIds.push(batchId);
       }
+    }
+  } catch (_) {}
+
+  // ── FACTOR 1: Academic Quizzes (Assessment attempts) ──
+  let quizzes = [];
+  try {
+    quizzes = await query(`
+      SELECT aa.id, aa.assessment_id, COALESCE(a.title, CONCAT('Quiz #', aa.assessment_id)) as title,
+             COALESCE(a.category, 'Technical Quiz') as category,
+             aa.marks_obtained, aa.total_marks, aa.score, aa.percentage, aa.status
+      FROM assessment_attempts aa
+      LEFT JOIN assessments a ON aa.assessment_id = a.id
+      WHERE aa.user_id = ? AND aa.status != 'in_progress' AND (aa.submitted_at IS NOT NULL OR aa.completed_at IS NOT NULL)
+      ORDER BY aa.id DESC
+    `, [numericId]);
+  } catch (err) {
+    console.warn(`[Skill Gap] Quiz query warning: ${err.message}`);
+  }
+
+  const dedupQuizzesMap = new Map();
+  for (const q of (quizzes || [])) {
+    const key = String(q.assessment_id || q.title);
+    if (!dedupQuizzesMap.has(key)) {
+      const pct = Number(q.percentage) || (q.total_marks ? Math.round((Number(q.marks_obtained) / Number(q.total_marks)) * 100) : Number(q.score) || 0);
+      dedupQuizzesMap.set(key, { ...q, computedScore: Math.min(100, Math.max(0, pct)) });
+    }
+  }
+  const dedupQuizzes = Array.from(dedupQuizzesMap.values());
+  const quizAvg = dedupQuizzes.length > 0 ? Math.round(dedupQuizzes.reduce((acc, q) => acc + q.computedScore, 0) / dedupQuizzes.length) : 0;
+  const quizPassed = dedupQuizzes.filter(q => q.computedScore >= 50 || String(q.status).toLowerCase() === 'passed').length;
+
+  // ── FACTOR 2: Batch Coursework Tasks ──
+  let batchTasks = [];
+  try {
+    batchTasks = await query(`
+      SELECT bt.id, bt.title, bt.topic, bt.difficulty, bt.language, bt.points,
+             ts.status as sub_status, ts.score as sub_score, ts.marks_obtained, ts.feedback, ts.submitted_at
+      FROM batch_tasks bt
+      LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ?)
+      WHERE (
+        bt.batch_id IN (SELECT batch_id FROM student_batches WHERE user_id = ?)
+        OR bt.batch_id = ?
+        OR ts.user_id = ?
+      )
+      ORDER BY bt.id DESC
+    `, [numericId, numericId, batchId || 0, numericId]);
+  } catch (err) {
+    console.warn(`[Skill Gap] Batch tasks query warning: ${err.message}`);
+  }
+
+  const tasksMap = new Map();
+  for (const t of (batchTasks || [])) {
+    if (!tasksMap.has(t.id)) tasksMap.set(t.id, t);
+  }
+  const uniqueTasks = Array.from(tasksMap.values());
+  const submittedTasks = uniqueTasks.filter(t => t.sub_status !== null && t.sub_status !== undefined);
+  const passedTasks = uniqueTasks.filter(t => {
+    const s = String(t.sub_status || '').toLowerCase();
+    return s === 'passed' || s === 'completed' || s === 'accepted' || (Number(t.points || 0) > 0 && Number(t.marks_obtained ?? t.sub_score ?? 0) >= Number(t.points));
+  });
+  const failedTasks = submittedTasks.filter(t => !passedTasks.some(p => p.id === t.id));
+  const taskCompletionRate = uniqueTasks.length > 0 ? Math.round((submittedTasks.length / uniqueTasks.length) * 100) : 0;
+  const taskPassRate = submittedTasks.length > 0 ? Math.round((passedTasks.length / submittedTasks.length) * 100) : 0;
+
+  // ── FACTOR 3: Coding Practice (Problems & Test Cases) ──
+  let codingSubs = [];
+  let totalProblemsCount = 1;
+  try {
+    codingSubs = await query(`
+      SELECT cs.id, cs.status, cs.passed_test_cases, cs.total_test_cases,
+             COALESCE(p.title, 'Algorithm Practice') as title
+      FROM coding_submissions cs
+      LEFT JOIN practice_problems p ON cs.problem_id = p.id
+      WHERE cs.student_id = ?
+    `, [numericId]);
+    const [totalProblemsRow] = await query(`SELECT COUNT(*) as count FROM practice_problems`);
+    if (totalProblemsRow && Number(totalProblemsRow.count) > 0) {
+      totalProblemsCount = Number(totalProblemsRow.count);
     }
   } catch (err) {
-    console.warn(`[Skill Gap Service] Assessment attempt query failed: ${err.message}`);
+    console.warn(`[Skill Gap] Coding practice query warning: ${err.message}`);
   }
 
-  // 2b. Coding Practice Sums & Coding Tasks
+  const solvedCount = (codingSubs || []).filter(c => {
+    const s = String(c.status || '').toLowerCase();
+    return s === 'passed' || s === 'accepted' || (c.total_test_cases > 0 && c.passed_test_cases === c.total_test_cases);
+  }).length;
+  const codingScore = Math.min(100, Math.round((solvedCount / totalProblemsCount) * 100));
+
+  // ── FACTOR 4: AI Technical Interviews ──
+  let interviewSubs = [];
   try {
-    const codingSubs = await query(
-      `SELECT ts.score, ts.task_title, ts.status
-       FROM task_submissions ts
-       WHERE ts.user_id = ? OR ts.student_id = ?`,
-      [numericId, numericId]
-    );
-
-    if (Array.isArray(codingSubs) && codingSubs.length > 0) {
-      for (const sub of codingSubs) {
-        const topic = sub.task_title || 'Coding Practice & Tasks';
-        codingMarks[topic] = Math.round(sub.score || (sub.status === 'completed' ? 85 : 40));
-      }
-    }
-  } catch (err) {}
-
-  // 2c. AI Technical Interviews
-  try {
-    const interviewAttempts = await query(
-      `SELECT score, topic, overall_score
-       FROM interview_sessions
-       WHERE user_id = ? OR student_id = ?`,
-      [numericId, numericId]
-    );
-
-    if (Array.isArray(interviewAttempts) && interviewAttempts.length > 0) {
-      for (const inv of interviewAttempts) {
-        const topic = inv.topic || 'AI Technical Interview';
-        interviewScores[topic] = Math.round(inv.overall_score || inv.score || 70);
-      }
-    }
-  } catch (err) {}
-
-  // 2d. Default balanced fallback performance across all 4 evaluation categories
-  if (Object.keys(quizMarks).length === 0 && Object.keys(codingMarks).length === 0 && Object.keys(interviewScores).length === 0) {
-    quizMarks['MySQL & Database Systems'] = 40;
-    quizMarks['Java Programming & Syntax'] = 85;
-    codingMarks['Coding Practice Sums (Algorithms)'] = 55;
-    codingMarks['Coding Tasks & Submissions'] = 75;
-    interviewScores['AI Technical Interview (Databases & SQL)'] = 30;
-    interviewScores['AI Technical Interview (Java & OOP)'] = 80;
+    interviewSubs = await query(`
+      SELECT id, interview_type, overall_score, feedback, status FROM interview_submissions WHERE user_id = ?
+    `, [numericId]);
+  } catch (_) {
+    try {
+      interviewSubs = await query(`
+        SELECT id, topic as interview_type, overall_score, feedback, status FROM interview_sessions WHERE user_id = ? OR student_id = ?
+      `, [numericId, numericId]);
+    } catch (__) {}
   }
+  const interviewMean = interviewSubs && interviewSubs.length > 0 ? Math.round(interviewSubs.reduce((acc, i) => acc + (Number(i.overall_score) || 0), 0) / interviewSubs.length) : 0;
 
-  const performancePayload = {
-    student_id: numericId,
-    student_name: studentName,
-    quizMarks,
-    codingMarks,
-    interviewScores,
-    milestoneProgress,
+  // ── FACTOR 5: AI Learning Roadmap ──
+  let roadmapItems = [];
+  try {
+    roadmapItems = await query(`
+      SELECT ri.title, ri.status, r.goal_name FROM roadmap_items ri
+      JOIN roadmaps r ON ri.roadmap_id = r.id
+      WHERE r.student_id = ? OR r.user_id = ?
+    `, [numericId, numericId]);
+  } catch (_) {}
+  const roadmapDone = (roadmapItems || []).filter(r => r.status === 'completed').length;
+  const roadmapProgress = roadmapItems && roadmapItems.length > 0 ? Math.round((roadmapDone / roadmapItems.length) * 100) : 0;
+
+  // Multi-factor summary object (Excluding attendance as requested)
+  const factorsSummary = {
+    quizzes: {
+      name: 'Academic Quizzes',
+      weight: '25%',
+      score: quizAvg,
+      status: quizAvg >= 70 ? 'Strong' : quizAvg >= 50 ? 'Needs Review' : 'Critical',
+      detail: dedupQuizzes.length > 0 ? `${dedupQuizzes.length} Quizzes Attempted (${quizPassed} Passed, ${dedupQuizzes.length - quizPassed} Failed)` : 'No Quizzes Attempted'
+    },
+    coding: {
+      name: 'Coding Practice Problems',
+      weight: '25%',
+      score: codingScore,
+      status: codingScore >= 70 ? 'Strong' : codingScore > 0 ? 'In Progress' : 'Critical',
+      detail: `${solvedCount} of ${totalProblemsCount} Problems Solved`
+    },
+    coursework: {
+      name: 'Batch Coursework Tasks',
+      weight: '20%',
+      score: taskCompletionRate,
+      status: taskCompletionRate >= 70 ? 'Strong' : taskCompletionRate >= 50 ? 'In Progress' : 'Critical',
+      detail: uniqueTasks.length > 0 ? `${submittedTasks.length} of ${uniqueTasks.length} Tasks Submitted (${passedTasks.length} Passed, ${failedTasks.length} Failed)` : 'No Tasks Assigned'
+    },
+    interviews: {
+      name: 'AI Technical Interviews',
+      weight: '15%',
+      score: interviewMean,
+      status: interviewSubs.length === 0 ? 'Not Attempted' : interviewMean >= 70 ? 'Strong' : 'Needs Review',
+      detail: interviewSubs.length === 0 ? '0 Mock Interviews Completed' : `${interviewMean}% across ${interviewSubs.length} sessions`
+    },
+    roadmap: {
+      name: 'AI Learning Roadmap',
+      weight: '15%',
+      score: roadmapProgress,
+      status: roadmapItems.length === 0 ? 'Not Started' : roadmapProgress >= 70 ? 'On Track' : 'Needs Focus',
+      detail: roadmapItems.length === 0 ? '0 Milestones Initiated' : `${roadmapProgress}% (${roadmapDone}/${roadmapItems.length} Milestones)`
+    }
   };
 
-  const freshAnalysis = await analyzeStudentPerformance(performancePayload);
+  // Build evaluated technical skill competencies dynamically from these 5 real factors
+  const skills = [];
 
-  // Save to SQL Database table
-  await saveSkillGapAnalysis(numericId, freshAnalysis);
+  // Skill 1: Core Language & Syntax Foundations
+  const coreLangScore = Math.round(0.6 * quizAvg + 0.4 * taskPassRate);
+  const coreFailedTaskNames = failedTasks.map(t => t.title).slice(0, 3);
+  const coreTaskReason = coreFailedTaskNames.length > 0 ? `Failed ${failedTasks.length} tasks (${coreFailedTaskNames.join(', ')}) due to compilation/syntax errors.` : '';
+  skills.push({
+    id: 'skill-core-lang',
+    name: `${batchName} Core & Syntax Foundations`,
+    skill: `${batchName} Core & Syntax Foundations`,
+    score: coreLangScore,
+    category: 'Core Programming',
+    status: coreLangScore >= 80 ? 'Strong' : coreLangScore >= 70 ? 'Good' : coreLangScore >= 50 ? 'Weak' : 'Critical',
+    is_weak: coreLangScore < 65,
+    lastAssessed: 'Recent Evaluation',
+    priority: coreLangScore < 50 ? 'High' : coreLangScore < 65 ? 'Medium' : 'Low',
+    reason: `Evaluated across Academic Quizzes (${quizAvg}%) and Batch Coursework Pass Rate (${taskPassRate}%).`,
+    factorsSummary: `Quiz Score: ${quizAvg}% · Task Pass Rate: ${taskPassRate}%`,
+    factors: [
+      { factor: 'Academic Quizzes', score: quizAvg, detail: `${dedupQuizzes.length} Quizzes (${quizPassed} Passed, ${dedupQuizzes.length - quizPassed} Failed)` },
+      { factor: 'Batch Coursework', score: taskPassRate, detail: `${submittedTasks.length} Submitted (${passedTasks.length} Passed, ${failedTasks.length} Failed)` }
+    ],
+    whyWeak: coreLangScore < 65 ? `Average quiz score is ${quizAvg}% and ${coreTaskReason || 'syntax accuracy requires improvement'}` : null,
+    targetScore: 85,
+    recommendedTopics: [`${batchName} Standard I/O & Scanner`, `${batchName} Syntax Rules & Compilation`, `${batchName} Control Flow & Methods`],
+    checklist: [
+      { id: 1, text: `Revise ${batchName} input/output handling and compilation syntax`, completed: false, type: 'revise', route: '/student/learning' },
+      { id: 2, text: `Debug and re-submit failed ${batchName} batch tasks`, completed: false, type: 'practice', route: '/student/batches' },
+      { id: 3, text: `Retake ${batchName} assessment to improve score above 75%`, completed: false, type: 'quiz', route: '/student/quiz' }
+    ]
+  });
 
-  return freshAnalysis;
+  // Skill 2: Algorithmic Problem Solving & Code Execution
+  const algoScore = Math.round(0.7 * codingScore + 0.3 * (taskPassRate > 0 ? taskPassRate : 0));
+  skills.push({
+    id: 'skill-algo',
+    name: 'Algorithmic Problem Solving & Code Execution',
+    skill: 'Algorithmic Problem Solving & Code Execution',
+    score: algoScore,
+    category: 'Data Structures & Algorithms',
+    status: algoScore >= 80 ? 'Strong' : algoScore >= 70 ? 'Good' : algoScore >= 50 ? 'Weak' : 'Critical',
+    is_weak: algoScore < 65,
+    lastAssessed: 'Recent Evaluation',
+    priority: algoScore < 50 ? 'High' : algoScore < 65 ? 'Medium' : 'Low',
+    reason: `Evaluated across Practice Arena (${codingScore}%) and Task Execution (${taskPassRate}%).`,
+    factorsSummary: `Practice Arena: ${codingScore}% (${solvedCount}/${totalProblemsCount} Solved)`,
+    factors: [
+      { factor: 'Coding Practice Arena', score: codingScore, detail: `${solvedCount}/${totalProblemsCount} problems solved` },
+      { factor: 'Algorithmic Tasks', score: taskPassRate, detail: `${passedTasks.length}/${submittedTasks.length} tasks passed all test cases` }
+    ],
+    whyWeak: algoScore < 65 ? `Only ${solvedCount} of ${totalProblemsCount} coding practice problems solved; test case pass rate is ${taskPassRate}%.` : null,
+    targetScore: 80,
+    recommendedTopics: ['Arithmetic Algorithms', 'Loop Traversal & Edge Cases', 'Test Case Debugging'],
+    checklist: [
+      { id: 1, text: 'Solve unattempted coding practice problem in Practice Arena', completed: false, type: 'practice', route: '/student/practice' },
+      { id: 2, text: 'Review algorithmic time complexity and edge case handling', completed: false, type: 'revise', route: '/student/learning' },
+      { id: 3, text: 'Pass all hidden test cases without time limit exceeded', completed: false, type: 'practice', route: '/student/practice' }
+    ]
+  });
+
+  // Skill 3: Batch Coursework & Practical Deliverables
+  const courseworkScore = Math.round(0.5 * taskCompletionRate + 0.5 * taskPassRate);
+  skills.push({
+    id: 'skill-coursework',
+    name: 'Batch Coursework & Practical Deliverables',
+    skill: 'Batch Coursework & Practical Deliverables',
+    score: courseworkScore,
+    category: 'Practical Engineering',
+    status: courseworkScore >= 80 ? 'Strong' : courseworkScore >= 70 ? 'Good' : courseworkScore >= 50 ? 'Weak' : 'Critical',
+    is_weak: courseworkScore < 65,
+    lastAssessed: 'Recent Evaluation',
+    priority: courseworkScore < 50 ? 'High' : courseworkScore < 65 ? 'Medium' : 'Low',
+    reason: `Evaluated across Task Submission Velocity (${taskCompletionRate}%) and Verification Pass Rate (${taskPassRate}%).`,
+    factorsSummary: `Tasks Submitted: ${submittedTasks.length}/${uniqueTasks.length} (${taskCompletionRate}%) · Passed: ${passedTasks.length}`,
+    factors: [
+      { factor: 'Submission Velocity', score: taskCompletionRate, detail: `${submittedTasks.length} of ${uniqueTasks.length} assigned tasks submitted` },
+      { factor: 'Solution Correctness', score: taskPassRate, detail: `${passedTasks.length} of ${submittedTasks.length} solutions accepted` }
+    ],
+    whyWeak: courseworkScore < 65 ? `${failedTasks.length} task submissions failed verification; ${uniqueTasks.length - submittedTasks.length} tasks remain unattempted.` : null,
+    targetScore: 90,
+    recommendedTopics: ['Code Verification', 'Clean Code Guidelines', 'Error Log Analysis'],
+    checklist: [
+      { id: 1, text: 'Fix compilation & logical bugs in submitted coursework', completed: false, type: 'practice', route: '/student/batches' },
+      { id: 2, text: 'Submit solutions for any pending coursework assignments', completed: false, type: 'practice', route: '/student/batches' }
+    ]
+  });
+
+  // Skill 4: Technical Interview Articulation & Depth
+  skills.push({
+    id: 'skill-interview',
+    name: 'Technical Interview Articulation & Depth',
+    skill: 'Technical Interview Articulation & Depth',
+    score: interviewMean,
+    category: 'Technical Communication',
+    status: interviewSubs.length === 0 ? 'Critical' : interviewMean >= 80 ? 'Strong' : interviewMean >= 70 ? 'Good' : 'Weak',
+    is_weak: interviewSubs.length === 0 || interviewMean < 65,
+    lastAssessed: 'Interview Arena',
+    priority: interviewSubs.length === 0 || interviewMean < 50 ? 'High' : 'Medium',
+    reason: interviewSubs.length === 0 ? '0 Mock Interviews Completed.' : `Average interview score: ${interviewMean}%.`,
+    factorsSummary: interviewSubs.length === 0 ? '0 Mock Interviews Completed' : `Overall Score: ${interviewMean}% across ${interviewSubs.length} interviews`,
+    factors: [
+      { factor: 'AI Mock Interviews', score: interviewMean, detail: `${interviewSubs.length} sessions completed` }
+    ],
+    whyWeak: interviewSubs.length === 0 ? 'No technical mock interviews attempted; verbal problem explanation and technical reasoning remain unassessed.' : interviewMean < 65 ? `Interview performance averaged ${interviewMean}%; conceptual articulation requires practice.` : null,
+    targetScore: 80,
+    recommendedTopics: ['Verbal Code Walkthrough', `${batchName} Conceptual Explanation`, 'Scenario-Based Reasoning'],
+    checklist: [
+      { id: 1, text: `Attempt an AI Mock Technical Interview for ${batchName}`, completed: false, type: 'interview', route: '/student/interview' },
+      { id: 2, text: 'Practice explaining code logic aloud with clarity', completed: false, type: 'practice', route: '/student/interview' }
+    ]
+  });
+
+  // Skill 5: Curriculum Roadmap Milestone Completion
+  skills.push({
+    id: 'skill-roadmap',
+    name: 'Curriculum Roadmap Milestone Completion',
+    skill: 'Curriculum Roadmap Milestone Completion',
+    score: roadmapProgress,
+    category: 'Curriculum Velocity',
+    status: roadmapItems.length === 0 ? 'Critical' : roadmapProgress >= 80 ? 'Strong' : roadmapProgress >= 70 ? 'Good' : 'Weak',
+    is_weak: roadmapItems.length === 0 || roadmapProgress < 65,
+    lastAssessed: 'Roadmap Tracker',
+    priority: roadmapItems.length === 0 || roadmapProgress < 50 ? 'High' : 'Medium',
+    reason: roadmapItems.length === 0 ? 'Roadmap milestones not started.' : `Milestone completion: ${roadmapProgress}%.`,
+    factorsSummary: roadmapItems.length === 0 ? '0 Roadmap Milestones Completed' : `Roadmap Progress: ${roadmapProgress}% (${roadmapDone}/${roadmapItems.length} Milestones)`,
+    factors: [
+      { factor: 'AI Learning Roadmap', score: roadmapProgress, detail: `${roadmapDone}/${roadmapItems.length} modules completed` }
+    ],
+    whyWeak: roadmapItems.length === 0 ? 'Learning roadmap has not been initiated; curriculum progression is stalled.' : roadmapProgress < 65 ? `Roadmap completion is at ${roadmapProgress}%; pending topics must be completed.` : null,
+    targetScore: 85,
+    recommendedTopics: ['Structured Syllabus Milestones', 'Self-Paced Learning', 'Concept Mastery Checklists'],
+    checklist: [
+      { id: 1, text: 'Open your personalized AI Learning Roadmap', completed: false, type: 'roadmap', route: '/student/roadmap' },
+      { id: 2, text: 'Complete and check off upcoming curriculum milestones', completed: false, type: 'revise', route: '/student/roadmap' }
+    ]
+  });
+
+  // Compute overall weighted competency across the 5 evaluated factors (Attendance excluded):
+  // Quizzes (25%), Coding (25%), Batch Tasks (20%), Roadmap (15%), Interview (15%)
+  const overallCompetency = Math.round(
+    0.25 * quizAvg +
+    0.25 * codingScore +
+    0.20 * taskCompletionRate +
+    0.15 * roadmapProgress +
+    0.15 * interviewMean
+  );
+
+  const weakAreas = skills.filter(s => s.is_weak);
+  const overallStatus = weakAreas.length === 0 ? 'Strong' : weakAreas.length <= 2 ? 'Needs Focus' : 'Needs Improvement';
+
+  // Generate suggestions list for compatibility with ST_ProgressAnalytics
+  const suggestions = weakAreas.map(w => ({
+    skill: w.name,
+    score: w.score,
+    priority: w.priority,
+    actions: w.checklist.map(c => c.text),
+    recommendations: w.recommendedTopics,
+    study_materials: [
+      { title: `${w.name} Master Guide`, link: '/student/learning' },
+      { title: 'Interactive Practice Modules', link: '/student/practice' }
+    ]
+  }));
+
+  const analysisResult = {
+    student_id: numericId,
+    student_name: studentName,
+    batch_name: batchName,
+    overall_score: overallCompetency,
+    overall_status: overallStatus,
+    weak_areas_count: weakAreas.length,
+    weak_areas: weakAreas,
+    all_evaluated_skills: skills,
+    skills: skills,
+    factors_summary: factorsSummary,
+    suggestions: suggestions
+  };
+
+  // Persist to SQL Database table
+  await saveSkillGapAnalysis(numericId, analysisResult);
+
+  return analysisResult;
 };

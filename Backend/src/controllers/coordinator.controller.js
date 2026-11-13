@@ -983,56 +983,7 @@ export const createCoordinatorLiveSession = async (req, res, next) => {
  */
 export const getCoordinatorSupportTickets = async (req, res, next) => {
   try {
-    let coordId = req.user?.userId || req.user?.id;
-    if (!coordId && req.user?.email) {
-      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
-      if (u && u.length > 0) coordId = u[0].id;
-    }
-    const collegeId = req.user?.collegeId || req.user?.college_id || null;
-
-    let tickets = [];
-    try {
-      tickets = await query(
-        `SELECT st.*,
-                COALESCE(u.name, 'User') AS requesterName,
-                u.email AS requesterEmail,
-                u.role AS requesterRole,
-                COALESCE(s.department, 'General') AS requesterBatch
-         FROM support_tickets st
-         LEFT JOIN users u ON st.user_id = u.id
-         LEFT JOIN students s ON u.id = s.user_id
-         WHERE (st.user_id = ? AND ? IS NOT NULL) OR (u.college_id = ? AND ? IS NOT NULL) OR (? IS NULL AND ? IS NULL)
-         ORDER BY st.id DESC`,
-        [coordId || null, coordId || null, collegeId, collegeId, coordId || null, collegeId]
-      );
-    } catch (e) {
-      console.warn('[DB getCoordinatorSupportTickets fallback]', e.message);
-      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
-    }
-
-    const formatted = (tickets || []).map(t => ({
-      id: `TICK-${t.id}`,
-      dbId: t.id,
-      title: t.subject || 'Support Issue',
-      subject: t.subject || 'Support Issue',
-      category: t.category || 'Academics & Labs',
-      priority: t.priority || 'Normal',
-      status: t.status || 'Open',
-      description: t.description || '',
-      requesterName: t.requesterName || 'User',
-      requesterEmail: t.requesterEmail || '',
-      role: t.requesterRole || 'COORDINATOR',
-      batch: t.requesterBatch || 'General',
-      created: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : 'Today',
-      time: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Today',
-      resolutionNote: t.resolution_note || '',
-      isEscalated: Boolean(t.is_escalated),
-      escalatedTo: t.escalated_to || '',
-      escalationReason: t.escalation_reason || '',
-      isOwner: t.user_id === coordId,
-    }));
-
-    return sendSuccess(res, 'Coordinator support tickets retrieved successfully', formatted);
+    return sendSuccess(res, 'Support tickets are managed exclusively by College Admin and Super Admin', []);
   } catch (error) {
     next(error);
   }
@@ -1079,48 +1030,9 @@ export const createCoordinatorSupportTicket = async (req, res, next) => {
 };
 
 export const updateCoordinatorSupportTicket = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { status, resolutionNote } = req.body;
-
-    const updates = [];
-    const params = [];
-    if (status) { updates.push('status = ?'); params.push(status); }
-    if (resolutionNote !== undefined) { updates.push('resolution_note = ?'); params.push(resolutionNote); }
-
-    if (updates.length > 0) {
-      params.push(cleanId);
-      await query(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = ?`, params);
-    }
-
-    return sendSuccess(res, 'Ticket updated successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };
 
 export const escalateCoordinatorSupportTicket = async (req, res, next) => {
-  try {
-    const coordId = req.user?.userId || req.user?.id || 1;
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { escalationReason } = req.body;
-
-    await query(
-      `UPDATE support_tickets 
-       SET is_escalated = 1,
-           escalated_to = 'admin',
-           escalation_reason = ?,
-           escalated_by = ?,
-           escalated_at = NOW(),
-           status = 'Escalated'
-       WHERE id = ?`,
-      [escalationReason || 'Coordinator requested assistance from College Admin.', coordId, cleanId]
-    );
-
-    return sendSuccess(res, 'Ticket escalated to College Admin successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };

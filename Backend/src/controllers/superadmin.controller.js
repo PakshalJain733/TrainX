@@ -639,6 +639,7 @@ export const getSuperAdminSupportTickets = async (req, res, next) => {
       tickets = await query(sql);
     } catch (e) {
       console.warn('[DB getSuperAdminSupportTickets fallback]', e.message);
+      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
     }
 
     const formatted = (tickets || []).map(t => ({

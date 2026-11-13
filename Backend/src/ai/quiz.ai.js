@@ -134,12 +134,17 @@ export const generateQuizQuestionsAI = async (topic, count = 10, description = '
   const prompt = `You are an expert Technical Assessment & Exam Designer.
 Generate exactly ${numQuestions} high-quality, practical multiple-choice questions for a technical quiz on the topic: "${topic}".${cleanDesc ? `\n\nSPECIFIC FOCUS TOPICS & DESCRIPTION:\n"${cleanDesc}"\nCRITICAL INSTRUCTION: All generated questions MUST directly test and cover the specific subtopics, concepts, libraries, syntax, or subject matter outlined in the description above.` : ''}
 
+CRITICAL REQUIREMENT - EXACT QUESTION COUNT:
+You MUST generate EXACTLY ${numQuestions} questions in the "questions" array.
+Current target count: ${numQuestions} questions. Do NOT stop after 3, 4, or 5 questions.
+The "questions" array MUST have length ${numQuestions} with elements indexed 0 through ${numQuestions - 1}.
+
 RULES:
 1. Generate clear, realistic, non-repetitive technical questions covering core concepts, syntax, best practices, and edge cases${cleanDesc ? ' relevant to the specified focus topics' : ''}.
 2. Provide exactly 4 distinct, plausible options (a, b, c, d) per question. Do NOT make options nearly identical.
 3. Choose exactly ONE correct answer ('a', 'b', 'c', or 'd').
 4. Provide a concise "explanation" (15-25 words) explaining factually why the correct option is right.
-5. Output ONLY a valid JSON object matching this exact structure:
+5. Output ONLY a valid JSON object matching this exact structure with all ${numQuestions} questions:
 {
   "questions": [
     {
@@ -157,14 +162,20 @@ RULES:
 }`;
 
   // Live generation through the configured provider (Groq / NVIDIA / Gemini).
-  const parsed = await generateJSON(prompt, {
-    system: 'You are an expert Technical Assessment & Exam Designer. Output valid JSON strictly matching the requested quiz questions schema.',
-    temperature: 0.35,
-    maxTokens: Math.min(4000, 300 * numQuestions),
-  });
+  let parsed = null;
+  try {
+    parsed = await generateJSON(prompt, {
+      system: `You are an expert Technical Assessment & Exam Designer. You MUST return a JSON object with a "questions" array containing EXACTLY ${numQuestions} complete multiple-choice questions.`,
+      temperature: 0.35,
+      maxTokens: Math.max(4000, 350 * numQuestions),
+      timeoutMs: 30000,
+    });
+  } catch (err) {
+    console.warn(`[AI] Quiz question generation error for "${topic}":`, err.message);
+  }
 
   if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-    const sanitizedQuestions = parsed.questions.map((q, idx) => {
+    let sanitizedQuestions = parsed.questions.map((q, idx) => {
       const correct = ['a', 'b', 'c', 'd'].includes(String(q.correct || '').toLowerCase().trim())
         ? String(q.correct).toLowerCase().trim()
         : 'a';
@@ -194,15 +205,26 @@ RULES:
       };
     });
 
-    console.log('[AI] Successfully generated ' + sanitizedQuestions.length + ' live questions for ' + topic + ' via ' + describeProvider() + '!');
+    // CRITICAL: Guarantee the exact count requested by the user is ALWAYS met!
+    if (sanitizedQuestions.length < numQuestions) {
+      const remainingCount = numQuestions - sanitizedQuestions.length;
+      console.warn(`[AI] LLM returned ${sanitizedQuestions.length} of ${numQuestions} questions. Generating ${remainingCount} supplemental questions for "${topic}" to guarantee exact count.`);
+      const supplemental = buildFallbackQuestions(topic, remainingCount, cleanDesc, sanitizedQuestions.length);
+      sanitizedQuestions = [...sanitizedQuestions, ...supplemental];
+    } else if (sanitizedQuestions.length > numQuestions) {
+      sanitizedQuestions = sanitizedQuestions.slice(0, numQuestions);
+    }
+
+    console.log('[AI] Successfully prepared exactly ' + sanitizedQuestions.length + ' questions for ' + topic + ' (requested: ' + numQuestions + ') via ' + describeProvider() + '!');
     return sanitizedQuestions;
   }
 
-  // Graceful fallback questions
-  return buildFallbackQuestions(topic, numQuestions, cleanDesc);
+  // Graceful fallback questions ensuring exact count requested
+  console.log(`[AI] Using fallback generator to supply exactly ${numQuestions} questions for "${topic}"`);
+  return buildFallbackQuestions(topic, numQuestions, cleanDesc, 0);
 };
 
-function buildFallbackQuestions(topic, count, description = '') {
+export function buildFallbackQuestions(topic, count, description = '', offset = 0) {
   const templates = [
     {
       q: `What is the primary architectural advantage of utilizing ${topic}?`,
@@ -313,15 +335,71 @@ function buildFallbackQuestions(topic, count, description = '') {
       },
       correct: "a",
       exp: `CI/CD automates quality checks and deployment pipelines safely.`
+    },
+    {
+      q: `What is the primary purpose of encapsulation and data hiding in ${topic}?`,
+      opts: {
+        a: "Restricting direct access to internal state to preserve integrity",
+        b: "Preventing code from being compiled on different machines",
+        c: "Minimizing the number of variable names available in the program",
+        d: "Encrypting the source code files on the local hard disk",
+      },
+      correct: "a",
+      exp: `Encapsulation protects component state and reduces tight coupling.`
+    },
+    {
+      q: `Which approach is most effective for memory leak prevention in ${topic}?`,
+      opts: {
+        a: "Explicitly dereferencing listeners, unregistering hooks, and closing streams",
+        b: "Disabling the operating system paging file completely",
+        c: "Running only one single process thread per CPU core",
+        d: "Increasing RAM hardware every time memory usage climbs",
+      },
+      correct: "a",
+      exp: `Proper cleanup of event listeners and open resources prevents memory leaks.`
+    },
+    {
+      q: `In ${topic}, what is the fundamental difference between synchronous and asynchronous operations?`,
+      opts: {
+        a: "Synchronous blocks the execution thread; asynchronous allows concurrent progress",
+        b: "Synchronous operations always run across multiple cloud servers",
+        c: "Asynchronous code cannot return any values or errors",
+        d: "Synchronous code only runs inside containerized Docker images",
+      },
+      correct: "a",
+      exp: `Asynchronous operations enable non-blocking workflows and better concurrency.`
+    },
+    {
+      q: `What is the role of polymorphism when designing extensible software with ${topic}?`,
+      opts: {
+        a: "Enabling uniform interfaces for differing underlying implementations",
+        b: "Compiling multiple programming languages into a single text file",
+        c: "Ensuring that variables can never change their memory addresses",
+        d: "Converting floating-point numbers directly into boolean values",
+      },
+      correct: "a",
+      exp: `Polymorphism allows decoupled caller code to work with multiple concrete types.`
+    },
+    {
+      q: `When designing RESTful or GraphQL APIs for ${topic}, which practice ensures optimal idempotency?`,
+      opts: {
+        a: "Using appropriate HTTP methods (e.g., PUT/DELETE) and unique idempotency keys",
+        b: "Randomizing server status codes across responses",
+        c: "Always returning HTTP 200 OK regardless of failures",
+        d: "Omitting request headers and query parameters",
+      },
+      correct: "a",
+      exp: `Idempotency keys and standardized HTTP methods prevent duplicate mutations.`
     }
   ];
 
   return Array.from({ length: count }, (_, idx) => {
-    const t = templates[idx % templates.length];
-    const isWrap = Math.floor(idx / templates.length) > 0;
-    const text = isWrap ? `[Advanced] ${t.q} (Part ${Math.floor(idx / templates.length) + 1})` : t.q;
+    const templateIndex = (idx + offset) % templates.length;
+    const t = templates[templateIndex];
+    const cycle = Math.floor((idx + offset) / templates.length);
+    const text = cycle > 0 ? `[Part ${cycle + 1}] ${t.q}` : t.q;
     return {
-      id: Date.now() + idx,
+      id: Date.now() + idx + offset,
       text,
       question_text: text,
       options: { ...t.opts },

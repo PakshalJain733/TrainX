@@ -41,9 +41,11 @@ export const evaluateStudentDefaulterStatus = async (studentId) => {
   const overallScore = studentPerf.overall_score !== undefined ? studentPerf.overall_score : 55;
   
   // Format rich weak areas so that skillName, level, score, and suggestedImprovement are never blank
-  const rawWeak = skillGapData && Array.isArray(skillGapData.weakAreas) && skillGapData.weakAreas.length > 0
-    ? skillGapData.weakAreas
-    : ['Database Indexing & Joins', 'API Error Handling & Validation'];
+  const rawWeak = skillGapData && Array.isArray(skillGapData.weak_areas || skillGapData.weakAreas) && (skillGapData.weak_areas || skillGapData.weakAreas).length > 0
+    ? (skillGapData.weak_areas || skillGapData.weakAreas)
+    : (skillGapData && Array.isArray(skillGapData.all_evaluated_skills)
+        ? skillGapData.all_evaluated_skills.filter(s => s.is_weak || s.score < 65)
+        : []);
 
   const weakAreas = rawWeak.map((item, idx) => {
     if (typeof item === 'string') {

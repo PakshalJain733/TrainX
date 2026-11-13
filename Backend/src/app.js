@@ -77,12 +77,21 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
-    frameguard: { action: 'sameorigin' }, // Clickjacking protection (same-site previews permitted)
+    frameguard: false, // Disabled global SAMEORIGIN so documents can be embedded across authorized frontends
     xContentTypeOptions: true, // MIME-sniffing protection enabled
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     hsts: nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   })
 );
+
+// Frame protection allowing authorized frontends to embed document viewers
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.getflytechnologies.com https://getflytechnologies.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+  );
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -200,6 +209,18 @@ const handleUploadsFile = (req, res, next) => {
     </html>
   `);
 };
+
+const uploadHeadersMiddleware = (req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.getflytechnologies.com https://getflytechnologies.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+  );
+  next();
+};
+
+app.use(['/uploads', '/api/v1/uploads', '/api/uploads'], uploadHeadersMiddleware);
 
 uploadPaths.forEach((p) => {
   if (fs.existsSync(p)) {

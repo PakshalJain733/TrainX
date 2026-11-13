@@ -57,7 +57,7 @@ const navGroups = [
 
 const footerNavItems = [
   { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone, moduleKey: "coordinatorBroadcast" },
-  { title: "Support Ticket", url: "/coordinator/help", icon: HelpCircle, moduleKey: "coordinatorHelp" },
+  { title: "Help & FAQ", url: "/coordinator/help", icon: HelpCircle, moduleKey: "coordinatorHelp" },
 ];
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {

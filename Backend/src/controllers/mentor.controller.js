@@ -2281,58 +2281,7 @@ export const getMentorMenteeInterviews = async (req, res, next) => {
  */
 export const getMentorSupportTickets = async (req, res, next) => {
   try {
-    const mentorId = getMentorId(req);
-    const collegeId = getCollegeId(req);
-    const userEmail = req.user?.email || null;
-
-    let tickets = [];
-    try {
-      tickets = await query(
-        `SELECT st.*,
-                COALESCE(u.name, 'Mentor') AS requesterName,
-                u.email AS requesterEmail,
-                u.role AS requesterRole,
-                COALESCE(s.department, 'General') AS requesterBatch,
-                s.roll_number AS requesterRollNo
-         FROM support_tickets st
-         LEFT JOIN users u ON st.user_id = u.id
-         LEFT JOIN students s ON u.id = s.user_id
-         WHERE (st.user_id = ? AND ? IS NOT NULL)
-            OR (u.email = ? AND ? IS NOT NULL)
-            OR (u.role = 'STUDENT' AND (u.college_id = ? OR ? IS NULL))
-            OR (st.user_id IS NULL AND st.target_role = 'admin')
-         ORDER BY st.id DESC`,
-        [mentorId, mentorId, userEmail, userEmail, collegeId, collegeId]
-      );
-    } catch (e) {
-      console.warn('[DB getMentorSupportTickets query failed, selecting user tickets]', e.message);
-      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
-    }
-
-    const formatted = (tickets || []).map(t => ({
-      id: `TICK-${t.id}`,
-      dbId: t.id,
-      title: t.subject || 'Support Issue',
-      subject: t.subject || 'Support Issue',
-      category: t.category || 'Academics & Labs',
-      priority: t.priority || 'Normal',
-      status: t.status || 'Open',
-      description: t.description || '',
-      requesterName: t.requesterName || (t.user_id === mentorId ? 'Me (Mentor)' : 'Student'),
-      requesterEmail: t.requesterEmail || '',
-      role: t.requesterRole || 'STUDENT',
-      batch: t.requesterBatch || 'General',
-      created: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : 'Today',
-      time: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Today',
-      resolutionNote: t.resolution_note || '',
-      mentorNote: t.mentor_note || '',
-      isEscalated: Boolean(t.is_escalated),
-      escalatedTo: t.escalated_to || '',
-      escalationReason: t.escalation_reason || '',
-      isOwner: t.user_id === mentorId,
-    }));
-
-    return sendSuccess(res, 'Mentor support tickets retrieved successfully', formatted);
+    return sendSuccess(res, 'Support tickets are managed exclusively by College Admin and Super Admin', []);
   } catch (error) {
     next(error);
   }
@@ -2380,51 +2329,11 @@ export const createMentorSupportTicket = async (req, res, next) => {
 };
 
 export const updateMentorSupportTicket = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { status, resolutionNote, mentorNote } = req.body;
-
-    const updates = [];
-    const params = [];
-    if (status) { updates.push('status = ?'); params.push(status); }
-    if (resolutionNote !== undefined) { updates.push('resolution_note = ?'); params.push(resolutionNote); }
-    if (mentorNote !== undefined) { updates.push('mentor_note = ?'); params.push(mentorNote); }
-
-    if (updates.length > 0) {
-      params.push(cleanId);
-      await query(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = ?`, params);
-    }
-
-    return sendSuccess(res, 'Ticket updated successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };
 
 export const escalateMentorSupportTicket = async (req, res, next) => {
-  try {
-    const mentorId = getMentorId(req);
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { escalationReason } = req.body;
-
-    await query(
-      `UPDATE support_tickets 
-       SET is_escalated = 1,
-           escalated_to = 'admin',
-           escalation_reason = ?,
-           escalated_by = ?,
-           escalated_at = NOW(),
-           status = 'Escalated'
-       WHERE id = ?`,
-      [escalationReason || 'Mentor requested assistance from College Admin.', mentorId, cleanId]
-    );
-
-    return sendSuccess(res, 'Ticket escalated to College Admin successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };
 
 // ---------------------------------------------------------------------------

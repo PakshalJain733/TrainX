@@ -72,6 +72,68 @@ export default function AdminLearningContent() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [resourceLink, setResourceLink] = useState("");
   const [viewingDocument, setViewingDocument] = useState(null);
+  const [blobDocUrl, setBlobDocUrl] = useState(null);
+  const [blobLoading, setBlobLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!viewingDocument?.url) {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+      return;
+    }
+
+    const url = viewingDocument.url;
+    const isPdfOrDoc = url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)($|\?)/i) || viewingDocument.type === "Document";
+
+    if (isPdfOrDoc && url.startsWith("http")) {
+      setBlobLoading(true);
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP error " + res.status);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!active) return;
+          const mimeType = url.match(/\.pdf($|\?)/i) ? "application/pdf" : (blob.type || "application/octet-stream");
+          const newBlobUrl = URL.createObjectURL(new Blob([blob], { type: mimeType }));
+          setBlobDocUrl(newBlobUrl);
+          setBlobLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.warn("[AD_LearningContent] Direct blob fetch failed, falling back to embedded viewer:", err.message);
+          setBlobDocUrl(null);
+          setBlobLoading(false);
+        });
+    } else {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+    }
+
+    return () => {
+      active = false;
+      if (blobDocUrl) {
+        URL.revokeObjectURL(blobDocUrl);
+      }
+    };
+  }, [viewingDocument?.url]);
+
+  const effectiveDocSrc = useMemo(() => {
+    if (!viewingDocument) return "";
+    if (blobDocUrl) return blobDocUrl;
+
+    const url = viewingDocument.url;
+    if (
+      url.startsWith("http") &&
+      !url.includes("localhost") &&
+      !url.includes("127.0.0.1") &&
+      url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx)($|\?)/i)
+    ) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  }, [viewingDocument, blobDocUrl]);
 
   const [batchesList, setBatchesList] = useState([]);
 
@@ -747,11 +809,19 @@ export default function AdminLearningContent() {
                 ) : viewingDocument.url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
                 ) : (
-                  <iframe
-                    src={viewingDocument.url}
-                    title={viewingDocument.title}
-                    className="lc-viewer-iframe"
-                  />
+                  <>
+                    {blobLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: '14px', gap: '8px' }}>
+                        <RefreshCw size={18} className="animate-spin" /> Loading document...
+                      </div>
+                    )}
+                    <iframe
+                      src={effectiveDocSrc}
+                      title={viewingDocument.title}
+                      className="lc-viewer-iframe"
+                      style={blobLoading ? { display: 'none' } : {}}
+                    />
+                  </>
                 )
               )}
             </div>

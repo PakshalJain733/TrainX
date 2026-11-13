@@ -14,6 +14,7 @@ import { getUserNotifications } from '../services/notification.service.js';
 import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
 import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
+import { calculateStudentProgressAnalytics } from '../services/progressAnalytics.service.js';
 
 export const isDeadlineExpired = (deadline) => {
   if (!deadline) return false;
@@ -1019,6 +1020,7 @@ export const getStudentPerformance = async (req, res, next) => {
     let totalStudents = 1;
     let quizList = [];
     let weeklyProgress = [];
+    let progressAnalytics = null;
 
     // Detailed Track Containers
     let taskDetails = { totalAssigned: 0, completedCount: 0, pendingCount: 0, meanScore: 0, completionRate: 0, tasks: [] };
@@ -1338,14 +1340,24 @@ export const getStudentPerformance = async (req, res, next) => {
         if (uCount && uCount[0]) totalStudents = Math.max(1, uCount[0].count);
       } catch (e) { }
 
-      // 8. Weekly Progress Generation (for ST_ProgressAnalytics chart)
-      const baseProg = learningProgress || (solvedCount > 0 ? 30 : 0);
-      weeklyProgress = [
-        { week: "Week 1", value: Math.min(100, Math.round(baseProg * 0.3)) },
-        { week: "Week 2", value: Math.min(100, Math.round(baseProg * 0.55)) },
-        { week: "Week 3", value: Math.min(100, Math.round(baseProg * 0.8)) },
-        { week: "Week 4", value: Math.min(100, baseProg) },
-      ];
+      // 8. Weekly & Monthly Progress Analytics across 5 parameters
+      try {
+        progressAnalytics = await calculateStudentProgressAnalytics(userId);
+      } catch (analyticsErr) {
+        console.warn('[progressAnalytics calculation error]:', analyticsErr.message);
+      }
+
+      if (progressAnalytics && progressAnalytics.weeklyProgress?.length > 0) {
+        weeklyProgress = progressAnalytics.weeklyProgress;
+      } else {
+        const baseProg = learningProgress || (solvedCount > 0 ? 30 : 0);
+        weeklyProgress = [
+          { week: "Week 1", value: Math.min(100, Math.round(baseProg * 0.3)) },
+          { week: "Week 2", value: Math.min(100, Math.round(baseProg * 0.55)) },
+          { week: "Week 3", value: Math.min(100, Math.round(baseProg * 0.8)) },
+          { week: "Week 4", value: Math.min(100, baseProg) },
+        ];
+      }
     }
 
     const validScores = [attendanceScore, quizScore, codingScore, interviewScore].filter(s => s > 0);
@@ -1365,7 +1377,7 @@ export const getStudentPerformance = async (req, res, next) => {
       : (overallScore || learningProgress || 50);
 
     const performanceData = {
-      overallScore,
+      overallScore: progressAnalytics?.overallProgress ?? overallScore,
       meanProgress,
       attendanceScore,
       codingScore,
@@ -1373,13 +1385,16 @@ export const getStudentPerformance = async (req, res, next) => {
       interviewScore,
       solvedCount,
       totalProblems,
-      learningProgress,
+      learningProgress: progressAnalytics?.overallProgress ?? learningProgress,
       ranking,
       totalStudents,
       quizList,
       weeklyData: weeklyProgress,
       weeklyProgress,
-      monthlyProgress: [],
+      monthlyProgress: progressAnalytics?.monthlyProgress || [],
+      activityCards: progressAnalytics?.activityCards || [],
+      calculatedOverallProgress: progressAnalytics?.overallProgress ?? overallScore,
+      breakdown: progressAnalytics?.breakdown || null,
       // Complete track collections
       taskDetails,
       quizDetails,
@@ -1460,7 +1475,7 @@ export const createSupportTicket = async (req, res, next) => {
     try {
       const result = await query(
         `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
-         VALUES (?, ?, ?, ?, 'Open', ?, 'mentor', NOW())`,
+         VALUES (?, ?, ?, ?, 'Open', ?, 'admin', NOW())`,
         [userId || null, subject.trim(), category, priority || 'Normal', description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
