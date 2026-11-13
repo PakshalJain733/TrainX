@@ -7,7 +7,6 @@ import {
   Briefcase,
   Sparkles,
   ShieldCheck,
-  Camera,
   Key,
   CheckCircle2,
   AlertCircle,
@@ -250,24 +249,6 @@ export function TrainerProfile() {
                   {getInitials(form.name)}
                 </div>
               )}
-              {isEditing && (
-                <button
-                  type="button"
-                  className="profile-camera-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Upload Avatar Photo"
-                >
-                  <Camera size={14} />
-                </button>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                disabled={!isEditing}
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>

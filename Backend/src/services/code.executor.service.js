@@ -43,8 +43,6 @@ export const LANGUAGE_ALIASES = {
   python: 'python',
   node: 'node',
   javascript: 'node',
-  typescript: 'node',
-  ts: 'node',
   sql: 'sql',
   go: 'go',
   golang: 'go',

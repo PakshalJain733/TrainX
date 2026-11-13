@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import {
   Check,
   User,
-  Camera,
   GraduationCap,
   Building,
   Users,
@@ -349,24 +348,6 @@ function MN_ProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              {isEditing && (
-                <button
-                  type="button"
-                  className="profile-camera-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Upload New Avatar Photo"
-                >
-                  <Camera size={14} />
-                </button>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                disabled={!isEditing}
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>

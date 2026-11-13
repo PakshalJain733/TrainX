@@ -568,7 +568,7 @@ export default function CodingPlatform() {
 
     const handleTabSwitchEvent = () => {
       if (proctorArmedRef.current && !hasSubmitted) {
-        handleProctorViolation("tab_switch", "Tab switch or leaving the examination window detected!");
+        endTaskDueToViolation("tab_switch", "Tab switch or leaving the examination window detected!");
       }
     };
 

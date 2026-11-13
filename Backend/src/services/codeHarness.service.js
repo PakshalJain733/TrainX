@@ -195,13 +195,15 @@ if __name__ == '__main__':
  */
 function wrapJavaHarness(code, functionName) {
   const fn = functionName.trim();
-  // If code is a class Solution without main, generate SolutionRunner
+  // Ensure class Solution is not public so it compiles cleanly alongside public class Main in Main.java
+  const cleanCode = code.replace(/\bpublic\s+class\s+Solution\b/g, 'class Solution');
+
   return `
 import java.io.*;
 import java.util.*;
 import java.lang.reflect.*;
 
-${code}
+${cleanCode}
 
 public class Main {
     public static void main(String[] args) {
@@ -215,7 +217,9 @@ public class Main {
             String rawInput = sb.toString().trim();
 
             Class<?> solClass = Class.forName("Solution");
-            Object solInstance = solClass.getDeclaredConstructor().newInstance();
+            Constructor<?> ctor = solClass.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            Object solInstance = ctor.newInstance();
 
             Method targetMethod = null;
             for (Method m : solClass.getDeclaredMethods()) {
@@ -229,31 +233,63 @@ public class Main {
                 System.err.println("Error: Could not find method ${fn} in class Solution.");
                 System.exit(1);
             }
+            targetMethod.setAccessible(true);
 
             Class<?>[] paramTypes = targetMethod.getParameterTypes();
             Object[] invokeArgs = new Object[paramTypes.length];
 
             String[] inputLines = rawInput.split("\\\\r?\\\\n");
+            String[] inputTokens = rawInput.trim().split("\\\\s+");
+
             for (int i = 0; i < paramTypes.length; i++) {
-                String valStr = i < inputLines.length ? inputLines[i].trim() : (rawInput.trim());
+                String valStr = "";
+                if (inputLines.length >= paramTypes.length) {
+                    valStr = inputLines[i].trim();
+                } else if (inputTokens.length >= paramTypes.length) {
+                    valStr = inputTokens[i].trim();
+                } else if (i < inputLines.length) {
+                    valStr = inputLines[i].trim();
+                } else {
+                    valStr = rawInput.trim();
+                }
+
                 Class<?> pt = paramTypes[i];
                 if (pt == int.class || pt == Integer.class) {
-                    invokeArgs[i] = Integer.parseInt(valStr.replaceAll("[^0-9-]", ""));
+                    String digits = valStr.replaceAll("[^0-9-]", "").trim();
+                    invokeArgs[i] = digits.isEmpty() ? 0 : Integer.parseInt(digits);
+                } else if (pt == long.class || pt == Long.class) {
+                    String digits = valStr.replaceAll("[^0-9-]", "").trim();
+                    invokeArgs[i] = digits.isEmpty() ? 0L : Long.parseLong(digits);
                 } else if (pt == double.class || pt == Double.class) {
-                    invokeArgs[i] = Double.parseDouble(valStr);
+                    String digits = valStr.replaceAll("[^0-9.-]", "").trim();
+                    invokeArgs[i] = digits.isEmpty() ? 0.0 : Double.parseDouble(digits);
                 } else if (pt == boolean.class || pt == Boolean.class) {
-                    invokeArgs[i] = Boolean.parseBoolean(valStr);
+                    invokeArgs[i] = Boolean.parseBoolean(valStr.trim());
                 } else if (pt == String.class) {
                     invokeArgs[i] = valStr.replaceAll("^\\\"|\\\"$", "");
                 } else if (pt == int[].class) {
-                    String clean = valStr.replaceAll("[\\[\\]]", "").trim();
+                    String clean = valStr.replace("[", "").replace("]", "").trim();
                     if (clean.isEmpty()) {
                         invokeArgs[i] = new int[0];
                     } else {
                         String[] parts = clean.split("[,\\\\s]+");
                         int[] arr = new int[parts.length];
-                        for (int k = 0; k < parts.length; k++) arr[k] = Integer.parseInt(parts[k].trim());
+                        for (int k = 0; k < parts.length; k++) {
+                            String pDigits = parts[k].replaceAll("[^0-9-]", "").trim();
+                            arr[k] = pDigits.isEmpty() ? 0 : Integer.parseInt(pDigits);
+                        }
                         invokeArgs[i] = arr;
+                    }
+                } else if (pt == String[].class) {
+                    String clean = valStr.replace("[", "").replace("]", "").trim();
+                    if (clean.isEmpty()) {
+                        invokeArgs[i] = new String[0];
+                    } else {
+                        String[] parts = clean.split("[,\\\\s]+");
+                        for (int k = 0; k < parts.length; k++) {
+                            parts[k] = parts[k].replaceAll("^\\\"|\\\"$", "").trim();
+                        }
+                        invokeArgs[i] = parts;
                     }
                 } else {
                     invokeArgs[i] = valStr;

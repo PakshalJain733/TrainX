@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Check, User, Camera, GraduationCap, Building, Users, ShieldCheck, CheckCircle2, Save, Sparkles, MapPin, Clock, KeyRound, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
+import { Check, User, GraduationCap, Building, Users, ShieldCheck, CheckCircle2, Save, Sparkles, MapPin, Clock, KeyRound, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -171,24 +171,6 @@ export default function CoordinatorProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              {isEditing && (
-                <button
-                  type="button"
-                  className="profile-camera-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Change Avatar Image"
-                >
-                  <Camera size={14} />
-                </button>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                disabled={!isEditing}
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>

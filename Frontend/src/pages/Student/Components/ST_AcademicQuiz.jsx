@@ -505,6 +505,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
 
   const handleProctorViolation = (reason, description) => {
     if (isReview || submitted || !proctorArmedRef.current) return;
+    if (reason !== "exit_fullscreen") return;
 
     // Debounce to prevent duplicate strikes when blur and visibilitychange fire simultaneously
     const now = Date.now();
@@ -622,7 +623,9 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
     }
 
     const handleTabSwitchEvent = () => {
-      handleProctorViolation("tab_switch", "Tab switch / Alt+Tab detected!");
+      if (proctorArmedRef.current && !submitted) {
+        endQuizDueToViolation("tab_switch", "Tab switch or leaving the quiz window detected!");
+      }
     };
 
     const handleVisibilityChange = () => {

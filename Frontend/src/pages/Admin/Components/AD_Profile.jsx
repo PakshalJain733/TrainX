@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, User, Camera, Mail, Phone, Building, Briefcase, CheckCircle2, Save, ShieldCheck, Globe, Bell, Key, AlertCircle, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
+import { Check, User, Mail, Phone, Building, Briefcase, CheckCircle2, Save, ShieldCheck, Globe, Bell, Key, AlertCircle, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -193,24 +193,6 @@ export default function AdminProfile() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              {isEditing && (
-                <button
-                  type="button"
-                  className="profile-camera-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Change Avatar Image"
-                >
-                  <Camera size={14} />
-                </button>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                disabled={!isEditing}
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
