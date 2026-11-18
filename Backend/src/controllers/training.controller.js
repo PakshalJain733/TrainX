@@ -8,6 +8,7 @@ import {
   updateTraining,
   updateTrainingStatus,
   getOverallTrainingStats,
+  getAllTrainingEnrollments,
   getEnrollmentsByTrainingId,
   registerStudentForTraining,
   upsertWebhookTrainingEnrollment,
@@ -139,6 +140,26 @@ export const changeTrainingStatus = async (req, res, next) => {
 };
 
 /**
+ * GET /api/v1/trainings/enrollments
+ * Admin: Retrieve all training enrollments across all programs with optional filtering.
+ */
+export const getAllEnrollments = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeId(req);
+    const filters = {
+      search: req.query.search || '',
+      branch: req.query.branch || 'all',
+      paymentStatus: req.query.payment_status || req.query.paymentStatus || 'all',
+      approvalStatus: req.query.approval_status || req.query.approvalStatus || 'all',
+    };
+    const enrollments = await getAllTrainingEnrollments(filters, collegeId);
+    return sendSuccess(res, 'Training enrollments retrieved successfully', enrollments);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/v1/trainings/:id/enrollments
  * Admin: Retrieve all enrollments and metrics for a specific training program.
  */
@@ -258,7 +279,11 @@ export const transferStudentTraining = async (req, res, next) => {
  */
 export const handleMultiTrainingWebhook = async (req, res, next) => {
   try {
-    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026';
+    const isProd = process.env.NODE_ENV === 'production';
+    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || (isProd ? null : 'TrainX_C2C_Webhook_Secret_Key_2026');
+    if (!expectedSecret) {
+      return sendError(res, 'Server misconfiguration: C2C_WEBHOOK_SECRET must be configured in environment.', 500);
+    }
     const providedSecret =
       req.headers['x-c2c-secret'] ||
       req.headers['x-c2c-webhook-secret'] ||

@@ -386,6 +386,130 @@ export const getOverallTrainingStats = async (collegeId = null) => {
 /**
  * Retrieves all enrollment records for a specific training program with filtering and metrics.
  */
+/**
+ * Retrieve all enrollments across all training programs with filters and metrics (for Admin dashboard).
+ */
+export const getAllTrainingEnrollments = async (filters = {}, collegeId = null) => {
+  const { search = '', branch = 'all', paymentStatus = 'all', approvalStatus = 'all' } = filters;
+
+  let sql = `
+    SELECT 
+      ce.*,
+      tp.name AS training_name,
+      tp.code AS training_code_ref,
+      tp.fee_amount AS tp_fee_amount,
+      tp.college_id AS tp_college_id
+    FROM c2c_enrollments ce
+    LEFT JOIN training_programs tp ON tp.id = ce.training_id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (collegeId) {
+    sql += ' AND (tp.college_id = ? OR tp.college_id IS NULL)';
+    params.push(collegeId);
+  }
+
+  if (approvalStatus && approvalStatus !== 'all') {
+    sql += ' AND LOWER(ce.approval_status) = LOWER(?)';
+    params.push(approvalStatus);
+  }
+
+  if (paymentStatus && paymentStatus !== 'all') {
+    sql += ' AND LOWER(ce.payment_status) = LOWER(?)';
+    params.push(paymentStatus);
+  }
+
+  if (branch && branch !== 'all') {
+    sql += ' AND LOWER(ce.branch) = LOWER(?)';
+    params.push(branch);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    sql += ` AND (
+      LOWER(ce.full_name) LIKE ? OR
+      LOWER(ce.email) LIKE ? OR
+      LOWER(COALESCE(ce.roll_number, '')) LIKE ? OR
+      LOWER(COALESCE(ce.utr_number, '')) LIKE ? OR
+      LOWER(COALESCE(tp.name, '')) LIKE ?
+    )`;
+    params.push(term, term, term, term, term);
+  }
+
+  sql += ' ORDER BY ce.created_at DESC';
+
+  const rows = await query(sql, params);
+
+  return rows.map((r) => {
+    const totalFee = Number(
+      r.total_fee !== undefined && r.total_fee !== null
+        ? r.total_fee
+        : (r.tp_fee_amount !== undefined && r.tp_fee_amount !== null ? r.tp_fee_amount : 0)
+    );
+    const amountPaid = Number(r.amount_paid || 0);
+    const balance = Number(
+      r.balance !== undefined && r.balance !== null
+        ? r.balance
+        : Math.max(0, totalFee - amountPaid)
+    );
+
+    return {
+      id: r.id,
+      responseId: r.response_id,
+      response_id: r.response_id,
+      trainingId: r.training_id,
+      training_id: r.training_id,
+      trainingCode: r.training_code || r.training_code_ref || '',
+      training_code: r.training_code || r.training_code_ref || '',
+      trainingName: r.training_name || 'General Training',
+      training_name: r.training_name || 'General Training',
+      studentId: r.student_id,
+      student_id: r.student_id,
+      name: r.full_name,
+      fullName: r.full_name,
+      full_name: r.full_name,
+      student_name: r.full_name,
+      email: r.email,
+      phone: r.mobile,
+      mobile: r.mobile,
+      rollNumber: r.roll_number,
+      roll_number: r.roll_number,
+      college: r.college,
+      branch: r.branch,
+      year: r.year,
+      division: r.division,
+      batch: r.batch,
+      totalFee,
+      total_fee: totalFee,
+      amountPaid,
+      amount_paid: amountPaid,
+      balance,
+      paymentStatus: r.payment_status || 'Pending',
+      payment_status: r.payment_status || 'Pending',
+      approvalStatus: r.approval_status || 'Pending',
+      approval_status: r.approval_status || 'Pending',
+      utrNumber: r.utr_number || '',
+      utr_number: r.utr_number || '',
+      paymentProofUrl: r.payment_proof_url || '',
+      payment_proof_url: r.payment_proof_url || '',
+      paymentDate: r.payment_date,
+      payment_date: r.payment_date,
+      rejectionReason: r.rejection_reason || '',
+      rejection_reason: r.rejection_reason || '',
+      approvedAt: r.approved_at,
+      approved_at: r.approved_at,
+      approvedBy: r.approved_by,
+      approved_by: r.approved_by,
+      registeredAt: r.created_at,
+      createdAt: r.created_at,
+      created_at: r.created_at,
+      updatedAt: r.updated_at,
+      updated_at: r.updated_at,
+    };
+  });
+};
+
 export const getEnrollmentsByTrainingId = async (trainingId, filters = {}) => {
   const training = await getTrainingById(trainingId);
   if (!training) {

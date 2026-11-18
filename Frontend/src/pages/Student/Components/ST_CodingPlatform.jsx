@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock, AlertCircle, ShieldAlert, User, LogOut, BookOpen, ExternalLink, Sparkles, HelpCircle, X, Award, RotateCcw } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -126,6 +126,18 @@ function getDynamicSampleTestCases(title = "", existingCases = []) {
   return [];
 }
 
+function isDeadlinePassed(deadline) {
+  if (!deadline) return false;
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'flexible deadline' || clean.toLowerCase() === 'none') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
+}
+
 const STARTER_TEMPLATES = {
   python: `# Write your Python solution here\nimport sys\n\ndef main():\n    # Read input from standard input\n    # lines = sys.stdin.read().splitlines()\n    pass\n\nif __name__ == '__main__':\n    main()\n`,
   node: `// Write your JavaScript (Node.js) solution here\nconst fs = require('fs');\n\nfunction main() {\n    // const input = fs.readFileSync(0, 'utf-8').trim();\n}\n\nmain();\n`,
@@ -162,13 +174,32 @@ export default function CodingPlatform() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isPractice = Boolean(
+    location.state?.source === 'practice' ||
+    location.state?.task?.source === 'practice_problem' ||
+    String(taskId || '').startsWith('practice-')
+  );
+
+  const isRetakeRequested = Boolean(
+    location.state?.task?.retakeAvailable ||
+    location.state?.isRetake ||
+    location.state?.task?.isRetake
+  );
+
   const initialTask = location.state?.task ? {
     ...location.state.task,
     language: location.state?.task?.language || location.state?.task?.lang || "",
     source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'practice_problem'),
+    function_name: location.state?.task?.function_name || location.state?.task?.functionName || null,
+    starter_templates: location.state?.task?.starter_templates || null,
     description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic || location.state.task.category, location.state.task.description),
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
-    alreadySubmitted: Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
+    alreadySubmitted: isRetakeRequested
+      ? false
+      : (isPractice
+          ? Boolean(location.state?.task?.attemptsCount >= 3)
+          : Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')),
+    retakeAvailable: isRetakeRequested || Boolean(location.state?.task?.retakeAvailable)
   } : null;
 
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
@@ -177,8 +208,8 @@ export default function CodingPlatform() {
   const [notFound, setNotFound] = useState(false);
   const initialLangKey = normalizeLanguageKey(initialTask?.language) || "java";
   const [selectedLang, setSelectedLang] = useState(initialLangKey);
-  const [code, setCode] = useState(() => STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
-  const [hasSubmitted, setHasSubmitted] = useState(Boolean(initialTask?.alreadySubmitted));
+  const [code, setCode] = useState(() => initialTask?.starter_templates?.[initialLangKey] || initialTask?.starterCode || STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
+  const [hasSubmitted, setHasSubmitted] = useState(() => Boolean(initialTask?.alreadySubmitted && !initialTask?.retakeAvailable));
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
   const [consoleTab, setConsoleTab] = useState("output");
@@ -190,23 +221,19 @@ export default function CodingPlatform() {
   const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().catch(() => {});
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen?.().catch(() => {});
-      setIsFullscreen(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
-    document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
-  }, []);
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [isProctorActive, setIsProctorActive] = useState(() => Boolean(document.fullscreenElement));
+  const [proctorTerminated, setProctorTerminated] = useState(false);
+  const [terminationReason, setTerminationReason] = useState("");
+  const [clipboardWarning, setClipboardWarning] = useState("");
+  const [proctorConfirmModal, setProctorConfirmModal] = useState(null); // { title, message, onConfirm, isDanger }
+  const proctorArmedRef = useRef(false);
+  const proctorViolationsRef = useRef(0);
+  const lastViolationTimeRef = useRef(0);
+  const hasAutoSubmittedRef = useRef(false);
+  const hasInitializedAttemptRef = useRef(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
 
   const user = (() => {
     try {
@@ -215,6 +242,433 @@ export default function CodingPlatform() {
       return {};
     }
   })();
+
+  const isBatchCoursework = Boolean(
+    location.state?.fromBatchCoursework ||
+    location.state?.task?.batch_id ||
+    taskData?.source === 'batch_task' ||
+    taskData?.batch_id ||
+    String(taskId || '').toLowerCase().startsWith('task-')
+  );
+
+  const isPracticeProblem = Boolean(
+    location.state?.source === 'practice' ||
+    location.state?.task?.source === 'practice_problem' ||
+    taskData?.source === 'practice_problem' ||
+    String(taskId || '').toLowerCase().startsWith('practice')
+  );
+
+  const isPracticeArena = !isBatchCoursework && Boolean(
+    String(taskId || '').toLowerCase().startsWith('practice-') ||
+    taskData?.source === 'practice' ||
+    location.state?.source === 'practice' ||
+    taskId
+  );
+
+  const isBatch = isBatchCoursework;
+
+  // Both Batch Coursework and Practice Problems are monitored under examination proctoring
+  const isProctoredSession = Boolean(isBatchCoursework || isPracticeProblem || isPracticeArena);
+
+  // Helper to determine if current session was launched via browser page reload (F5 / Ctrl+R)
+  const isPageReload = () => {
+    try {
+      const navEntries = window.performance?.getEntriesByType?.('navigation');
+      if (navEntries && navEntries.length > 0) {
+        return navEntries[0].type === 'reload';
+      }
+      return window.performance?.navigation?.type === 1;
+    } catch {
+      return false;
+    }
+  };
+
+  // Scoped key generator for proctoring strikes in sessionStorage
+  const getProctorStorageKey = () => {
+    const sId = user?.userId || user?.id || "guest";
+    const tId = String(taskId || taskData?.id || "unknown");
+    return isPracticeArena
+      ? `proctor_strikes_practice_${sId}_${tId}`
+      : `proctor_strikes_${sId}_${tId}`;
+  };
+
+  const getProctorAttemptInitKey = () => {
+    const sId = user?.userId || user?.id || "guest";
+    const tId = String(taskId || taskData?.id || "unknown");
+    return isPracticeArena
+      ? `proctor_initialized_practice_${sId}_${tId}`
+      : `proctor_initialized_${sId}_${tId}`;
+  };
+
+  const getStoredProctorStrikes = () => {
+    try {
+      const val = sessionStorage.getItem(getProctorStorageKey());
+      const num = parseInt(val, 10);
+      return !isNaN(num) && num >= 0 ? num : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const setStoredProctorStrikes = (count) => {
+    try {
+      sessionStorage.setItem(getProctorStorageKey(), String(count));
+    } catch {}
+  };
+
+  const clearStoredProctorStrikes = () => {
+    try {
+      sessionStorage.removeItem(getProctorStorageKey());
+      sessionStorage.removeItem(getProctorAttemptInitKey());
+    } catch {}
+  };
+
+  // Fix 1: Sync ref with persisted storage on mount/task change.
+  // - If this is a page reload (F5) within the same active attempt, preserve strikes.
+  // - If this is a genuinely new task or practice attempt (navigation), reset stale strikes to zero.
+  // - Do not reset strikes merely because React re-renders or the component remounts during the same attempt.
+  useEffect(() => {
+    if (isProctoredSession) {
+      proctorViolationsRef.current = getStoredProctorStrikes();
+    }
+  }, [taskId, isProctoredSession]);
+
+  const handleProctorViolation = (reason, description) => {
+    if (!isProctoredSession || hasSubmitted || !proctorArmedRef.current) return;
+
+    if (reason === "exit_fullscreen") {
+      const isFsNow = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      if (isFsNow) {
+        return;
+      }
+    }
+
+    // Debounce to prevent duplicate strikes (1500ms duplicate event protection)
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current < 1500) {
+      return;
+    }
+    lastViolationTimeRef.current = now;
+
+    const currentStrikes = getStoredProctorStrikes() + 1;
+    proctorViolationsRef.current = currentStrikes;
+    setStoredProctorStrikes(currentStrikes);
+
+    if (currentStrikes < 3) {
+      const remaining = 3 - currentStrikes;
+      showClipboardToast(
+        `⚠️ Warning ${currentStrikes}/2: ${description} You have ${remaining} chance${remaining === 1 ? '' : 's'} left before automatic submission.`
+      );
+    } else {
+      clearStoredProctorStrikes();
+      endTaskDueToViolation(reason, `${description} Maximum violation limit (2 warnings) reached.`);
+    }
+  };
+
+  // Batch tasks list from navigation state (guaranteed isolated from practice problems)
+  const batchTasksList = Array.isArray(location.state?.batchTasks) ? location.state.batchTasks : [];
+
+  const currentBatchIndex = isBatchCoursework && batchTasksList.length > 0
+    ? batchTasksList.findIndex((bt) => {
+        const slug = String(bt.taskNumber || '').replace(/\s+/g, '-').toLowerCase();
+        return slug === String(taskId || '').toLowerCase() || `task-${bt.id}` === String(taskId || '').toLowerCase() || String(bt.id) === String(taskData?.id);
+      })
+    : -1;
+
+  const canNavigatePrev = isBatchCoursework
+    ? (currentBatchIndex > 0)
+    : (parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10) > 1);
+
+  const canNavigateNext = isBatchCoursework
+    ? (currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1)
+    : false;
+
+  const handlePrevNavigation = () => {
+    clearStoredProctorStrikes();
+    proctorViolationsRef.current = 0;
+    if (isBatchCoursework) {
+      if (canNavigatePrev && currentBatchIndex > 0) {
+        const prevTask = batchTasksList[currentBatchIndex - 1];
+        navigate(`/student/coding-platform/task-${prevTask.id}`, {
+          state: {
+            task: prevTask,
+            batchTasks: batchTasksList,
+            batchId: location.state?.batchId || taskData?.batch_id,
+            fromBatchCoursework: true,
+            enterFullscreen: true,
+          }
+        });
+      }
+    } else {
+      const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
+      navigate(`/student/coding-platform/practice-${Math.max(1, num - 1)}`, {
+        state: { source: 'practice' }
+      });
+    }
+  };
+
+  const handleNextNavigation = () => {
+    clearStoredProctorStrikes();
+    proctorViolationsRef.current = 0;
+    if (isBatchCoursework) {
+      if (canNavigateNext && currentBatchIndex >= 0 && currentBatchIndex < batchTasksList.length - 1) {
+        const nextTask = batchTasksList[currentBatchIndex + 1];
+        navigate(`/student/coding-platform/task-${nextTask.id}`, {
+          state: {
+            task: nextTask,
+            batchTasks: batchTasksList,
+            batchId: location.state?.batchId || taskData?.batch_id,
+            fromBatchCoursework: true,
+            enterFullscreen: true,
+          }
+        });
+      }
+    }
+  };
+
+  const showClipboardToast = (msg) => {
+    setClipboardWarning(msg);
+    setTimeout(() => setClipboardWarning(""), 3500);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+      if (isProctoredSession) setIsProctorActive(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  const handleEnterFullscreenAndStart = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    } catch (err) {
+      console.warn("Fullscreen permission error:", err);
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    }
+  };
+
+  const handleToggleFullscreenClick = () => {
+    if (isProctoredSession && !hasSubmitted) {
+      const strikes = getStoredProctorStrikes();
+      const nextStrike = strikes + 1;
+      if (nextStrike < 3) {
+        setProctorConfirmModal({
+          title: "Exit Full-Screen Mode?",
+          message: `Exiting full-screen is an examination violation. This action will count as Warning ${nextStrike}/2. Are you sure you want to proceed?`,
+          isDanger: false,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            } else {
+              handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+            }
+          }
+        });
+      } else {
+        setProctorConfirmModal({
+          title: "Final Warning: Submission Will Trigger",
+          message: "Exiting full-screen now will exceed your 2 allowed warnings. Your task will be ended and your current code will be automatically submitted. Proceed?",
+          isDanger: true,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            } else {
+              handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+            }
+          }
+        });
+      }
+      return;
+    }
+    toggleFullscreen();
+  };
+
+  const endTaskDueToViolation = (reason, description) => {
+    if (hasAutoSubmittedRef.current || hasSubmitted) return;
+    hasAutoSubmittedRef.current = true;
+    proctorArmedRef.current = false;
+    setProctorTerminated(true);
+    setTerminationReason(reason);
+    setHasSubmitted(true);
+
+    setConsoleStatus("error");
+    const reasonLabel = reason === "exit_fullscreen"
+      ? "⚠️ Full-screen exited! Solution automatically submitted as per exam guidelines."
+      : "⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines.";
+    setConsoleOutput(`${reasonLabel}\nEvaluating test cases in Docker sandbox...`);
+
+    if (submitRef.current && !isSubmitting) {
+      submitRef.current({ isAutoSubmit: true, reason });
+    }
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFs = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      setIsFullscreen(isFs);
+      if (isFs) {
+        setIsProctorActive(true);
+      }
+
+      if (isProctoredSession && !hasSubmitted && proctorArmedRef.current && !isFs) {
+        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+    document.addEventListener("mozfullscreenchange", handleFsChange);
+    document.addEventListener("MSFullscreenChange", handleFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+      document.removeEventListener("mozfullscreenchange", handleFsChange);
+      document.removeEventListener("MSFullscreenChange", handleFsChange);
+    };
+  }, [isProctoredSession, hasSubmitted]);
+
+  // Tab switching, blur, and anti-cheat keyboard shortcuts
+  useEffect(() => {
+    if (!isProctoredSession || hasSubmitted) return;
+
+    let armTimer = null;
+    // For batch coursework tasks, arm proctoring after initialization even if browser is not native fullscreen.
+    // For practice sessions, keep fullscreen-based arming.
+    if (isFullscreen || isBatchCoursework) {
+      armTimer = setTimeout(() => {
+        proctorArmedRef.current = true;
+      }, 1500);
+    } else {
+      proctorArmedRef.current = false;
+    }
+
+    const handleTabSwitchEvent = () => {
+      if (proctorArmedRef.current && !hasSubmitted) {
+        endTaskDueToViolation("tab_switch", "Tab switch or leaving the examination window detected!");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && proctorArmedRef.current && !hasSubmitted) {
+        handleTabSwitchEvent();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Window blur indicates focus left the examination window (e.g. switching windows, floating overlay interactions)
+      if (proctorArmedRef.current && !hasSubmitted) {
+        handleTabSwitchEvent();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      const key = (e.key || "").toLowerCase();
+      const code = e.code || "";
+
+      if (e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Alt key navigation is disabled during proctored tasks.");
+        return;
+      }
+
+      if (isMod && (key === "tab" || code === "Tab" || key === "w" || key === "t" || key === "n")) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Tab switching shortcuts are disabled during this task.");
+        return;
+      }
+
+      if (key === "f11" || code === "F11" || key === "f12" || code === "F12") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      if (
+        (isMod && (key === "v" || code === "KeyV" || key === "c" || code === "KeyC" || key === "x" || code === "KeyX")) ||
+        (e.shiftKey && (key === "insert" || code === "Insert"))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        showClipboardToast("⚠️ Copying, cutting, and pasting is disabled in the compiler! Type your code manually.");
+        return;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      if (armTimer) clearTimeout(armTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isProctoredSession, hasSubmitted, isProctorActive, isFullscreen, isBatchCoursework]);
+
+  // Global clipboard and drag/drop blockers (strict compiler anti-cheat)
+  useEffect(() => {
+    const blockClipboard = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showClipboardToast("⚠️ Copying, cutting, and pasting is strictly disabled in the compiler! You must type your solution manually.");
+    };
+
+    const blockContext = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const blockDragDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    document.addEventListener("copy", blockClipboard, true);
+    document.addEventListener("cut", blockClipboard, true);
+    document.addEventListener("paste", blockClipboard, true);
+    document.addEventListener("contextmenu", blockContext, true);
+    document.addEventListener("dragstart", blockDragDrop, true);
+    document.addEventListener("drop", blockDragDrop, true);
+
+    return () => {
+      document.removeEventListener("copy", blockClipboard, true);
+      document.removeEventListener("cut", blockClipboard, true);
+      document.removeEventListener("paste", blockClipboard, true);
+      document.removeEventListener("contextmenu", blockContext, true);
+      document.removeEventListener("dragstart", blockDragDrop, true);
+      document.removeEventListener("drop", blockDragDrop, true);
+    };
+  }, []);
 
   const getInitials = (name) => {
     if (!name || typeof name !== "string") return "ST";
@@ -229,156 +683,125 @@ export default function CodingPlatform() {
       setNotFound(false);
       const requested = String(taskId || '');
       const numeric = requested.replace(/[^0-9]/g, '');
-      const isPractice =
-        location.state?.source === 'practice' ||
-        location.state?.task?.source === 'practice_problem' ||
-        requested.toLowerCase().startsWith('practice') ||
-        Boolean(location.state?.task && !location.state?.task?.batch_id);
+
+      // Strict determination: Batch Coursework Task vs Practice Problem
+      const isBatchTarget = Boolean(
+        location.state?.fromBatchCoursework ||
+        location.state?.task?.batch_id ||
+        taskData?.source === 'batch_task' ||
+        taskData?.batch_id ||
+        requested.toLowerCase().startsWith('task-')
+      );
 
       try {
-        if (isPractice) {
-          if (numeric) {
-            try {
-              const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
-              const probData = await probRes.json();
-              if (probRes.ok && probData.success && probData.data) {
-                const p = probData.data;
-                const rawCases = p.testCases || p.cases || p.test_cases || [];
-                const taskLang = p.language || "";
-                const taskNormKey = normalizeLanguageKey(taskLang);
-                if (taskNormKey) {
-                  setSelectedLang(taskNormKey);
-                  setCode((prevCode) => {
-                    const prev = typeof prevCode === "string" ? prevCode : "";
-                    return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
-                  });
-                }
-                setTaskData({
-                  id: p.id,
-                  title: p.title,
-                  topic: p.category || p.topic || "General DSA",
-                  difficulty: p.difficulty || "Medium",
-                  points: p.points || 100,
-                  deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
-                  description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
-                  testCases: getDynamicSampleTestCases(p.title, rawCases),
-                  source: "practice_problem",
-                  language: taskLang,
+        if (isBatchTarget) {
+          // ── 1. STRICT BATCH TASK PIPELINE ──
+          // Never touch practice problems and never fallback to practice problems
+          try {
+            const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
+            const data = await res.json();
+            if (res.ok && data?.success && data?.data) {
+              const t = data.data;
+              const rawCases = t.testCases || t.test_cases || [];
+              const taskLang = t.language || "";
+              const taskNormKey = normalizeLanguageKey(taskLang);
+              if (taskNormKey) {
+                setSelectedLang(taskNormKey);
+                setCode((prevCode) => {
+                  const prev = typeof prevCode === "string" ? prevCode : "";
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
                 });
-                return;
               }
-            } catch (err) {
-              console.warn("Failed fetching practice problem details:", err);
+              const isRetakeActive = Boolean(t.retakeAvailable);
+              if (t.alreadySubmitted && !isRetakeActive) {
+                setHasSubmitted(true);
+                const prevCode = t.submission?.submitted_code || t.submission?.code_submission || t.submission?.code;
+                if (prevCode) {
+                  setCode(prevCode);
+                }
+              } else {
+                setHasSubmitted(false);
+              }
+              setTaskData({
+                id: t.id,
+                batch_id: t.batch_id,
+                title: t.title,
+                topic: t.topic || "General Assignment",
+                difficulty: t.difficulty || "Medium",
+                points: t.points || 100,
+                deadline: t.deadline || "",
+                description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
+                testCases: getDynamicSampleTestCases(t.title, rawCases),
+                source: "batch_task",
+                language: taskLang,
+                alreadySubmitted: Boolean(t.alreadySubmitted),
+                retakeAvailable: isRetakeActive,
+                retakePermission: t.retakePermission || null,
+                submissions: Array.isArray(t.submissions) ? t.submissions : (t.submission ? [t.submission] : []),
+                isExpired: Boolean(t.isExpired),
+              });
+              return;
             }
+          } catch (err) {
+            console.warn("Failed fetching batch task detail:", err);
           }
 
-          if (initialTask) {
+          if (initialTask && (initialTask.source === 'batch_task' || initialTask.batch_id || isBatchTarget)) {
             setTaskData(initialTask);
             return;
           }
+
+          // If the batch task is not found, show Not Found! DO NOT fall back to practice problems!
+          setNotFound(true);
+          return;
         }
 
-        const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
-        const data = await res.json();
-        if (data.success && data.data) {
-          const t = data.data;
-          const batchId = String(t.id ?? '');
-          const idMatch =
-            (batchId && (batchId === requested || batchId === numeric)) ||
-            (numeric && parseInt(batchId, 10) === parseInt(numeric, 10));
-          if (idMatch) {
-            const rawCases = t.testCases || t.test_cases || [];
-            const taskLang = t.language || "";
-            const taskNormKey = normalizeLanguageKey(taskLang);
-            if (taskNormKey) {
-              setSelectedLang(taskNormKey);
-              setCode((prevCode) => {
-                const prev = typeof prevCode === "string" ? prevCode : "";
-                return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+        // ── 2. STRICT PRACTICE PROBLEM PIPELINE ──
+        if (numeric) {
+          try {
+            const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
+            const probData = await probRes.json();
+            if (probRes.ok && probData.success && probData.data) {
+              const p = probData.data;
+              const rawCases = p.testCases || p.cases || p.test_cases || [];
+              const taskLang = p.language || "";
+              const taskNormKey = normalizeLanguageKey(taskLang);
+              if (taskNormKey) {
+                setSelectedLang(taskNormKey);
+                setCode((prevCode) => {
+                  const prev = typeof prevCode === "string" ? prevCode : "";
+                  const isDefaultStarter = !prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim());
+                  return isDefaultStarter ? (STARTER_TEMPLATES[taskNormKey] || "") : prev;
+                });
+              }
+              const isRetakeActive = Boolean(p.retakeAvailable);
+              if (isRetakeActive) {
+                setHasSubmitted(false);
+              }
+              setTaskData({
+                id: p.id,
+                title: p.title,
+                topic: p.category || p.topic || "General DSA",
+                difficulty: p.difficulty || "Medium",
+                points: p.points || 100,
+                deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
+                description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
+                testCases: getDynamicSampleTestCases(p.title, rawCases),
+                source: "practice_problem",
+                language: taskLang,
+                retakeAvailable: isRetakeActive,
+                isExpired: Boolean(p.isExpired || p.is_expired),
               });
+              return;
             }
-            if (t.alreadySubmitted) {
-              setHasSubmitted(true);
-            }
-            setTaskData({
-              id: t.id,
-              batch_id: t.batch_id,
-              title: t.title,
-              topic: t.topic || "General Assignment",
-              difficulty: t.difficulty || "Medium",
-              points: t.points || 100,
-              deadline: t.deadline || "",
-              description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
-              testCases: getDynamicSampleTestCases(t.title, rawCases),
-              source: "batch_task",
-              language: taskLang,
-              alreadySubmitted: Boolean(t.alreadySubmitted),
-            });
-            return;
+          } catch (err) {
+            console.warn("Failed fetching practice problem details:", err);
           }
         }
 
-        const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
-        const probData = await probRes.json();
-        if (probRes.ok && probData.success && probData.data) {
-          const p = probData.data;
-          const rawCases = p.testCases || p.cases || p.test_cases || [];
-          const taskLang = p.language || "";
-          const taskNormKey = normalizeLanguageKey(taskLang);
-          if (taskNormKey) {
-            setSelectedLang(taskNormKey);
-            setCode((prevCode) => {
-              const prev = typeof prevCode === "string" ? prevCode : "";
-              return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
-            });
-          }
-          setTaskData({
-            id: p.id,
-            title: p.title,
-            topic: p.category || p.topic || "General DSA",
-            difficulty: p.difficulty || "Medium",
-            points: p.points || 100,
-            deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
-            description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
-            testCases: getDynamicSampleTestCases(p.title, rawCases),
-            source: "practice_problem",
-            language: taskLang,
-          });
-          return;
-        }
-
-        if (initialTask) {
+        if (initialTask && initialTask.source === 'practice_problem') {
           setTaskData(initialTask);
-          return;
-        }
-
-        // Built-in standard problem fallback for seamless direct navigation
-        const defaultProblems = {
-          "1": {
-            id: "1",
-            title: "Return First Element",
-            topic: "Array Basics",
-            difficulty: "Easy",
-            points: 100,
-            deadline: "",
-            description: getDynamicProblemDescription("Return First Element", "Array Basics", "Write a program that returns the first element of a given array.\n\nInput Format:\n- Line 1: An integer n (length of array).\n- Line 2: n space-separated integers.\n\nOutput Format:\n- A single integer representing the first element."),
-            testCases: getDynamicSampleTestCases("Return First Element", []),
-          },
-          "2": {
-            id: "2",
-            title: "Multiply Two Numbers",
-            topic: "Math & Logic",
-            difficulty: "Easy",
-            points: 100,
-            deadline: "",
-            description: getDynamicProblemDescription("Multiply Two Numbers", "Math", "Write a program that takes two integers as input and prints their product.\n\nInput Format:\n- A single line containing two space-separated integers A and B.\n\nOutput Format:\n- Print the product of A and B as a single integer."),
-            testCases: getDynamicSampleTestCases("Multiply Two Numbers", []),
-          }
-        };
-
-        const fallbackKey = String(numeric || "1");
-        if (defaultProblems[fallbackKey]) {
-          setTaskData(defaultProblems[fallbackKey]);
           return;
         }
 
@@ -410,6 +833,16 @@ export default function CodingPlatform() {
   const assignedLangKey = normalizeLanguageKey(taskData?.language || location.state?.task?.language);
   const isLanguageLocked = Boolean(assignedLangKey);
 
+  const rawDeadline = taskData?.deadline || location.state?.task?.deadline || location.state?.task?.dueDate || location.state?.task?.due;
+  const isRetakeActive = Boolean(taskData?.retakeAvailable);
+  const isDeadlinePassedVal = isDeadlinePassed(rawDeadline);
+  const isTaskExpired = !isRetakeActive && Boolean(
+    taskData?.isExpired ||
+    location.state?.task?.isExpired ||
+    (isDeadlinePassedVal && !hasSubmitted)
+  );
+  const isCompilerLocked = (hasSubmitted || isTaskExpired) && !isRetakeActive;
+
   const handleLanguageChange = (newLang) => {
     if (isLanguageLocked && newLang !== assignedLangKey) {
       return;
@@ -426,9 +859,18 @@ export default function CodingPlatform() {
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
-    if (hasSubmitted) {
+    if (isTaskExpired) {
       setConsoleStatus("error");
-      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Code execution and submissions are closed.");
+      return;
+    }
+    if (hasSubmitted && !isRetakeActive) {
+      setConsoleStatus("error");
+      setConsoleOutput(
+        isBatch
+          ? "🔒 You have already submitted this batch task. The compiler is locked."
+          : "🔒 Maximum submission limit reached (3 attempts allowed per problem)."
+      );
       return;
     }
     if (!isModuleActive("codingCompiler")) {
@@ -447,7 +889,9 @@ export default function CodingPlatform() {
     setConsoleOutput("Running code...");
     setMobileView("code");
 
-    // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
+    if (isPractice) {
+      setConsoleTab("output");
+    }
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
       .find((tc) => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
     const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
@@ -456,7 +900,15 @@ export default function CodingPlatform() {
       const res = await fetch(`${API_BASE}/code/run`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ language: selectedLang, code: typeof code === "string" ? code : String(code ?? ""), stdin }),
+        body: JSON.stringify({
+          language: selectedLang,
+          code: typeof code === "string" ? code : String(code ?? ""),
+          stdin,
+          function_name: taskData?.function_name || taskData?.functionName || null,
+          problem_id: taskData?.id,
+          source: isBatch ? 'batch_task' : 'practice_problem',
+          task_id: taskId,
+        }),
       });
       const data = await res.json();
 
@@ -504,14 +956,22 @@ export default function CodingPlatform() {
     }
   };
 
-  const hasAutoSubmittedRef = useRef(false);
-
   const handleSubmit = async (opts = {}) => {
     const isAuto = opts?.isAutoSubmit === true;
+
     if (isSubmitting || isRunning) return;
-    if (hasSubmitted) {
+    if (isTaskExpired) {
       setConsoleStatus("error");
-      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      setConsoleOutput("🔒 Deadline Expired: The submission deadline for this task has ended. Submissions are closed.");
+      return;
+    }
+    if (hasSubmitted && !isAuto && !isRetakeActive) {
+      setConsoleStatus("error");
+      setConsoleOutput(
+        isBatch
+          ? "🔒 You have already submitted this batch task. The compiler is locked and reattempts are not allowed."
+          : "🔒 Maximum submission limit reached (3 attempts allowed per problem)."
+      );
       return;
     }
     if (!isAuto && !isModuleActive("codingCompiler")) {
@@ -534,12 +994,26 @@ export default function CodingPlatform() {
       setConsoleStatus("error");
       return;
     }
+
+    if (isBatch && (submissions.length >= 1 || taskData?.alreadySubmitted) && !isRetakeActive) {
+      setHasSubmitted(true);
+      setConsoleOutput("🔒 You have already submitted this batch task. The compiler is locked and reattempts are not allowed.");
+      setConsoleStatus("error");
+      return;
+    }
+
+    if (!isBatch && submissions.length >= 3 && !isRetakeActive) {
+      setHasSubmitted(true);
+      setConsoleOutput("🔒 Maximum submission limit reached (3/3 attempts used). You cannot submit again for this problem.");
+      setConsoleStatus("error");
+      return;
+    }
     setIsSubmitting(true);
     setConsoleStatus("running");
     if (isAuto) {
-      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test cases in Docker sandbox...");
+      setConsoleOutput("⚠️ Tab switch detected! Solution automatically submitted as per exam guidelines. Evaluating test xases in sandbox...");
     } else {
-      setConsoleOutput("Evaluating all test cases in Docker sandbox...");
+      setConsoleOutput("Evaluating all test cases in sandbox...");
     }
     setMobileView("code");
 
@@ -552,20 +1026,24 @@ export default function CodingPlatform() {
           code: currentCode,
           problem_id: taskData.id,
           task_id: taskId,
-          source: taskData.source || (taskData.batch_id ? 'batch_task' : undefined),
+          source: isBatch ? 'batch_task' : 'practice_problem',
+          function_name: taskData?.function_name || taskData?.functionName || null,
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setConsoleStatus("error");
-        if (data?.message?.includes("already been submitted")) {
+        const msg = String(data?.message || "");
+        const isMaxLimit = msg.toLowerCase().includes("maximum submission limit") || Boolean(data?.attemptsUsed >= 3);
+        const isBatchLocked = isBatch && (msg.toLowerCase().includes("already") || Boolean(data?.isBatchLocked));
+        if (isMaxLimit || isBatchLocked) {
           setHasSubmitted(true);
-          setConsoleOutput(`🔒 ${data.message}`);
-        } else if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
+          setConsoleOutput(`🔒 ${msg || "Maximum submission limit reached."}`);
+        } else if (msg.includes("Docker") || msg.includes("unavailable")) {
           setConsoleOutput(`⚠️ Compiler service is currently unavailable. Please try again later.`);
         } else {
-          setConsoleOutput(`❌ Submission failed: ${data.message || "Unknown error"}`);
+          setConsoleOutput(`❌ Submission failed: ${msg || "Unknown error"}`);
         }
         return;
       }
@@ -617,8 +1095,38 @@ export default function CodingPlatform() {
         [header, scoreLine, timeLine, "\nTest Cases:", ...tcLines].filter(Boolean).join("\n")
       );
 
-      // Lock task against reattempt upon successful submission
-      setHasSubmitted(true);
+      // Lock task: Batch tasks strictly lock after 1 submission; practice problems lock at 3 submissions or after retake attempt
+      const attemptsCount = result.attempts_used ?? (submissions.length + 1);
+      if (isBatch || attemptsCount >= 3 || taskData?.retakeAvailable || isRetakeActive) {
+        setHasSubmitted(true);
+        setTaskData(prev => prev ? { ...prev, retakeAvailable: false } : prev);
+        clearStoredProctorStrikes();
+        proctorViolationsRef.current = 0;
+      } else {
+        setHasSubmitted(false);
+        // Reset Practice Arena strikes after each successful manual submission, before the next attempt
+        clearStoredProctorStrikes();
+        proctorViolationsRef.current = 0;
+      }
+      // Immediately inject current submission result so the submissions tab is populated without delay
+      if (isBatch && result) {
+        const currentBatchSub = {
+          id: result.submission?.id || Date.now(),
+          status: String(result.status || 'submitted').toLowerCase(),
+          marks: result.marks ?? result.score ?? 0,
+          score: result.marks ?? result.score ?? 0,
+          percentage: result.percentage ?? 0,
+          passed_test_cases: result.passed_tests ?? 0,
+          total_test_cases: result.total_tests ?? (taskData?.testCases?.length || 1),
+          language: selectedLang || taskData?.language || 'Java',
+          submitted_at: new Date().toISOString(),
+          attempt_number: result.attempts_used || 1,
+          is_retake: Boolean(isRetakeActive),
+          feedback: `${result.status === 'accepted' ? 'Passed' : 'Failed'}: Passed ${result.passed_tests ?? 0}/${result.total_tests ?? 1} test cases (${result.percentage ?? 0}%) - Score: ${result.score ?? 0}/${taskData?.points || 100} pts`,
+        };
+        setSubmissions([currentBatchSub]);
+      }
+
       setActiveTab("submissions");
       loadSubmissions();
 
@@ -638,14 +1146,78 @@ export default function CodingPlatform() {
   const loadSubmissions = async () => {
     setSubmissionsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/code/submissions/my`, { headers: getAuthHeaders() });
-      const data = await res.json();
-      if (res.ok && data?.data?.submissions) {
-        const problemId = String(taskData?.id || "");
-        const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
-        setSubmissions(matched);
-        if (matched.length > 0) {
+      if (isBatch) {
+        // Batch Tasks store submissions in task_submissions via the batch tasks detail endpoint
+        const targetTaskId = taskData?.id || String(taskId || '').replace(/[^0-9]/g, '') || taskId;
+        let batchSubmissions = [];
+
+        try {
+          const res = await fetch(`${API_BASE}/batches/tasks/detail/${targetTaskId}`, { headers: getAuthHeaders() });
+          const data = await res.json();
+          if (res.ok && data?.success && data?.data) {
+            const t = data.data;
+            const subs = Array.isArray(t.submissions) ? t.submissions : (t.submission ? [t.submission] : []);
+            batchSubmissions = subs.map((sub, idx) => ({
+              id: sub.id,
+              status: (sub.status || '').toLowerCase(),
+              marks: sub.score ?? sub.marks_obtained ?? 0,
+              score: sub.score ?? sub.marks_obtained ?? 0,
+              percentage: sub.status === 'Passed' ? 100 : (sub.status === 'Partial' ? 50 : 0),
+              passed_test_cases: sub.status === 'Passed' ? (taskData?.testCases?.length || 1) : 0,
+              total_test_cases: taskData?.testCases?.length || 1,
+              language: taskData?.language || 'Java',
+              submitted_at: sub.submitted_at,
+              attempt_number: sub.attempt_number || (idx + 1),
+              is_retake: Boolean(sub.is_retake),
+              feedback: sub.feedback,
+            }));
+          }
+        } catch (err) {
+          console.warn("[loadSubmissions] Failed fetching batch task submissions:", err);
+        }
+
+        // Fallback to taskData?.submissions if detail fetch returned empty
+        if (batchSubmissions.length === 0 && Array.isArray(taskData?.submissions) && taskData.submissions.length > 0) {
+          batchSubmissions = taskData.submissions.map((sub, idx) => ({
+            id: sub.id,
+            status: (sub.status || '').toLowerCase(),
+            marks: sub.score ?? sub.marks_obtained ?? 0,
+            score: sub.score ?? sub.marks_obtained ?? 0,
+            percentage: sub.status === 'Passed' ? 100 : 0,
+            passed_test_cases: sub.status === 'Passed' ? (taskData.testCases?.length || 1) : 0,
+            total_test_cases: taskData.testCases?.length || 1,
+            language: taskData.language || 'Java',
+            submitted_at: sub.submitted_at,
+            attempt_number: sub.attempt_number || (idx + 1),
+            is_retake: Boolean(sub.is_retake),
+            feedback: sub.feedback,
+          }));
+        }
+
+        setSubmissions(batchSubmissions);
+        const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
+        if (isRetake) {
+          setHasSubmitted(false);
+        } else if (batchSubmissions.length > 0 || taskData?.alreadySubmitted) {
           setHasSubmitted(true);
+        }
+      } else {
+        // Practice Problems store submissions in coding_submissions
+        const res = await fetch(`${API_BASE}/code/submissions/my`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data?.data?.submissions) {
+          const problemId = String(taskData?.id || "");
+          const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
+          setSubmissions(matched);
+
+          const isRetake = Boolean(taskData?.retakeAvailable || isRetakeActive);
+          if (isRetake) {
+            setHasSubmitted(false);
+          } else if (matched.length >= 3) {
+            setHasSubmitted(true);
+          } else {
+            setHasSubmitted(false);
+          }
         }
       }
     } catch { /* ignore */ } finally {
@@ -654,59 +1226,15 @@ export default function CodingPlatform() {
   };
 
   useEffect(() => {
-    if (activeTab === "submissions" && taskData?.id) loadSubmissions();
+    if (taskData?.id) loadSubmissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, taskData?.id]);
+  }, [taskData?.id, activeTab]);
 
   
   const submitRef = useRef(null);
   useEffect(() => {
     submitRef.current = handleSubmit;
   });
-
-  useEffect(() => {
-    const triggerTabSwitchAutoSubmit = () => {
-      if (taskData && !hasSubmitted && !hasAutoSubmittedRef.current) {
-        hasAutoSubmittedRef.current = true;
-        if (submitRef.current && !isSubmitting) {
-          submitRef.current({ isAutoSubmit: true, reason: "tab_switch" });
-        }
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        triggerTabSwitchAutoSubmit();
-      }
-    };
-
-    const handleWindowBlur = () => {
-      triggerTabSwitchAutoSubmit();
-    };
-
-    const preventCopy = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setConsoleStatus("error");
-      setConsoleOutput("⚠️ Copying, cutting, and pasting is strictly disabled in the coding compiler! You must type your solution manually.");
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleWindowBlur);
-    document.addEventListener("copy", preventCopy, true);
-    document.addEventListener("cut", preventCopy, true);
-    document.addEventListener("paste", preventCopy, true);
-    document.addEventListener("contextmenu", preventCopy, true);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleWindowBlur);
-      document.removeEventListener("copy", preventCopy, true);
-      document.removeEventListener("cut", preventCopy, true);
-      document.removeEventListener("paste", preventCopy, true);
-      document.removeEventListener("contextmenu", preventCopy, true);
-    };
-  }, [taskData, hasSubmitted, isSubmitting]);
 
   const testCasesList = taskData?.testCases || taskData?.test_cases || [];
 
@@ -719,7 +1247,9 @@ export default function CodingPlatform() {
             <p style={{ color: "#64748b", marginBottom: "16px" }}>
               This task or problem is not available. It may have been deleted.
             </p>
-            <Link to="/student/practice" className="cp-back-btn">← Back to Practice</Link>
+            <Link to={isBatchCoursework ? "/student/batches" : "/student/practice"} className="cp-back-btn">
+              {isBatchCoursework ? "← Back to My Batches" : "← Back to Practice"}
+            </Link>
           </div>
         )}
         {!notFound && (
@@ -730,14 +1260,51 @@ export default function CodingPlatform() {
             <button 
               type="button" 
               onClick={() => {
-                if (window.history.length > 2) navigate(-1);
-                else navigate('/student/practice');
+                if (isProctoredSession && !hasSubmitted) {
+                  setProctorConfirmModal({
+                    title: isBatchCoursework ? "Leave Proctored Coursework?" : "Leave Proctored Practice?",
+                    message: isBatchCoursework
+                      ? "Leaving this page will exit the proctored coursework environment. Are you sure you want to return to My Batches?"
+                      : "Leaving this page will exit the proctored practice arena. Are you sure you want to return to Practice?",
+                    isDanger: true,
+                    onConfirm: () => {
+                      setProctorConfirmModal(null);
+                      proctorArmedRef.current = false;
+                      clearStoredProctorStrikes();
+                      proctorViolationsRef.current = 0;
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen?.().catch(() => {});
+                      }
+                      if (isBatchCoursework) {
+                        navigate('/student/batches');
+                      } else if (window.history.length > 2) {
+                        navigate(-1);
+                      } else {
+                        navigate('/student/practice');
+                      }
+                    }
+                  });
+                  return;
+                }
+                proctorArmedRef.current = false;
+                clearStoredProctorStrikes();
+                proctorViolationsRef.current = 0;
+                if (document.fullscreenElement) {
+                  document.exitFullscreen?.().catch(() => {});
+                }
+                if (isBatchCoursework) {
+                  navigate('/student/batches');
+                } else if (window.history.length > 2) {
+                  navigate(-1);
+                } else {
+                  navigate('/student/practice');
+                }
               }} 
               className="cp-back-btn"
-              title="Back to Problems"
+              title={isBatchCoursework ? "Back to Coursework" : "Back to Problems"}
             >
               <ArrowLeft size={15} />
-              <span>Problems</span>
+              <span>{isBatchCoursework ? "Coursework" : "Problems"}</span>
             </button>
 
             <div className="cp-header-divider" />
@@ -754,35 +1321,30 @@ export default function CodingPlatform() {
               })()}
             </div>
 
-            <div className="cp-header-nav-group">
-              <button 
-                type="button"
-                className="cp-nav-btn" 
-                onClick={() => {
-                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
-                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
-                  const prefix = isPractice ? 'practice-' : 'task-';
-                  navigate(`/student/coding-platform/${prefix}${Math.max(1, num - 1)}`);
-                }}
-                disabled={parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10) <= 1}
-                title="Previous Problem"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button 
-                type="button"
-                className="cp-nav-btn" 
-                onClick={() => {
-                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
-                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
-                  const prefix = isPractice ? 'practice-' : 'task-';
-                  navigate(`/student/coding-platform/${prefix}${num + 1}`);
-                }}
-                title="Next Problem"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            {(!isBatchCoursework || batchTasksList.length > 1) && (
+              <div className="cp-header-nav-group">
+                <button 
+                  type="button"
+                  className="cp-nav-btn" 
+                  onClick={handlePrevNavigation}
+                  disabled={!canNavigatePrev}
+                  title={canNavigatePrev ? "Previous Task" : "No Previous Task"}
+                  style={!canNavigatePrev ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button 
+                  type="button"
+                  className="cp-nav-btn" 
+                  onClick={handleNextNavigation}
+                  disabled={!canNavigateNext}
+                  title={canNavigateNext ? "Next Task" : "No Next Task"}
+                  style={!canNavigateNext ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="cp-header-right">
@@ -803,18 +1365,24 @@ export default function CodingPlatform() {
             
             <button
               type="button"
-              className={`cp-run-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
+              className={`cp-run-btn ${!isModuleActive("codingCompiler") || isCompilerLocked ? 'cp-btn--off' : ''}`}
               onClick={handleRun}
-              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting || hasSubmitted}
+              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting || isCompilerLocked}
               title={
-                hasSubmitted 
-                  ? "This task has already been submitted. Reattempts are disabled." 
+                isTaskExpired
+                  ? "Deadline Expired: Submissions and code execution are closed."
+                  : (hasSubmitted && !isRetakeActive)
+                  ? (isBatch 
+                      ? "This batch task has been submitted. Compiler execution is locked." 
+                      : "Maximum submission limit reached (3/3 attempts used).")
                   : (!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code")
               }
-              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+              style={(!isModuleActive("codingCompiler") || isCompilerLocked) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {hasSubmitted ? (
-                <span>Run (Submitted)</span>
+              {isTaskExpired ? (
+                <span>Run (Expired)</span>
+              ) : (hasSubmitted && !isRetakeActive) ? (
+                <span>Run (Locked)</span>
               ) : isRunning ? (
                 <span>Running...</span>
               ) : (
@@ -824,45 +1392,136 @@ export default function CodingPlatform() {
             
             <button
               type="button"
-              className={`cp-submit-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
+              className={`cp-submit-btn ${!isModuleActive("codingCompiler") || isCompilerLocked ? 'cp-btn--off' : ''}`}
               onClick={handleSubmit}
-              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning || hasSubmitted}
+              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning || isCompilerLocked}
               title={
-                hasSubmitted 
-                  ? "This task has already been submitted. Reattempts are disabled." 
-                  : (!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code")
+                isTaskExpired
+                  ? "Deadline Expired: The submission deadline for this task has passed."
+                  : isRetakeActive
+                  ? "Submit Code (Retake Attempt - 1 attempt remaining)"
+                  : hasSubmitted 
+                  ? (isBatch 
+                      ? "This batch task has already been submitted. Reattempts are strictly disabled." 
+                      : `Maximum submission limit reached (${Math.min(submissions.length || 3, 3)}/3 attempts used).`)
+                  : (!isModuleActive("codingCompiler") 
+                      ? "Code submission is currently disabled by administrator" 
+                      : (isBatch 
+                          ? "Submit Batch Task (Single Attempt Allowed)" 
+                          : `Submit Code (${Math.max(0, 3 - submissions.length)} attempts remaining)`))
               }
-              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
+              style={(!isModuleActive("codingCompiler") || isCompilerLocked) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {hasSubmitted ? (
-                <><CheckCircle2 size={14} /> <span>Submitted</span></>
+              {isTaskExpired ? (
+                <><Lock size={14} /> <span>Deadline Expired</span></>
+              ) : isRetakeActive ? (
+                <><CheckCircle2 size={14} /> <span>Submit Retake (1 chance)</span></>
+              ) : hasSubmitted ? (
+                <><CheckCircle2 size={14} /> <span>{isBatch ? "Submitted (Locked)" : `${Math.min(submissions.length || 3, 3)}/3 Submitted (Locked)`}</span></>
               ) : isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? "Submit" : "Submit (Off)"}</span></>
+                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? (isBatch ? "Submit Task" : `Submit (${Math.min(submissions.length, 3)}/3)`) : "Submit (Off)"}</span></>
               )}
             </button>
+
+            {isProctoredSession && (
+              <div className="cp-proctor-live-badge" title="This task is actively proctored. Exiting full-screen or switching tabs will immediately end your task.">
+                <span className="cp-proctor-live-pulse" />
+                <span>{isBatchCoursework ? "Proctored Task (Anti-Cheat Active)" : "Proctored Practice (Anti-Cheat Active)"}</span>
+              </div>
+            )}
 
             <div className="cp-header-divider" />
 
             <button
               type="button"
               className="cp-fs-toggle-btn"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
+              onClick={handleToggleFullscreenClick}
+              title={isFullscreen ? (isProctoredSession && !hasSubmitted ? "Locked Full-Screen (Exiting Ends Task)" : "Exit Full Screen") : "Full Screen"}
             >
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
 
-            {isFullscreen && user?.name && (
-              <div className="cp-user-profile-badge" title={user.email || user.name}>
-                <div className="cp-user-avatar">
-                  {getInitials(user.name)}
-                </div>
-                <div className="cp-user-meta">
-                  <span className="cp-user-name">{user.name}</span>
-                  <span className="cp-user-role">STUDENT</span>
-                </div>
+            {user?.name && (
+              <div className="cp-user-menu-wrap" ref={userMenuRef}>
+                <button
+                  type="button"
+                  className={`cp-user-profile-btn ${userMenuOpen ? "active" : ""}`}
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  title={`${user.name} • Student Account (${user.email || "TrainX"})`}
+                  aria-expanded={userMenuOpen}
+                >
+                  <div className="cp-user-avatar">
+                    {getInitials(user.name)}
+                  </div>
+                  <div className="cp-user-meta">
+                    <span className="cp-user-name">{user.name}</span>
+                    <span className="cp-user-role">STUDENT</span>
+                  </div>
+                  <ChevronDown size={14} className={`cp-user-chevron ${userMenuOpen ? "rotated" : ""}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="cp-user-dropdown-popover">
+                    <div className="cp-user-popover-header">
+                      <div className="cp-popover-avatar">
+                        {getInitials(user.name)}
+                      </div>
+                      <div className="cp-popover-user-info">
+                        <div className="cp-popover-name">{user.name}</div>
+                        <div className="cp-popover-email">{user.email || "student@trainx.internal"}</div>
+                        <span className="cp-popover-role-pill">
+                          <CheckCircle2 size={11} /> Verified Student
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="cp-popover-divider" />
+
+                    <div className="cp-popover-actions">
+                      <button
+                        type="button"
+                        className="cp-popover-action-item"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          if (isProctoredSession && !hasSubmitted) {
+                            if (window.confirm("You are currently inside a proctored session. Navigating away may mark your attempt as finished. Are you sure you want to view profile?")) {
+                              navigate("/student/profile");
+                            }
+                          } else {
+                            navigate("/student/profile");
+                          }
+                        }}
+                      >
+                        <User size={15} />
+                        <span>View Student Profile</span>
+                      </button>
+
+                      <div className="cp-popover-divider" />
+
+                      <button
+                        type="button"
+                        className="cp-popover-action-item cp-popover-action-item--danger"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          if (isProctoredSession && !hasSubmitted) {
+                            if (!window.confirm("You have an active proctored task. Signing out will terminate the session. Proceed to sign out?")) {
+                              return;
+                            }
+                          }
+                          sessionStorage.clear();
+                          localStorage.removeItem("token");
+                          localStorage.removeItem("user");
+                          navigate("/login");
+                        }}
+                      >
+                        <LogOut size={15} />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -966,9 +1625,9 @@ export default function CodingPlatform() {
                   </div>
 
                   {taskData?.deadline && (
-                    <div className="cp-deadline-notice">
-                      <span className="cp-deadline-label">Submission Deadline:</span>
-                      <span className="cp-deadline-val">{taskData.deadline}</span>
+                    <div className="cp-deadline-notice" style={isTaskExpired ? { background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b' } : {}}>
+                      <span className="cp-deadline-label">{isTaskExpired ? 'Deadline (Expired):' : 'Submission Deadline:'}</span>
+                      <span className="cp-deadline-val">{taskData.deadline} {isTaskExpired && '(Closed)'}</span>
                     </div>
                   )}
                 </>
@@ -989,12 +1648,32 @@ export default function CodingPlatform() {
                       const statusColor = isAccepted ? "#16a34a" : isPartial ? "#d97706" : s.status === "compilation_error" ? "#9333ea" : s.status === "time_limit_exceeded" ? "#d97706" : "#dc2626";
                       const statusLabel = isAccepted ? "✅ Accepted" : isPartial ? "⚠️ Partially Accepted" : s.status === "compilation_error" ? "🔴 Compilation Error" : s.status === "time_limit_exceeded" ? "⏱️ Time Limit Exceeded" : "❌ Wrong Answer";
                       const marksVal = s.marks ?? s.score ?? 0;
+                      const attemptNum = submissions.length - i;
                       return (
                         <div key={s.id || i} style={{ border: `1.5px solid ${isAccepted ? '#86efac' : isPartial ? '#fde68a' : '#e2e8f0'}`, borderRadius: "10px", padding: "12px 16px", background: isAccepted ? "#f0fdf4" : isPartial ? "#fffbeb" : "#fff" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                            <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
-                              {statusLabel}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ fontWeight: 700, color: statusColor, textTransform: "uppercase", fontSize: "12px" }}>
+                                {statusLabel}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  padding: "2px 7px",
+                                  borderRadius: "4px",
+                                  background: s.is_retake ? "rgba(245, 158, 11, 0.15)" : "#f1f5f9",
+                                  color: s.is_retake ? "#b45309" : "#475569",
+                                  border: s.is_retake ? "1px solid #fde68a" : "none",
+                                }}
+                              >
+                                {s.is_retake
+                                  ? `Attempt #${s.attempt_number || attemptNum} (Retake)`
+                                  : (submissions.some(sub => sub.is_retake) || submissions.length > 1)
+                                  ? `Attempt #${s.attempt_number || attemptNum} (Original)`
+                                  : `Attempt #${attemptNum}`}
+                              </span>
+                            </div>
                             <span style={{ fontSize: "12px", color: "#64748b" }}>
                               {s.language} &bull; {s.passed_test_cases ?? 0}/{s.total_test_cases ?? 0} tests passed
                             </span>
@@ -1004,6 +1683,17 @@ export default function CodingPlatform() {
                             {s.percentage ?? 0}% &nbsp;|&nbsp;
                             {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ""}
                           </div>
+                          {s.feedback && (
+                            <div style={{ marginTop: "10px", padding: "8px 12px", background: "#f8fafc", borderLeft: "3px solid #6366f1", borderRadius: "6px" }}>
+                              <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", marginBottom: "3px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span>💬 Feedback {s.feedback_by ? `(by ${s.feedback_by})` : ""}:</span>
+                                {s.feedback_at && <span style={{ fontWeight: 400, color: "#94a3b8" }}>{new Date(s.feedback_at).toLocaleDateString()}</span>}
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#334155", whiteSpace: "pre-wrap" }}>
+                                {s.feedback}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1015,7 +1705,7 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
-            {hasSubmitted && (
+            {isTaskExpired ? (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1028,24 +1718,83 @@ export default function CodingPlatform() {
                 fontWeight: 600,
               }}>
                 <Lock size={15} color="#dc2626" />
-                <span>Task Submitted — Reattempts are disabled for this assignment.</span>
+                <span>
+                  🔒 Deadline Expired ({taskData?.deadline || 'Past Due'}) — Submissions and compiler execution have ended.
+                </span>
               </div>
-            )}
+            ) : isRetakeActive ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 16px',
+                background: '#fffbeb',
+                borderBottom: '1.5px solid #fde68a',
+                color: '#92400e',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <RotateCcw size={16} color="#d97706" />
+                  <span>
+                    ⚡ <strong>Retake Active:</strong> You have 1 opportunity to solve, test, and submit this {isBatch ? 'batch task' : 'practice problem'}. The compiler is active and unlocked.
+                  </span>
+                </div>
+                <span
+                  style={{
+                    padding: '5px 12px',
+                    backgroundColor: '#d97706',
+                    color: '#ffffff',
+                    borderRadius: '6px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)',
+                  }}
+                >
+                  <RotateCcw size={12} /> 1 Attempt Allowed
+                </span>
+              </div>
+            ) : hasSubmitted ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                background: '#fef2f2',
+                borderBottom: '1px solid #fecaca',
+                color: '#991b1b',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}>
+                <Lock size={15} color="#dc2626" />
+                <span>
+                  {taskData?.source === 'batch_task' || taskData?.batch_id
+                    ? 'Batch Task Submitted — The compiler is locked. You cannot edit code or submit again.'
+                    : 'Maximum Attempts Reached (3/3 submitted) — Submission locked for this problem.'}
+                </span>
+              </div>
+            ) : null}
             <div className="cp-editor-area cp-editor-area--monaco">
               <MonacoCodeEditor
                 value={typeof code === "string" ? code : String(code ?? "")}
                 onChange={(val) => {
-                  if (hasSubmitted) return;
+                  if (isCompilerLocked) return;
                   const strVal = typeof val === "string" ? val : (val?.target?.value ?? "");
                   setCode(strVal);
                 }}
                 language={selectedLang}
                 height="100%"
-                readOnly={hasSubmitted}
+                readOnly={isCompilerLocked}
+                preventCopyPaste={true}
                 options={{
                   fontSize: 13,
                   padding: { top: 12, bottom: 12 },
-                  readOnly: hasSubmitted,
+                  readOnly: isCompilerLocked,
+                  contextmenu: false,
+                  formatOnPaste: false,
                 }}
               />
             </div>
@@ -1120,6 +1869,137 @@ export default function CodingPlatform() {
           </div>
         </div>
         </>
+        )}
+
+        {/* ── Anti-Cheat Clipboard Alert Toast ── */}
+        {clipboardWarning && (
+          <div className="cp-clipboard-toast">
+            <span>{clipboardWarning}</span>
+          </div>
+        )}
+
+        {/* ── Proctored Full-Screen Gate Overlay ── */}
+        {isProctoredSession && !hasSubmitted && !isFullscreen && !proctorTerminated && (
+          <div className="proctor-fullscreen-gate-overlay">
+            <div className="proctor-gate-card">
+              <div className="proctor-gate-badge">
+                <Lock size={14} /> {isBatchCoursework ? "PROCTORED COURSEWORK ASSESSMENT" : "PROCTORED PRACTICE ASSESSMENT"}
+              </div>
+              <h2 className="proctor-gate-title">Full-Screen Mode Required</h2>
+              <p className="proctor-gate-subtitle">
+                This {isBatchCoursework ? "batch task" : "practice problem"} is monitored under examination mode. Once started, strict proctoring is enforced:
+              </p>
+              <div className="proctor-gate-rules">
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🖥️</span>
+                  <div>
+                    <strong>Full-Screen is Mandatory:</strong> Exiting full-screen will trigger warnings; on the 3rd exit your code is automatically submitted and the session ends.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🚫</span>
+                  <div>
+                    <strong>Tab Switching Disabled:</strong> Switching tabs, leaving the window, or minimizing will trigger warnings and count toward automatic submission.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">📋</span>
+                  <div>
+                    <strong>Copy / Paste Blocked:</strong> Copying, cutting, or pasting code into the compiler is strictly disabled. You must type your solution manually.
+                  </div>
+                </div>
+                <div className="proctor-rule-item">
+                  <span className="proctor-rule-icon">🔒</span>
+                  <div>
+                    <strong>Submission Attempt:</strong> Once submitted or ended due to violations, further changes are locked.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleEnterFullscreenAndStart}
+                className="proctor-gate-btn"
+              >
+                <Maximize2 size={18} />
+                <span>{isBatchCoursework ? "Enter Full-Screen & Start Task" : "Enter Full-Screen & Start Practice"}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Proctored Violation / Termination Modal ── */}
+        {proctorTerminated && (
+          <div className="proctor-termination-modal-overlay">
+            <div className="proctor-termination-card">
+              <div className="proctor-termination-icon-wrap">
+                <ShieldAlert size={36} color="#dc2626" />
+              </div>
+              <h3 className="proctor-term-title">Session Ended — Proctoring Policy Violation</h3>
+              <p className="proctor-term-desc">
+                {terminationReason === "exit_fullscreen"
+                  ? "You exited full-screen mode during this proctored task. As per examination guidelines, your task has been ended and your current solution was automatically submitted."
+                  : "Tab switching or leaving the examination window was detected. As per examination guidelines, your task has been ended and your current solution was automatically submitted."}
+              </p>
+              <div className="proctor-term-status-box">
+                <div className="proctor-term-status-header">
+                  <Lock size={15} className="proctor-term-status-icon" />
+                  <span>Compiler Locked & Auto-Submitted</span>
+                </div>
+                <p className="proctor-term-status-sub">
+                  Your code has been submitted to the Docker evaluation sandbox. Your results and marks will be recorded on your batch dashboard.
+                </p>
+              </div>
+              <div className="proctor-term-btn-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen?.().catch(() => {});
+                    }
+                    navigate(isBatchCoursework ? '/student/batches' : '/student/practice');
+                  }}
+                  className="proctor-term-btn-exit"
+                >
+                  <ArrowLeft size={16} />
+                  <span>{isBatchCoursework ? "Back to My Batches" : "Back to Practice"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Custom In-App Proctor Confirmation Dialog ── */}
+        {proctorConfirmModal && (
+          <div className="proctor-termination-modal-overlay" style={{ zIndex: 1000001 }}>
+            <div className="proctor-termination-card" style={{ borderColor: proctorConfirmModal.isDanger ? "#fecaca" : "#fed7aa" }}>
+              <div className="proctor-termination-icon-wrap" style={{ background: proctorConfirmModal.isDanger ? "#fee2e2" : "#ffedd5", borderColor: proctorConfirmModal.isDanger ? "#fca5a5" : "#fdba74" }}>
+                <AlertCircle size={36} color={proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c"} />
+              </div>
+              <h3 className="proctor-term-title" style={{ color: proctorConfirmModal.isDanger ? "#991b1b" : "#9a3412" }}>
+                {proctorConfirmModal.title}
+              </h3>
+              <p className="proctor-term-desc">
+                {proctorConfirmModal.message}
+              </p>
+              <div className="proctor-term-btn-row">
+                <button
+                  type="button"
+                  onClick={() => setProctorConfirmModal(null)}
+                  className="proctor-term-btn-review"
+                >
+                  Stay in Assessment
+                </button>
+                <button
+                  type="button"
+                  onClick={proctorConfirmModal.onConfirm}
+                  className="proctor-term-btn-exit"
+                  style={{ background: proctorConfirmModal.isDanger ? "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)" : "linear-gradient(135deg, #ea580c 0%, #c2410c 100%)" }}
+                >
+                  Confirm Exit
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

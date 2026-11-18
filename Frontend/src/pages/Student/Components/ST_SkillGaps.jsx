@@ -1,115 +1,95 @@
 import React, { useState, useEffect } from "react";
-import { Check, AlertTriangle, CheckCircle2, BookOpen, ArrowRight, Target, Sparkles, Award, TrendingDown, RotateCcw, ChevronRight, Info, Layers, GraduationCap, PlayCircle, UserCheck, Calendar } from "lucide-react";
+import { 
+  Check, 
+  AlertTriangle, 
+  CheckCircle2, 
+  BookOpen, 
+  ArrowRight, 
+  ArrowLeft,
+  Target, 
+  Sparkles, 
+  Award, 
+  TrendingDown, 
+  RotateCcw, 
+  ChevronRight, 
+  Info, 
+  Layers, 
+  GraduationCap, 
+  PlayCircle, 
+  UserCheck, 
+  Calendar,
+  FileText,
+  Code2,
+  Brain,
+  Compass
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_SkillGaps.css";
 
-const initialSkillData = [
-  {
-    id: "skill-1",
-    name: "Data Structures & Algorithms",
-    score: 82,
-    status: "Strong",
-    category: "Core Technical",
-    lastAssessed: "Recent Evaluation",
-    whyWeak: null,
-    targetScore: 90,
-    recommendedTopics: ["Trees & Graphs", "Dynamic Programming"],
-    checklist: [
-      { id: 1, text: "Revise Trees & Graphs concepts", completed: false, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Solve DP practice problems", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Attempt DSA mock quiz", completed: false, type: "quiz", route: "/student/quiz" },
-    ]
-  },
-  {
-    id: "skill-2",
-    name: "Database Systems & SQL",
-    score: 54,
-    status: "Weak",
-    category: "Backend & Systems",
-    lastAssessed: "Recent Evaluation",
-    whyWeak: "Scored 54% in Indexing & Joins practical evaluation.",
-    targetScore: 85,
-    recommendedTopics: ["Indexing & Execution Plans", "ACID Transactions"],
-    checklist: [
-      { id: 1, text: "Review SQL Indexing & Query Tuning", completed: false, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Solve SQL join practice problems", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Attempt Database Systems quiz", completed: false, type: "quiz", route: "/student/quiz" },
-    ]
-  },
-  {
-    id: "skill-3",
-    name: "JavaScript & Modern Web APIs",
-    score: 76,
-    status: "Good",
-    category: "Full Stack",
-    lastAssessed: "Recent Evaluation",
-    whyWeak: null,
-    targetScore: 85,
-    recommendedTopics: ["Asynchronous Event Loop", "Closures & Scopes"],
-    checklist: [
-      { id: 1, text: "Revise Event Loop & Promises", completed: false, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Solve Asynchronous JS exercises", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Attempt JS Async quiz", completed: false, type: "quiz", route: "/student/quiz" },
-    ]
-  },
-  {
-    id: "skill-4",
-    name: "Object-Oriented Design & Clean Code",
-    score: 88,
-    status: "Strong",
-    category: "Software Engineering",
-    lastAssessed: "Recent Evaluation",
-    whyWeak: null,
-    targetScore: 90,
-    recommendedTopics: ["SOLID Principles", "Design Patterns"],
-    checklist: [
-      { id: 1, text: "Review Factory & Observer patterns", completed: false, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Refactor OOP code modules", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Attempt Design Patterns quiz", completed: false, type: "quiz", route: "/student/quiz" },
-    ]
-  }
-];
-
 export default function StudentSkillGaps() {
   const navigate = useNavigate();
-  const [skills, setSkills] = useState(initialSkillData);
+  const [skills, setSkills] = useState([]);
+  const [factorsSummary, setFactorsSummary] = useState(null);
+  const [overallScore, setOverallScore] = useState(null);
+  const [overallStatus, setOverallStatus] = useState("");
+  const [batchName, setBatchName] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [selectedWeakSkill, setSelectedWeakSkill] = useState(initialSkillData[1]);
+  const [selectedWeakSkill, setSelectedWeakSkill] = useState(null);
   const [interventionData, setInterventionData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     apiFetch("/skill-gaps")
       .then((res) => {
         let evaluated = [];
         if (res && res.data && res.data.all_evaluated_skills) {
           evaluated = res.data.all_evaluated_skills;
+          if (res.data.factors_summary) setFactorsSummary(res.data.factors_summary);
+          if (res.data.overall_score !== undefined) setOverallScore(res.data.overall_score);
+          if (res.data.overall_status) setOverallStatus(res.data.overall_status);
+          if (res.data.batch_name) setBatchName(res.data.batch_name);
         } else if (res && res.all_evaluated_skills) {
           evaluated = res.all_evaluated_skills;
+          if (res.factors_summary) setFactorsSummary(res.factors_summary);
+          if (res.overall_score !== undefined) setOverallScore(res.overall_score);
+          if (res.overall_status) setOverallStatus(res.overall_status);
+          if (res.batch_name) setBatchName(res.batch_name);
         }
+
         if (evaluated.length > 0) {
           const mapped = evaluated.map((item, idx) => ({
-            id: `skill-${idx}`,
-            name: item.skill,
-            score: item.score,
-            status: item.score >= 80 ? "Strong" : item.score >= 70 ? "Good" : item.score >= 50 ? "Weak" : "Critical",
-            category: "Technical Skill",
-            lastAssessed: "Recent Evaluation",
-            whyWeak: item.score < 60 ? `Scored low (${item.score}%) in technical assessment.` : null,
-            targetScore: 85,
-            recommendedTopics: [item.skill],
-            checklist: [
-              { id: 1, text: `Revise ${item.skill} concepts`, completed: false, type: "revise", route: "/student/learning" },
-              { id: 2, text: `Solve ${item.skill} practice problems`, completed: false, type: "practice", route: "/student/practice" },
-              { id: 3, text: `Attempt ${item.skill} quiz`, completed: false, type: "quiz", route: "/student/quiz" },
+            id: item.id || `skill-${idx}`,
+            name: item.name || item.skill,
+            skill: item.skill || item.name,
+            score: Number(item.score) || 0,
+            status: item.status || (item.score >= 80 ? "Strong" : item.score >= 70 ? "Good" : item.score >= 50 ? "Weak" : "Critical"),
+            category: item.category || "Technical Skill",
+            lastAssessed: item.lastAssessed || "Recent Evaluation",
+            factorsSummary: item.factorsSummary || item.reason || "",
+            factors: item.factors || [],
+            whyWeak: item.whyWeak || (item.score < 65 ? item.reason || `Calculated average competency score is ${item.score}%.` : null),
+            targetScore: item.targetScore || 85,
+            recommendedTopics: item.recommendedTopics || [item.name || item.skill],
+            checklist: item.checklist || [
+              { id: 1, text: `Revise fundamental concepts for ${item.name || item.skill}`, completed: false, type: "revise", route: "/student/learning" },
+              { id: 2, text: `Practice exercises and problem sets`, completed: false, type: "practice", route: "/student/practice" },
+              { id: 3, text: `Attempt assessment quiz to verify proficiency`, completed: false, type: "quiz", route: "/student/quiz" },
             ]
           }));
+
           setSkills(mapped);
-          const weak = mapped.find((s) => s.score < 60);
+          const weak = mapped.find((s) => s.score < 65 || s.is_weak) || mapped[0];
           if (weak) setSelectedWeakSkill(weak);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to fetch live skill gaps:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     apiFetch("/interventions/student/my-status")
       .then((res) => {
@@ -130,14 +110,16 @@ export default function StudentSkillGaps() {
     return true;
   });
 
-  // Calculate summary counts safely without NaN
+  // Calculate summary counts safely
   const totalSkills = skills.length;
   const strongCount = skills.filter((s) => s.score >= 70).length;
   const goodCount = skills.filter((s) => s.score >= 60 && s.score < 70).length;
   const weakCount = skills.filter((s) => s.score < 60).length;
-  const avgOverallScore = totalSkills > 0
-    ? Math.round(skills.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0) / totalSkills)
-    : 78;
+  const avgOverallScore = overallScore !== null && overallScore !== undefined
+    ? overallScore
+    : totalSkills > 0
+      ? Math.round(skills.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0) / totalSkills)
+      : 0;
 
   // Toggle checklist item status
   const handleToggleChecklist = (skillId, checkId) => {
@@ -179,6 +161,18 @@ export default function StudentSkillGaps() {
 
   return (
     <div className="student-skillgaps-container">
+      {/* Top Navigation / Back to Progress */}
+      <div className="student-skillgaps-top-nav">
+        <button
+          type="button"
+          className="btn-back-to-progress"
+          onClick={() => navigate("/student/progress")}
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Progress Analytics</span>
+        </button>
+      </div>
+
       {/* Top Header */}
       <div className="student-skillgaps-header">
         <div>
@@ -187,39 +181,154 @@ export default function StudentSkillGaps() {
             <span>My Skill Analysis & Gap Diagnostics</span>
           </h1>
           <p className="student-skillgaps-subtitle">
-            AI-computed skill proficiency based on your recent Quizzes, Coding Practice, and AI Mock Interviews.
+            Multi-factor intelligence evaluated across your Quizzes, Coursework Tasks, Coding Practice, AI Interviews & Roadmap.
           </p>
         </div>
         <div className="student-skillgaps-overall-badge">
           <Sparkles size={18} />
-          <span>Overall Competency: <strong>{avgOverallScore}%</strong></span>
+          <span>Overall Competency: <strong>{avgOverallScore}%</strong> {overallStatus ? `· ${overallStatus}` : ""}</span>
         </div>
       </div>
 
-      {/* Mentor Intervention & Action Plan Banner */}
-      {interventionData && interventionData.statusInfo && interventionData.statusInfo.isDefaulter && (
-        <div style={{ padding: "16px 20px", borderRadius: "14px", background: "#fff1f2", border: "1px solid #fecdd3", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <div className="flex-between">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#e11d48", fontWeight: 800, fontSize: "15px" }}>
-              <AlertTriangle size={20} />
-              <span>Mentor Intervention Alert: Action Plan Assigned</span>
+      {/* 5-Factor Learning Evaluation Pillars Overview (Attendance excluded) */}
+      {factorsSummary && (
+        <div className="skillgaps-factors-banner">
+          <div className="factors-banner-header">
+            <div className="factors-banner-title">
+              <Brain size={18} className="text-indigo-600" />
+              <span>Multi-Track Performance Pillars ({batchName ? `Batch: ${batchName}` : "Enrolled Curriculum"})</span>
             </div>
-            <span style={{ padding: "4px 10px", borderRadius: "12px", background: "#e11d48", color: "#ffffff", fontSize: "12px", fontWeight: 700 }}>
-              {interventionData.statusInfo.priority || "High"} Priority
-            </span>
+            <span className="factors-banner-badge">5 Evaluated Factors</span>
           </div>
-          <div style={{ fontSize: "13px", color: "#9f1239", lineHeight: 1.5 }}>
-            <strong>Flagged Reasons:</strong> {Array.isArray(interventionData.statusInfo.reasons) ? interventionData.statusInfo.reasons.join(" · ") : "Requires performance improvement"}
-          </div>
-          {interventionData.history && interventionData.history.length > 0 && (
-            <div style={{ marginTop: "4px", padding: "10px 12px", background: "#ffffff", borderRadius: "8px", border: "1px solid #ffe4e6", fontSize: "12.5px", color: "#334155" }}>
-              <div><strong>Assigned Mentor:</strong> {interventionData.history[0].mentor_name || "Prof. Mentor"}</div>
-              <div><strong>Action Directives:</strong> {interventionData.history[0].action_taken || "Assigned 1-on-1 counseling & remedial tasks"}</div>
-              <div><strong>Recommendations:</strong> {interventionData.history[0].recommendations || "Complete practice drills"}</div>
+
+          <div className="skillgaps-factors-grid">
+            {/* Factor 1: Quizzes */}
+            <div className="factor-metric-card">
+              <div className="factor-card-top">
+                <span className="factor-card-name">Academic Quizzes</span>
+                <span className="factor-card-weight">{factorsSummary.quizzes?.weight || "25%"}</span>
+              </div>
+              <div className="factor-card-score" style={{ color: getStatusColor(factorsSummary.quizzes?.score || 0) }}>
+                {factorsSummary.quizzes?.score ?? 0}%
+              </div>
+              <div className="factor-card-detail">{factorsSummary.quizzes?.detail || "Quiz Accuracy"}</div>
             </div>
-          )}
+
+            {/* Factor 2: Batch Tasks */}
+            <div className="factor-metric-card">
+              <div className="factor-card-top">
+                <span className="factor-card-name">Coursework Tasks</span>
+                <span className="factor-card-weight">{factorsSummary.coursework?.weight || "20%"}</span>
+              </div>
+              <div className="factor-card-score" style={{ color: getStatusColor(factorsSummary.coursework?.score || 0) }}>
+                {factorsSummary.coursework?.score ?? 0}%
+              </div>
+              <div className="factor-card-detail">{factorsSummary.coursework?.detail || "Task Submissions"}</div>
+            </div>
+
+            {/* Factor 3: Coding Practice */}
+            <div className="factor-metric-card">
+              <div className="factor-card-top">
+                <span className="factor-card-name">Coding Practice</span>
+                <span className="factor-card-weight">{factorsSummary.coding?.weight || "25%"}</span>
+              </div>
+              <div className="factor-card-score" style={{ color: getStatusColor(factorsSummary.coding?.score || 0) }}>
+                {factorsSummary.coding?.score ?? 0}%
+              </div>
+              <div className="factor-card-detail">{factorsSummary.coding?.detail || "Problems Solved"}</div>
+            </div>
+
+            {/* Factor 4: AI Interview */}
+            <div className="factor-metric-card">
+              <div className="factor-card-top">
+                <span className="factor-card-name">AI Interview</span>
+                <span className="factor-card-weight">{factorsSummary.interviews?.weight || "15%"}</span>
+              </div>
+              <div className="factor-card-score" style={{ color: factorsSummary.interviews?.score > 0 ? getStatusColor(factorsSummary.interviews.score) : "#94a3b8" }}>
+                {factorsSummary.interviews?.score ?? 0}%
+              </div>
+              <div className="factor-card-detail">{factorsSummary.interviews?.detail || "Mock Interviews"}</div>
+            </div>
+
+            {/* Factor 5: AI Roadmap */}
+            <div className="factor-metric-card">
+              <div className="factor-card-top">
+                <span className="factor-card-name">AI Roadmap</span>
+                <span className="factor-card-weight">{factorsSummary.roadmap?.weight || "15%"}</span>
+              </div>
+              <div className="factor-card-score" style={{ color: factorsSummary.roadmap?.score > 0 ? getStatusColor(factorsSummary.roadmap.score) : "#94a3b8" }}>
+                {factorsSummary.roadmap?.score ?? 0}%
+              </div>
+              <div className="factor-card-detail">{factorsSummary.roadmap?.detail || "Milestones Completed"}</div>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Mentor Intervention & Action Plan Banner */}
+      {interventionData && interventionData.statusInfo && interventionData.statusInfo.isDefaulter && (() => {
+        // Exclude attendance from displayed reasons as requested
+        const rawReasons = Array.isArray(interventionData.statusInfo.reasons) 
+          ? interventionData.statusInfo.reasons 
+          : [String(interventionData.statusInfo.reasons || "Requires performance improvement")];
+        const cleanReasons = rawReasons.filter((r) => !r.toLowerCase().includes("attendance"));
+
+        if (cleanReasons.length === 0 && (!interventionData.statusInfo.weakAreas || interventionData.statusInfo.weakAreas.length === 0)) {
+          return null;
+        }
+
+        const latestHistory = interventionData.history && interventionData.history.length > 0 ? interventionData.history[0] : null;
+
+        return (
+          <div className="skillgaps-intervention-banner">
+            <div className="intervention-banner-header">
+              <div className="intervention-title-group">
+                <div className="intervention-icon-box">
+                  <AlertTriangle size={18} />
+                </div>
+                <span>Mentor Intervention Alert: Action Plan Assigned</span>
+              </div>
+              <span className="intervention-priority-badge">
+                {interventionData.statusInfo.priority || "High"} Priority
+              </span>
+            </div>
+
+            <div className="intervention-reasons-group">
+              <span className="intervention-reason-label">Flagged Diagnostic Areas:</span>
+              <div className="intervention-reasons-list">
+                {cleanReasons.length > 0 ? (
+                  cleanReasons.map((reason, idx) => (
+                    <span key={idx} className="intervention-reason-chip">
+                      {reason}
+                    </span>
+                  ))
+                ) : (
+                  <span className="intervention-reason-chip">
+                    Competency benchmark below threshold
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {latestHistory && (
+              <div className="intervention-meta-grid">
+                <div className="intervention-meta-card">
+                  <span className="intervention-meta-label">Assigned Mentor</span>
+                  <span className="intervention-meta-value">{latestHistory.mentor_name || "Faculty Mentor"}</span>
+                </div>
+                <div className="intervention-meta-card">
+                  <span className="intervention-meta-label">Action Directive</span>
+                  <span className="intervention-meta-value">{latestHistory.action_taken || "1-on-1 counseling & remedial practice"}</span>
+                </div>
+                <div className="intervention-meta-card">
+                  <span className="intervention-meta-label">Recommendations</span>
+                  <span className="intervention-meta-value">{latestHistory.recommendations || "Complete targeted exercises in Practice Arena"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* KPI Overview Cards */}
       <div className="skillgaps-kpi-grid">
@@ -228,8 +337,8 @@ export default function StudentSkillGaps() {
             <Layers size={22} />
           </div>
           <div>
-            <div className="kpi-label">Assessed Skills</div>
-            <div className="kpi-val">{totalSkills} Skills</div>
+            <div className="kpi-label">Assessed Competencies</div>
+            <div className="kpi-val">{totalSkills} Domains</div>
           </div>
         </div>
 
@@ -238,8 +347,8 @@ export default function StudentSkillGaps() {
             <CheckCircle2 size={22} />
           </div>
           <div>
-            <div className="kpi-label">Strong Skills (&ge;70%)</div>
-            <div className="kpi-val text-emerald">{strongCount} Skills</div>
+            <div className="kpi-label">Strong Domains (&ge;70%)</div>
+            <div className="kpi-val text-emerald">{strongCount} Domains</div>
           </div>
         </div>
 
@@ -248,8 +357,8 @@ export default function StudentSkillGaps() {
             <Award size={22} />
           </div>
           <div>
-            <div className="kpi-label">Good Skills (60-69%)</div>
-            <div className="kpi-val text-blue">{goodCount} Skills</div>
+            <div className="kpi-label">Good Domains (60-69%)</div>
+            <div className="kpi-val text-blue">{goodCount} Domains</div>
           </div>
         </div>
 
@@ -258,7 +367,7 @@ export default function StudentSkillGaps() {
             <TrendingDown size={22} />
           </div>
           <div>
-            <div className="kpi-label">Weak Skills (&lt;60%)</div>
+            <div className="kpi-label">Gaps Identified (&lt;60%)</div>
             <div className="kpi-val text-amber">{weakCount} Action Needed</div>
           </div>
         </div>
@@ -274,7 +383,7 @@ export default function StudentSkillGaps() {
                 <Layers size={20} />
                 <span>My Skill Analysis</span>
               </h2>
-              <p className="card-desc">Click any weak skill to open personalized improvement plan</p>
+              <p className="card-desc">Click any competency to open personalized diagnostic report & action plan</p>
             </div>
 
             {/* Filter Tabs */}
@@ -312,16 +421,15 @@ export default function StudentSkillGaps() {
                   className={`skill-item-row ${isSelected ? "skill-item-row--selected" : ""} ${
                     isWeak ? "skill-item-row--weak" : ""
                   }`}
-                  onClick={() => {
-                    if (skill.score < 60) {
-                      setSelectedWeakSkill(skill);
-                    }
-                  }}
+                  onClick={() => setSelectedWeakSkill(skill)}
                 >
                   <div className="skill-item-left">
                     <div className="skill-item-name-group">
                       <span className="skill-item-name">{skill.name}</span>
                       <span className="skill-item-category">{skill.category}</span>
+                      {skill.factorsSummary && (
+                        <span className="skill-item-factors-tag">{skill.factorsSummary}</span>
+                      )}
                     </div>
                   </div>
 
@@ -340,15 +448,19 @@ export default function StudentSkillGaps() {
 
                   <div className="skill-item-right">
                     {getStatusBadge(skill.status, skill.score)}
-                    {isWeak && (
-                      <span className="skill-action-hint">
-                        View Plan <ChevronRight size={14} />
-                      </span>
-                    )}
+                    <span className="skill-action-hint">
+                      View Plan <ChevronRight size={14} />
+                    </span>
                   </div>
                 </div>
               );
             })}
+
+            {filteredSkills.length === 0 && !loading && (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
+                No evaluated competencies match the selected filter.
+              </div>
+            )}
           </div>
         </div>
 
@@ -359,7 +471,11 @@ export default function StudentSkillGaps() {
               <div className="recommendation-header">
                 <div className="recommendation-title-row">
                   <div className="skill-title-with-badge">
-                    <AlertTriangle className="icon-alert" size={22} />
+                    {selectedWeakSkill.score < 60 ? (
+                      <AlertTriangle className="icon-alert" size={22} />
+                    ) : (
+                      <Award className="text-emerald" size={22} />
+                    )}
                     <h2>{selectedWeakSkill.name}</h2>
                   </div>
                   {getStatusBadge(selectedWeakSkill.status, selectedWeakSkill.score)}
@@ -385,19 +501,42 @@ export default function StudentSkillGaps() {
                 </div>
               </div>
 
-              {/* Section 1: Why this skill is weak */}
+              {/* Section 1: Contributing Evaluation Factors */}
+              {selectedWeakSkill.factors && selectedWeakSkill.factors.length > 0 && (
+                <div className="recommendation-section">
+                  <h3 className="section-subtitle">
+                    <Layers size={16} />
+                    <span>Contributing Factors Breakdown</span>
+                  </h3>
+                  <div className="contributing-factors-grid">
+                    {selectedWeakSkill.factors.map((f, idx) => (
+                      <div key={idx} className="contributing-factor-row">
+                        <div>
+                          <span className="cf-name">{f.factor}: </span>
+                          <span className="cf-detail">{f.detail}</span>
+                        </div>
+                        <span className="cf-score" style={{ background: `${getStatusColor(f.score)}18`, color: getStatusColor(f.score) }}>
+                          {f.score}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 2: Why this skill is weak */}
               <div className="recommendation-section">
                 <h3 className="section-subtitle">
                   <Info size={16} />
-                  <span>Why is this skill weak?</span>
+                  <span>Diagnostic Findings</span>
                 </h3>
                 <div className="why-weak-box">
-                  <p>{selectedWeakSkill.whyWeak || "Assessment data indicates below-target scores in recent practice modules."}</p>
+                  <p>{selectedWeakSkill.whyWeak || `Current performance benchmark is at ${selectedWeakSkill.score}%, meeting active proficiency expectations.`}</p>
                 </div>
               </div>
 
-              {/* Section 2: Recommended Topics */}
-              {selectedWeakSkill.recommendedTopics && (
+              {/* Section 3: Recommended Topics */}
+              {selectedWeakSkill.recommendedTopics && selectedWeakSkill.recommendedTopics.length > 0 && (
                 <div className="recommendation-section">
                   <h3 className="section-subtitle">
                     <BookOpen size={16} />
@@ -414,8 +553,8 @@ export default function StudentSkillGaps() {
                 </div>
               )}
 
-              {/* Section 3: Actionable Checklist (What should I do?) */}
-              {selectedWeakSkill.checklist && (
+              {/* Section 4: Actionable Checklist (What should I do?) */}
+              {selectedWeakSkill.checklist && selectedWeakSkill.checklist.length > 0 && (
                 <div className="recommendation-section">
                   <h3 className="section-subtitle">
                     <CheckCircle2 size={16} />
@@ -440,7 +579,7 @@ export default function StudentSkillGaps() {
                           className="checklist-action-btn"
                           onClick={() => navigate(item.route || "/student/learning")}
                         >
-                          <span>{item.type === "quiz" ? "Take Quiz" : item.type === "retake" ? "Start Interview" : "Explore"}</span>
+                          <span>{item.type === "quiz" ? "Take Quiz" : item.type === "interview" ? "Start Interview" : item.type === "practice" ? "Practice" : item.type === "roadmap" ? "Roadmap" : "Explore"}</span>
                           <ArrowRight size={12} />
                         </button>
                       </div>
@@ -456,14 +595,14 @@ export default function StudentSkillGaps() {
                   onClick={() => navigate("/student/quiz")}
                 >
                   <GraduationCap size={16} />
-                  <span>Start Remedial Practice Quiz</span>
+                  <span>Start Practice Quiz</span>
                 </button>
                 <button
                   className="btn-secondary-action"
-                  onClick={() => navigate("/student/ai-interview")}
+                  onClick={() => navigate("/student/practice")}
                 >
-                  <Sparkles size={16} />
-                  <span>Retake AI Interview</span>
+                  <Code2 size={16} />
+                  <span>Practice Coding</span>
                 </button>
               </div>
             </div>
@@ -471,7 +610,7 @@ export default function StudentSkillGaps() {
             <div className="no-weak-skill-selected">
               <CheckCircle2 size={48} className="text-emerald" />
               <h3>All Skills Look Great!</h3>
-              <p>Select any skill from the list to view diagnostic breakdown and recommended action items.</p>
+              <p>Select any competency from the list to view diagnostic breakdown and recommended action items.</p>
             </div>
           )}
         </div>

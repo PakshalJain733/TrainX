@@ -7,32 +7,39 @@
 
 import 'dotenv/config';
 import { initializeDatabase } from '../src/config/init_db.js';
+import { runMigrations } from '../src/config/migrator.js';
 
 async function run() {
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
+  const dbName = process.env.DB_NAME || 'training_portal_db';
+  const dbUser = process.env.DB_USER || 'root';
+
   console.log('========================================================');
   console.log('⚡ [TrainX Database Migration Runner]');
-  console.log('   Target Host:  ', process.env.DB_HOST || 'localhost');
-  console.log('   Target Port:  ', process.env.DB_PORT || '3306');
-  console.log('   Database Name:', process.env.DB_NAME || 'training_portal_db');
-  console.log('   User:         ', process.env.DB_USER || 'root');
+  console.log('   Target Host:  ', dbHost);
+  console.log('   Target Port:  ', dbPort);
+  console.log('   Database Name:', dbName);
+  console.log('   User:         ', dbUser);
   console.log('========================================================');
 
   const start = Date.now();
   try {
-    const success = await initializeDatabase();
-    const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-
-    if (success) {
-      console.log('========================================================');
-      console.log(`✅ [Migration Complete] All tables & seeds verified in ${elapsed}s.`);
-      console.log('========================================================');
-      process.exit(0);
-    } else {
-      console.error('========================================================');
-      console.error(`❌ [Migration Failed] initializeDatabase returned false.`);
-      console.error('========================================================');
+    // 1. Initialize core baseline schema & tables
+    const initSuccess = await initializeDatabase();
+    if (!initSuccess) {
+      console.error('❌ [Migration Failed] initializeDatabase returned false.');
       process.exit(1);
     }
+
+    // 2. Run pending migrations via AutoMigrator
+    const migrationResult = await runMigrations();
+    const elapsed = ((Date.now() - start) / 1000).toFixed(2);
+
+    console.log('========================================================');
+    console.log(`✅ [Migration Complete] Verified in ${elapsed}s (Applied: ${migrationResult.appliedCount}, Total: ${migrationResult.total}).`);
+    console.log('========================================================');
+    process.exit(0);
   } catch (err) {
     console.error('========================================================');
     console.error('❌ [Fatal Migration Error]:', err.message);

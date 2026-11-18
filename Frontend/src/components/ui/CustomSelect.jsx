@@ -26,7 +26,11 @@ export default function CustomSelect({
   );
 
   const selectedOption = normalizedOptions.find(
-    (opt) => String(opt.value) === String(value)
+    (opt) =>
+      (value !== undefined && value !== null && String(opt.value).toLowerCase() === String(value).toLowerCase()) ||
+      (opt.code && value !== undefined && value !== null && String(opt.code).toLowerCase() === String(value).toLowerCase()) ||
+      (opt.name && value !== undefined && value !== null && String(opt.name).toLowerCase() === String(value).toLowerCase()) ||
+      (opt.id && value !== undefined && value !== null && String(opt.id) === String(value))
   );
 
   const calculatePosition = () => {
@@ -36,7 +40,7 @@ export default function CustomSelect({
     const viewportWidth = window.innerWidth;
 
     // Show only first 3 items at once, then scroll
-    const maxVisibleItems = 3;
+    const maxVisibleItems = 6;
     const itemHeight = 38;
     const verticalPadding = 12; // 6px top + 6px bottom
     const maxDropdownHeight = maxVisibleItems * itemHeight + verticalPadding; // 126px
@@ -64,7 +68,8 @@ export default function CustomSelect({
     const availableSpace = openUp ? spaceAbove - 16 : spaceBelow - 16;
     const maxHeight = Math.max(80, Math.min(maxDropdownHeight, availableSpace));
     
-    const targetWidth = rect.width > 0 ? rect.width : 160;
+    const maxAllowedWidth = Math.max(120, viewportWidth - 16);
+    const targetWidth = Math.min(rect.width > 0 ? rect.width : 160, maxAllowedWidth);
     const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - targetWidth - 8));
 
     const computedStyle = {
@@ -208,7 +213,7 @@ export default function CustomSelect({
               <div className="custom-select-empty" role="status">No options available</div>
             ) : (
               normalizedOptions.map((opt) => {
-                const isSelected = String(opt.value) === String(value);
+                const isSelected = selectedOption ? opt.value === selectedOption.value : (value !== undefined && value !== null && String(opt.value).toLowerCase() === String(value).toLowerCase());
                 const OptIcon = opt.icon;
                 return (
                   <div

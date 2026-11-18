@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X } from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X, Lock, AlertCircle, RotateCcw, ShieldAlert } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import "../Styles/ST_PracticeProblems.css";
+
+const isDeadlinePassed = (dueDate) => {
+  if (!dueDate || dueDate === "No Deadline" || dueDate === "N/A" || dueDate === "Flexible Deadline") return false;
+  const d = new Date(dueDate);
+  if (isNaN(d.getTime())) return false;
+  d.setHours(23, 59, 59, 999);
+  return d.getTime() < Date.now();
+};
+
 const practiceProblemsData = [];
 
 export default function PracticeProblems() {
@@ -30,11 +39,16 @@ export default function PracticeProblems() {
           solveStatus: p.solve_status || "Unsolved",
           scoreObtained: p.marks_obtained ?? p.score_obtained ?? null,
           percentage: p.percentage ?? null,
+          retakeAvailable: Boolean(p.retakeAvailable),
           companies: p.tags ? (Array.isArray(p.tags) ? p.tags : (typeof p.tags === "string" ? p.tags.split(",").map(t => t.trim()) : [])) : ["TCS", "Infosys"],
           solutionAvailable: true,
           description: p.description || "No problem description provided.",
           language: p.language || "",
           dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
+          rawDueDate: p.due_date || p.dueDate || null,
+          isExpired: Boolean(p.isExpired || p.is_expired || (p.due_date && isDeadlinePassed(p.due_date))),
+          attemptsCount: p.attempts_count ?? p.attemptsCount ?? 0,
+          maxAttempts: p.max_attempts ?? 3,
         }));
         setProblemsList(mapped);
       } catch (err) {
@@ -258,7 +272,7 @@ export default function PracticeProblems() {
       <div id="problems-table-section" className="problems-table-card">
         <div className="table-header-info">
           <h3>All Practice Problems ({filteredProblems.length})</h3>
-          <span className="table-sub">Click 'Solve' to launch live compiler and test cases</span>
+          <span className="table-sub">Click 'Solve' to launch proctored live compiler (Anti-Cheat & Full-Screen active)</span>
         </div>
 
         <div className="problems-table-wrapper">
@@ -285,17 +299,73 @@ export default function PracticeProblems() {
                   const isSolved = prob.solved || prob.solveStatus === "Solved";
                   const isPartial = prob.solveStatus === "Partial";
                   const hasAttempted = prob.solveStatus === "Attempted";
+                  const isExpired = !isSolved && (Boolean(prob.isExpired) || (prob.dueDate && isDeadlinePassed(prob.dueDate)));
+                  const attemptsUsed = prob.attemptsCount || 0;
+                  const maxAttempts = prob.maxAttempts || 3;
+                  const attemptsExhausted = attemptsUsed >= maxAttempts && !isSolved;
+
+                  // Determine action button label
+                  let btnLabel = "Solve";
+                  if (isSolved) btnLabel = "Review";
+                  else if (isExpired) btnLabel = "Expired";
+                  else if (attemptsExhausted) btnLabel = `${maxAttempts}/${maxAttempts} Used`;
+                  else if (attemptsUsed > 0) btnLabel = `Resume (${attemptsUsed}/${maxAttempts})`;
+
                   return (
                     <tr key={prob.id} className="problem-row">
                       <td>
                         <div className="prob-title-box">
                           <Link
                             to={`/student/coding-platform/practice-${prob.id}`}
-                            state={{ task: prob, source: 'practice' }}
+                            state={{ task: { ...prob, isExpired }, source: 'practice', enterFullscreen: true }}
                             className="prob-title-link"
+                            onClick={async () => {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on practice title click:", err);
+                              }
+                            }}
                           >
                             {prob.title}
                           </Link>
+                          <span
+                            style={{
+                              fontSize: "10.5px",
+                              fontWeight: 700,
+                              backgroundColor: "#fef2f2",
+                              color: "#dc2626",
+                              border: "1px solid #fecaca",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px"
+                            }}
+                            title="Monitored Assessment: Anti-Cheat & Full-Screen Proctoring Enforced"
+                          >
+                            <ShieldAlert size={10} /> Proctored
+                          </span>
+                          {prob.retakeAvailable && (
+                            <span
+                              style={{
+                                fontSize: "10.5px",
+                                fontWeight: 700,
+                                backgroundColor: "#fef3c7",
+                                color: "#b45309",
+                                border: "1px solid #fde68a",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px"
+                              }}
+                            >
+                              <RotateCcw size={10} /> Retake Available
+                            </span>
+                          )}
                           <span className="prob-points">{prob.points} pts</span>
                         </div>
                       </td>
@@ -308,38 +378,105 @@ export default function PracticeProblems() {
                         </span>
                       </td>
                       <td>
-                        {isSolved ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "3px 8px", borderRadius: "6px" }}>
-                            <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : `${prob.points}/${prob.points}`}
-                          </span>
-                        ) : isPartial ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fffbeb", border: "1px solid #fde68a", padding: "3px 8px", borderRadius: "6px" }}>
-                            <span>⚠️</span> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points}` : "Partial"}
-                          </span>
-                        ) : hasAttempted ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "12px", fontWeight: 600, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", padding: "3px 8px", borderRadius: "6px" }}>
-                            <span>❌</span> 0/{prob.points}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: "#64748b" }}>
-                            Unsolved ({prob.points} pts)
-                          </span>
-                        )}
+                        <div className="pp-status-col">
+                          {isSolved ? (
+                            <span className="pp-status-badge solved">
+                              <CheckCircle2 size={13} /> {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points} pts` : `${prob.points}/${prob.points} pts`}
+                            </span>
+                          ) : isExpired ? (
+                            <span className="pp-status-badge expired">
+                              <Lock size={12} /> Expired
+                            </span>
+                          ) : isPartial ? (
+                            <span className="pp-status-badge partial">
+                              <AlertCircle size={12} /> Partial • {prob.scoreObtained != null ? `${prob.scoreObtained}/${prob.points} pts` : "Partial"}
+                            </span>
+                          ) : hasAttempted ? (
+                            <span className="pp-status-badge attempted">
+                              <X size={12} strokeWidth={2.5} /> Attempted • 0/{prob.points} pts
+                            </span>
+                          ) : (
+                            <span className="pp-status-badge unsolved">
+                              Unsolved ({prob.points} pts)
+                            </span>
+                          )}
+
+                          {/* Attempt tracking indicator */}
+                          {attemptsUsed > 0 ? (
+                            <span className={`pp-attempts-pill ${attemptsExhausted ? "exhausted" : "active"}`}>
+                              <span style={{ fontSize: "8px" }}>●</span> {attemptsUsed}/{maxAttempts} attempts used
+                            </span>
+                          ) : (
+                            <span className="pp-attempts-pill empty">
+                              0/{maxAttempts} attempts used
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                        <span style={{ color: isExpired ? '#dc2626' : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8'), fontWeight: isExpired ? 700 : (prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400), fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                           {prob.dueDate}
+                          {isExpired && (
+                            <span style={{ fontSize: '10px', background: '#fee2e2', color: '#991b1b', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>EXPIRED</span>
+                          )}
                         </span>
                       </td>
 
                       <td className="pp-td-action">
-                        <Button
-                          size="sm"
-                          className="solve-btn"
-                          onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: prob, source: 'practice' } })}
-                        >
-                          <Terminal size={14} /> {isSolved ? "Review" : isPartial ? "Resume" : "Solve"}
-                        </Button>
+                        {prob.retakeAvailable ? (
+                          <Button
+                            size="sm"
+                            className="solve-btn"
+                            onClick={async () => {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on retake click:", err);
+                              }
+                              navigate(`/student/coding-platform/practice-${prob.id}`, { 
+                                state: { 
+                                  task: { ...prob, isExpired, retakeAvailable: true }, 
+                                  source: 'practice', 
+                                  isRetake: true, 
+                                  enterFullscreen: true 
+                                } 
+                              });
+                            }}
+                            style={{ background: '#4f46e5', color: '#ffffff', borderColor: '#4338ca', fontWeight: 700 }}
+                          >
+                            <RotateCcw size={14} /> Start Retake
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="solve-btn"
+                          disabled={attemptsExhausted}
+                            onClick={async () => {
+                            if (attemptsExhausted) return;
+                            try {
+                              if (!document.fullscreenElement) {
+                                await document.documentElement.requestFullscreen?.();
+                              }
+                            } catch (err) {
+                              console.warn("Fullscreen request error on solve click:", err);
+                            }
+                            navigate(`/student/coding-platform/practice-${prob.id}`, { 
+                              state: { task: { ...prob, isExpired }, source: 'practice', enterFullscreen: true } 
+                            });
+                          }}
+                            style={
+                            attemptsExhausted
+                              ? { background: '#f1f5f9', color: '#94a3b8', borderColor: '#e2e8f0', cursor: 'not-allowed' }
+                              : isExpired
+                              ? { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+                              : {}
+                          }
+                          >
+                            <Terminal size={14} /> {btnLabel}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

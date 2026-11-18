@@ -67,7 +67,8 @@ export const generateWeeklyReportController = async (req, res, next) => {
  */
 export const getStudentWeeklyReportsController = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id || 6;
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) return sendError(res, 'Authentication required', 401);
     const reports = await getStudentWeeklyReports(userId);
     return sendSuccess(res, 'Student weekly reports retrieved successfully', reports);
   } catch (error) {

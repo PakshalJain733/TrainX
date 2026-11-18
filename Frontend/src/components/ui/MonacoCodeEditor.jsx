@@ -199,6 +199,9 @@ export default function MonacoCodeEditor({
         domNode.addEventListener("paste", blockEvent, true);
         domNode.addEventListener("copy", blockEvent, true);
         domNode.addEventListener("cut", blockEvent, true);
+        domNode.addEventListener("drop", blockEvent, true);
+        domNode.addEventListener("dragstart", blockEvent, true);
+        domNode.addEventListener("dragover", (e) => { e.preventDefault(); e.stopPropagation(); }, true);
         domNode.addEventListener("contextmenu", (e) => {
           e.preventDefault();
           e.stopPropagation();

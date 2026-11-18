@@ -587,7 +587,12 @@ export const getCachedMilestoneTheory = async (milestoneTitle, targetRole = '') 
     );
     if (rows && rows.length > 0) {
       const data = typeof rows[0].theory_json === 'string' ? JSON.parse(rows[0].theory_json) : rows[0].theory_json;
-      if (data && data.title && Array.isArray(data.sections) && data.sections.some(s => Array.isArray(s.points) && s.points.length > 0)) {
+      const dataStr = JSON.stringify(data || '');
+      const isOutdated = dataStr.includes('Real-World Analogy') ||
+                         dataStr.includes('kitchen timer') ||
+                         dataStr.includes('theater stage') ||
+                         dataStr.includes('class ProductionModule');
+      if (data && data.title && Array.isArray(data.sections) && data.sections.some(s => Array.isArray(s.points) && s.points.length > 0) && !isOutdated) {
         globalTheoryCache.set(key, data);
         return data;
       }
@@ -648,11 +653,13 @@ const ensurePracticeTable = async () => {
 /**
  * Fetch cached AI practice challenge for a milestone topic
  */
-export const getCachedMilestonePractice = async (milestoneTitle, targetRole = '', topic = '') => {
+export const getCachedMilestonePractice = async (milestoneTitle, targetRole = '', topic = '', milestoneIndex = 1) => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
   const cleanRole = String(targetRole || '').trim().toLowerCase();
   const cleanTopic = String(topic || cleanTitle).trim().toLowerCase();
-  const key = `${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  const mIdx = Math.max(1, parseInt(milestoneIndex, 10) || 1);
+  const rawKey = `m${mIdx}__${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  const key = rawKey.length > 240 ? rawKey.slice(0, 240) : rawKey;
   if (!cleanTitle) return null;
 
   if (globalPracticeCache.has(key)) {
@@ -682,11 +689,13 @@ export const getCachedMilestonePractice = async (milestoneTitle, targetRole = ''
 /**
  * Save AI generated practice challenge into DB and Memory Cache
  */
-export const saveCachedMilestonePractice = async (milestoneTitle, targetRole, topic, practiceData) => {
+export const saveCachedMilestonePractice = async (milestoneTitle, targetRole, topic, practiceData, milestoneIndex = 1) => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
   const cleanRole = String(targetRole || '').trim().toLowerCase();
   const cleanTopic = String(topic || cleanTitle).trim().toLowerCase();
-  const key = `${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  const mIdx = Math.max(1, parseInt(milestoneIndex, 10) || 1);
+  const rawKey = `m${mIdx}__${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  const key = rawKey.length > 240 ? rawKey.slice(0, 240) : rawKey;
   if (!cleanTitle || !practiceData || !practiceData.title) return;
 
   globalPracticeCache.set(key, practiceData);
@@ -700,7 +709,7 @@ export const saveCachedMilestonePractice = async (milestoneTitle, targetRole, to
        ON DUPLICATE KEY UPDATE practice_json = VALUES(practice_json)`,
       [key, practiceJson]
     );
-    console.log(`[Roadmap Model] Saved AI practice challenge for "${cleanTopic}" to database.`);
+    console.log(`[Roadmap Model] Saved AI practice challenge for Milestone ${mIdx} ("${cleanTopic}") to database.`);
   } catch (err) {
     console.warn(`[Roadmap Model] Practice DB cache save warning: ${err.message}`);
   }

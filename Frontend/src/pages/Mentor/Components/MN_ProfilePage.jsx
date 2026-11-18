@@ -1,85 +1,204 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Check, User, Camera, GraduationCap, Building, Users, ShieldCheck, CheckCircle2, Save, Sparkles, MapPin, Clock, Award, BookOpen, Star, Key, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
+import {
+  Check,
+  User,
+  GraduationCap,
+  Building,
+  Users,
+  ShieldCheck,
+  CheckCircle2,
+  Save,
+  Sparkles,
+  Award,
+  Key,
+  QrCode,
+  Copy,
+  Loader2,
+  X,
+  Edit2,
+  Mail,
+  Phone,
+  Database,
+  AlertCircle,
+  Calendar,
+  Star,
+  Video,
+} from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { mentorProfile } from "../../../data/mentorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
-const specOptions = [
+// ── Year Options for Mentors ──
+const yearOptions = [
+  { value: "1st Year (FE)", label: "1st Year (FE)" },
+  { value: "2nd Year (SE)", label: "2nd Year (SE)" },
+  { value: "3rd Year (TE)", label: "3rd Year (TE)" },
+  { value: "Final Year (BE 2026)", label: "Final Year (BE 2026)" },
+  { value: "Academic Year 2025-2026", label: "Academic Year 2025-2026" },
+  { value: "Academic Year 2026-2027", label: "Academic Year 2026-2027" },
+];
+
+// ── Area of Expertise Options ──
+const expertiseOptions = [
   { value: "Full Stack Development", label: "Full Stack Development" },
   { value: "Data Structures & Algorithms", label: "Data Structures & Algorithms" },
   { value: "AI & Machine Learning", label: "AI & Machine Learning" },
-  { value: "Cloud & DevOps", label: "Cloud & DevOps" },
-  { value: "Cybersecurity", label: "Cybersecurity" },
+  { value: "Cloud Computing & DevOps", label: "Cloud Computing & DevOps" },
+  { value: "Cybersecurity & Network Defense", label: "Cybersecurity & Network Defense" },
+  { value: "Database Systems & SQL Optimization", label: "Database Systems & SQL Optimization" },
+  { value: "Mobile Application Engineering", label: "Mobile Application Engineering" },
+  { value: "Data Science & Big Data Analytics", label: "Data Science & Big Data Analytics" },
+  { value: "Software Architecture & System Design", label: "Software Architecture & System Design" },
 ];
 
 function MN_ProfilePage() {
   const fileInputRef = useRef(null);
   const [deptOptions, setDeptOptions] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState({ connected: false, email: '' });
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleToast, setGoogleToast] = useState('');
 
-  // 2FA Google Authenticator State
-  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
-  const [loading2FASetup, setLoading2FASetup] = useState(false);
-  const [totpData, setTotpData] = useState(null);
-  const [totpCodeInput, setTotpCodeInput] = useState(["", "", "", "", "", ""]);
-  const [verifying2FA, setVerifying2FA] = useState(false);
-  const [totpError, setTotpError] = useState("");
-  const [totpSuccess, setTotpSuccess] = useState("");
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const totpInputRefs = useRef([]);
+  const checkGoogleStatus = () => {
+    apiFetch("/google/auth/user-status")
+      .then((res) => {
+        if (res && res.success) {
+          setGoogleStatus({
+            connected: Boolean(res.connected),
+            email: res.email || '',
+          });
+        }
+      })
+      .catch(() => {});
+  };
+
+  const handleConnectGoogle = () => {
+    let localUser = {};
+    try {
+      localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {};
+    } catch {}
+
+    const userId = localUser.id || localUser.userId || '';
+    const apiBase = getApiBaseUrl().replace(/\/v1$/, '');
+    const returnUrl = encodeURIComponent(window.location.pathname);
+    window.location.href = `${apiBase}/google/auth/login?userId=${userId}&returnTo=${returnUrl}`;
+  };
+
+  const handleDisconnectGoogle = async () => {
+    if (!window.confirm("Are you sure you want to disconnect your Google account?")) return;
+    try {
+      setGoogleLoading(true);
+      await apiFetch("/google/auth/disconnect", { method: "POST" });
+      setGoogleStatus({ connected: false, email: '' });
+      setGoogleToast("Google account disconnected successfully.");
+    } catch (err) {
+      console.error("Failed to disconnect Google:", err);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile?.name || "Mentor";
-    let email = localUser.email || mentorProfile?.email || "mentor@pvppcoe.ac.in";
-    return { name, email, ...localUser };
+    try {
+      localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {}
+    return localUser;
   };
 
   const initialUser = resolveUser();
 
+  // Exactly the 6 profile fields requested
   const [form, setForm] = useState({
-    name: initialUser.name,
-    email: initialUser.email,
-    phone: initialUser.mobile_number || mentorProfile?.phone || "",
-    department: initialUser.department || mentorProfile?.department || "Computer Engineering",
-    specialization: mentorProfile?.specialization || "Full Stack Development",
-    role: "Mentor",
-    college: mentorProfile?.college || "P.V.P.P. College of Engineering",
-    officeLocation: mentorProfile?.officeLocation || "Room 304, Block A",
-    officeHours: mentorProfile?.officeHours || "Mon-Fri 10:00 AM - 5:00 PM",
-    allocatedBatches: mentorProfile?.allocatedBatches || 0,
-    totalStudents: mentorProfile?.totalStudents || 0,
-    rating: mentorProfile?.rating || 4.9,
-    experience: mentorProfile?.experience || "5+ Years",
-    empId: initialUser.empId || initialUser.emp_id || initialUser.employee_id || "EMP-MN-201",
+    name: initialUser.name || "Mentor",
+    email: initialUser.email || "mentor@college.edu.in",
+    mobile_number: initialUser.mobile_number || initialUser.phone || "",
+    department: initialUser.department || "",
+    current_year: initialUser.current_year || initialUser.currentYear || "Final Year (2026)",
+    area_of_expertise: initialUser.area_of_expertise || initialUser.areaOfExpertise || initialUser.specialization || "Full Stack Development",
+    role: initialUser.role || "Mentor",
+    allocatedBatches: 0,
+    totalStudents: 0,
+    rating: 4.9,
   });
 
   useEffect(() => {
-    apiFetch("/auth/me")
+    // 1. Fetch live mentor profile directly from database
+    checkGoogleStatus();
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("google_connected") === "true") {
+        const email = urlParams.get("email");
+        setGoogleToast(`Google Meet connected successfully${email ? ` (${decodeURIComponent(email)})` : ''}!`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        checkGoogleStatus();
+      }
+    }
+
+    // 1. Fetch live mentor profile directly from database
+    apiFetch("/mentor/profile")
       .then((res) => {
-        if (res && (res.user || res.data)) {
-          const u = res.user || res.data;
+        const u = res?.data || res?.user || res;
+        if (u) {
           setForm((prev) => ({
             ...prev,
             name: u.name || prev.name,
             email: u.email || prev.email,
-            phone: u.mobile_number || u.phone || prev.phone,
+            mobile_number: u.mobile_number || u.phone || u.mobile || prev.mobile_number,
             department: u.department || prev.department,
+            current_year: u.current_year || u.currentYear || prev.current_year,
+            area_of_expertise: u.area_of_expertise || u.areaOfExpertise || u.specialization || prev.area_of_expertise,
+            role: u.role || prev.role,
+            allocatedBatches: u.allocatedBatches ?? prev.allocatedBatches,
+            totalStudents: u.totalStudents ?? prev.totalStudents,
+            rating: u.rating ?? prev.rating,
           }));
-          setIs2FAEnabled(Boolean(u.two_factor_enabled || u.two_factor_secret));
+          if (u.avatarUrl || u.avatar_url) {
+            setAvatarUrl(u.avatarUrl || u.avatar_url);
+          }
         }
       })
-      .catch(() => { });
+      .catch(() => {
+        // Fallback to /auth/me
+        apiFetch("/auth/me")
+          .then((res) => {
+            if (res && (res.user || res.data)) {
+              const u = res.user || res.data;
+              setForm((prev) => ({
+                ...prev,
+                name: u.name || prev.name,
+                email: u.email || prev.email,
+                mobile_number: u.mobile_number || u.phone || prev.mobile_number,
+                department: u.department || prev.department,
+                current_year: u.current_year || u.currentYear || prev.current_year,
+                area_of_expertise: u.area_of_expertise || u.areaOfExpertise || u.specialization || prev.area_of_expertise,
+              }));
+              if (u.avatarUrl || u.avatar_url) {
+                setAvatarUrl(u.avatarUrl || u.avatar_url);
+              }
+            }
+          })
+          .catch(() => {});
+      });
 
+    
+    apiFetch("/auth/me")
+      .then((res) => {
+        const u = res?.user || res?.data || res;
+        if (u) {
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch departments list for dropdown
     apiFetch("/departments")
       .then((res) => {
         const list = res?.data || res || [];
@@ -94,129 +213,77 @@ function MN_ProfilePage() {
       .catch(() => {});
   }, []);
 
-  const handleOpen2FASetup = async () => {
-    setTotpError("");
-    setTotpSuccess("");
-    setTotpCodeInput(["", "", "", "", "", ""]);
-    setLoading2FASetup(true);
-    setIs2FASetupOpen(true);
-
-    try {
-      const res = await apiFetch("/auth/setup-2fa", { method: "POST" });
-      if (res && (res.data || res.qrCode)) {
-        setTotpData(res.data || res);
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to generate Google Authenticator QR Code");
-    } finally {
-      setLoading2FASetup(false);
-    }
-  };
-
-  const handleCopySecret = () => {
-    if (totpData?.secret) {
-      navigator.clipboard.writeText(totpData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    }
-  };
-
-  const handleTotpDigitChange = (index, value) => {
-    const cleanVal = value.replace(/\D/g, "").slice(-1);
-    const newCode = [...totpCodeInput];
-    newCode[index] = cleanVal;
-    setTotpCodeInput(newCode);
-
-    if (cleanVal && index < 5) {
-      totpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleTotpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !totpCodeInput[index] && index > 0) {
-      totpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleTotpPaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasteData) {
-      const digits = pasteData.split("");
-      const newCode = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        newCode[i] = d;
-      });
-      setTotpCodeInput(newCode);
-      const nextIdx = Math.min(digits.length, 5);
-      totpInputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  const handleVerify2FASubmit = async (e) => {
-    e.preventDefault();
-    const code = totpCodeInput.join("");
-    if (code.length < 6) {
-      setTotpError("Please enter complete 6-digit Authenticator code.");
-      return;
-    }
-    setVerifying2FA(true);
-    setTotpError("");
-    setTotpSuccess("");
-
-    try {
-      const res = await apiFetch("/auth/verify-2fa", {
-        method: "POST",
-        body: JSON.stringify({
-          secret: totpData?.secret,
-          code: code,
-        }),
-      });
-
-      if (res && (res.success || res.data)) {
-        setTotpSuccess("Google Authenticator 2FA paired and activated successfully!");
-        setIs2FAEnabled(true);
-        setTimeout(() => {
-          setIs2FASetupOpen(false);
-        }, 1500);
-      } else {
-        setTotpError(res?.message || "Invalid Authenticator Code. Please check Google Authenticator.");
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to verify 2FA code. Please try again.");
-    } finally {
-      setVerifying2FA(false);
-    }
-  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setAvatarUrl(url);
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image size should be less than 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  // Save the 6 fields directly to MySQL Database
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    setSaving(true);
+    setSaveError("");
     try {
-      await apiFetch("/admin/profile", {
+      const payload = {
+        name: form.name,
+        email: form.email,
+        mobile_number: form.mobile_number,
+        phone: form.mobile_number,
+        department: form.department,
+        current_year: form.current_year,
+        currentYear: form.current_year,
+        area_of_expertise: form.area_of_expertise,
+        areaOfExpertise: form.area_of_expertise,
+        specialization: form.area_of_expertise,
+        avatar_url: avatarUrl,
+        avatarUrl: avatarUrl,
+      };
+
+      // 1. Save directly to Mentor Profile API (MySQL Database)
+      await apiFetch("/mentor/profile", {
         method: "PUT",
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          department: form.department,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      // 2. Also sync current user in storage for instantaneous UI reactivity
+      try {
+        const stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+        const updatedUser = {
+          ...stored,
+          name: form.name,
+          email: form.email,
+          mobile_number: form.mobile_number,
+          department: form.department,
+          current_year: form.current_year,
+          area_of_expertise: form.area_of_expertise,
+          avatar_url: avatarUrl,
+        };
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      } catch (_) {}
+
+      // 3. Emit global event so Top Navbar and headers update instantly
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setSaved(true);
       setIsEditing(false);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => setSaved(false), 3500);
     } catch (err) {
       console.error("Failed to save mentor profile:", err);
+      setSaveError(err.message || "Failed to commit changes to database. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -232,21 +299,42 @@ function MN_ProfilePage() {
       <div className="ui-section-header-MN">
         <div className="ui-section-main">
           <div>
-            <h2 className="ui-section-title">
-              <User size={22} className="ui-section-title-icon" />
-              <span>Mentor Profile & Settings</span>
-            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
+              <h2 className="ui-section-title" style={{ margin: 0 }}>
+                <User size={22} className="ui-section-title-icon" />
+                <span>Mentor Profile & Settings</span>
+              </h2>
+            </div>
             <p className="ui-section-desc">
-              Manage your mentor dossier, office availability, and notification settings.
+              Manage your mentor dossier, department affiliation, current cohort year, and area of expertise.
             </p>
           </div>
         </div>
       </div>
 
+      {googleToast && (
+        <div className="profile-alert-success" style={{ marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={18} />
+            <span>{googleToast}</span>
+          </div>
+          <button onClick={() => setGoogleToast('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
       {saved && (
-        <div className="profile-alert-success">
+        <div className="profile-alert-success" style={{ marginBottom: '18px' }}>
           <CheckCircle2 size={18} />
-          <span>Profile updated and saved successfully!</span>
+          <span>Mentor profile updated and saved to MySQL database successfully!</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="profile-alert-error">
+          <AlertCircle size={18} />
+          <span>{saveError}</span>
         </div>
       )}
 
@@ -260,24 +348,6 @@ function MN_ProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              {isEditing && (
-                <button
-                  type="button"
-                  className="profile-camera-btn"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Change Avatar Image"
-                >
-                  <Camera size={14} />
-                </button>
-              )}
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                disabled={!isEditing}
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
@@ -286,25 +356,64 @@ function MN_ProfilePage() {
               <strong>{form.role}</strong>
             </div>
 
-            <div className="profile-badges-wrap" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div className="profile-badges-wrap" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Badge variant="success">Active Mentor</Badge>
-              <Badge variant="default">{form.department || "Engineering"}</Badge>
+              {form.department && <Badge variant="default">{form.department}</Badge>}
+            </div>
+
+            {/* Quick Metrics Cards */}
+            <div className="profile-stats-mini-row">
+              <div className="profile-stat-mini-card">
+                <span className="profile-stat-mini-num">{form.allocatedBatches || 0}</span>
+                <span className="profile-stat-mini-label">Batches</span>
+              </div>
+              <div className="profile-stat-mini-card">
+                <span className="profile-stat-mini-num">{form.totalStudents || 0}</span>
+                <span className="profile-stat-mini-label">Students</span>
+              </div>
+              <div className="profile-stat-mini-card">
+                <span className="profile-stat-mini-num" style={{ color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <Star size={13} fill="#f59e0b" color="#f59e0b" /> {form.rating || 4.9}
+                </span>
+                <span className="profile-stat-mini-label">Rating</span>
+              </div>
             </div>
           </div>
 
           <div className="profile-academic-divider" />
 
+          {/* Academic & Mentor Dossier List: Exactly the 6 Fields */}
           <div className="profile-academic-details">
             <h4 className="profile-section-subtitle">Mentor Dossier</h4>
 
+            {/* 1. Full Name */}
             <div className="profile-detail-row">
-              <Building size={16} className="profile-detail-icon" />
+              <User size={16} className="profile-detail-icon" />
               <div>
-                <span className="profile-detail-label">Institution</span>
-                <p className="profile-detail-value">{form.college}</p>
+                <span className="profile-detail-label">Full Name</span>
+                <p className="profile-detail-value">{form.name}</p>
               </div>
             </div>
 
+            {/* 2. Email */}
+            <div className="profile-detail-row">
+              <Mail size={16} className="profile-detail-icon text-blue-500" />
+              <div>
+                <span className="profile-detail-label">Email Address</span>
+                <p className="profile-detail-value">{form.email}</p>
+              </div>
+            </div>
+
+            {/* 3. Mobile Number */}
+            <div className="profile-detail-row">
+              <Phone size={16} className="profile-detail-icon text-emerald-500" />
+              <div>
+                <span className="profile-detail-label">Mobile Number</span>
+                <p className="profile-detail-value">{form.mobile_number || "Not specified"}</p>
+              </div>
+            </div>
+
+            {/* 4. Department */}
             <div className="profile-detail-row">
               <GraduationCap size={16} className="profile-detail-icon" />
               <div>
@@ -313,41 +422,51 @@ function MN_ProfilePage() {
               </div>
             </div>
 
+            {/* 5. Current Year */}
             <div className="profile-detail-row">
-              <Users size={16} className="profile-detail-icon profile-icon-emerald" />
+              <Calendar size={16} className="profile-detail-icon text-purple-500" />
               <div>
-                <span className="profile-detail-label">Assigned Scope</span>
-                <p className="profile-detail-value">{form.allocatedBatches} · {form.totalStudents}</p>
+                <span className="profile-detail-label">Current Year</span>
+                <p className="profile-detail-value">{form.current_year || "Final Year (2026)"}</p>
               </div>
             </div>
 
+            {/* 6. Area of Expertise */}
             <div className="profile-detail-row">
-              <MapPin size={16} className="profile-detail-icon text-purple-500" />
+              <Award size={16} className="profile-detail-icon profile-icon-indigo" />
               <div>
-                <span className="profile-detail-label">Office Location</span>
-                <p className="profile-detail-value">{form.officeLocation}</p>
+                <span className="profile-detail-label">Area of Expertise</span>
+                <p className="profile-detail-value">{form.area_of_expertise || "Full Stack Development"}</p>
               </div>
             </div>
 
+            {/* 7. Google Meet Status */}
             <div className="profile-detail-row">
-              <Clock size={16} className="profile-detail-icon text-blue-500" />
+              <Video size={16} className={`profile-detail-icon ${googleStatus.connected ? 'text-green-500' : 'profile-icon-slate'}`} />
               <div>
-                <span className="profile-detail-label">Office Hours</span>
-                <p className="profile-detail-value">{form.officeHours}</p>
+                <span className="profile-detail-label">Google Meet</span>
+                <p className="profile-detail-value" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {googleStatus.connected ? (
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>Connected</span>
+                  ) : (
+                    <span style={{ color: '#64748b' }}>Not Connected</span>
+                  )}
+                </p>
               </div>
             </div>
 
-            {/* Change Password & 2FA Buttons */}
+            {/* Change Password Button */}
             <div className="profile-change-pw-wrap">
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}
                 className="profile-change-pw-btn"
               >
+                <Key size={13} />
                 <span>Change Password</span>
               </button>
 
-
+              
             </div>
           </div>
         </div>
@@ -355,13 +474,20 @@ function MN_ProfilePage() {
         {/* RIGHT COLUMN: Edit Profile Form */}
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
+            {isEditing && (
+              <div className="profile-edit-banner-info">
+                <Database size={16} />
+                <span>Edit Mode Active: Modifying mentor profile. Click <strong>Save Profile</strong> to permanently commit updates to MySQL database.</span>
+              </div>
+            )}
+
             <div className="profile-form-section">
               <div className="profile-section-heading profile-section-heading-flex">
                 <div className="profile-heading-group">
                   <User size={18} className="profile-heading-icon profile-icon-indigo" />
                   <div>
-                    <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
-                    <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
+                    <h3 className="profile-heading-title">{isEditing ? "Edit Mentor Profile Details" : "Mentor Profile Details"}</h3>
+                    <p className="profile-heading-desc">Saved directly to your mentor profile in the database.</p>
                   </div>
                 </div>
 
@@ -369,7 +495,10 @@ function MN_ProfilePage() {
                   {!isEditing ? (
                     <button
                       type="button"
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => {
+                        setIsEditing(true);
+                        setSaveError("");
+                      }}
                       className="profile-edit-trigger-btn"
                     >
                       <Edit2 size={15} /> Edit Profile
@@ -378,103 +507,104 @@ function MN_ProfilePage() {
                     <>
                       <button
                         type="button"
-                        onClick={() => setIsEditing(false)}
+                        onClick={() => {
+                          setIsEditing(false);
+                          setSaveError("");
+                        }}
                         className="profile-cancel-btn"
+                        disabled={saving}
                       >
                         <X size={15} /> Cancel
                       </button>
                       <button
                         type="submit"
                         className="profile-save-btn"
+                        disabled={saving}
                       >
-                        <Save size={15} /> Save Profile
+                        {saving ? (
+                          <>
+                            <Loader2 size={15} className="animate-spin" /> Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={15} /> Save Profile
+                          </>
+                        )}
                       </button>
                     </>
                   )}
                 </div>
               </div>
 
-              <div className="profile-form-grid">
-                <div className="profile-field">
+              {/* Exact 6 Fields Form Grid */}
+              <div className="profile-form-grid mobile-pair-2">
+                {/* 1. Full Name */}
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Full Name *</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                    required
-                  />
+                  <div className="profile-input-wrapper">
+                    <User size={16} className="profile-field-icon" />
+                    <input
+                      type="text"
+                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
+                      value={form.name}
+                      onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
+                      placeholder="e.g. Dr. Rajesh Sharma"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Email Address *</label>
-                  <input
-                    type="email"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.email}
-                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                    required
-                  />
+                {/* 2. Email Address */}
+                <div className="profile-field mobile-field-full">
+                  <label className="profile-label">Email *</label>
+                  <div className="profile-input-wrapper">
+                    <Mail size={16} className="profile-field-icon" />
+                    <input
+                      type="email"
+                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
+                      value={form.email}
+                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
+                      placeholder="mentor@college.edu.in"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Phone Number *</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.phone}
-                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="profile-form-section mt-6">
-              <div className="profile-section-heading">
-                <Sparkles size={18} className="profile-heading-icon profile-icon-indigo" />
-                <div>
-                  <h3 className="profile-heading-title">Specialization & Academic Governance</h3>
-                  <p className="profile-heading-desc">Configure your primary domain expertise, department, employee ID, and office cabin location.</p>
-                </div>
-              </div>
-
-              <div className="profile-form-grid">
-                <div className="profile-field">
-                  <label className="profile-label">Official Title / Role *</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.role}
-                    onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                    required
-                  />
+                {/* 3. Mobile Number */}
+                <div className="profile-field mobile-field-full">
+                  <label className="profile-label">Mobile Number *</label>
+                  <div className="profile-input-wrapper">
+                    <Phone size={16} className="profile-field-icon" />
+                    <input
+                      type="tel"
+                      className={`profile-input profile-input-with-icon ${!isEditing ? 'profile-input-readonly' : ''}`}
+                      value={form.mobile_number}
+                      onChange={(e) => setForm((p) => ({ ...p, mobile_number: e.target.value }))}
+                      readOnly={!isEditing}
+                      disabled={!isEditing}
+                      placeholder="e.g. 7418529635"
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Primary Specialization *</label>
-                  <CustomSelect
-                    value={form.specialization}
-                    options={specOptions}
-                    disabled={!isEditing}
-                    onChange={(val) => setForm((p) => ({ ...p, specialization: val }))}
-                    placeholder="Select Specialization"
-                    icon={Award}
-                  />
-                </div>
-
-                <div className="profile-field">
+                {/* 4. Department */}
+                <div className="profile-field mobile-field-full">
                   <label className="profile-label">Department *</label>
                   <CustomSelect
                     value={form.department}
-                    options={deptOptions}
+                    options={deptOptions.length > 0 ? deptOptions : [
+                      { value: "Computer Engineering", label: "Computer Engineering" },
+                      { value: "Information Technology", label: "Information Technology" },
+                      { value: "Electronics & Telecommunication", label: "Electronics & Telecommunication" },
+                      { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
+                      { value: "Mechanical Engineering", label: "Mechanical Engineering" },
+                      { value: "Civil Engineering", label: "Civil Engineering" },
+                    ]}
                     disabled={!isEditing}
                     onChange={(val) => setForm((p) => ({ ...p, department: val }))}
                     placeholder="Select Department"
@@ -482,48 +612,127 @@ function MN_ProfilePage() {
                   />
                 </div>
 
+                {/* 5. Current Year */}
                 <div className="profile-field">
-                  <label className="profile-label">Employee / Staff ID *</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.empId}
-                    onChange={(e) => setForm((p) => ({ ...p, empId: e.target.value }))}
-                    readOnly={!isEditing}
+                  <label className="profile-label">Current Year *</label>
+                  <CustomSelect
+                    value={form.current_year}
+                    options={yearOptions}
                     disabled={!isEditing}
-                    required
+                    onChange={(val) => setForm((p) => ({ ...p, current_year: val }))}
+                    placeholder="Select Current Year"
+                    icon={Calendar}
                   />
                 </div>
 
+                {/* 6. Area of Expertise */}
                 <div className="profile-field">
-                  <label className="profile-label">Office Location / Cabin</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.officeLocation}
-                    onChange={(e) => setForm((p) => ({ ...p, officeLocation: e.target.value }))}
-                    readOnly={!isEditing}
+                  <label className="profile-label">Area of Expertise *</label>
+                  <CustomSelect
+                    value={form.area_of_expertise}
+                    options={expertiseOptions}
                     disabled={!isEditing}
-                    placeholder="e.g. Faculty Block C, Room 302"
+                    onChange={(val) => setForm((p) => ({ ...p, area_of_expertise: val }))}
+                    placeholder="Select Area of Expertise"
+                    icon={Award}
                   />
                 </div>
+              </div>
 
-                <div className="profile-field">
-                  <label className="profile-label">Teaching Experience</label>
-                  <input
-                    type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    value={form.experience}
-                    onChange={(e) => setForm((p) => ({ ...p, experience: e.target.value }))}
-                    readOnly={!isEditing}
-                    disabled={!isEditing}
-                    placeholder="e.g. 6+ Years Teaching & Industry"
-                  />
+              {isEditing && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setSaveError("");
+                    }}
+                    className="profile-cancel-btn"
+                    disabled={saving}
+                  >
+                    <X size={15} /> Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="profile-save-btn"
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" /> Saving to Database...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={15} /> Save All Changes
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Integrations Section */}
+          <div className="profile-google-section">
+            <div className="profile-section-heading">
+              <div className="profile-heading-group">
+                <Video size={18} className="profile-heading-icon profile-icon-indigo" />
+                <div>
+                  <h3 className="profile-heading-title">Live Classes & Meeting Integration</h3>
+                  <p className="profile-heading-desc">
+                    Connect your Google account to automatically schedule and launch real Google Meet rooms for your students.
+                  </p>
                 </div>
               </div>
             </div>
 
-          </form>
+            <div className={`profile-google-card ${googleStatus.connected ? 'profile-google-card--connected' : ''}`}>
+              <div className="profile-google-card-left">
+                <div className="profile-google-icon-box">
+                  <Video size={20} color={googleStatus.connected ? "#16a34a" : "#4f46e5"} />
+                </div>
+                <div>
+                  <div className="profile-google-title">
+                    {googleStatus.connected ? (
+                      <>
+                        <CheckCircle2 size={16} color="#16a34a" />
+                        <span>Google Meet Connected · <strong>{googleStatus.email}</strong></span>
+                      </>
+                    ) : (
+                      <span>Google Meet & Calendar</span>
+                    )}
+                  </div>
+                  <div className="profile-google-desc">
+                    {googleStatus.connected
+                      ? "Your Google account is active. When you schedule classes, live Google Meet rooms are created directly on your calendar."
+                      : "Authorize once to automatically generate real Google Meet rooms for all your live classes and doubt sessions."}
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-google-actions">
+                {googleStatus.connected ? (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectGoogle}
+                    disabled={googleLoading}
+                    className="profile-google-btn-disconnect"
+                  >
+                    {googleLoading ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogle}
+                    className="profile-google-btn-connect"
+                  >
+                    <Video size={15} />
+                    <span>Connect Google Meet</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -531,141 +740,7 @@ function MN_ProfilePage() {
         isOpen={showChangePassModal}
         onClose={() => setShowChangePassModal(false)}
       />
-
-      {/* Google Authenticator 2FA Modal */}
-      {is2FASetupOpen && createPortal(
-        <div className="modal-overlay profile-2fa-modal-overlay">
-          <div className="modal-dialog profile-2fa-modal-dialog">
-            <div className="profile-2fa-modal-header">
-              <div className="profile-2fa-modal-title-wrap">
-                <div className="profile-2fa-modal-icon">
-                  <QrCode size={20} />
-                </div>
-                <div>
-                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
-                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIs2FASetupOpen(false)}
-                className="profile-2fa-modal-close-btn"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {loading2FASetup ? (
-              <div className="profile-2fa-modal-loading">
-                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
-                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleVerify2FASubmit}>
-                {totpError && (
-                  <div className="profile-2fa-alert-error">
-                    {totpError}
-                  </div>
-                )}
-
-                {totpSuccess && (
-                  <div className="profile-2fa-alert-success">
-                    <CheckCircle2 size={16} />
-                    <span>{totpSuccess}</span>
-                  </div>
-                )}
-
-                {/* QR Code Container */}
-                <div className="profile-2fa-qr-box">
-                  {totpData?.qrCode ? (
-                    <img
-                      src={totpData.qrCode}
-                      alt="Google Authenticator QR Code"
-                      className="profile-2fa-qr-img"
-                    />
-                  ) : (
-                    <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="profile-2fa-qr-icon" />
-                    </div>
-                  )}
-                  <p className="profile-2fa-qr-text">
-                    Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
-                  </p>
-                </div>
-
-                {/* Secret Key Copy Bar */}
-                {totpData?.secret && (
-                  <div className="profile-2fa-secret-box">
-                    <label className="profile-2fa-secret-label">
-                      Or enter Secret Key manually:
-                    </label>
-                    <div className="profile-2fa-secret-row">
-                      <code className="profile-2fa-secret-code">
-                        {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={handleCopySecret}
-                        className="profile-2fa-copy-btn"
-                      >
-                        {copiedSecret ? <Check size={12} className="profile-copy-check-icon" /> : <Copy size={12} />}
-                        {copiedSecret ? "Copied" : "Copy"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6-Digit Code Input */}
-                <div className="profile-2fa-code-input-section">
-                  <label className="profile-2fa-code-label">
-                    Enter 6-Digit Authenticator Verification Code:
-                  </label>
-                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
-                    {totpCodeInput.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (totpInputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleTotpKeyDown(idx, e)}
-                        className="profile-2fa-digit-input"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="profile-2fa-modal-actions">
-                  <button
-                    type="button"
-                    onClick={() => setIs2FASetupOpen(false)}
-                    className="profile-2fa-modal-cancel-btn"
-                    disabled={verifying2FA}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="profile-2fa-modal-submit-btn"
-                    disabled={verifying2FA}
-                  >
-                    {verifying2FA ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Verifying...
-                      </>
-                    ) : (
-                      "Verify & Enable 2FA"
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+      
     </div>
   );
 }

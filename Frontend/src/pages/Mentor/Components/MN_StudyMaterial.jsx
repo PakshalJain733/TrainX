@@ -23,6 +23,7 @@ export default function StudyMaterial() {
   const [batch, setBatch] = useState("All Batches");
   const [selectedFile, setSelectedFile] = useState(null);
   const [resourceLink, setResourceLink] = useState("");
+  const [deadline, setDeadline] = useState("");
 
   const fetchBatches = async () => {
     try {
@@ -98,6 +99,7 @@ export default function StudyMaterial() {
         formData.append("batch", batch);
         formData.append("type", category);
         formData.append("link", resourceLink || "");
+        formData.append("deadline", deadline || "");
         formData.append("file", selectedFile);
 
         const res = await fetch(`${getApiBaseUrl()}/mentor/materials`, {
@@ -119,6 +121,7 @@ export default function StudyMaterial() {
             batch,
             type: category,
             link: resourceLink,
+            deadline: deadline || "",
           }),
         });
       }
@@ -128,6 +131,7 @@ export default function StudyMaterial() {
         description,
         batch,
         type: category,
+        deadline,
         url: uploadedUrl,
       });
 
@@ -267,15 +271,15 @@ export default function StudyMaterial() {
           <div className="mentor-modal-container">
             {/* Modal Header */}
             <div className="mentor-modal-top">
-              <div className="mentor-modal-title-wrap">
-                <div className="mentor-modal-icon-wrap">
+              <div className="mentor-modal-title-wrap" style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                <div className="mentor-modal-icon-wrap" style={{ flexShrink: 0 }}>
                   <BookOpen size={20} color="#4f46e5" />
                 </div>
                 <div>
-                  <h3 className="mentor-modal-heading">
+                  <h3 className="mentor-modal-heading" style={{ margin: '0 0 3px 0', fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
                     Upload Learning Content
                   </h3>
-                  <p className="mentor-modal-subtext">
+                  <p className="mentor-modal-subtext" style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.4 }}>
                     Publish videos, documents, web links, or study notes for student batches.
                   </p>
                 </div>
@@ -413,6 +417,19 @@ export default function StudyMaterial() {
                         className="mentor-input-text"
                       />
                     </div>
+                  </div>
+
+                  {/* Task Deadline / Due Date (Optional) */}
+                  <div>
+                    <label className="mentor-form-label">
+                      Task Deadline / Due Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className="mentor-input-text"
+                    />
                   </div>
 
                   {/* Modal Footer Actions */}

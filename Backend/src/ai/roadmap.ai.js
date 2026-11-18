@@ -698,75 +698,513 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
 /**
  * Generates an in-depth, hands-on practice coding challenge for a milestone topic using AI
  */
-export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '', topic = '') => {
+/**
+ * Validates and sanitizes generated practice problems and test cases for strict logical consistency.
+ * Prevents mixing of problem types (e.g. palindrome true/false outputs on string-reversal problems).
+ */
+export function validateAndSanitizePracticeProblem(problem, context = {}) {
+  if (!problem || typeof problem !== 'object') return problem;
+
+  const combinedText = `${problem.title || ''} ${problem.prompt || ''} ${problem.description || ''} ${context.topic || ''} ${context.title || ''}`.toLowerCase();
+  
+  const isPalindromeProblem = combinedText.includes('palindrome');
+  const isStringReversalProblem = (combinedText.includes('reverse') || combinedText.includes('reversal')) && !isPalindromeProblem;
+  const isCaseConversionProblem = (combinedText.includes('uppercase') || combinedText.includes('lowercase') || combinedText.includes('capitalize')) && !isPalindromeProblem;
+
+  // 1. STRING REVERSAL SANITIZATION
+  if (isStringReversalProblem) {
+    let currentInput = String(problem.sampleInput || 'hello').trim();
+    const cleanedInputMatch = currentInput.match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+    const cleanWord = (cleanedInputMatch && cleanedInputMatch[1]) ? cleanedInputMatch[1].trim() : 'hello';
+    const reversedWord = cleanWord.split('').reverse().join('');
+
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+    // If output is boolean (true/false) or does not contain the reversed string, replace with actual reversed string
+    if (outputStr === 'true' || outputStr === 'false' || outputStr === 'boolean' || (!outputStr.includes(reversedWord.toLowerCase()) && (outputStr.includes('true') || outputStr.includes('false')))) {
+      problem.sampleInput = cleanWord;
+      problem.sampleOutput = reversedWord;
+    }
+
+    // Fix starterCode if it has boolean comparison e.g. console.log(reverseString("hello") === "olleh")
+    if (problem.starterCode) {
+      problem.starterCode = problem.starterCode
+        .replace(/console\.log\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*===?\s*[^)]+\)/g, 'console.log($1($2))')
+        .replace(/print\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*==\s*[^)]+\)/g, 'print($1($2))');
+    }
+
+    // Sanitize test cases: ensure each expectedOutput is the actual reversed string of its input
+    const fallbackWords = ['hello', 'world', 'TrainX', '12345'];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
+      problem.testCases = problem.testCases.map((tc, idx) => {
+        let tcInput = String(tc.input || '').trim();
+        const tcMatch = tcInput.match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+        const tcWord = (tcMatch && tcMatch[1]) ? tcMatch[1].trim() : (tcInput || fallbackWords[idx % fallbackWords.length]);
+        const tcReversed = tcWord.split('').reverse().join('');
+        return {
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
+          output: tcReversed,
+          expected_output: tcReversed,
+          expectedOutput: tcReversed,
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
+          description: `Reverses "${tcWord}" to "${tcReversed}"`
+        };
+      });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const w = fallbackWords[idx % fallbackWords.length];
+        const rev = w.split('').reverse().join('');
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${w}"`,
+          output: rev,
+          expected_output: rev,
+          expectedOutput: rev,
+          is_hidden: true,
+          isHidden: true,
+          description: `Reverses "${w}" to "${rev}"`
+        });
+      }
+    } else {
+      problem.testCases = fallbackWords.map((w, idx) => ({
+        id: idx + 1,
+        input: `"${w}"`,
+        output: w.split('').reverse().join(''),
+        expected_output: w.split('').reverse().join(''),
+        expectedOutput: w.split('').reverse().join(''),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+      }));
+    }
+  }
+
+  // 2. PALINDROME PROBLEM SANITIZATION
+  if (isPalindromeProblem) {
+    let currentInput = String(problem.sampleInput || 'racecar').trim();
+    const cleanWord = currentInput.replace(/["']/g, '').trim() || 'racecar';
+    const cleanAlphanum = cleanWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isPal = cleanAlphanum === cleanAlphanum.split('').reverse().join('');
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+
+    // Palindrome check MUST return boolean true or false
+    if (!outputStr.includes('true') && !outputStr.includes('false')) {
+      problem.sampleInput = cleanWord;
+      problem.sampleOutput = String(isPal);
+    }
+
+    // Sanitize test cases to be strictly boolean
+    const palWords = [
+      { word: 'racecar', isPal: true },
+      { word: 'hello', isPal: false },
+      { word: 'A man, a plan, a canal: Panama', isPal: true },
+      { word: 'TrainX', isPal: false },
+    ];
+    if (Array.isArray(problem.testCases) && problem.testCases.length > 0) {
+      problem.testCases = problem.testCases.map((tc, idx) => {
+        const fallback = palWords[idx % palWords.length];
+        const tcWord = String(tc.input || fallback.word).replace(/["']/g, '').trim();
+        const tcClean = tcWord.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const tcIsPal = tcClean === tcClean.split('').reverse().join('');
+        return {
+          id: tc.id || idx + 1,
+          input: `"${tcWord}"`,
+          output: String(tcIsPal),
+          expected_output: String(tcIsPal),
+          expectedOutput: String(tcIsPal),
+          is_hidden: idx >= 2,
+          isHidden: idx >= 2,
+          description: `Checks whether "${tcWord}" is a palindrome (${tcIsPal})`
+        };
+      });
+      while (problem.testCases.length < 4) {
+        const idx = problem.testCases.length;
+        const item = palWords[idx % palWords.length];
+        problem.testCases.push({
+          id: idx + 1,
+          input: `"${item.word}"`,
+          output: String(item.isPal),
+          expected_output: String(item.isPal),
+          expectedOutput: String(item.isPal),
+          is_hidden: true,
+          isHidden: true,
+          description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+        });
+      }
+    } else {
+      problem.testCases = palWords.map((item, idx) => ({
+        id: idx + 1,
+        input: `"${item.word}"`,
+        output: String(item.isPal),
+        expected_output: String(item.isPal),
+        expectedOutput: String(item.isPal),
+        is_hidden: idx >= 2,
+        isHidden: idx >= 2,
+        description: `Checks whether "${item.word}" is a palindrome (${item.isPal})`
+      }));
+    }
+  }
+
+  // 3. CASE CONVERSION SANITIZATION
+  if (isCaseConversionProblem) {
+    let currentInput = String(problem.sampleInput || 'hello world').trim();
+    const cleanWord = currentInput.replace(/["']/g, '').trim();
+    const outputStr = String(problem.sampleOutput || '').trim().toLowerCase();
+    if (outputStr === 'true' || outputStr === 'false') {
+      if (combinedText.includes('uppercase')) {
+        problem.sampleOutput = cleanWord.toUpperCase();
+      } else if (combinedText.includes('lowercase')) {
+        problem.sampleOutput = cleanWord.toLowerCase();
+      }
+    }
+  }
+
+  // 4. UNIFIED LEETCODE COMPILER METADATA (Function Signatures & Test Cases)
+  if (!problem.function_name) {
+    if (isStringReversalProblem) problem.function_name = 'reverseString';
+    else if (isPalindromeProblem) problem.function_name = 'isPalindrome';
+    else if (isCaseConversionProblem) problem.function_name = 'convertCase';
+    else {
+      const fnMatch = String(problem.starterCode || '').match(/(?:function|def)\s+([a-zA-Z0-9_]+)/);
+      problem.function_name = fnMatch ? fnMatch[1] : 'solve';
+    }
+  }
+
+  const fnName = problem.function_name;
+
+  if (!problem.starter_templates) {
+    problem.starter_templates = {
+      node: `// Implement the function\nfunction ${fnName}(input) {\n  // Write your code here\n  \n}\n`,
+      python: `# Implement the function\ndef ${fnName}(input):\n    # Write your code here\n    pass\n`,
+      java: `class Solution {\n    public String ${fnName}(String input) {\n        // Write your code here\n        return "";\n    }\n}\n`,
+      cpp: `class Solution {\npublic:\n    string ${fnName}(string input) {\n        // Write your code here\n        return "";\n    }\n};\n`
+    };
+  }
+
+  // Ensure testCases has at least 4 test cases (2 visible + 2 hidden)
+  if (!Array.isArray(problem.testCases) || problem.testCases.length < 4) {
+    const sIn = problem.sampleInput || 'sample';
+    const sOut = problem.sampleOutput || 'sample';
+    const existing = Array.isArray(problem.testCases) ? problem.testCases : [];
+    const baseCases = [
+      ...existing,
+      { input: `"${sIn}"`, output: sOut, expected_output: sOut, is_hidden: false },
+      { input: `"${sIn} 2"`, output: `${sOut} 2`, expected_output: `${sOut} 2`, is_hidden: false },
+      { input: `"${sIn} hidden 1"`, output: `${sOut} hidden 1`, expected_output: `${sOut} hidden 1`, is_hidden: true },
+      { input: `"${sIn} hidden 2"`, output: `${sOut} hidden 2`, expected_output: `${sOut} hidden 2`, is_hidden: true },
+    ].slice(0, 4);
+
+    problem.testCases = baseCases.map((tc, idx) => ({
+      id: tc.id || idx + 1,
+      input: tc.input,
+      output: tc.output || tc.expected_output,
+      expected_output: tc.expected_output || tc.output,
+      expectedOutput: tc.expected_output || tc.output,
+      is_hidden: idx >= 2,
+      isHidden: idx >= 2,
+    }));
+  }
+
+  // 5. Standardize difficulty tier strictly into: 'Very Easy' | 'Easy' | 'Medium' | 'Hard' | 'Very Hard'
+  const mIdx = Math.max(1, parseInt(problem.milestoneIndex || context.milestoneIndex || context.mIdx, 10) || 1);
+  const rawDiff = String(problem.difficulty || '').trim().toLowerCase();
+  if (rawDiff.includes('very easy') || rawDiff === 'beginner') {
+    problem.difficulty = 'Very Easy';
+  } else if (rawDiff.includes('very hard') || rawDiff === 'expert') {
+    problem.difficulty = 'Very Hard';
+  } else if (rawDiff === 'easy' || rawDiff === 'elementary') {
+    problem.difficulty = 'Easy';
+  } else if (rawDiff === 'medium' || rawDiff === 'intermediate') {
+    problem.difficulty = 'Medium';
+  } else if (rawDiff === 'hard' || rawDiff === 'advanced') {
+    problem.difficulty = 'Hard';
+  } else {
+    problem.difficulty = resolveMilestoneDifficultyTier(mIdx);
+  }
+  problem.milestoneIndex = mIdx;
+
+  // 6. Pedagogical HTML & UI Challenge Sanitization
+  const isHtmlTopic = problem.language === 'html' || 
+    String(problem.starterCode || '').includes('<!DOCTYPE html>') ||
+    String(problem.title || '').toLowerCase().includes('html') ||
+    String(context.topic || '').toLowerCase().includes('html');
+
+  if (isHtmlTopic) {
+    problem.language = 'html';
+    const sInput = String(problem.sampleInput || '').trim();
+    if (sInput.startsWith('[') || sInput.startsWith('{')) {
+      problem.sampleInput = "Direct HTML5 Markup (No stdin required)";
+    }
+    if (problem.prompt && (problem.prompt.toLowerCase().includes('function') || problem.prompt.toLowerCase().includes('return')) && problem.prompt.includes('HTML')) {
+      problem.prompt = `Write clean, semantic HTML5 markup for the requested structure. Use standard semantic elements (<section>, <article>, <h2>, <p>) to build the UI, and check your live output in the Live Web Preview tab.`;
+    }
+  }
+
+  return problem;
+}
+
+export const ROADMAP_PRACTICE_TIERS = {
+  1: 'Very Easy',
+  2: 'Easy',
+  3: 'Medium',
+  4: 'Hard',
+  5: 'Very Hard',
+};
+
+export const ROADMAP_TIER_DESCRIPTIONS = {
+  1: 'Very Easy (Absolute Beginner: zero prior knowledge assumed. Basic variables, simple print/return, direct arithmetic, trivial starter exercises)',
+  2: 'Easy (Elementary: basic conditionals, simple helper functions, single loops, elementary array or string operations)',
+  3: 'Medium (Intermediate: combining loops + conditionals, data structures, objects/dictionaries, standard filtering or aggregations)',
+  4: 'Hard (Advanced: multi-step logic, algorithmic reasoning, edge cases, nested structures, data processing)',
+  5: 'Very Hard (Expert: complex algorithms, optimal time/space complexity, high-performance edge cases, production architecture)',
+};
+
+export function resolveMilestoneDifficultyTier(mIdx) {
+  const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+  return ROADMAP_PRACTICE_TIERS[idx] || (idx > 5 ? 'Very Hard' : 'Medium');
+}
+
+export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '', topic = '', options = {}) => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
   const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
   const cleanTopic = String(topic || cleanTitle).trim();
+  const { milestoneIndex = 1, difficulty: customDifficulty, topics = [], description = '' } = options || {};
+  const mIdx = Math.max(1, parseInt(milestoneIndex, 10) || 1);
+
+  const tierName = resolveMilestoneDifficultyTier(mIdx);
+  const difficultyDesc = ROADMAP_TIER_DESCRIPTIONS[mIdx] || ROADMAP_TIER_DESCRIPTIONS[5];
+  const difficulty = customDifficulty && (customDifficulty.includes('Easy') || customDifficulty.includes('Medium') || customDifficulty.includes('Hard'))
+    ? customDifficulty
+    : tierName;
+
+  const topicsList = Array.isArray(topics) && topics.length > 0
+    ? topics.map(t => typeof t === 'string' ? t : (t.title || JSON.stringify(t))).join('; ')
+    : cleanTopic;
 
   const prompt = `You are a Principal Coding Instructor and Technical Curriculum Architect.
-Create a highly specific, authentic, hands-on coding challenge strictly focused on the topic: "${cleanTopic}" (from module: "${cleanTitle}") tailored for a student aspiring to become a "${cleanRole}".
+Create a highly specific, authentic, hands-on coding challenge strictly focused on Milestone ${mIdx}: "${cleanTopic}" (from module: "${cleanTitle}") tailored for a student aspiring to become a "${cleanRole}".
 
-CRITICAL REQUIREMENTS:
-1. STRICT TOPIC RELEVANCE:
-   - The challenge MUST directly test practical implementation of "${cleanTopic}".
+CRITICAL PEDAGOGICAL DIFFICULTY & PROGRESSION RULES:
+1. STRICT PROGRESSION FROM ZERO KNOWLEDGE (PEDAGOGICAL CALIBRATION):
+   - The student begins with ZERO initial knowledge of "${cleanTopic}".
+   - Practice challenges MUST strictly follow an authentic 5-tier graduated progression:
+     * Milestone 1 MUST BE "Very Easy": Complete beginner friendly. Trivial assignment, basic arithmetic, single-line string/number return, or elementary print output. Assume ZERO prior exposure. NEVER expect complex loops, multi-step logic, or advanced abstractions.
+     * Milestone 2 MUST BE "Easy": Straightforward helper function, single conditional (if/else), basic loop, or simple collection lookup.
+     * Milestone 3 MUST BE "Medium": Combining loops, conditionals, objects, or arrays with standard transformations or filtering.
+     * Milestone 4 MUST BE "Hard": Multi-step algorithmic problem solving, handling boundary cases, and structured nested data.
+     * Milestone 5+ MUST BE "Very Hard": Complex algorithmic challenge, edge case robustness, and optimal time/space complexity.
+   - Target Milestone Level: Milestone ${mIdx}
+   - Target Difficulty Tier: "${tierName}" (${difficultyDesc})
+   - In your JSON response, set the "difficulty" field EXACTLY to "${tierName}".
+
+2. STRICT MILESTONE CONFINEMENT:
+   ${description ? `- Milestone Scope / Objectives: "${description}"` : ''}
+   ${topicsList ? `- Milestone Topic Outline: ${topicsList}` : ''}
+   - The challenge MUST strictly and exclusively focus on concepts covered within Milestone ${mIdx} ("${cleanTitle}").
+   - DO NOT introduce, test, or mix topics from later milestones or advanced tiers.
+
+3. DOMAIN & LANGUAGE ALIGNMENT:
+   - The challenge MUST directly test practical implementation of "${cleanTopic}" at the Milestone ${mIdx} difficulty tier ("${tierName}").
    - NEVER provide a generic "iterate through numbers array" problem.
-   - If topic relates to React / State / Hooks: Ask to write a functional React component with useState/useEffect. Language: "react".
-   - If topic relates to HTML5 / CSS3 / Flexbox: Ask to build a modern responsive layout or UI element. Language: "html".
-   - If topic relates to SQL / Relational Databases: Ask to write a SQL query (JOINs, aggregations, schema). Language: "sql" or "node".
-   - If topic relates to Python / Data / AI: Ask to solve a Python data processing challenge with dictionaries, list comprehensions, or helper functions. Language: "python".
-   - If topic relates to Java / OOP: Ask to implement a class with encapsulation, inheritance, or method dispatch. Language: "java".
-   - If topic relates to Data Structures & Algorithms: Ask to solve a canonical problem for that structure (e.g. Two Pointers, Binary Search, Stack, Tree traversal). Language: "node", "python", "cpp", or "java".
+   - If topic relates to React / State / Hooks: Ask to write a functional React component calibrated to milestone level. Language: "react".
+   - If topic relates to HTML5 / CSS3 / Web Design / Flexbox:
+     * The student writes DIRECT semantic HTML & CSS in the editor.
+     * DO NOT ask the student to write a JavaScript function or string concatenator that parses JSON into HTML!
+     * "sampleInput": Must be "Direct HTML5 Markup (No stdin required)".
+     * "sampleOutput": A clean, readable snippet of the expected semantic HTML layout (properly formatted with newlines and indentation) or "Rendered Web Preview: Semantic layout with headings, articles, and styled cards."
+     * "starterCode": Must be a clean HTML5 skeleton (<!DOCTYPE html><html lang="en"><head><style>...</style></head><body>...</body></html>) with helpful comments.
+     * Milestone 1 (Very Easy) MUST be basic introductory HTML (e.g. creating a basic page with <h1>, <h2>, <p>, <img>, or <section> tags).
+     * Language: "html".
+   - If topic relates to SQL / Relational Databases: Ask to write a SQL query (selection/filtering for early milestones, JOINs/aggregations for later milestones). Language: "sql" or "node".
+   - If topic relates to Python / Data / AI: Ask to solve a Python data processing challenge with variables/arithmetic for M1, functions/loops for M2, dictionaries/OOP for M3, algorithms for M4+. Language: "python".
+   - If topic relates to Java / OOP: Ask to implement a class or method matching the milestone difficulty. Language: "java".
+   - If topic relates to Data Structures & Algorithms: Ask to solve a canonical problem matching the milestone tier. Language: "node", "python", "cpp", or "java".
    - If topic relates to Backend / APIs / Node.js: Ask to implement a request handler, middleware, or data validation logic. Language: "node".
 
-2. REALISTIC PROBLEM STATEMENT:
-   - Provide a clear, engaging 2-3 sentence problem description with requirements and constraints.
+4. REALISTIC PROBLEM STATEMENT:
+   - Provide a clear, engaging 2-3 sentence problem description with requirements and constraints strictly matching Milestone ${mIdx}.
 
-3. CONCRETE SAMPLE INPUT & EXPECTED OUTPUT:
-   - Provide realistic sample input and expected sample output.
+5. STRICT PROBLEM-TYPE AND EXPECTED OUTPUT CONSISTENCY:
+   - Every sampleInput and expected sampleOutput MUST strictly match the exact problem statement.
+   - STRING REVERSAL: If the problem asks to reverse a string (e.g. reverseString("hello")), the expected output MUST ALWAYS be the reversed string ("olleh"), NEVER a boolean true/false!
+     * Example: Input "hello" -> Output "olleh". Input "world" -> Output "dlrow". Input "TrainX" -> Output "XniarT".
+   - PALINDROME CHECK: If the problem asks to check whether a string is a palindrome (e.g. isPalindrome("racecar")), the output MUST be boolean true/false.
+   - NEVER MIX EXAMPLES, TEST CASES, OR EXPECTED OUTPUTS FROM DIFFERENT PROBLEM TYPES. A string reversal challenge must NEVER contain palindrome true/false outputs.
+   - TRANSFORMATION PROBLEMS: For any transformation, formatting, or math (case conversion, sorting, calculating totals), the expected output must be the transformed result itself, NEVER boolean validation flags.
+   - The starterCode test invocation must print the actual return value (e.g. console.log(reverseString("hello"))), NEVER a boolean comparison assertion like console.log(reverseString("hello") === "olleh").
 
-4. WORKING STARTER CODE:
+6. WORKING STARTER CODE & SOLUTION CODE:
    - Provide boilerplate code with function signature, helpful inline comments, and a runnable test invocation at the bottom so clicking "Run Code" produces clean console output immediately.
+   - Solution code must be complete, correct, and directly solve the challenge.
 
 Output ONLY valid JSON strictly matching this schema without markdown backticks:
 {
   "title": "Hands-on Challenge: Specific Topic Title for ${cleanTopic}",
   "prompt": "Detailed challenge statement explaining what function/component to build...",
   "sampleInput": "Concrete input data...",
-  "sampleOutput": "Concrete expected output...",
+  "sampleOutput": "Concrete expected output matching the problem requirements...",
   "starterCode": "// Starter code with instructions\\nfunction solve() {\\n  // Your implementation\\n}\\n",
   "solutionCode": "// Reference solution...",
-  "language": "node"
+  "language": "node",
+  "milestoneIndex": ${mIdx},
+  "difficulty": "${tierName}"
 }`;
 
   try {
     const parsed = await generateJSON(prompt, {
-      system: 'You are an AI coding exercise generator. Output valid JSON strictly matching the practice challenge schema with 100% topic relevance.',
+      system: 'You are an AI coding exercise generator. Output valid JSON strictly matching the practice challenge schema with 100% topic, milestone difficulty, and expected output consistency.',
       temperature: 0.7,
       maxTokens: 3000,
       timeoutMs: 45000,
     });
 
     if (parsed && parsed.title && parsed.prompt) {
-      return parsed;
+      return validateAndSanitizePracticeProblem(parsed, { topic: cleanTopic, title: cleanTitle });
     }
   } catch (err) {
-    console.warn(`[AI Engine] Practice generation warning for "${cleanTopic}": ${err.message}`);
+    console.warn(`[AI Engine] Practice generation warning for Milestone ${mIdx} ("${cleanTopic}"): ${err.message}`);
   }
 
-  return generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole);
+  const fallback = generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, { milestoneIndex: mIdx, difficulty });
+  return validateAndSanitizePracticeProblem(fallback, { topic: cleanTopic, title: cleanTitle });
 };
 
-export function generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole) {
+export function generateTopicSpecificPracticeFallback(cleanTopic, cleanTitle, cleanRole, options = {}) {
+  const mIdx = Math.max(1, parseInt(options?.milestoneIndex, 10) || 1);
+  const tier = resolveMilestoneDifficultyTier(mIdx);
   const lower = `${cleanTopic} ${cleanTitle} ${cleanRole}`.toLowerCase();
 
-  // 1. React / Frontend Hooks & UI
+  // 1. String Manipulation / Reversal / Palindrome
+  if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
+    const isPal = lower.includes("palindrome");
+    if (isPal) {
+      return {
+        title: `Hands-on Challenge: Palindrome Verification (${cleanTopic})`,
+        prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+        sampleInput: `racecar`,
+        sampleOutput: `true`,
+        starterCode: `// Palindrome Verification (${tier}) for: ${cleanTopic}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+        solutionCode: `function isPalindrome(str) {\n  if (typeof str !== "string") return false;\n  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");\n  return clean === clean.split("").reverse().join("");\n}`,
+        language: "node",
+        milestoneIndex: mIdx,
+        difficulty: tier,
+        testCases: [
+          { input: "racecar", expectedOutput: "true", isHidden: false, description: "Standard palindrome" },
+          { input: "hello", expectedOutput: "false", isHidden: false, description: "Non-palindrome" },
+          { input: "madam", expectedOutput: "true", isHidden: true, description: "Word palindrome" }
+        ]
+      };
+    }
+
+    const isReversal = lower.includes("reverse") || lower.includes("reversal");
+    if (!isReversal && mIdx === 1) {
+      // General String Milestone 1: Very Easy — Absolute Beginner string fundamentals
+      return {
+        title: `Hands-on Challenge: String Concatenation & Greeting (${cleanTopic})`,
+        prompt: `Write a beginner-friendly function createGreeting(name) that takes a user's name as input and returns a warm greeting message: "Hello, " followed by the name and an exclamation mark "!". For example, createGreeting("Alice") returns "Hello, Alice!". This introduces fundamental string operations for complete beginners.`,
+        sampleInput: `Alice`,
+        sampleOutput: `Hello, Alice!`,
+        starterCode: `// String Fundamentals (Very Easy) for: ${cleanTopic}
+function createGreeting(name) {
+  // Return "Hello, " + name + "!"
+  return "Hello, " + (name || "Learner") + "!";
+}
+
+// Test execution:
+console.log(createGreeting("Alice"));
+`,
+        solutionCode: `function createGreeting(name) {\n  return "Hello, " + (name || "Learner") + "!";\n}`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Very Easy",
+        testCases: [
+          { input: "Alice", expectedOutput: "Hello, Alice!", isHidden: false, description: "Greeting for Alice" },
+          { input: "Bob", expectedOutput: "Hello, Bob!", isHidden: false, description: "Greeting for Bob" },
+          { input: "Developer", expectedOutput: "Hello, Developer!", isHidden: true, description: "Greeting for Developer" },
+          { input: "TrainX", expectedOutput: "Hello, TrainX!", isHidden: true, description: "Greeting for TrainX" }
+        ]
+      };
+    }
+
+    // String Reversal: Strictly return reversed string, NEVER boolean
+    return {
+      title: `Hands-on Challenge: String Reversal (${cleanTopic})`,
+      prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+      sampleInput: `hello`,
+      sampleOutput: `olleh`,
+      starterCode: `// String Reversal (${tier}) for: ${cleanTopic}
+function reverseString(str) {
+  if (typeof str !== "string") return "";
+  return str.split("").reverse().join("");
+}
+
+// Test execution:
+const result = reverseString("hello");
+console.log(result);
+`,
+      solutionCode: `function reverseString(str) {\n  if (typeof str !== "string") return "";\n  return str.split("").reverse().join("");\n}`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: tier,
+      testCases: [
+        { input: "hello", expectedOutput: "olleh", isHidden: false, description: "Reverse hello" },
+        { input: "world", expectedOutput: "dlrow", isHidden: false, description: "Reverse world" },
+        { input: "TrainX", expectedOutput: "XniarT", isHidden: true, description: "Reverse TrainX" }
+      ]
+    };
+  }
+
+  // 2. React / Frontend Hooks & UI
   if (lower.includes("react") || lower.includes("hook") || lower.includes("state") || lower.includes("component")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on React Challenge: Milestone 1 Component Basics (${cleanTopic})`,
+        prompt: `Create a clean, beginner-friendly functional React component for ${cleanTopic} that displays a user greeting card with a name, role badge, and active status. Verify your component renders properly in the Live Preview pane.`,
+        sampleInput: `Props: { name: 'Alex Johnson', role: '${cleanRole}', status: 'Active' }`,
+        sampleOutput: `Live Web Preview: Renders styled greeting card with user information and badge`,
+        starterCode: `// React Milestone 1: Component Fundamentals (Very Easy) for: ${cleanTopic}
+import React from 'react';
+
+export default function UserCard() {
+  const user = {
+    name: "Alex Johnson",
+    role: "${cleanRole}",
+    status: "Active"
+  };
+
+  return (
+    <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '380px', margin: '20px auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Milestone 1 • Fundamentals (Very Easy)</span>
+      <h3 style={{ margin: '8px 0 4px', color: '#1e293b' }}>{user.name}</h3>
+      <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>Target Role: <strong>{user.role}</strong></p>
+      <div style={{ display: 'inline-block', padding: '4px 10px', background: '#dcfce7', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+        Status: {user.status}
+      </div>
+    </div>
+  );
+}`,
+        solutionCode: `// Complete Milestone 1 React Component`,
+        language: "react",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
     return {
       title: `Hands-on React Challenge: Build an Interactive Component for ${cleanTopic}`,
       prompt: `Develop a functional React component demonstrating ${cleanTopic}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset or filtering), and verify the live interactive UI in the Live Preview pane.`,
       sampleInput: `Interactive button clicks & user input state transitions`,
       sampleOutput: `Live Web Preview: Renders responsive styled React component with real-time state feedback`,
-      starterCode: `// React Interactive Playground for: ${cleanTopic}
+      starterCode: `// React Interactive Playground (${tier}) for: ${cleanTopic}
 import React, { useState } from 'react';
 
 export default function InteractiveApp() {
@@ -800,14 +1238,16 @@ export default function InteractiveApp() {
   );
 }`,
       solutionCode: `// Complete solution for React State management`,
-      language: "react"
+      language: "react",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
-  // 2. HTML / CSS / Responsive Layouts
+  // 3. HTML / CSS / Responsive Layouts
   if (lower.includes("html") || lower.includes("css") || lower.includes("flexbox") || lower.includes("grid") || lower.includes("layout")) {
     return {
-      title: `Hands-on Web Design Challenge: ${cleanTopic}`,
+      title: `Hands-on Web Design Challenge: Milestone ${mIdx} Layout (${cleanTopic})`,
       prompt: `Write modern HTML5 markup and modern CSS3 styles for ${cleanTopic}. Structure the page elements with semantic tags, use Flexbox or Grid for alignment, and preview your layout live in the Live Web Preview pane.`,
       sampleInput: `HTML5 semantic markup with CSS Flexbox styles`,
       sampleOutput: `Live Web Preview: Displays a polished, responsive styled UI card with hover effects`,
@@ -867,7 +1307,7 @@ export default function InteractiveApp() {
 </head>
 <body>
   <article class="card">
-    <span class="badge">TOPIC MODULE</span>
+    <span class="badge">MILESTONE ${mIdx} • ${tier.toUpperCase()}</span>
     <h2>${cleanTopic}</h2>
     <p>Semantic HTML5 and CSS3 styling demonstration for ${cleanRole}. Flexbox provides flexible alignment across viewport sizes.</p>
     <a href="#" class="btn">Explore Module</a>
@@ -875,21 +1315,55 @@ export default function InteractiveApp() {
 </body>
 </html>`,
       solutionCode: `<!-- Solution code for HTML/CSS flexbox -->`,
-      language: "html"
+      language: "html",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
-  // 3. SQL / Database
+  // 4. SQL / Database
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join") || lower.includes("table")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on SQL Challenge: Milestone 1 Basic Filtering (${cleanTopic})`,
+        prompt: `Write a basic, foundational database query logic for ${cleanTopic}. Filter all active records from a collection and project only id, name, and role. Perfect for complete beginners.`,
+        sampleInput: `users = [{id: 1, name: 'Alice', active: true, role: 'Developer'}, {id: 2, name: 'Bob', active: false, role: 'Designer'}]`,
+        sampleOutput: `Expected: [{ id: 1, name: 'Alice', role: 'Developer' }]`,
+        starterCode: `// SQL Milestone 1: Basic Selection & Projection (Very Easy) for: ${cleanTopic}
+
+function queryActiveUsers(users) {
+  if (!Array.isArray(users)) return [];
+  return users
+    .filter(u => u.active === true)
+    .map(u => ({ id: u.id, name: u.name, role: u.role }));
+}
+
+// Sample Test Data
+const sampleUsers = [
+  { id: 1, name: "Alice", active: true, role: "Developer" },
+  { id: 2, name: "Bob", active: false, role: "Designer" },
+  { id: 3, name: "Charlie", active: true, role: "QA Engineer" }
+];
+
+console.log("Executing Milestone 1 Query for: ${cleanTopic}...");
+const result = queryActiveUsers(sampleUsers);
+console.log("Query Result:", JSON.stringify(result));
+`,
+        solutionCode: `// Milestone 1 SQL solution`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
     return {
       title: `Hands-on SQL Challenge: Queries & Joins for ${cleanTopic}`,
       prompt: `Write a database query or data manipulation function for ${cleanTopic}. The function should take records from two related datasets (e.g., users and orders) and perform an inner join, computing the total transaction value per user.`,
       sampleInput: `users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}], orders = [{userId: 1, amount: 250}, {userId: 1, amount: 150}, {userId: 2, amount: 400}]`,
       sampleOutput: `Expected: [{ userId: 1, name: 'Alice', totalSpent: 400 }, { userId: 2, name: 'Bob', totalSpent: 400 }]`,
-      starterCode: `// SQL / Relational Data Processing Challenge: ${cleanTopic}
+      starterCode: `// SQL / Relational Data Processing Challenge (${tier}): ${cleanTopic}
 
 function executeRelationalJoin(users, orders) {
-  // TODO: Perform join on users.id === orders.userId and aggregate totalSpent per user
   const result = [];
   
   for (const user of users) {
@@ -925,18 +1399,81 @@ const report = executeRelationalJoin(sampleUsers, sampleOrders);
 console.log("Query Result:", JSON.stringify(report, null, 2));
 `,
       solutionCode: `// Reference solution`,
-      language: "node"
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
-  // 4. Python / AI / Data Processing
+  // 5. Python / AI / Data Processing
   if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 1 Basics & Variables (${cleanTopic})`,
+        prompt: `Write a beginner Python program for ${cleanTopic}. Calculate the total price of items including sales tax (8%). Define unit_price and quantity, compute subtotal and total, and print a formatted summary. Assumes zero prior knowledge.`,
+        sampleInput: `price = 20.0, quantity = 2, tax_rate = 0.08`,
+        sampleOutput: `Bill Summary: {'subtotal': 40.0, 'tax': 3.2, 'total': 43.2, 'status': 'CALCULATED'}`,
+        starterCode: `# Python Milestone 1: Beginner Fundamentals (Very Easy) for: ${cleanTopic}
+def calculate_bill(price: float, quantity: int, tax_rate: float = 0.08) -> dict:
+    subtotal = round(price * quantity, 2)
+    tax = round(subtotal * tax_rate, 2)
+    total = round(subtotal + tax, 2)
+    return {
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": total,
+        "status": "CALCULATED"
+    }
+
+# Test execution:
+result = calculate_bill(20.0, 2)
+print("Bill Summary:", result)
+`,
+        solutionCode: `# Complete Milestone 1 solution`,
+        language: "python",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
+    if (mIdx === 2) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 2 Functions & Loops (${cleanTopic})`,
+        prompt: `Write a Python function for ${cleanTopic} that filters numbers above a given threshold from a list and computes their average. Straightforward single-loop logic for elementary learners.`,
+        sampleInput: `numbers = [10, 25, 40, 15, 60], threshold = 20`,
+        sampleOutput: `Filtered Summary: {'filtered_count': 3, 'average': 41.67, 'status': 'PROCESSED'}`,
+        starterCode: `# Python Milestone 2: Functions & Iterations (Easy) for: ${cleanTopic}
+from typing import List, Dict, Any
+
+def filter_and_average(numbers: List[float], threshold: float) -> Dict[str, Any]:
+    filtered = [n for n in numbers if n > threshold]
+    if not filtered:
+        return {"filtered_count": 0, "average": 0.0, "status": "EMPTY"}
+    avg = round(sum(filtered) / len(filtered), 2)
+    return {
+        "filtered_count": len(filtered),
+        "average": avg,
+        "status": "PROCESSED"
+    }
+
+# Test execution:
+test_nums = [10, 25, 40, 15, 60]
+result = filter_and_average(test_nums, 20)
+print("Filtered Summary:", result)
+`,
+        solutionCode: `# Milestone 2 solution`,
+        language: "python",
+        milestoneIndex: 2,
+        difficulty: "Easy"
+      };
+    }
+
     return {
       title: `Hands-on Python Challenge: ${cleanTopic}`,
       prompt: `Implement a clean Python function that processes data for ${cleanTopic}. Your code should validate input entries, compute statistical aggregations (count, average, top frequency), and return a structured dictionary summary.`,
       sampleInput: `Data records: [15, 22, 15, 45, 22, 15, 60, 30]`,
       sampleOutput: `{'total_count': 8, 'average': 28.0, 'most_frequent': 15, 'status': 'OPTIMIZED'}`,
-      starterCode: `# Python Implementation for: ${cleanTopic}
+      starterCode: `# Python Implementation (${tier}) for: ${cleanTopic}
 from typing import List, Dict, Any
 from collections import Counter
 
@@ -967,18 +1504,84 @@ result = process_metrics_pipeline(test_data)
 print("Result Summary:", result)
 `,
       solutionCode: `# Reference solution`,
-      language: "python"
+      language: "python",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
-  // 5. Default Specialized Engineering Challenge
+  // 6. Default Specialized Engineering Challenge (Node / JS)
+  if (mIdx === 1) {
+    return {
+      title: `Hands-on Challenge: Milestone 1 Fundamentals (${cleanTopic})`,
+      prompt: `Write a foundational JavaScript function for ${cleanTopic} that checks whether a numerical test score meets the passing threshold (>= 60) and returns a structured evaluation object. Designed for absolute beginners.`,
+      sampleInput: `score = 75`,
+      sampleOutput: `Evaluation Result: {"score":75,"status":"PASSED","verdict":"Requirement Met"}`,
+      starterCode: `// Milestone 1: Beginner Fundamentals (Very Easy) for: ${cleanTopic}
+// Role: ${cleanRole}
+
+function evaluateScore(score) {
+  const isPassing = typeof score === "number" && score >= 60;
   return {
-    title: `Hands-on Challenge: Implement ${cleanTopic} Algorithm`,
-    prompt: `Develop a solution applying the fundamental principles of ${cleanTopic} for ${cleanRole}. Your function should accept input parameters, handle edge cases, and return the processed result with clean console output.`,
+    score: score,
+    status: isPassing ? "PASSED" : "FAILED",
+    verdict: isPassing ? "Requirement Met" : "Needs Retake"
+  };
+}
+
+// Sample test run
+const testScore = 75;
+console.log("Executing Milestone 1 task for ${cleanTopic}...");
+const output = evaluateScore(testScore);
+console.log("Evaluation Result:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 1 solution`,
+      language: "node",
+      milestoneIndex: 1,
+      difficulty: "Very Easy"
+    };
+  }
+
+  if (mIdx === 2) {
+    return {
+      title: `Hands-on Challenge: Milestone 2 Logic & Functions (${cleanTopic})`,
+      prompt: `Write a JavaScript function for ${cleanTopic} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum. Straightforward single-loop logic.`,
+      sampleInput: `transactions = [50, 120, 30, 200, 80], threshold = 100`,
+      sampleOutput: `Summary: {"count":2,"total":320,"status":"PROCESSED"}`,
+      starterCode: `// Milestone 2: Elementary Logic (Easy) for: ${cleanTopic}
+// Role: ${cleanRole}
+
+function summarizeHighValueTransactions(transactions, threshold) {
+  if (!Array.isArray(transactions)) return { count: 0, total: 0 };
+  const filtered = transactions.filter(t => t > threshold);
+  const total = filtered.reduce((acc, curr) => acc + curr, 0);
+  return {
+    count: filtered.length,
+    total: total,
+    status: "PROCESSED"
+  };
+}
+
+// Sample test run
+const sampleTransactions = [50, 120, 30, 200, 80];
+console.log("Executing Milestone 2 task for ${cleanTopic}...");
+const output = summarizeHighValueTransactions(sampleTransactions, 100);
+console.log("Summary:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 2 solution`,
+      language: "node",
+      milestoneIndex: 2,
+      difficulty: "Easy"
+    };
+  }
+
+  return {
+    title: `Hands-on Challenge: Milestone ${mIdx} Algorithm (${cleanTopic})`,
+    prompt: `Develop a solution applying the principles of ${cleanTopic} for ${cleanRole}. Your function should accept input parameters, handle edge cases, and return the processed result with clean console output.`,
     sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
     sampleOutput: `Expected: { topic: "${cleanTopic}", processedCount: 7, maxValue: 89, minValue: 7, sorted: [7, 12, 23, 34, 45, 56, 89] }`,
-    starterCode: `// Algorithmic Challenge for: ${cleanTopic}
-// Role: ${cleanRole}
+    starterCode: `// Algorithmic Challenge (${tier}) for: ${cleanTopic}
+// Role: ${cleanRole} (Milestone ${mIdx})
 
 function executeModuleTask(items) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -1007,145 +1610,136 @@ const output = executeModuleTask(inputData);
 console.log("Output Result:", JSON.stringify(output, null, 2));
 `,
     solutionCode: `// Solution code`,
-    language: "node"
+    language: "node",
+    milestoneIndex: mIdx,
+    difficulty: tier
   };
 }
 
 /**
- * Generates deep, crystal-clear educational theory for a milestone topic using AI
+ * Generates deep, crystal-clear, informative technical educational theory for a milestone topic using AI
  */
 export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '') => {
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
   const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
 
-  const prompt = `You are an extraordinary Computer Science Educator, Senior Staff Engineer, and Author (in the pedagogy style of top authors and clean-code educators).
-Generate a comprehensive, crystal-clear, highly educational theory guide specifically for the topic: "${cleanTitle}" tailored for the role: "${cleanRole}".
+  const prompt = `You are a Principal Software Engineer and Computer Science Professor.
+Generate an in-depth, strictly informative, and technically authoritative curriculum guide for the topic: "${cleanTitle}" tailored for the role: "${cleanRole}".
 
-CRITICAL PEDAGOGICAL MISSION:
-The user is a student or learner reading this guide so they can 100% UNDERSTAND "${cleanTitle}".
-When reading this theory, the student must have an "Aha!" moment and be able to clearly explain:
-1. What is this topic? (Explain in plain English with a relatable everyday real-world analogy so the concept clicks immediately).
-2. Why do we need it? (What real-world problem does it solve in modern applications? What goes wrong without it?).
-3. How does it work under the hood? (Step-by-step execution lifecycle, flow of data, components, and mechanics).
-4. Practical Code Walkthrough: (A clean, fully functional, realistic code snippet with comments on every important line explaining how it works).
-5. Common Mistakes to Avoid: (The top 2-3 traps or bugs beginners create with this topic and the exact fix).
-6. Industry Best Practices & Senior Takeaways: (Production rules used by senior engineers at top tech companies).
+CRITICAL EDUCATIONAL REQUIREMENTS:
+- Strictly INFORMATIVE and TECHNICAL content. Explain the actual concepts, specifications, browser/runtime architectures, and workflows directly.
+- STRICTLY FORBIDDEN: Do NOT use childish, fluffy, or unrelated everyday analogies (NO comparisons to kitchen timers, theater stages, houses, cakes, recipe books, or restaurant waiters). Keep every explanation professional, rigorous, and directly on-topic.
+- SYNTAX REQUIREMENT: The codeExample must contain ONLY pure, clean, idiomatic SYNTAX for "${cleanTitle}". Do NOT wrap the code in generic dummy classes (e.g. NO "class ProductionModule"). Do NOT output lengthy comment intros or file headers. Show only the clean, essential syntax directly illustrating the topic.
 
-MANDATORY 4-LEVEL PEDAGOGICAL STRUCTURE (Strictly in this order):
-1. SECTION 1 [Level 1: Core Concept & Real-World Intuition]
-   - "level": "Level 1: Core Concept & Real-World Intuition"
-   - "levelBadge": "Intuition"
-   - "title": Engaging title explaining what "${cleanTitle}" is in simple terms
-   - "explanation": 3-4 sentence plain-English explanation introducing the concept, why it exists, and an intuitive real-world analogy (e.g. comparing an API to a restaurant waiter, Git to video game save points, CSS Flexbox to arranging items on a conveyor belt, database indexes to book indexes).
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**What It Is:** [Simple, memorable plain-English definition]"
-     * "**Real-World Analogy:** [Relatable everyday analogy that cements the mental model]"
-     * "**The Problem It Solves:** [Why we need it and the headaches developers face without it]"
-     * "**Core Mental Model:** [How to think about and visualize this concept intuitively]"
-   - "takeaway": High-impact foundational rule or mental model to remember forever.
+MANDATORY 4-LEVEL STRUCTURE (Strictly in this order):
+1. Level 1: Core Technical Foundations & Architecture
+   - "level": "Level 1: Core Technical Foundations & Architecture"
+   - "levelBadge": "Foundations"
+   - "title": Technical definition and architectural role of "${cleanTitle}"
+   - "explanation": 3-4 sentence technically accurate explanation defining what the technology is, its governing specifications (W3C, WHATWG, ECMAScript, Git DAG), and why it is indispensable in modern software architecture.
+   - "points": 4 bullet points formatted as:
+     * "**Technical Definition:** [Clear, standard-based definition of ${cleanTitle}]"
+     * "**Architectural Purpose:** [The exact technical problem it solves in software systems]"
+     * "**Core Specifications:** [Standards, protocols, or fundamental design specifications]"
+     * "**Ecosystem Integration:** [How it interfaces with other layers of the modern technology stack]"
+   - "takeaway": Authoritative engineering principle.
 
-2. SECTION 2 [Level 2: Working Mechanics & Step-by-Step Flow]
-   - "level": "Level 2: Working Mechanics & Step-by-Step Flow"
+2. Level 2: Working Mechanics & Execution Flow
+   - "level": "Level 2: Working Mechanics & Execution Flow"
    - "levelBadge": "Mechanics"
-   - "title": Specific technical title for the operational lifecycle and workflow of "${cleanTitle}"
-   - "explanation": Step-by-step breakdown of how "${cleanTitle}" actually operates when executed, how data moves through it, and the key components involved.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Step-by-Step Execution:** [Clear sequence of actions from start to finish]"
-     * "**Key Building Blocks:** [The essential keywords, components, parameters, or methods]"
-     * "**Data & State Transitions:** [How inputs transform into outputs]"
-     * "**Standard Patterns:** [The idiomatic, clean way developers structure this in real projects]"
-   - "takeaway": Practical rule for writing clean, structured code with "${cleanTitle}".
+   - "title": Lifecycle, operational mechanics, and step-by-step workflow of "${cleanTitle}"
+   - "explanation": Step-by-step technical breakdown of how the browser engine, runtime, or CLI parses, builds, and executes it.
+   - "points": 4 bullet points:
+     * "**Parsing & Execution Pipeline:** [Sequence of operations from source parsing to execution/rendering]"
+     * "**Core Building Blocks:** [Essential syntax constructs, keywords, APIs, or commands]"
+     * "**State & Data Flow:** [How data, events, or state changes propagate through the system]"
+     * "**Standard Implementation Patterns:** [Idiomatic architectural patterns used in modern production code]"
+   - "takeaway": Practical rule for clean, robust implementation.
 
-3. SECTION 3 [Level 3: Deep Core Internals & Architecture]
-   - "level": "Level 3: Deep Core Internals & Architecture"
+3. Level 3: Deep Core Internals & Runtime Engine
+   - "level": "Level 3: Deep Core Internals & Runtime Engine"
    - "levelBadge": "Core Internals"
-   - "title": Specific technical title naming the underlying engine, runtime, or architectural mechanics of "${cleanTitle}"
-   - "explanation": Under-the-hood explanation of how the engine, runtime, VM, database, or operating system executes this behind the scenes.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Under-the-Hood Engine:** [How the runtime, compiler, or browser processes this]"
-     * "**Memory & Resource Mechanics:** [How memory, handles, or system resources are allocated]"
-     * "**Performance & Big-O Complexity:** [Time/Space efficiency, latency impact, or throughput]"
-     * "**Underlying Guarantees:** [Thread safety, immutability, or consistency mechanics]"
-   - "takeaway": Low-level optimization rule to write high-performance code.
+   - "title": Underlying runtime engine, memory management, and performance mechanics of "${cleanTitle}"
+   - "explanation": Under-the-hood analysis of the browser rendering engine (DOM/CSSOM/Render Tree), JS execution context/event loop, or Git content-addressable object store (Blobs, Trees, Commits).
+   - "points": 4 bullet points:
+     * "**Under-the-Hood Engine:** [How the runtime, VM, or storage engine processes this]"
+     * "**Memory & Resource Management:** [Heap, stack, node references, or disk object allocations]"
+     * "**Performance & Complexity Bounds:** [Time/space complexity, reflow/repaint triggers, or I/O efficiency]"
+     * "**Guarantees & Consistency:** [Immutability, task queue ordering, or ACID/history integrity]"
+   - "takeaway": Deep performance optimization principle.
 
-4. SECTION 4 [Level 4: Common Pitfalls & Senior Best Practices]
+4. Level 4: Common Pitfalls & Senior Best Practices
    - "level": "Level 4: Common Pitfalls & Senior Best Practices"
-   - "levelBadge": "Advanced Mastery"
-   - "title": Specific technical title covering beginner traps, debugging, and production standards for "${cleanTitle}"
-   - "explanation": Detailed analysis of common mistakes developers make with "${cleanTitle}", how subtle bugs happen, and how senior engineers build resilient production applications.
-   - "points": 4-5 bullet points starting with bold tags:
-     * "**Common Beginner Trap #1:** [The mistake, why it happens, and how to fix it]"
-     * "**Common Beginner Trap #2:** [Another subtle bug or anti-pattern and the solution]"
-     * "**Defensive Edge-Cases:** [How to handle unexpected inputs, nulls, or failures safely]"
-     * "**Senior Engineering Checklist:** [Verification criteria for shipping to production]"
-   - "takeaway": Golden takeaway rule for writing production-grade code.
-
-CODE EXAMPLE REQUIREMENT:
-- "codeExample": Provide a REAL, fully functional, beautifully commented code snippet specifically for "${cleanTitle}".
-  * Show basic usage first, then demonstrate an idiomatic, production-grade pattern.
-  * Every important line MUST have an inline comment explaining what it does so the student learns by reading the code.
-  * Must be 100% relevant to "${cleanTitle}". Never output generic placeholder code.
+   - "levelBadge": "Senior Practices"
+   - "title": Edge cases, security anti-patterns, and production engineering standards for "${cleanTitle}"
+   - "explanation": Detailed analysis of common developer mistakes, edge cases, security hazards, and senior production verification standards.
+   - "points": 4 bullet points:
+     * "**Common Anti-Pattern & Fix:** [Specific technical error, why it fails, and the direct solution]"
+     * "**Security & Defensive Handling:** [Vulnerabilities (e.g. XSS, secret leaks) and defense mechanisms]"
+     * "**Performance Bottlenecks:** [Critical performance pitfall and the mitigation strategy]"
+     * "**Production Readiness Checklist:** [Verification criteria for shipping to production]"
+   - "takeaway": Production engineering golden rule.
 
 Output ONLY valid JSON strictly matching this schema without markdown fences:
 {
-  "title": "Master Guide to ${cleanTitle}: Concept, Mechanics & Production",
-  "overview": "Comprehensive 2-3 paragraph educational overview explaining ${cleanTitle} simply, why it is essential for ${cleanRole}, and what the student will master...",
-  "difficultyProgression": "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+  "title": "Technical Curriculum Guide: ${cleanTitle}",
+  "overview": "Comprehensive 2-3 paragraph technical overview explaining ${cleanTitle}, its foundational standards, architectural importance for ${cleanRole}, and core competencies covered.",
+  "difficultyProgression": "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
   "sections": [
     {
-      "level": "Level 1: Core Concept & Real-World Intuition",
-      "levelBadge": "Intuition",
-      "title": "Understanding ${cleanTitle}: What It Is & Why It Matters",
-      "explanation": "Plain English explanation with real-world analogy...",
+      "level": "Level 1: Core Technical Foundations & Architecture",
+      "levelBadge": "Foundations",
+      "title": "Technical definition and architectural role of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**What It Is:** Plain English definition...",
-        "**Real-World Analogy:** Relatable comparison...",
-        "**The Problem It Solves:** Real-world problem addressed...",
-        "**Core Mental Model:** How to visualize this concept..."
+        "**Technical Definition:** ...",
+        "**Architectural Purpose:** ...",
+        "**Core Specifications:** ...",
+        "**Ecosystem Integration:** ..."
       ],
-      "takeaway": "Actionable foundational takeaway..."
+      "takeaway": "..."
     },
     {
-      "level": "Level 2: Working Mechanics & Step-by-Step Flow",
+      "level": "Level 2: Working Mechanics & Execution Flow",
       "levelBadge": "Mechanics",
-      "title": "How ${cleanTitle} Works: Lifecycle & Architecture",
-      "explanation": "Detailed step-by-step breakdown of how it works...",
+      "title": "Operational lifecycle and workflow of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Step-by-Step Execution:** Sequential flow...",
-        "**Key Building Blocks:** Essential components...",
-        "**Data & State Transitions:** Transformations...",
-        "**Standard Patterns:** Idiomatic usage..."
+        "**Parsing & Execution Pipeline:** ...",
+        "**Core Building Blocks:** ...",
+        "**State & Data Flow:** ...",
+        "**Standard Implementation Patterns:** ..."
       ],
-      "takeaway": "Actionable design takeaway..."
+      "takeaway": "..."
     },
     {
-      "level": "Level 3: Deep Core Internals & Architecture",
+      "level": "Level 3: Deep Core Internals & Runtime Engine",
       "levelBadge": "Core Internals",
-      "title": "Under the Hood: Engine Internals & Performance of ${cleanTitle}",
-      "explanation": "Under the hood deep dive...",
+      "title": "Under the hood: Runtime engine and resource mechanics of ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Under-the-Hood Engine:** Runtime mechanics...",
-        "**Memory & Resource Mechanics:** Allocations and lifecycle...",
-        "**Performance & Big-O Complexity:** Efficiency bounds...",
-        "**Underlying Guarantees:** Concurrency or state guarantees..."
+        "**Under-the-Hood Engine:** ...",
+        "**Memory & Resource Management:** ...",
+        "**Performance & Complexity Bounds:** ...",
+        "**Guarantees & Consistency:** ..."
       ],
-      "takeaway": "Actionable optimization takeaway..."
+      "takeaway": "..."
     },
     {
       "level": "Level 4: Common Pitfalls & Senior Best Practices",
-      "levelBadge": "Advanced Mastery",
-      "title": "Mistakes to Avoid & Senior Best Practices for ${cleanTitle}",
-      "explanation": "Common pitfalls and production standards...",
+      "levelBadge": "Senior Practices",
+      "title": "Production pitfalls, security, and standards for ${cleanTitle}",
+      "explanation": "...",
       "points": [
-        "**Common Beginner Trap #1:** The mistake and fix...",
-        "**Common Beginner Trap #2:** The anti-pattern and fix...",
-        "**Defensive Edge-Cases:** Resilience checks...",
-        "**Senior Engineering Checklist:** Production rules..."
+        "**Common Anti-Pattern & Fix:** ...",
+        "**Security & Defensive Handling:** ...",
+        "**Performance Bottlenecks:** ...",
+        "**Production Readiness Checklist:** ..."
       ],
-      "takeaway": "Actionable production takeaway..."
+      "takeaway": "..."
     }
   ],
-  "codeExample": "// Fully commented working code for ${cleanTitle}...",
+  "codeExample": "// Pure syntax demonstrating ${cleanTitle}...",
   "bestPractices": [
     "Specific production rule 1...",
     "Specific production rule 2...",
@@ -1156,8 +1750,8 @@ Output ONLY valid JSON strictly matching this schema without markdown fences:
 
   try {
     const parsed = await generateJSON(prompt, {
-      system: 'You are an extraordinary Computer Science Educator and Senior Staff Architect. Output valid JSON strictly matching the 4-tier educational theory schema. Prioritize crystal-clear pedagogical explanations that make the concept click instantly for the student.',
-      temperature: 0.7,
+      system: 'You are a Principal Software Engineer and Computer Science Professor. Output valid JSON strictly matching the 4-tier educational theory schema. Provide rigorous, highly informative, technical explanations without childish analogies. The codeExample must be pure syntax.',
+      temperature: 0.5,
       maxTokens: 4000,
       timeoutMs: 60000,
     });
@@ -1175,136 +1769,195 @@ Output ONLY valid JSON strictly matching this schema without markdown fences:
 export function generateRoleSpecificTheoryFallback(cleanTitle, cleanRole) {
   const lower = `${cleanTitle} ${cleanRole}`.toLowerCase();
 
-  // 1. React / Frontend Hooks & State
-  if (lower.includes("hook") || lower.includes("state") || lower.includes("react") || lower.includes("component")) {
+  // 1. Web Fundamentals: HTML5, CSS3, JavaScript & Git
+  if (lower.includes("html") || lower.includes("css") || lower.includes("web") || (lower.includes("javascript") && lower.includes("git"))) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is a cornerstone of modern frontend web engineering in React. In modern user interfaces, components need to remember data—like user inputs, modal toggles, or fetched API responses—and re-render the view whenever that data changes. This guide breaks down how state and lifecycle work from intuitive mental models to Virtual DOM reconciliation and senior production practices.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} constitutes the foundational layer of web client engineering and distributed source code management. HTML5 provides semantic element trees, CSS3 enforces styling rules and cascade layout engines, ECMAScript (JavaScript) manages dynamic asynchronous runtime logic, and Git tracks repository state via directed acyclic graphs (DAGs). Mastering these core technologies is essential for building scalable applications.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} gives React components a memory. In regular JavaScript functions, local variables disappear when the function finishes running. In React, state hooks instruct the React runtime to preserve values across consecutive renders.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Architectural Foundation & Technical Standards of ${cleanTitle}`,
+          explanation: `Modern web architecture relies on a strict separation of concerns between document structure (HTML5), visual presentation (CSS3), dynamic behavior (ECMAScript), and versioned state persistence (Git). Each component adheres to W3C, WHATWG, and ECMA specifications.`,
           points: [
-            `**What It Is:** A declarative mechanism that binds reactive data to the user interface, automatically re-rendering when updated.`,
-            `**Real-World Analogy:** Think of component state like a digital scoreboard at a basketball match. Whenever points are scored (state update), the scoreboard instantly refreshes without having to rebuild the entire stadium.`,
-            `**The Problem It Solves:** In traditional vanilla JS, updating a UI required manually selecting DOM elements and mutating them (document.getElementById.innerText = ...). State makes the UI a direct reflection of data: UI = f(state).`,
-            `**Core Mental Model:** Never mutate state directly. Always treat state values as read-only snapshots and call updater functions to schedule transitions.`
+            `**Technical Definition:** A standardized technology stack comprising HTML5 for DOM tree structuring, CSS3 for cascade and layout computation, ECMAScript for event-driven logic, and Git for distributed version control.`,
+            `**Architectural Purpose:** Enforces separation of concerns, guarantees cross-browser standard compliance, and enables deterministic team collaboration through cryptographically hashed commit graphs.`,
+            `**Core Specifications:** W3C HTML5 Semantic Standards, CSS Cascading and Inheritance Level 3/4, ECMAScript 2023 language specification, and Git SHA-1/SHA-256 object store model.`,
+            `**Ecosystem Integration:** HTML and CSS feed the browser rendering pipeline (DOM/CSSOM), JavaScript binds to browser Web APIs, and Git hooks into automated CI/CD deployment pipelines.`
           ],
-          takeaway: "State represents a snapshot of your component at a single moment in time. When state updates, React re-invokes the component with the new snapshot."
+          takeaway: "Build on semantic markup and standard specifications to guarantee cross-platform accessibility, SEO indexability, and maintainable architectures."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
-          title: `How ${cleanTitle} Works: Lifecycle, Re-renders & State Transitions`,
-          explanation: `When a state setter is invoked, React enqueues the update, schedules a re-render, re-executes the component function, and reconciles the new output with the browser DOM.`,
+          title: `Parsing Pipeline, DOM/CSSOM Trees & Git Directed Acyclic Graph`,
+          explanation: `When a browser parses an HTML document, it tokenizes bytes into tokens, builds DOM nodes, computes the CSSOM, constructs the render tree, and computes layout coordinates before painting pixels. Git simultaneously manages file state across working tree, staging index, and object database.`,
           points: [
-            `**Step-by-Step Execution:** 1. User interacts (clicks button) ➔ 2. State setter called with new value ➔ 3. React schedules component re-render ➔ 4. Function re-executes with new state snapshot ➔ 5. Virtual DOM diffed and minimal browser DOM updated.`,
-            `**Key Building Blocks:** Declare state with \`const [value, setValue] = useState(initialState)\`, or use \`useReducer\` for complex multi-step state machines.`,
-            `**Batching & Asynchronous Updates:** React batches multiple state updates executed inside the same event loop tick to prevent multiple jarring re-renders.`,
-            `**Standard Patterns:** Keep state as close as possible to the component that uses it. Lift state up only when sibling components genuinely need to share it.`
+            `**Parsing & Execution Pipeline:** HTML bytes ➔ Tokens ➔ DOM Nodes ➔ CSSOM Tree calculation ➔ Render Tree construction ➔ Layout reflow calculation ➔ Raster painting.`,
+            `**Core Building Blocks:** Semantic tags (<main>, <nav>, <article>), CSS selectors and Flexbox/Grid properties, JavaScript event listeners, and Git CLI primitives (status, add, commit, push).`,
+            `**State & Data Flow:** User actions dispatch DOM events through capture and bubbling phases, triggering asynchronous JavaScript handlers that update element attributes or fetch remote payloads.`,
+            `**Standard Implementation Patterns:** Use semantic HTML for accessibility (a11y), responsive modern CSS Flexbox/Grid without fragile absolute coordinates, and atomic feature-branch Git workflows.`
           ],
-          takeaway: "State updates are scheduled, not applied instantaneously within the current function line. Always use functional updates `setVal(prev => prev + 1)` when depending on prior state."
+          takeaway: "Minimize DOM reflows and repaints by batching style mutations, and keep Git commits atomic with descriptive imperative commit headers."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
-          title: `Under the Hood: React Fiber Tree, Hook Linked-Lists & Reconciliation`,
-          explanation: `React stores hook states in a singly linked list attached to the component's Fiber node. The order of hook calls is the single source of truth for their identity.`,
+          title: `Browser Rendering Engine, V8 Event Loop & Git Content-Addressable Storage`,
+          explanation: `Browser engines (e.g. Blink, Gecko) maintain multi-threaded pipelines separating the compositor thread from the main UI thread. JavaScript executes on a single thread using the V8 engine, coordinating microtasks (Promises) and macrotasks (timers) via the Event Loop. Git stores all repository files as immutable SHA-hashed blobs, trees, and commit nodes.`,
           points: [
-            `**Under-the-Hood Engine:** Each component instance is represented by a Fiber object in memory. Hook records are linked sequentially (hook.next).`,
-            `**Why Rules of Hooks Exist:** Because React matches state to hooks strictly by their call order, hooks must NEVER be placed inside conditionals, loops, or nested functions.`,
-            `**Fiber Reconciliation Diffing:** React uses an O(N) heuristic diffing algorithm to compare the new virtual tree against the old one, patching only changed browser nodes.`,
-            `**Memory & Garbage Collection:** Unmounted component Fibers are detached and reclaimed by the browser's Garbage Collector.`
+            `**Under-the-Hood Engine:** The browser's C++ rendering engine handles layout and rasterization on GPU layers, while the V8 runtime compiles JavaScript to native machine instructions via ignition interpreter and Turbofan JIT compiler.`,
+            `**Memory & Resource Management:** DOM nodes are managed C++ objects bridged to the JavaScript garbage collector. Orphaned element references prevent memory reclamation.`,
+            `**Performance & Complexity Bounds:** CSS selector matching occurs right-to-left. Deep nesting increases matching complexity. Git commit lookups and branch pointer adjustments are O(1) constant-time operations.`,
+            `**Guarantees & Consistency:** Git's cryptographic SHA hashing guarantees complete repository immutability: history cannot be rewritten without altering all downstream commit hashes.`
           ],
-          takeaway: "Never call hooks conditionally. Hook call order must remain 100% deterministic between every render cycle."
+          takeaway: "Understand the single-threaded nature of the JavaScript event loop: long-running synchronous code freezes the browser compositor thread."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
-          title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Mastering state requires avoiding infinite re-render loops, stale closures in effect hooks, and unnecessary re-render waterfalls.`,
+          levelBadge: "Senior Practices",
+          title: `Production Pitfalls, Security Standards & Verification for ${cleanTitle}`,
+          explanation: `Production web applications must defend against Cross-Site Scripting (XSS), eliminate accidental credential commits in Git, and prevent layout thrashing.`,
           points: [
-            `**Common Beginner Trap #1 (Direct Mutation):** Doing \`state.items.push(newItem)\` mutates the existing reference, so React fails to detect the change. Solution: Always return a new array or object (\`[...prev, newItem]\`).`,
-            `**Common Beginner Trap #2 (Stale Closures):** Capturing an old state variable inside a \`setInterval\` or \`useEffect\` without listing it in the dependency array. Solution: Use functional updates (\`setCount(c => c + 1)\`).`,
-            `**Defensive Edge-Cases:** Provide sensible initial state values (e.g., empty array \`[]\` instead of \`null\`) to prevent runtime 'Cannot read properties of undefined' errors.`,
-            `**Senior Engineering Checklist:** Derive state whenever possible instead of storing redundant state (e.g. calculate \`fullName = firstName + ' ' + lastName\` on the fly rather than keeping a third state).`
+            `**Common Anti-Pattern & Fix:** Directly setting element.innerHTML with untrusted user input causes XSS vulnerabilities. Fix: Always use element.textContent or sanitized templates.`,
+            `**Security & Defensive Handling:** Never commit .env secrets or private SSH keys to Git repositories. Configure robust .gitignore files and commit verification hooks (pre-commit).`,
+            `**Performance Bottlenecks:** Layout thrashing caused by reading DOM layout geometry (e.g. offsetWidth) immediately after writing styles. Fix: Batch all reads before executing writes.`,
+            `**Production Readiness Checklist:** Ensure semantic HTML passes accessibility audits (WCAG AA), responsive styles adapt across viewports, and branch protection rules enforce code reviews.`
           ],
-          takeaway: "Don't put values in state if they can be calculated on the fly during render from existing props or state."
+          takeaway: "Never use innerHTML with dynamic content; sanitize all inputs, configure strict .gitignore rules, and profile layout rendering in browser DevTools."
         }
       ],
-      codeExample: `// Production-Grade React Implementation: ${cleanTitle}
-import React, { useState, useCallback, useMemo } from 'react';
+      codeExample: `<!-- 1. HTML5 Semantic Syntax -->
+<header>
+  <nav aria-label="Main Navigation">
+    <a href="#dashboard">Dashboard</a>
+  </nav>
+</header>
+<main class="content-container">
+  <article>
+    <h1>System Status</h1>
+    <button id="refreshBtn" type="button">Refresh Metrics</button>
+  </article>
+</main>
 
-export default function InteractiveCounterModule() {
-  // Level 1: Declarative state with clean initial primitives
-  const [items, setItems] = useState([
-    { id: 1, title: 'Master Core Concepts', completed: true },
-    { id: 2, title: 'Understand Execution Flow', completed: false }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+/* 2. Modern CSS3 Responsive Syntax */
+.content-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
 
-  // Level 2: Functional updater to avoid stale state bugs
-  const handleToggleItem = useCallback((id) => {
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
-    );
+// 3. JavaScript DOM Event & Async Syntax
+const refreshBtn = document.getElementById('refreshBtn');
+refreshBtn?.addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/metrics');
+    const data = await res.json();
+    console.log('Metrics loaded:', data);
+  } catch (err) {
+    console.error('Fetch error:', err);
+  }
+});
+
+# 4. Essential Git Terminal Syntax
+git init
+git checkout -b feature/metrics-dashboard
+git add .
+git commit -m "feat(dashboard): integrate metrics refresh endpoint"
+git push -u origin feature/metrics-dashboard`,
+      bestPractices: [
+        "Enforce strict separation between HTML semantic structure, CSS styling, and JavaScript logic.",
+        "Use modern CSS Flexbox and Grid layouts; avoid brittle absolute positioning and inline styles.",
+        "Prevent XSS security vulnerabilities by never assigning unsanitized user inputs to innerHTML.",
+        "Always maintain an up-to-date .gitignore file to prevent secrets and build artifacts from entering Git history."
+      ]
+    };
+  }
+
+  // 2. React / Frontend Hooks & State
+  if (lower.includes("hook") || lower.includes("state") || lower.includes("react") || lower.includes("component")) {
+    return {
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} is a core foundation of React component state architecture. React components declare state hooks to bind reactive data to the user interface, scheduling reconciliation passes whenever state updates occur. Understanding hook execution lifecycles, closure captures, and Fiber reconciliation is critical for writing robust frontend code.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      sections: [
+        {
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Declarative State & Component Architecture`,
+          explanation: `In React's declarative paradigm, the user interface is a pure function of component state: UI = f(state). State hooks instruct the React runtime to preserve and track values across consecutive render passes.`,
+          points: [
+            `**Technical Definition:** A declarative state management API that preserves values across component re-render lifecycles without requiring class instances.`,
+            `**Architectural Purpose:** Eliminates direct imperative DOM mutation by making UI components declarative reflections of reactive state snapshots.`,
+            `**Core Specifications:** React Hooks specification, immutable state transitions, and deterministic render contracts.`,
+            `**Ecosystem Integration:** Integrates with React Fiber reconciliation, Context API, and state machines (e.g. Redux, Zustand).`
+          ],
+          takeaway: "Always treat state as strictly read-only snapshots; schedule state transitions using immutable updates."
+        },
+        {
+          level: "Level 2: Working Mechanics & Execution Flow",
+          levelBadge: "Mechanics",
+          title: `How ${cleanTitle} Works: Lifecycle, Re-renders & State Transitions`,
+          explanation: `When a state setter is invoked, React enqueues the state update, schedules a component re-render, re-executes the component function, and reconciles the new output with the browser DOM.`,
+          points: [
+            `**Parsing & Execution Pipeline:** 1. User event triggers setter ➔ 2. Update enqueued in Fiber work queue ➔ 3. Re-render executed with new snapshot ➔ 4. Virtual DOM diffed ➔ 5. Minimal browser DOM patched.`,
+            `**Core Building Blocks:** useState for local state, useReducer for complex state transitions, useEffect for side-effects, and useMemo/useCallback for referential stability.`,
+            `**State & Data Flow:** React batches state updates inside event ticks to coalesce renders and prevent UI stutter.`,
+            `**Standard Implementation Patterns:** Keep state as local as possible. Lift state up only when siblings must synchronize on shared data.`
+          ],
+          takeaway: "State updates are scheduled asynchronously; always use functional updates setVal(prev => prev + 1) when depending on current state."
+        },
+        {
+          level: "Level 3: Deep Core Internals & Runtime Engine",
+          levelBadge: "Core Internals",
+          title: `Under the Hood: React Fiber Tree, Hook Linked-Lists & Reconciliation`,
+          explanation: `React stores hook state in a singly linked list attached to the component Fiber node. The sequence of hook calls is the single source of truth for matching state to hook invocations.`,
+          points: [
+            `**Under-the-Hood Engine:** Each component instance is represented by a Fiber object in memory. Hook records are linked sequentially (hook.next).`,
+            `**Memory & Resource Management:** Unmounted Fibers are garbage-collected; uncleaned subscriptions cause retained memory leaks.`,
+            `**Performance & Complexity Bounds:** React's heuristic diffing algorithm executes in O(N) linear time by comparing component types and keys.`,
+            `**Guarantees & Consistency:** Hook call order must remain 100% deterministic between every render cycle (Rules of Hooks).`
+          ],
+          takeaway: "Never call hooks conditionally or inside loops to guarantee deterministic Fiber linked-list traversals."
+        },
+        {
+          level: "Level 4: Common Pitfalls & Senior Best Practices",
+          levelBadge: "Senior Practices",
+          title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
+          explanation: `Mastering state requires avoiding direct mutations, stale closures in effect hooks, and unnecessary re-render waterfalls.`,
+          points: [
+            `**Common Anti-Pattern & Fix:** Mutating state objects directly (state.items.push(x)) bypasses React change detection. Fix: Always return a new reference ([...prev, x]).`,
+            `**Security & Defensive Handling:** Validate external API payloads before setting them into state to prevent undefined property crashes.`,
+            `**Performance Bottlenecks:** Passing inline object or function references down to memoized child components forces redundant re-renders. Fix: Use useCallback and useMemo.`,
+            `**Production Readiness Checklist:** Derive calculated values on the fly during render rather than storing synchronized redundant state.`
+          ],
+          takeaway: "Calculate derived state during render rather than syncing duplicate state variables."
+        }
+      ],
+      codeExample: `// React State & Hook Syntax
+import React, { useState, useEffect, useCallback } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  // Synchronize side effects with dependency array
+  useEffect(() => {
+    document.title = \`Count: \${count}\`;
+  }, [count]);
+
+  // Functional update prevents stale closure bugs
+  const increment = useCallback(() => {
+    setCount(prev => prev + 1);
   }, []);
 
-  const handleAddItem = (e) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return; // Defensive validation
-
-    const newItem = {
-      id: Date.now(),
-      title: inputValue.trim(),
-      completed: false
-    };
-
-    // Level 4 Best Practice: Immutable state update via spread operator
-    setItems((prev) => [...prev, newItem]);
-    setInputValue('');
-  };
-
-  // Level 3: Memoized computation to avoid wasteful recalculations
-  const completedCount = useMemo(() => {
-    return items.filter((item) => item.completed).length;
-  }, [items]);
-
   return (
-    <div style={{ padding: '20px', background: '#0f172a', color: '#f8fafc', borderRadius: '12px' }}>
-      <h3 style={{ margin: '0 0 10px', color: '#38bdf8' }}>${cleanTitle} - Interactive Demo</h3>
-      <p style={{ color: '#94a3b8', fontSize: '14px' }}>
-        Progress: {completedCount} of {items.length} completed
-      </p>
-
-      <form onSubmit={handleAddItem} style={{ display: 'flex', gap: '8px', margin: '16px 0' }}>
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Add a new milestone item..."
-          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #334155', background: '#1e293b', color: '#fff' }}
-        />
-        <button type="submit" style={{ padding: '8px 16px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-          Add Item
-        </button>
-      </form>
-
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {items.map((item) => (
-          <li key={item.id} onClick={() => handleToggleItem(item.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', cursor: 'pointer', borderBottom: '1px solid #1e293b' }}>
-            <span>{item.completed ? '✅' : '⏳'}</span>
-            <span style={{ textDecoration: item.completed ? 'line-through' : 'none', color: item.completed ? '#64748b' : '#f8fafc' }}>
-              {item.title}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div className="counter-container">
+      <p>Current Count: {count}</p>
+      <button onClick={increment} type="button">Increment</button>
     </div>
   );
 }`,
@@ -1317,107 +1970,84 @@ export default function InteractiveCounterModule() {
     };
   }
 
-  // 2. SQL & Databases
+  // 3. SQL & Databases
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join") || lower.includes("mongo")) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is a foundational pillar of database management and backend architecture. Whether managing user profiles, transaction logs, or relational entities, understanding how data is organized, queried, indexed, and preserved with ACID guarantees is essential for building scalable applications.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} forms the data persistence and query layer of modern software architecture. Relational databases manage structured schemas, indexes, and relations while enforcing ACID transaction guarantees (Atomicity, Consistency, Isolation, Durability) to ensure data reliability under concurrent load.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} allows software systems to store, structure, and retrieve persistent information reliably. Relational databases organize information into strongly typed tables with relationships, guaranteeing integrity.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Relational Schemas & ACID Guarantees`,
+          explanation: `Relational databases organize information into strongly typed tables with primary and foreign key constraints, guaranteeing integrity and ACID transactional compliance.`,
           points: [
-            `**What It Is:** A structured system and query language designed to store, manage, and query structured data with transactional guarantees.`,
-            `**Real-World Analogy:** Think of a relational database like a massive excel ledger maintained by a strict bank auditor. Every account has an exact schema, and money can never be deducted from one account without successfully being added to another (ACID transactions).`,
-            `**The Problem It Solves:** Without structured databases, storing data in raw text or JSON files causes data corruption, race conditions during simultaneous writes, and terrible search performance as datasets grow.`,
-            `**Core Mental Model:** Tables represent entities (e.g. Users, Orders). Foreign keys represent relationships. Indexes represent sorted lookups for lightning-fast search.`
+            `**Technical Definition:** A declarative query and management system for structured data providing ACID guarantees.`,
+            `**Architectural Purpose:** Eliminates data corruption, prevents race conditions during concurrent mutations, and enables high-speed indexing.`,
+            `**Core Specifications:** ANSI SQL standard, Relational Algebra, and relational constraint specifications.`,
+            `**Ecosystem Integration:** Interfaces with backend ORMs, database connection pools, and migration pipelines.`
           ],
-          takeaway: "Design your schema around data integrity and entity relationships first, before attempting query micro-optimizations."
+          takeaway: "Design schemas around relational integrity and normalization first before applying query micro-optimizations."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
           title: `How ${cleanTitle} Works: Query Parsing, Execution Plans & Joins`,
-          explanation: `When a client sends a SQL query, the database server parses the syntax, compiles an optimized execution plan using cost-based metrics, reads pages into the buffer pool, and returns the result set.`,
+          explanation: `When a client sends a SQL query, the database server parses syntax, compiles an optimized cost-based execution plan, retrieves data pages from buffer pools, and returns filtered rows.`,
           points: [
-            `**Step-by-Step Execution:** 1. Query received ➔ 2. Parser validates syntax & permissions ➔ 3. Query Optimizer evaluates index statistics and plans join order ➔ 4. Storage Engine fetches data pages from RAM buffer or disk ➔ 5. Rows filtered, sorted, and returned to client.`,
-            `**Key Building Blocks:** Primary Keys (unique identifier), Foreign Keys (referential integrity), JOIN operations (INNER, LEFT, RIGHT), and Aggregations (GROUP BY, SUM, COUNT).`,
-            `**JOIN Mechanics:** INNER JOIN returns records that match in both tables; LEFT JOIN returns all rows from the primary table plus matched rows from the secondary table.`,
-            `**Transactions & ACID:** Atomicity (all or nothing), Consistency (valid states), Isolation (concurrent safety), and Durability (persisted to disk).`
+            `**Parsing & Execution Pipeline:** Query receipt ➔ Lexical and syntactic parse ➔ Query Optimizer evaluates index statistics ➔ Storage Engine reads disk/buffer pages ➔ Result set filtered and returned.`,
+            `**Core Building Blocks:** Primary Keys, Foreign Keys, Index constraints, INNER/LEFT JOINs, and GROUP BY aggregations.`,
+            `**State & Data Flow:** Write-Ahead Logging (WAL) writes disk change logs sequentially before updating data pages in memory.`,
+            `**Standard Implementation Patterns:** Always use parameterized queries and explicit transaction boundaries (BEGIN ... COMMIT).`
           ],
-          takeaway: "Always inspect queries with `EXPLAIN` or `EXPLAIN ANALYZE` to ensure queries leverage indexes rather than executing full-table sequential scans."
+          takeaway: "Inspect slow queries with EXPLAIN ANALYZE to verify index lookups instead of sequential full-table scans."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
           title: `Under the Hood: B-Tree Indexes, Write-Ahead Logs (WAL) & Buffer Pools`,
-          explanation: `Relational databases use B-Tree and B+Tree disk data structures for logarithmic O(log N) searches and Write-Ahead Logging (WAL) to ensure crash recovery.`,
+          explanation: `Relational engines use B+Tree disk data structures for O(log N) searches and Multi-Version Concurrency Control (MVCC) for non-blocking reads.`,
           points: [
-            `**Under-the-Hood Engine:** Data is stored in fixed-size blocks (pages, typically 8KB to 16KB). The database keeps frequent pages cached in memory in the Buffer Pool.`,
-            `**B+Tree Indexing:** Intermediate nodes store navigation keys, while leaf nodes store pointers to rows or table clusters linked together sequentially for fast range scans.`,
-            `**Write-Ahead Logging (WAL):** Modifications are written sequentially to a crash-recovery log on disk before being applied to data pages in memory, guaranteeing durability at high speed.`,
-            `**Locking & Concurrency:** Multi-Version Concurrency Control (MVCC) allows readers to read consistent snapshots without blocking concurrent writers.`
+            `**Under-the-Hood Engine:** Storage engines (e.g. InnoDB) read and write fixed-size 16KB disk pages cached in the buffer pool.`,
+            `**Memory & Resource Management:** B+Trees balance leaf nodes containing sorted row pointers or clustered primary index data.`,
+            `**Performance & Complexity Bounds:** Index lookups run in O(log N) time; full table scans run in O(N) time.`,
+            `**Guarantees & Consistency:** MVCC ensures concurrent readers do not block writers and writers do not block readers.`
           ],
-          takeaway: "Adding too many indexes speeds up reads but slows down INSERT, UPDATE, and DELETE operations because every write must update all related B-Trees."
+          takeaway: "Balance indexes carefully: excessive indexes speed up SELECTs but degrade INSERT, UPDATE, and DELETE throughput."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
+          levelBadge: "Senior Practices",
           title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Poor database access patterns cause severe application latency bottlenecks. Senior engineers guard against N+1 query problems and SQL injection vulnerabilities.`,
+          explanation: `Preventing N+1 query patterns, SQL injection, and database connection exhaustion are vital production disciplines.`,
           points: [
-            `**Common Beginner Trap #1 (The N+1 Query Problem):** Fetching 50 items and then issuing 50 separate queries inside a loop to fetch their child relations. Fix: Use single JOINs or batching (e.g. \`WHERE id IN (...)\`).`,
-            `**Common Beginner Trap #2 (SQL Injection):** Concatenating raw user inputs into query strings. Fix: Always use parameterized queries / prepared statements (e.g. \`db.query('SELECT * FROM users WHERE id = ?', [userId])\`).`,
-            `**Defensive Edge-Cases:** Always enforce foreign key cascade constraints cautiously, and wrap multiple interdependent database operations inside a formal transaction (\`BEGIN ... COMMIT\`).`,
-            `**Senior Engineering Checklist:** Use pagination (LIMIT / OFFSET or Keyset Cursor) for large datasets; never run unrestricted \`SELECT * FROM table\` in production.`
+            `**Common Anti-Pattern & Fix:** The N+1 query problem executes individual queries in loops. Fix: Use single JOINs or batched IN queries.`,
+            `**Security & Defensive Handling:** Concatenating raw user inputs into queries creates SQL injection vulnerabilities. Fix: Always use prepared statements.`,
+            `**Performance Bottlenecks:** Unindexed columns in WHERE, ORDER BY, or JOIN clauses force expensive full-table scans.`,
+            `**Production Readiness Checklist:** Enforce connection pooling limits and pagination (LIMIT / OFFSET) on public APIs.`
           ],
-          takeaway: "Never concatenate raw user input into SQL queries; always use parameterized statements to prevent catastrophic SQL injection attacks."
+          takeaway: "Never concatenate raw inputs into SQL queries; always use parameterized statements to eliminate injection vulnerabilities."
         }
       ],
-      codeExample: `-- Production SQL Schema & Query Blueprint for: ${cleanTitle}
-
--- Level 1 & 2: Relational Schema with Constraints
-CREATE TABLE IF NOT EXISTS departments (
+      codeExample: `-- Relational Schema Definition Syntax
+CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS team_members (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    department_id INT NOT NULL,
-    full_name VARCHAR(150) NOT NULL,
-    email VARCHAR(200) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
     status ENUM('active', 'inactive') DEFAULT 'active',
-    salary DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Level 2: Foreign Key constraint enforces relational integrity
-    CONSTRAINT fk_member_dept FOREIGN KEY (department_id) 
-        REFERENCES departments(id) ON DELETE CASCADE,
-        
-    -- Level 3: Composite Index for fast filtering and sorting
-    INDEX idx_dept_status (department_id, status)
+    INDEX idx_user_status (status)
 );
 
--- Level 2 & 4: Optimized Parametric Reporting Query with Joins & Aggregations
--- Explains how to fetch department metrics without N+1 query bottlenecks
-SELECT 
-    d.id AS department_id,
-    d.name AS department_name,
-    COUNT(m.id) AS total_active_members,
-    COALESCE(AVG(m.salary), 0) AS average_salary
-FROM departments d
-LEFT JOIN team_members m 
-    ON d.id = m.department_id AND m.status = 'active'
-GROUP BY d.id, d.name
-HAVING COUNT(m.id) > 0
-ORDER BY total_active_members DESC;`,
+-- Parameterized Query Syntax
+SELECT id, name, email, created_at
+FROM users
+WHERE status = 'active'
+ORDER BY created_at DESC
+LIMIT 20;`,
       bestPractices: [
-        "Always use prepared statements / parameterized queries to completely eliminate SQL injection risks.",
+        "Always use parameterized queries / prepared statements to completely eliminate SQL injection risks.",
         "Add indexes to columns used frequently in WHERE clauses, JOIN conditions, and ORDER BY fields.",
         "Prevent N+1 query anti-patterns by utilizing eager JOINs or batched IN queries in your backend API.",
         "Wrap all multi-table business mutations inside explicit database transactions with rollback handlers."
@@ -1425,227 +2055,163 @@ ORDER BY total_active_members DESC;`,
     };
   }
 
-  // 3. Git, Version Control & DevOps
+  // 4. Git, Version Control & DevOps
   if (lower.includes("git") || lower.includes("github") || lower.includes("docker") || lower.includes("devops") || lower.includes("ci/cd")) {
     return {
-      title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-      overview: `${cleanTitle} is an indispensable discipline for professional software engineering. In modern engineering teams, multiple engineers write code concurrently. Understanding version control, branching strategies, automated testing, and deployment pipelines ensures code changes can be tracked, merged, and shipped reliably without breaking production systems.`,
-      difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+      title: `Technical Curriculum Guide: ${cleanTitle}`,
+      overview: `${cleanTitle} provides distributed version control, cryptographic revision tracking, and automated deployment pipelines for modern software engineering teams.`,
+      difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
       sections: [
         {
-          level: "Level 1: Core Concept & Real-World Intuition",
-          levelBadge: "Intuition",
-          title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-          explanation: `${cleanTitle} provides a distributed time-machine and collaboration hub for software projects. Every commit captures a snapshot of the codebase at a specific point in history.`,
+          level: "Level 1: Core Technical Foundations & Architecture",
+          levelBadge: "Foundations",
+          title: `Understanding ${cleanTitle}: Distributed Version Control & DAG Architecture`,
+          explanation: `Git is a content-addressable key-value store that tracks snapshots of a project over time. Every commit is linked in a directed acyclic graph (DAG).`,
           points: [
-            `**What It Is:** A distributed version control system that tracks file modifications and enables seamless branch-based team collaboration.`,
-            `**Real-World Analogy:** Think of Git like a video game save system with parallel universes. Every commit is a checkpoint you can travel back to, and branches are parallel universes where you experiment with new quests without risking your main world.`,
-            `**The Problem It Solves:** Before version control, teams shared code by emailing zip files (project_final_v2_new.zip), leading to overwritten code, lost work, and zero audit trails of who made what change.`,
-            `**Core Mental Model:** Working Directory (where you edit) ➔ Staging Area (what you prepare to commit) ➔ Local Repository (saved history) ➔ Remote (shared GitHub cloud).`
+            `**Technical Definition:** A distributed version control system where every client retains a full mirror of the repository repository and history.`,
+            `**Architectural Purpose:** Enables non-linear, branch-based team development and cryptographically verified audit trails.`,
+            `**Core Specifications:** Git Object Model (Blobs, Trees, Commits, Annotated Tags), SHA-1/SHA-256 hash trees.`,
+            `**Ecosystem Integration:** Interfaces with remote hosting services (GitHub, GitLab) and CI/CD pipelines.`
           ],
-          takeaway: "Make small, atomic commits that do one thing well with clear, descriptive commit messages."
+          takeaway: "Structure work into small, atomic commits with clear, descriptive imperative commit messages."
         },
         {
-          level: "Level 2: Working Mechanics & Step-by-Step Flow",
+          level: "Level 2: Working Mechanics & Execution Flow",
           levelBadge: "Mechanics",
           title: `How ${cleanTitle} Works: Branching, Merging & Pull Requests`,
-          explanation: `In standard feature-branch workflows, developers branch off the main branch, make atomic commits, push to remote repositories, and open Pull Requests for peer review before merging.`,
+          explanation: `Developers branch off the main line, stage changes in the index, commit snapshots to the local database, and push to remotes for review.`,
           points: [
-            `**Step-by-Step Execution:** 1. \`git checkout -b feature/auth\` ➔ 2. Make code edits ➔ 3. \`git add .\` to stage changes ➔ 4. \`git commit -m 'feat: implement JWT authentication'\` ➔ 5. \`git push origin feature/auth\` ➔ 6. Open Pull Request on GitHub.`,
-            `**Key Building Blocks:** Branches (lightweight movable pointers to commits), HEAD (pointer to currently checked out branch), Merge (combining branch histories), and Rebase (re-applying commits on top of another base).`,
-            `**Merge Conflicts:** Occur when two branches modify the exact same line in a file. Git pauses and highlights conflict markers (\`<<<<<<< HEAD\`), requiring the developer to choose the correct final code.`,
-            `**Standard Conventions:** Adopt Conventional Commits (\`feat:\`, \`fix:\`, \`docs:\`, \`refactor:\`) to maintain an automated, machine-readable changelog.`
+            `**Parsing & Execution Pipeline:** Working Directory ➔ git add stages to Index ➔ git commit writes objects ➔ git push synchronizes with remote.`,
+            `**Core Building Blocks:** Branches (movable 41-byte pointers to commits), HEAD pointer, Fast-forward and 3-way Merges.`,
+            `**State & Data Flow:** Merge conflicts trigger when concurrent branches edit identical file lines, requiring manual conflict resolution.`,
+            `**Standard Implementation Patterns:** Adopt Conventional Commits (feat:, fix:, docs:) and short-lived feature branches.`
           ],
-          takeaway: "Always pull the latest changes from main into your branch before opening a Pull Request to resolve conflicts early."
+          takeaway: "Pull the latest changes from main before opening a Pull Request to resolve merge conflicts early."
         },
         {
-          level: "Level 3: Deep Core Internals & Architecture",
+          level: "Level 3: Deep Core Internals & Runtime Engine",
           levelBadge: "Core Internals",
           title: `Under the Hood: Git Directed Acyclic Graph (DAG) & Content-Addressable Storage`,
-          explanation: `Under the hood, Git is a content-addressable key-value store. Git stores all data as immutable objects identified by their SHA-1/SHA-256 hash.`,
+          explanation: `Git objects are stored compressed in .git/objects/ named by their SHA hash. Branches are simply text files pointing to a 40-character commit hash.`,
           points: [
-            `**The 4 Core Git Objects:** Blobs (raw file contents), Trees (directories and file names), Commits (metadata, author, timestamp, parent pointer), and Tags.`,
-            `**Directed Acyclic Graph (DAG):** Commits form an immutable directed graph where each commit node points backward to its parent commit(s).`,
-            `**Branches are Just Pointers:** A branch in Git is simply a 41-byte text file inside \`.git/refs/heads/\` containing the 40-character SHA hash of the latest commit. Creating a branch is instantaneous (O(1) time).`,
-            `**Garbage Collection:** Orphaned commits (unreachable by any branch or tag) are eventually cleaned up by \`git gc\` via the reflog.`
+            `**Under-the-Hood Engine:** 4 core object types: Blobs (contents), Trees (directories), Commits (metadata + tree pointer), Tags.`,
+            `**Memory & Resource Management:** Branch creation is instantaneous (O(1) time and 41 bytes of storage).`,
+            `**Performance & Complexity Bounds:** History traversal operates over the commit DAG in O(V + E) time.`,
+            `**Guarantees & Consistency:** Commit hashes guarantee complete cryptographic integrity of all prior parent commits.`
           ],
-          takeaway: "Because branches are just lightweight 40-byte pointers, creating and switching branches in Git is practically free in CPU and memory."
+          takeaway: "Because branches are just 41-byte pointer files, branching and switching branches is practically free."
         },
         {
           level: "Level 4: Common Pitfalls & Senior Best Practices",
-          levelBadge: "Advanced Mastery",
+          levelBadge: "Senior Practices",
           title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-          explanation: `Careless Git habits can leak sensitive secrets, destroy commit histories, or paralyze continuous deployment pipelines.`,
+          explanation: `Careless Git workflows can leak API keys, clobber shared histories, or break automated continuous deployment pipelines.`,
           points: [
-            `**Common Beginner Trap #1 (Committing Secrets):** Committing \`.env\` files containing API keys or database passwords to public repositories. Fix: Always configure a robust \`.gitignore\` file before your very first commit.`,
-            `**Common Beginner Trap #2 (Force Pushing to Main):** Running \`git push --force\` on shared production branches overwrites your teammates' commits. Fix: Enable Branch Protection Rules in GitHub settings.`,
-            `**Defensive Edge-Cases:** Use \`git stash\` to temporarily park uncommitted work when you need to switch branches urgently without creating sloppy half-baked commits.`,
-            `**Senior Engineering Checklist:** Squash or rebase messy exploratory commits into clean logical units before merging into production.`
+            `**Common Anti-Pattern & Fix:** Committing .env secrets to public repositories. Fix: Configure .gitignore before the first commit.`,
+            `**Security & Defensive Handling:** Force-pushing (git push -f) on shared branches overwrites teammate work. Fix: Enable branch protection rules.`,
+            `**Performance Bottlenecks:** Storing large binary files in Git bloats repository clone sizes. Fix: Use Git LFS for binaries.`,
+            `**Production Readiness Checklist:** Ensure atomic commits, rebase or squash feature branches before merging, and enforce CI pass requirements.`
           ],
-          takeaway: "Never commit API keys or credentials; always verify your `.gitignore` is properly configured before staging files."
+          takeaway: "Never commit API keys or credentials; always verify .gitignore before staging files."
         }
       ],
-      codeExample: `# Professional Git & CI/CD Terminal Workflow: ${cleanTitle}
-
-# 1. Start fresh from up-to-date main branch
+      codeExample: `# Core Git Workflow Syntax
 git checkout main
 git pull origin main
-
-# 2. Create and switch to a descriptive feature branch
-git checkout -b feature/user-profile-module
-
-# 3. Work on changes, check status and differences
-git status
-git diff
-
-# 4. Stage specific files (never blindly stage secrets or binaries)
-git add src/components/UserProfile.jsx
-git add src/styles/UserProfile.css
-
-# 5. Commit with semantic, clear commit message
-git commit -m "feat(profile): add responsive user badge and college metadata"
-
-# 6. Rebase on latest main if teammate merged code in the interim
-git fetch origin
-git rebase origin/main
-
-# 7. Push to GitHub and set upstream tracking
-git push -u origin feature/user-profile-module
-
-# 8. If merge conflict happens during rebase, resolve files and continue:
-# git status
-# (edit conflicted files and remove markers)
-# git add src/components/UserProfile.jsx
-# git rebase --continue`,
+git checkout -b feature/auth-service
+git add src/auth/
+git commit -m "feat(auth): add JWT token validation middleware"
+git push -u origin feature/auth-service`,
       bestPractices: [
-        "Configure `.gitignore` immediately to prevent secret credentials and node_modules from being tracked.",
+        "Configure .gitignore immediately to prevent secret credentials and node_modules from being tracked.",
         "Keep commits atomic: each commit should represent a single cohesive, working change.",
-        "Never run `git push --force` on main or shared branches; use branch protection rules.",
-        "Write meaningful commit messages following Conventional Commits (e.g. `feat:`, `fix:`, `refactor:`)."
+        "Never run git push --force on main or shared branches; use branch protection rules.",
+        "Write meaningful commit messages following Conventional Commits (e.g. feat:, fix:, refactor:)."
       ]
     };
   }
 
-  // 4. Default Comprehensive & Educational Fallback for Any Role/Topic
+  // 5. Default General Technical Fallback
   return {
-    title: `Master Guide to ${cleanTitle}: Concept, Mechanics & Production`,
-    overview: `Comprehensive master curriculum for ${cleanTitle} tailored specifically for ${cleanRole}. This guide systematically guides you from foundational intuition, real-world analogies, and core definitions up to step-by-step operational mechanics, underlying architectural principles, and senior production standards.`,
-    difficultyProgression: "1. Intuition & Concept ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
+    title: `Technical Curriculum Guide: ${cleanTitle}`,
+    overview: `Comprehensive technical curriculum for ${cleanTitle} tailored specifically for ${cleanRole}. This guide systematically breaks down foundational architecture, core standards, operational workflows, runtime execution mechanics, and senior production verification standards.`,
+    difficultyProgression: "1. Technical Foundations ➔ 2. Working Mechanics ➔ 3. Deep Internals ➔ 4. Senior Best Practices",
     sections: [
       {
-        level: "Level 1: Core Concept & Real-World Intuition",
-        levelBadge: "Intuition",
-        title: `Understanding ${cleanTitle}: What It Is & Why It Matters`,
-        explanation: `${cleanTitle} is a foundational concept essential for mastering ${cleanRole}. Having a clear mental model of what it does and why it was created is the key to mastering its practical application.`,
+        level: "Level 1: Core Technical Foundations & Architecture",
+        levelBadge: "Foundations",
+        title: `Technical Architecture & Core Principles of ${cleanTitle}`,
+        explanation: `${cleanTitle} is a foundational construct in modern software engineering. Understanding its architectural specifications and standard models is essential for building scalable applications.`,
         points: [
-          `**What It Is:** A fundamental methodology and structural construct in ${cleanRole} that organizes workflows, ensures reliability, and solves domain challenges.`,
-          `**Real-World Analogy:** Think of ${cleanTitle} like a standardized architectural blueprint in construction. Without blueprints, builders work with conflicting measurements and structural flaws emerge; with blueprints, every artisan coordinates smoothly.`,
-          `**The Problem It Solves:** Eliminates chaotic ad-hoc implementations, reduces operational bugs, and establishes a standardized, repeatable approach to solving problems.`,
-          `**Core Mental Model:** Understand the inputs required, the transformation that takes place, and the guaranteed output delivered.`
+          `**Technical Definition:** A core architectural construct and standard methodology utilized within ${cleanRole} systems.`,
+          `**Architectural Purpose:** Solves domain problems systematically by providing structured execution, modularity, and operational predictability.`,
+          `**Core Specifications:** Governed by established technical standards, interface contracts, and architectural protocols.`,
+          `**Ecosystem Integration:** Interfaces cleanly with surrounding application components, APIs, and runtime pipelines.`
         ],
-        takeaway: "Always understand what problem a tool or concept solves before attempting to implement complex advanced variations."
+        takeaway: "Master core architectural principles and standard contracts before implementing complex variations."
       },
       {
-        level: "Level 2: Working Mechanics & Step-by-Step Flow",
+        level: "Level 2: Working Mechanics & Execution Flow",
         levelBadge: "Mechanics",
-        title: `How ${cleanTitle} Works: Operational Lifecycle & Execution`,
-        explanation: `In daily practice, ${cleanTitle} operates through structured sequential stages. Following this standardized workflow ensures consistency and peak efficiency.`,
+        title: `Operational Lifecycle & Step-by-Step Execution of ${cleanTitle}`,
+        explanation: `In operational environments, ${cleanTitle} executes through structured sequential phases, transforming inputs into validated outputs.`,
         points: [
-          `**Step-by-Step Execution:** 1. Initialization & requirement validation ➔ 2. Core parameter processing ➔ 3. Execution of business logic ➔ 4. Verification and quality assurance ➔ 5. Delivery and output logging.`,
-          `**Key Building Blocks:** The core components, standard parameters, and configuration options required to achieve the desired outcome.`,
-          `**Data & State Transitions:** How input data is validated, transformed, and packaged for downstream consumption.`,
-          `**Standard Patterns:** The industry-accepted patterns and idioms that professionals adhere to in day-to-day work.`
+          `**Parsing & Execution Pipeline:** 1. Initialization ➔ 2. Input validation ➔ 3. Core execution logic ➔ 4. Verification ➔ 5. Output delivery.`,
+          `**Core Building Blocks:** Standard syntax constructs, configuration parameters, and execution hooks.`,
+          `**State & Data Flow:** How data is parsed, passed across execution boundaries, and managed in memory.`,
+          `**Standard Implementation Patterns:** Industry-standard idioms that ensure modularity, high cohesion, and low coupling.`
         ],
-        takeaway: "Break complex workflows down into small, verifiable operational steps with explicit validation checks."
+        takeaway: "Structure operational workflows into small, deterministic steps with explicit validation checks."
       },
       {
-        level: "Level 3: Deep Core Internals & Architecture",
+        level: "Level 3: Deep Core Internals & Runtime Engine",
         levelBadge: "Core Internals",
-        title: `Under the Hood: Architecture, Resource Management & Performance`,
-        explanation: `Under the surface, ${cleanTitle} relies on specific resource allocation models, throughput pipelines, and execution dependencies that govern its scalability.`,
+        title: `Under the Hood: Engine Architecture & Resource Management`,
+        explanation: `Under the surface, ${cleanTitle} relies on resource management models, runtime allocation structures, and throughput pipelines.`,
         points: [
-          `**Under-the-Hood Engine:** The underlying architecture and structural dependencies that drive execution.`,
-          `**Memory & Resource Lifecycle:** How resources, connections, or state allocations are managed to prevent bottlenecks or leaks.`,
-          `**Performance & Big-O Efficiency:** How processing time scales as volume increases, and the architectural levers used to maintain sub-second responsiveness.`,
-          `**Systemic Guarantees:** Consistency checks, fail-safe fallbacks, and fault isolation mechanisms.`
+          `**Under-the-Hood Engine:** The underlying execution runtime and structural mechanics driving system operations.`,
+          `**Memory & Resource Management:** How memory handles, connections, or system resources are allocated and reclaimed.`,
+          `**Performance & Complexity Bounds:** Algorithmic efficiency bounds, time/space trade-offs, and throughput scalability.`,
+          `**Guarantees & Consistency:** Concurrency guarantees, fault isolation boundaries, and fail-safe recovery mechanisms.`
         ],
-        takeaway: "Anticipate how your system behaves under peak load by designing for asynchronous processing and resource pooling."
+        takeaway: "Design for scale by profiling resource allocation and memory usage under production load conditions."
       },
       {
         level: "Level 4: Common Pitfalls & Senior Best Practices",
-        levelBadge: "Advanced Mastery",
-        title: `Mistakes to Avoid & Senior Best Practices for ${cleanTitle}`,
-        explanation: `Real-world production environments require defensive planning, clean error boundaries, and proactive risk mitigation.`,
+        levelBadge: "Senior Practices",
+        title: `Production Pitfalls & Senior Engineering Standards for ${cleanTitle}`,
+        explanation: `Real-world production environments require defensive error boundaries, boundary validation, and proactive risk mitigation.`,
         points: [
-          `**Common Beginner Trap #1:** Skipping input validation at system boundaries, leading to cascading runtime failures. Fix: Always sanitize and validate inputs upfront.`,
-          `**Common Beginner Trap #2:** Over-engineering simple requirements with unnecessary layers of complexity. Fix: Favor simplicity and readability over premature optimization.`,
-          `**Defensive Edge-Cases:** Handle unexpected edge cases, null or empty states, and network timeouts gracefully with clear user feedback.`,
-          `**Senior Engineering Checklist:** Follow clean code conventions, maintain comprehensive automated tests, and document non-obvious architecture decisions.`
+          `**Common Anti-Pattern & Fix:** Neglecting perimeter input validation causes cascading runtime exceptions. Fix: Validate inputs upfront.`,
+          `**Security & Defensive Handling:** Defensive boundary checks, sanitized parameter handling, and strict type verification.`,
+          `**Performance Bottlenecks:** Unnecessary resource allocations and synchronous blocking on critical execution paths.`,
+          `**Production Readiness Checklist:** Clean code conventions, automated test coverage, and comprehensive telemetry/logging.`
         ],
-        takeaway: "Keep code and architectures simple, defensively validate all inputs at the perimeter, and profile under real-world loads."
+        takeaway: "Defensively validate all inputs at the perimeter and profile under realistic load."
       }
     ],
-    codeExample: `// Professional Implementation Blueprint for: ${cleanTitle}
-/**
- * Role: ${cleanRole}
- * Module: ${cleanTitle}
- * Purpose: Demonstrates clear, robust, production-ready execution with defensive handling
- */
+    codeExample: `// Syntax & Core Execution Pattern for: ${cleanTitle}
 
-class ProductionModule {
-  constructor(name) {
-    if (!name || typeof name !== 'string') {
-      throw new Error("Invalid module name: A non-empty string is required.");
-    }
-    this.name = name;
-    this.records = [];
-  }
+// 1. Module Definition & Parameter Validation
+export function executeOperation(config = {}) {
+  const { enabled = true, options = {} } = config;
+  if (!enabled) return { status: "SKIPPED" };
 
-  // Level 2: Controlled operational method with input validation
-  addRecord(record) {
-    if (!record || typeof record !== 'object') {
-      console.warn("[Module] Skipped invalid record payload.");
-      return false;
-    }
-    this.records.push({
-      ...record,
-      timestamp: new Date().toISOString()
-    });
-    return true;
-  }
+  // 2. Core Operational Logic
+  const result = {
+    module: "${cleanTitle}",
+    timestamp: new Date().toISOString(),
+    status: "SUCCESS"
+  };
 
-  // Level 3 & 4: Defensive processing with O(N) efficiency
-  executePipeline() {
-    if (this.records.length === 0) {
-      return { status: "EMPTY", count: 0, items: [] };
-    }
-
-    console.log(\`[Pipeline] Processing \${this.records.length} items for \${this.name}...\`);
-    
-    // Clean transformation without side-effects
-    const processed = this.records.map((item, idx) => ({
-      index: idx + 1,
-      id: item.id || \`rec_\${idx + 1}\`,
-      processedAt: item.timestamp
-    }));
-
-    return {
-      status: "SUCCESS",
-      count: processed.length,
-      module: this.name,
-      items: processed
-    };
-  }
+  return result;
 }
 
-// Example Execution:
-const moduleInstance = new ProductionModule("${cleanTitle}");
-moduleInstance.addRecord({ id: 101, title: "Foundational Setup" });
-moduleInstance.addRecord({ id: 102, title: "Applied Implementation" });
-const outcome = moduleInstance.executePipeline();
-console.log("✅ Execution Result:", outcome);`,
+// 3. Invocation Syntax
+const outcome = executeOperation({ enabled: true });
+console.log(outcome);`,
     bestPractices: [
-      "Master fundamental mental models and core definitions before implementing advanced features.",
+      "Master fundamental technical contracts and definitions before implementing advanced features.",
       "Defensively validate inputs and boundaries to catch errors early and gracefully.",
       "Structure workflows into modular, reusable components with single responsibilities.",
       "Profile performance and resource allocations under real production load conditions."

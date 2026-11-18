@@ -1,29 +1,94 @@
 import { BrevoClient } from '@getbrevo/brevo';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
+import dns from 'dns';
+import net from 'net';
 import { query } from '../config/db.js';
 
-// Ensure environment variables are loaded
-if (!process.env.BREVO_API_KEY && !process.env.SMTP_HOST) {
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-  dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
+let nodemailerModule = null;
+const getNodemailer = async () => {
+  if (nodemailerModule) return nodemailerModule;
+  try {
+    const mod = await import('nodemailer');
+    nodemailerModule = mod.default || mod;
+    return nodemailerModule;
+  } catch (_) {
+    return null;
+  }
+};
+
+// Enforce IPv4 resolution order across Node.js to prevent ENETUNREACH on platforms without IPv6 routing
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
 }
+
+// Ensure environment variables are loaded regardless of current working directory
+dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 let brevoClient = null;
 let smtpTransporter = null;
+let cachedIpv4Host = null;
+let lastSmtpFailureTime = 0;
+const SMTP_CIRCUIT_BREAKER_TTL = 10 * 60 * 1000; // 10 minutes cache when SMTP network is unreachable
 
-const getSmtpTransporter = () => {
-  if (!smtpTransporter && process.env.SMTP_HOST) {
-    smtpTransporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-      auth: {
-        user: (process.env.SMTP_USER || '').trim(),
-        pass: (process.env.SMTP_PASS || '').trim(),
-      },
-    });
+export const getPrimaryFrontendUrl = () => {
+  const raw = process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com';
+  // If multiple URLs are provided (comma-separated, e.g. for CORS allowlists), take the primary URL
+  const firstUrl = raw.split(',')[0].trim();
+  return firstUrl.replace(/\/+$/, '');
+};
+
+const getResolvedIpv4Host = async (host) => {
+  if (!host || net.isIP(host)) return host;
+  if (cachedIpv4Host) return cachedIpv4Host;
+  try {
+    const ips = await dns.promises.resolve4(host);
+    if (ips && ips.length > 0) {
+      cachedIpv4Host = ips[0];
+      return cachedIpv4Host;
+    }
+  } catch (_) { }
+  return host;
+};
+
+const createTransporterInstance = async (port, isSecure) => {
+  const nm = await getNodemailer();
+  if (!nm) {
+    throw new Error('Nodemailer package is not installed. Please configure Brevo or install nodemailer.');
+  }
+
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim();
+  const resolvedHost = await getResolvedIpv4Host(host);
+
+  return nm.createTransport({
+    host: resolvedHost,
+    port,
+    secure: isSecure,
+    auth: { user, pass },
+    connectionTimeout: 4000, // Fast 4s timeout so blocked SMTP ports don't stall user requests
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
+    tls: {
+      servername: host, // Ensures TLS certificate validates correctly against smtp.gmail.com
+      rejectUnauthorized: true,
+    },
+  });
+};
+
+const getSmtpTransporter = async (alternatePort = false) => {
+  const defaultPort = parseInt(process.env.SMTP_PORT || '465', 10);
+  const defaultSecure = process.env.SMTP_SECURE === 'true' || defaultPort === 465;
+
+  if (alternatePort) {
+    const fallbackPort = defaultPort === 465 ? 587 : 465;
+    return await createTransporterInstance(fallbackPort, fallbackPort === 465);
+  }
+
+  if (!smtpTransporter) {
+    smtpTransporter = await createTransporterInstance(defaultPort, defaultSecure);
   }
   return smtpTransporter;
 };
@@ -56,7 +121,7 @@ export const isEmailSystemDisabled = async () => {
     if (emailRow && emailRow.length > 0) {
       return emailRow[0].is_active === 0 || emailRow[0].is_active === false;
     }
-  } catch (e) {}
+  } catch (e) { }
   return false;
 };
 
@@ -69,31 +134,50 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
     throw new Error('Email delivery system is currently disabled by Super Admin maintenance policy.');
   }
 
-  const useSmtp = (process.env.EMAIL_PROVIDER || '').toLowerCase() === 'smtp' ||
-    Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const provider = (process.env.EMAIL_PROVIDER || 'smtp').trim().toLowerCase();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpPass = (process.env.SMTP_PASS || '').trim();
+  const hasSmtpConfig = Boolean(smtpUser && smtpPass);
+  const isSmtpCircuitOpen = (Date.now() - lastSmtpFailureTime) < SMTP_CIRCUIT_BREAKER_TTL;
 
-  if (useSmtp) {
+  const nm = await getNodemailer();
+
+  // SMTP is attempted when configured, not overridden to brevo, circuit breaker is not tripped, and nodemailer is installed
+  if (provider !== 'brevo' && hasSmtpConfig && !isSmtpCircuitOpen && nm) {
+    const senderEmail = (process.env.SMTP_FROM_EMAIL || smtpUser || 'admin@trainingportal.com').trim();
+    const senderName = (process.env.SMTP_FROM_NAME || 'TrainX').trim();
+    const mailPayload = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: toName ? `"${toName}" <${to}>` : to,
+      subject,
+      text: textContent || '',
+      html: htmlContent || textContent || '',
+    };
+
+    // Attempt 1: Primary SMTP port (default 465 SSL, forced IPv4)
     try {
-      const transporter = getSmtpTransporter();
-      if (!transporter) throw new Error('SMTP transporter is not configured');
-      const senderEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'admin@trainingportal.com').trim();
-      const senderName = (process.env.SMTP_FROM_NAME || 'TrainX Portal').trim();
-      const info = await transporter.sendMail({
-        from: `"${senderName}" <${senderEmail}>`,
-        to: toName ? `"${toName}" <${to}>` : to,
-        subject,
-        text: textContent || '',
-        html: htmlContent || textContent || '',
-      });
-      console.log(`[SMTP] Email sent to ${to} (Message ID: ${info.messageId})`);
+      const transporter = await getSmtpTransporter(false);
+      const info = await transporter.sendMail(mailPayload);
+      console.log(`[SMTP Primary] Email successfully delivered to ${to} (Message ID: ${info.messageId})`);
       return info;
-    } catch (smtpErr) {
-      console.error(`[SMTP Error] Failed to send email to ${to}:`, smtpErr.message);
-      if (!process.env.BREVO_API_KEY) {
-        throw smtpErr;
+    } catch (smtpErr1) {
+      console.warn(`[SMTP Primary Warning] Delivery via primary port failed for ${to}: ${smtpErr1.message}. Trying alternate SMTP port...`);
+      smtpTransporter = null;
+
+      // Attempt 2: Alternate SMTP port (port 587 STARTTLS)
+      try {
+        const altTransporter = await getSmtpTransporter(true);
+        const info2 = await altTransporter.sendMail(mailPayload);
+        console.log(`[SMTP Alternate] Email successfully delivered to ${to} via alternate port (Message ID: ${info2.messageId})`);
+        return info2;
+      } catch (smtpErr2) {
+        console.error(`[SMTP Error] Both SMTP attempts failed for ${to}: ${smtpErr2.message}`);
+        lastSmtpFailureTime = Date.now();
+        console.warn('[SMTP Fallback] Engaging Brevo as backup delivery to ensure OTP delivery...');
       }
-      console.warn('[SMTP Warning] Falling back to Brevo HTTPS API...');
     }
+  } else if (isSmtpCircuitOpen && hasSmtpConfig) {
+    console.info(`[SMTP Circuit Active] Direct SMTP previously unreachable. Fast-routing ${to} directly to Brevo HTTPS API.`);
   }
 
   const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
@@ -333,7 +417,7 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
       textContent,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Failed to send OTP email to ${to}:`, error.message);
+    console.error(`[Email Error] Failed to send OTP email to ${to}:`, error.message);
     throw error;
   }
 };
@@ -354,8 +438,9 @@ export const sendWelcomeEmail = async ({
 }) => {
   try {
     const roleUpper = role.toUpperCase();
-    const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
-    
+    const isStudent = String(role || '').toLowerCase().trim() === 'student';
+    const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : role.toLowerCase() === 'trainer' ? '#3b82f6' : '#6366f1';
+
     const queryParamsObj = {
       email: to || '',
       name: name || '',
@@ -363,16 +448,18 @@ export const sendWelcomeEmail = async ({
       mobile_number: mobile_number || '',
       roll_number: roll_number || '',
       department: department || '',
-      year: year || '',
-      division: division || '',
     };
+    if (isStudent) {
+      if (year) queryParamsObj.year = year;
+      if (division) queryParamsObj.division = division;
+    }
     if (secure_code) {
       queryParamsObj.secure_code = secure_code;
       queryParamsObj.code = secure_code;
     }
 
     const queryParams = new URLSearchParams(queryParamsObj).toString();
-    const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?${queryParams}`;
+    const regUrl = `${getPrimaryFrontendUrl()}/register?${queryParams}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
@@ -409,7 +496,7 @@ export const sendWelcomeEmail = async ({
         ${mobile_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Mobile Number:</strong> ${mobile_number}</div>` : ''}
         ${roll_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">College / Roll ID:</strong> ${roll_number}</div>` : ''}
         ${department ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Department:</strong> ${department}</div>` : ''}
-        ${year ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Academic Year:</strong> ${year} ${division ? `(Division ${division})` : ''}</div>` : ''}
+        ${isStudent && year ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Academic Year:</strong> ${year} ${division ? `(Division ${division})` : ''}</div>` : ''}
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155;">
           <strong style="width: 140px;">Assigned Role:</strong> 
           <span style="background-color: ${badgeBg}; color: #ffffff; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
@@ -423,8 +510,7 @@ export const sendWelcomeEmail = async ({
         <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.6;">
           <li>Click the <strong>Complete Your Registration</strong> button below.</li>
           <li>Enter your new account password and confirm it.</li>
-          <li>Link your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) by scanning the QR code.</li>
-          <li>Once 2FA is verified, your status will change from <strong>Unverified</strong> to <strong>Verified</strong>.</li>
+          <li>Once submitted, your account will be reviewed and approved by your Administrator.</li>
           <li>Your Administrator will then perform a final review and <strong>manually approve</strong> your account.</li>
         </ol>
       </div>
@@ -443,10 +529,10 @@ export const sendWelcomeEmail = async ({
       footerNote: 'Need assistance? Reach out to your campus administrator or coordinator.',
     });
 
-    const subject = secure_code 
+    const subject = secure_code
       ? `Action Required: Complete Your ${roleUpper} Registration (Secure Code: ${secure_code})`
       : `Welcome ${name}! Complete your registration`;
-    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration and Authenticator 2FA are paired, your status changes to Verified and will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration is submitted, your account will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
 
     return await sendEmail({
       to,
@@ -456,14 +542,14 @@ export const sendWelcomeEmail = async ({
       textContent,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Welcome email dispatch failed for ${to}:`, error.message);
+    console.error(`[Email Error] Welcome email dispatch failed for ${to}:`, error.message);
     return null;
   }
 };
 
 export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
   try {
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/`;
+    const loginUrl = `${getPrimaryFrontendUrl()}/`;
     const roleUpper = String(role).toUpperCase();
 
     const contentHtml = `
@@ -479,7 +565,7 @@ export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
           ✅ Account Status: Active & Approved
         </div>
         <div style="color: #047857; font-size: 13.5px; line-height: 1.5;">
-          You can now log in using your registered email, password, and 6-digit Authenticator app code.
+          You can now log in using your registered email and password.
         </div>
       </div>
 
@@ -619,6 +705,123 @@ export const sendAdminCredentialsEmail = async ({
 };
 
 /**
+ * Send Student Credentials Email on Bulk Upload
+ * Sends immediate login credentials with default password '12345678'
+ */
+export const sendStudentCredentialsEmail = async ({
+  to,
+  name,
+  password = '12345678',
+  roll_number = '',
+  department = '',
+  collegeName = '',
+}) => {
+  try {
+    const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
+    const loginUrl = `${frontendBase}/`;
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to Campus Training Portal, ${name}! 🎉
+      </div>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your student training account has been registered and activated. You can now log in directly to access your courses, practice problems, mock assessments, and campus training sessions.
+      </p>
+
+      <!-- Credentials Box -->
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 22px; margin: 24px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-size: 12px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">
+          🔑 YOUR LOGIN CREDENTIALS
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 140px;">Portal Link:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <a href="${loginUrl}" style="color: #4f46e5; text-decoration: none;">${loginUrl}</a>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Login Email:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 14px;">${to}</span>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Default Password:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 15px; letter-spacing: 0.5px;">${password}</span>
+            </td>
+          </tr>
+          ${roll_number ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Roll / Student ID:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${roll_number}</td>
+          </tr>` : ''}
+          ${department ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Department:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${department}</td>
+          </tr>` : ''}
+          ${collegeName ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">College:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${collegeName}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Assigned Role:</td>
+            <td style="padding: 10px 0;">
+              <span style="background-color: #3b82f6; color: #ffffff; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                STUDENT
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Quick Steps -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Getting Started:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13.5px; line-height: 1.6;">
+          <li>Click the <strong>Log In to Portal</strong> button below.</li>
+          <li>Enter your <strong>Login Email</strong> and default password: <strong>${password}</strong>.</li>
+          <li>We recommend updating your password after logging in from your <strong>Profile Settings</strong>.</li>
+        </ol>
+      </div>
+
+      <!-- Login CTA Button -->
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          Log In to Portal &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to Campus Training Portal',
+      subtitle: 'Your Account Credentials & Portal Access',
+      contentHtml,
+      footerNote: 'This email contains your login credentials. Keep them safe and change your password after initial login.',
+    });
+
+    const subject = `Welcome to Campus Training Portal - Your Login Credentials`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour student account has been created. You can log in directly using the credentials below:\n\nPortal URL: ${loginUrl}\nEmail: ${to}\nDefault Password: ${password}\n${roll_number ? `Roll No: ${roll_number}\n` : ''}${department ? `Department: ${department}\n` : ''}\n\nLog in now at ${loginUrl}\n\nBest regards,\nCampus Training Portal Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStudentCredentialsEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+
+/**
  * Send Secure Access Code & Registration Invitation Email to College Admin
  * When Super Admin generates a code for that college.
  */
@@ -630,7 +833,7 @@ export const sendAdminRegistrationCodeEmail = async ({
 }) => {
   try {
     const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
-    const regUrl = `${frontendBase}/register?email=${encodeURIComponent(to)}&name=${encodeURIComponent(name)}&code=${encodeURIComponent(secure_code)}&role=admin`;
+    const regUrl = `${frontendBase}/setup-institution?token=${encodeURIComponent(secure_code)}&email=${encodeURIComponent(to)}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
@@ -683,7 +886,6 @@ export const sendAdminRegistrationCodeEmail = async ({
           <li>Click the <strong>Complete Your Registration</strong> button below.</li>
           <li>Your registered email and secure code will be pre-filled automatically.</li>
           <li>Create and confirm your secure password.</li>
-          <li>Pair your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) for 2FA.</li>
           <li>Once submitted, your account will be active on the portal.</li>
         </ol>
       </div>
@@ -725,10 +927,10 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
   try {
     const htmlContent = html
       ? renderBaseTemplate({
-          title: subject || 'Training Portal Notification',
-          subtitle: '',
-          contentHtml: html,
-        })
+        title: subject || 'Training Portal Notification',
+        subtitle: '',
+        contentHtml: html,
+      })
       : null;
 
     return await sendEmail({
@@ -738,7 +940,537 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
       textContent: text,
     });
   } catch (error) {
-    console.error(`[Brevo Error] Failed to send generic email to ${to}:`, error.message);
+    console.error(`[Email Error] Failed to send generic email to ${to}:`, error.message);
     throw error;
+  }
+};
+
+/**
+ * Send email to User confirming their registration is pending admin approval
+ */
+export const sendRegistrationPendingEmail = async ({ to, name, role = 'student', collegeName = '' }) => {
+  try {
+    const roleUpper = String(role).toUpperCase();
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Registration Submitted! ⏳
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>, thank you for registering for the role of <strong>${roleUpper}</strong>${collegeName ? ` at <strong>${collegeName}</strong>` : ''}.
+      </p>
+
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <div style="font-weight: 700; color: #92400e; font-size: 14px; margin-bottom: 4px;">
+          ⏳ Account Status: Pending Administrator Approval
+        </div>
+        <div style="color: #78350f; font-size: 13.5px; line-height: 1.5;">
+          Your registration has been forwarded to the College Administrator for verification. You will receive an official approval confirmation email once your account has been reviewed and activated.
+        </div>
+      </div>
+
+      <p style="margin: 16px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.5;">
+        No further action is required from you at this time. Once approved, you will be able to log in with your registered email and password.
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Campus Training Portal',
+      subtitle: 'Registration Under Review',
+      contentHtml,
+      footerNote: 'Need urgent access? Reach out directly to your campus administrator.',
+    });
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject: `⏳ Registration Received: Pending Administrator Approval`,
+      htmlContent,
+      textContent: `Hello ${name},\n\nYour registration as ${roleUpper} has been received and is pending approval from your College Administrator.\n\nYou will receive an email as soon as your account is approved and activated.\n\nBest regards,\nCampus Training Portal Team`,
+    });
+  } catch (error) {
+    console.error(`[Email Error] sendRegistrationPendingEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Send email to Admin notifying that a new user registration requires approval
+ */
+export const sendAdminNewPendingUserEmail = async ({ adminEmail, adminName = 'Administrator', userName, userEmail, userRole, collegeName = '' }) => {
+  try {
+    const roleUpper = String(userRole).toUpperCase();
+    const reviewUrl = `${getPrimaryFrontendUrl()}/admin/approve-users`;
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        New Registration Awaiting Your Approval 👤
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${adminName}</strong>, a new applicant has registered and is waiting for your review on the portal.
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin: 20px 0;">
+        <div style="font-size: 14px; color: #334155; margin-bottom: 8px;">
+          <strong>Applicant Name:</strong> ${userName}
+        </div>
+        <div style="font-size: 14px; color: #334155; margin-bottom: 8px;">
+          <strong>Email:</strong> <span style="color:#2563eb; font-weight:600;">${userEmail}</span>
+        </div>
+        <div style="font-size: 14px; color: #334155;">
+          <strong>Requested Role:</strong> <span style="background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:6px; font-weight:700; font-size:12px;">${roleUpper}</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 28px;">
+        <a href="${reviewUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
+          Review in Approve Users &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Campus Training Portal',
+      subtitle: 'New User Registration Alert',
+      contentHtml,
+      footerNote: 'You received this notification because you are a registered administrator.',
+    });
+
+    return await sendEmail({
+      to: adminEmail,
+      toName: adminName,
+      subject: `🔔 Action Required: New ${roleUpper} Registration (${userName}) Pending Approval`,
+      htmlContent,
+      textContent: `Hello ${adminName},\n\nA new user (${userName}, ${userEmail}) has registered as ${roleUpper} and is awaiting your approval.\n\nReview them at: ${reviewUrl}\n\nBest regards,\nCampus Training Portal`,
+    });
+  } catch (error) {
+    console.error(`[Email Error] sendAdminNewPendingUserEmail failed for ${adminEmail}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Send Account Activation Email for newly provisioned Admin, Mentor, Coordinator, Trainer
+ * Dispatches activation token link to allow the user to set their password.
+ */
+export const sendStaffActivationEmail = async ({ to, name, role = 'Staff', rawToken }) => {
+  try {
+    const frontendUrl = getPrimaryFrontendUrl();
+    const activationLink = `${frontendUrl}/activate-account?token=${rawToken}&email=${encodeURIComponent(to)}`;
+    const subject = 'Welcome to TrainX – Activate Your Account';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to TrainX! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your account has been successfully created by the administrator.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To get started, please activate your account and set your password by clicking the button below.
+      </p>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate My Account
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After successfully setting your password, you can log in to TrainX using your registered email address and newly created password.
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 8px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Best Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Activate Your Account',
+      subtitle: 'TrainX Staff & Administrator Onboarding',
+      contentHtml,
+      footerNote: 'This activation link is valid for 72 hours and can only be used once. For security reasons, do not share this link.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYour account has been successfully created by the administrator.\n\nTo get started, please activate your account and set your password by visiting:\n${activationLink}\n\nAfter successfully setting your password, you can log in to TrainX using your registered email address and newly created password.\n\nBest Regards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStaffActivationEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Part 1: Send Admin Invitation with Secure Code (Super Admin -> Admin)
+ * Subject: Welcome to TrainX – Admin Account Activation
+ */
+export const sendAdminInvitationCodeEmail = async ({
+  to,
+  name = 'Admin',
+  code,
+  college_name = '',
+  collegeName = '',
+}) => {
+  try {
+    const finalCollegeName = college_name || collegeName || '';
+    const frontendBase = getPrimaryFrontendUrl();
+    const activationLink = `${frontendBase}/activate-account?role=college_admin&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
+    const subject = 'Welcome to TrainX – Admin Account Activation';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to TrainX! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You have been invited to join TrainX as an Admin${finalCollegeName ? ` for <strong>${finalCollegeName}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To activate your account, please click the button below.
+      </p>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate Your Account
+        </a>
+      </div>
+
+      <!-- Secure Activation Code Box -->
+      <div style="background-color: #f1f5f9; border: 2px dashed #4f46e5; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+          🔑 Your Secure Activation Code
+        </div>
+        <div style="font-family: monospace; font-size: 28px; font-weight: 800; color: #1e1b4b; letter-spacing: 3px; margin: 8px 0;">
+          ${code}
+        </div>
+        <div style="font-size: 13px; color: #64748b;">
+          Registered Email: <strong style="color: #1e293b;">${to}</strong>
+        </div>
+      </div>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After clicking the button, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.
+      </p>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        We look forward to having you on board!
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 14px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: 'Admin Account Activation',
+      contentHtml,
+      footerNote: 'This secure code can only be used once to activate your administrator account.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYou have been invited to join TrainX as an Admin.\n\nTo activate your account, please click the link below:\n${activationLink}\n\nYour Secure Activation Code: ${code}\n\nAfter clicking the link, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.\n\nWe look forward to having you on board!\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminInvitationCodeEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Part 3: Send Staff Invitation with Secure Code (Admin -> Mentor, Coordinator, Trainer)
+ * Subject: Welcome to TrainX – Activate Your Account
+ */
+export const sendStaffInvitationCodeEmail = async ({
+  to,
+  name = 'User',
+  role = 'Staff',
+  code,
+  college_name = '',
+  collegeName = '',
+}) => {
+  try {
+    const finalCollegeName = college_name || collegeName || '';
+    const frontendBase = getPrimaryFrontendUrl();
+    const roleCapitalized = String(role).charAt(0).toUpperCase() + String(role).slice(1).replace(/_/g, ' ');
+    const activationLink = `${frontendBase}/activate-account?role=${encodeURIComponent(role)}&email=${encodeURIComponent(to)}&code=${encodeURIComponent(code)}`;
+    const subject = 'Welcome to TrainX – Activate Your Account';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome to TrainX! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You have been invited to join TrainX as a <strong>${roleCapitalized}</strong>${finalCollegeName ? ` for <strong>${finalCollegeName}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 24px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        To activate your account, please click the button below.
+      </p>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${activationLink}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+          Activate Your Account
+        </a>
+      </div>
+
+      <!-- Secure Activation Code Box -->
+      <div style="background-color: #f1f5f9; border: 2px dashed #4f46e5; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">
+          🔑 Your Secure Activation Code
+        </div>
+        <div style="font-family: monospace; font-size: 28px; font-weight: 800; color: #1e1b4b; letter-spacing: 3px; margin: 8px 0;">
+          ${code}
+        </div>
+        <div style="font-size: 13px; color: #64748b;">
+          Assigned Role: <strong style="color: #4f46e5;">${roleCapitalized}</strong> &bull; Registered Email: <strong style="color: #1e293b;">${to}</strong>
+        </div>
+      </div>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        After clicking the button, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.
+      </p>
+
+      <p style="margin: 20px 0 16px 0; color: #475569; font-size: 14px; line-height: 1.6;">
+        We look forward to having you on board!
+      </p>
+
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 14px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px; font-weight: 600;">DIRECT ACTIVATION LINK:</p>
+        <p style="margin: 0; word-break: break-all; font-size: 12px; color: #4f46e5;">
+          <a href="${activationLink}" style="color: #4f46e5; text-decoration: underline;">${activationLink}</a>
+        </p>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: `${roleCapitalized} Account Activation`,
+      contentHtml,
+      footerNote: 'This secure code can only be used once to activate your account.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYou have been invited to join TrainX as a ${roleCapitalized}.\n\nTo activate your account, please click the link below:\n${activationLink}\n\nYour Secure Activation Code: ${code}\n\nAfter clicking the link, you will be redirected to the TrainX activation page, where you can enter your activation code and create your password.\n\nWe look forward to having you on board!\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendStaffInvitationCodeEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Part 5: Send Direct Admin Creation Welcome Email (Super Admin -> Add User)
+ * Subject: Welcome to TrainX – Your Admin Account Has Been Created
+ */
+export const sendAdminDirectCreatedEmail = async ({
+  to,
+  name = 'Admin',
+  temporaryPassword,
+  collegeName = '',
+}) => {
+  try {
+    const frontendBase = getPrimaryFrontendUrl();
+    const loginUrl = `${frontendBase}/`;
+    const subject = 'Welcome to TrainX – Your Admin Account Has Been Created';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome ${name}! 🎉
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Welcome to TrainX!
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your Admin account has been created by the Super Admin${collegeName ? ` for <strong>${collegeName}</strong>` : ''}.
+      </p>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        You can log in to your account using the credentials below:
+      </p>
+
+      <!-- Credentials Box -->
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 22px; margin: 24px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-size: 12px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">
+          🔐 YOUR LOGIN CREDENTIALS
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 150px;">Email:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-family: monospace;">${to}</span>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Temporary Password:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-family: monospace;">${temporaryPassword}</span>
+            </td>
+          </tr>
+          ${collegeName ? `
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">College:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${collegeName}</td>
+          </tr>` : ''}
+        </table>
+      </div>
+
+      <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #92400e; font-size: 13.5px; line-height: 1.5; font-weight: 600;">
+          ⚠️ For security reasons, you will be prompted to change your password immediately after your first login.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: #ffffff; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);">
+          Login to TrainX &rarr;
+        </a>
+      </div>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Welcome to TrainX',
+      subtitle: 'Your Admin Account Has Been Created',
+      contentHtml,
+      footerNote: 'Please keep your credentials confidential. You will be prompted to set a permanent password upon login.',
+    });
+
+    const textContent = `Hello ${name},\n\nWelcome to TrainX!\n\nYour Admin account has been created by the Super Admin.\n\nYou can log in to your account using the credentials below:\nEmail: ${to}\nTemporary Password: ${temporaryPassword}\n\nFor security reasons, you will be prompted to change your password immediately after your first login.\n\nLogin to TrainX at: ${loginUrl}\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminDirectCreatedEmail failed for ${to}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Send Account Rejection Email
+ * Subject: TrainX Account Registration Update
+ */
+export const sendAccountRejectionEmail = async ({
+  to,
+  name = 'User',
+  role = 'User',
+  reason = '',
+}) => {
+  try {
+    const roleCapitalized = String(role).charAt(0).toUpperCase() + String(role).slice(1).replace(/_/g, ' ');
+    const subject = 'TrainX Account Registration Update';
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        TrainX Registration Update
+      </div>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>,
+      </p>
+      <p style="margin: 0 0 16px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Thank you for your interest in TrainX. Your registration request for the role of <strong>${roleCapitalized}</strong> was not approved at this time.
+      </p>
+
+      ${reason ? `
+      <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+        <div style="font-weight: 700; color: #991b1b; font-size: 13.5px; margin-bottom: 4px;">Reason:</div>
+        <div style="color: #b91c1c; font-size: 13.5px; line-height: 1.5;">${reason}</div>
+      </div>` : ''}
+
+      <p style="margin: 20px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.6;">
+        If you believe this was an error or require further assistance, please contact your institution's placement coordinator or administrator.
+      </p>
+
+      <p style="margin: 24px 0 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+        Regards,<br/>
+        <strong>TrainX Team</strong>
+      </p>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'TrainX',
+      subtitle: 'Registration Status Update',
+      contentHtml,
+      footerNote: 'Need assistance? Reach out to your institution administrator.',
+    });
+
+    const textContent = `Hello ${name},\n\nYour ${roleCapitalized} account request was not approved at this time.${reason ? `\n\nReason: ${reason}` : ''}\n\nIf you have questions, please reach out to your institution administrator.\n\nRegards,\nTrainX Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAccountRejectionEmail failed for ${to}:`, error.message);
+    return null;
   }
 };

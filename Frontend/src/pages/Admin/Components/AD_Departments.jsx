@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
+import { GraduationCap, Search, Plus, Building2, Briefcase, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
 import { departmentAPI, collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/AD_Departments.css";
@@ -156,31 +156,46 @@ export default function Departments() {
         departmentAPI.getDepartments(selectedCollegeId === 'all' ? null : selectedCollegeId).catch(() => []),
       ]);
 
-      const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("authUser") || "{}";
+      const rawUser =
+        sessionStorage.getItem("user") ||
+        sessionStorage.getItem("authUser") ||
+        localStorage.getItem("user") ||
+        localStorage.getItem("authUser") ||
+        "{}";
       let currentUser = {};
       try { currentUser = JSON.parse(rawUser); } catch (_) {}
 
       let rawColleges = Array.isArray(collegesData) ? collegesData : [];
       const userRole = (currentUser.role || "").toLowerCase();
+      const userCollegeId = currentUser.college_id || currentUser.collegeId;
 
       if (userRole && !userRole.includes("super")) {
-        const userEmail = (currentUser.email || "").toLowerCase().trim();
-        const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
-        const matched = rawColleges.filter((c) => {
-          const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
-          const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
-          return (
-            String(c.id) === String(currentUser.college_id || currentUser.collegeId) ||
-            colEmail === userEmail ||
-            (emailDomain && colDomain && emailDomain.endsWith(colDomain))
-          );
-        });
-        if (matched.length > 0) rawColleges = matched;
+        if (userCollegeId) {
+          const byId = rawColleges.filter((c) => String(c.id) === String(userCollegeId));
+          if (byId.length > 0) rawColleges = byId;
+        } else {
+          const userEmail = (currentUser.email || "").toLowerCase().trim();
+          const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
+          const matched = rawColleges.filter((c) => {
+            const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
+            const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
+            return (
+              colEmail === userEmail ||
+              (emailDomain && colDomain && emailDomain.endsWith(colDomain))
+            );
+          });
+          if (matched.length > 0) rawColleges = matched;
+        }
       }
 
       setColleges(rawColleges);
       if (rawColleges.length > 0) {
-        setDeptForm(prev => ({ ...prev, collegeId: prev.collegeId || rawColleges[0].id }));
+        setDeptForm(prev => ({
+          ...prev,
+          collegeId: rawColleges.some(c => String(c.id) === String(prev.collegeId))
+            ? prev.collegeId
+            : rawColleges[0].id
+        }));
       }
       setDepartments(Array.isArray(deptsData) ? deptsData : []);
     } catch (err) {
@@ -235,7 +250,7 @@ export default function Departments() {
     }
 
     setIsAddModalOpen(false);
-    setDeptForm({ name: '', code: '', collegeId: '', hodName: '', hodEmail: '' });
+    setDeptForm({ name: '', code: '', collegeId: colleges[0]?.id || '', hodName: '', hodEmail: '' });
   };
 
   const handleEditDepartment = async (e) => {
@@ -278,13 +293,6 @@ export default function Departments() {
         </div>
 
         <div className="departments-actions-wrap">
-          <button
-            onClick={loadData}
-            className="dept-btn-icon"
-            title="Refresh Data"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
           <button
             onClick={() => {
               if (colleges.length > 0 && !deptForm.collegeId) {
@@ -436,7 +444,9 @@ export default function Departments() {
             <form onSubmit={handleAddDepartment}>
               <div className="modal-body">
                 <div className="form-group-admin">
-                  <label>College *</label>
+                  <label className="form-label-admin">
+                    <span>College Institution</span>
+                  </label>
                   <DeptSelect
                     value={deptForm.collegeId}
                     options={(Array.isArray(colleges) ? colleges : []).map((c) => ({
@@ -448,34 +458,41 @@ export default function Departments() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
-                    <label>Department Name *</label>
+                    <label className="form-label-admin">
+                      <span>Department Name</span>
+                    </label>
                     <input
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="e.g. Computer Science"
+                      placeholder="e.g. Computer Science & Engineering"
                       value={deptForm.name}
                       onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Department Code *</label>
+                    <label className="form-label-admin">
+                      <span>Department Code</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className="form-input-admin dept-code-input"
                       placeholder="e.g. CSE"
                       value={deptForm.code}
-                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
                     />
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>HOD Name</label>
+                    <label className="form-label-admin">
+                      <span>HOD Name</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       className="form-input-admin"
@@ -485,7 +502,10 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>HOD Email</label>
+                    <label className="form-label-admin">
+                      <span>HOD Email</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="email"
                       className="form-input-admin"
@@ -506,7 +526,8 @@ export default function Departments() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Save Department
+                  <Plus size={16} />
+                  <span>Save Department</span>
                 </button>
               </div>
             </form>
@@ -632,9 +653,11 @@ export default function Departments() {
 
             <form onSubmit={handleEditDepartment}>
               <div className="modal-body">
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
-                    <label>Department Name *</label>
+                    <label className="form-label-admin">
+                      <span>Department Name</span>
+                    </label>
                     <input
                       type="text"
                       required
@@ -644,20 +667,25 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Department Code *</label>
+                    <label className="form-label-admin">
+                      <span>Department Code</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className="form-input-admin dept-code-input"
                       value={editDept.code || ''}
-                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value })}
+                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value.toUpperCase() })}
                     />
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>HOD Name</label>
+                    <label className="form-label-admin">
+                      <span>HOD Name</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="text"
                       className="form-input-admin"
@@ -666,7 +694,10 @@ export default function Departments() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>HOD Email</label>
+                    <label className="form-label-admin">
+                      <span>HOD Email</span>
+                      <span className="form-optional">(Optional)</span>
+                    </label>
                     <input
                       type="email"
                       className="form-input-admin"
@@ -686,7 +717,8 @@ export default function Departments() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Save Changes
+                  <Check size={16} />
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

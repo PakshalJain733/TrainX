@@ -254,8 +254,10 @@ export default function Assignments() {
                 <span className={`mentor-assign-status ${
                   a.status === 'Completed'
                     ? 'mentor-assign-status--completed'
+                    : a.status === 'Expired'
+                    ? 'mentor-assign-status--expired'
                     : 'mentor-assign-status--pending'
-                }`}>
+                }`} style={a.status === 'Expired' ? { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 } : {}}>
                   {a.status || 'Active'}
                 </span>
               </div>
@@ -299,7 +301,7 @@ export default function Assignments() {
                   style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2 mobile-pair-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Topic</label>
                   <input
@@ -323,7 +325,7 @@ export default function Assignments() {
                   />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2 mobile-pair-2" style={{ gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Points</label>
                   <input

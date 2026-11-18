@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Search, BookOpen, BookOpenCheck, FileText, Video, Sparkles, ExternalLink, Download, Eye, X, Play } from "lucide-react";
+import { Search, BookOpen, BookOpenCheck, FileText, Video, Sparkles, ExternalLink, Download, Eye, X, Play, RefreshCw } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { Badge } from "../../../components/ui/Badge";
 import { EVENTS, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -12,6 +12,68 @@ export default function LearningContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All resources");
   const [viewerModal, setViewerModal] = useState(null);
+  const [blobDocUrl, setBlobDocUrl] = useState(null);
+  const [blobLoading, setBlobLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!viewerModal?.url) {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+      return;
+    }
+
+    const url = viewerModal.url;
+    const isPdfOrDoc = url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)($|\?)/i) || viewerModal.type === "document";
+
+    if (isPdfOrDoc && url.startsWith("http")) {
+      setBlobLoading(true);
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP error " + res.status);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!active) return;
+          const mimeType = url.match(/\.pdf($|\?)/i) ? "application/pdf" : (blob.type || "application/octet-stream");
+          const newBlobUrl = URL.createObjectURL(new Blob([blob], { type: mimeType }));
+          setBlobDocUrl(newBlobUrl);
+          setBlobLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.warn("[ST_LearningContent] Direct blob fetch failed, falling back to embedded viewer:", err.message);
+          setBlobDocUrl(null);
+          setBlobLoading(false);
+        });
+    } else {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+    }
+
+    return () => {
+      active = false;
+      if (blobDocUrl) {
+        URL.revokeObjectURL(blobDocUrl);
+      }
+    };
+  }, [viewerModal?.url]);
+
+  const effectiveDocSrc = useMemo(() => {
+    if (!viewerModal) return "";
+    if (blobDocUrl) return blobDocUrl;
+
+    const url = viewerModal.url;
+    if (
+      url.startsWith("http") &&
+      !url.includes("localhost") &&
+      !url.includes("127.0.0.1") &&
+      url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx)($|\?)/i)
+    ) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  }, [viewerModal, blobDocUrl]);
 
   const loadResources = async () => {
     setLoading(true);
@@ -45,20 +107,18 @@ export default function LearningContent() {
       console.error("Failed to load student learning content:", err);
     }
 
-    if (loadedItems.length > 0) {
-      const mapped = loadedItems.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        category: item.batch || item.category || "All Batches",
-        subject: item.subject || "General",
-        type: item.type || "Document",
-        file_url: item.file_url,
-        link: item.link,
-        status: "Published",
-      }));
-      setResources(mapped);
-    }
+    const mapped = (loadedItems || []).map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      category: item.batch || item.category || "All Batches",
+      subject: item.subject || "General",
+      type: item.type || "Document",
+      file_url: item.file_url,
+      link: item.link,
+      status: "Published",
+    }));
+    setResources(mapped);
     setLoading(false);
   };
 
@@ -183,11 +243,13 @@ export default function LearningContent() {
   return (
     <div className="learning-content-page stack-6">
       <div className="student-header-box">
-        <h2 className="student-header-title">
-          <BookOpenCheck size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
-          <span>Learning Resources & Documentation</span>
-        </h2>
-        <p className="student-header-desc">Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources.</p>
+        <div className="student-header-left">
+          <h2 className="student-header-title">
+            <BookOpenCheck size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
+            <span>Learning Resources & Documentation</span>
+          </h2>
+          <p className="student-header-desc">Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources.</p>
+        </div>
       </div>
 
       {/* Search Bar Card */}
@@ -214,19 +276,39 @@ export default function LearningContent() {
         </div>
       </div>
 
-      {/* Resource Cards Grid */}
-      <div className="learning-resources-grid">
-        {loading ? (
-          <div className="learning-empty-state">
-            <p className="learning-empty-title">Loading study materials...</p>
+      {/* Resource Cards Grid or Centered Empty State */}
+      {loading ? (
+        <div className="learning-empty-card-ST">
+          <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
+          <h3 className="learning-empty-title">Loading study materials...</h3>
+          <p className="learning-empty-desc">Fetching published lecture notes, reference guides, and curriculum resources.</p>
+        </div>
+      ) : filteredResources.length === 0 ? (
+        <div className="learning-empty-card-ST">
+          <div className="learning-empty-icon-wrap">
+            <BookOpen size={36} color="#4f46e5" />
           </div>
-        ) : filteredResources.length === 0 ? (
-          <div className="learning-empty-state">
-            <BookOpen size={36} className="learning-empty-icon" />
-            <p className="learning-empty-title">No learning resources available yet.</p>
-          </div>
-        ) : (
-          filteredResources.map((item) => {
+          <h3 className="learning-empty-title">
+            {searchQuery ? "No Matching Learning Resources" : "No Learning Resources Available"}
+          </h3>
+          <p className="learning-empty-desc">
+            {searchQuery
+              ? `No resources match "${searchQuery}". Try searching with different keywords or clear your query.`
+              : "No study materials or documentation have been published for your cohort yet. Check back soon for new resources."}
+          </p>
+          {searchQuery && (
+            <button
+              type="button"
+              className="learning-empty-clear-btn"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="learning-resources-grid">
+          {filteredResources.map((item) => {
             const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null;
@@ -317,9 +399,9 @@ export default function LearningContent() {
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
 
       {/* Dynamic File & Video Viewer Modal */}
@@ -392,11 +474,19 @@ export default function LearningContent() {
                 ) : viewerModal.url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video controls autoPlay src={viewerModal.url} className="lc-viewer-video" />
                 ) : (
-                  <iframe
-                    src={viewerModal.url}
-                    title={viewerModal.title}
-                    className="lc-viewer-iframe"
-                  />
+                  <>
+                    {blobLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: '14px', gap: '8px' }}>
+                        Loading document...
+                      </div>
+                    )}
+                    <iframe
+                      src={effectiveDocSrc}
+                      title={viewerModal.title}
+                      className="lc-viewer-iframe"
+                      style={blobLoading ? { display: 'none' } : {}}
+                    />
+                  </>
                 )
               )}
             </div>

@@ -32,5 +32,9 @@
   "homepage": "https://github.com/PakshalJain733/CAMPUS-TRAINING-PORTAL#readme",
   "dependencies": {
     "@monaco-editor/react": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=18.20.0",
+    "npm": ">=10.0.0"
   }
 }

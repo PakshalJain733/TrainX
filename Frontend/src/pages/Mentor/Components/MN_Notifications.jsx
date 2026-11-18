@@ -31,15 +31,15 @@ export default function MentorNotifications() {
         let broadcastMapped = [];
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           broadcastMapped = res.data.map((b) => ({
-            id: `broadcast-${b.id}`,
-            title: `📢 [Notice] ${b.title}`,
-            body: b.message,
-            time: b.created_at ? new Date(b.created_at).toLocaleString() : new Date().toLocaleString(),
-            category: "Broadcast",
+            id: b.id || `broadcast-${b.db_id || Math.random()}`,
+            title: b.title?.startsWith("📢") ? b.title : `📢 [Notice] ${b.title || 'Announcement'}`,
+            body: b.body || b.message || b.desc || '',
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : new Date().toLocaleString()),
+            category: b.category || "Broadcast",
             icon: Bell,
             iconColor: "#7c3aed",
             iconBg: "#f5f3ff",
-            unread: true,
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
           }));
         }
         setNotifications((prev) => {
@@ -70,18 +70,21 @@ export default function MentorNotifications() {
     };
   }, []);
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const deleteNotif = (id) => {
+  const deleteNotif = async (id) => {
     setNotifications((prev) => prev.filter((item) => item.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const markSingleRead = (id) => {
+  const markSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;

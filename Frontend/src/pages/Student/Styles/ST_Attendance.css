@@ -82,7 +82,7 @@
   border-radius: 20px;
   border: 1px solid #e2e8f0;
   padding: 24px;
-  margin-bottom: 10px;
+  /* margin-bottom: 10px; */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
@@ -634,6 +634,15 @@
 @media (max-width: 768px) {
   .attendance-grid-qr {
     grid-template-columns: 1fr;
+  }
+
+  .attendance-qr-box {
+    padding: 20px;
+  }
+
+  .attendance-mark-btn {
+    width: 100%;
+    max-width: 260px;
   }
 }
 
@@ -1585,3 +1594,48 @@
 .student-att-select-option--selected { background: #eef2ff; color: #4338ca; font-weight: 700; }
 .student-att-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .student-att-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
+
+/* Batch-Wise Breakdown Tabs & Empty State */
+/* .attendance-main-tabs {
+  margin-top: 16px;
+  width: 100%;
+} */
+
+.attendance-nav-tabs-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.attendance-empty-batch-box {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 44px 20px;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  gap: 8px;
+}
+
+.attendance-empty-batch-box h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.attendance-empty-batch-box p {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 420px;
+  margin: 0;
+}

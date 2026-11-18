@@ -4,6 +4,7 @@ import {
   getSubmissionByIdService,
   getStudentSubmissionsService,
   getAllCodingSubmissionsService,
+  submitCodeFeedbackService,
 } from '../services/codingSubmission.service.js';
 
 /**
@@ -77,6 +78,16 @@ export const getCodingSubmissionById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const submission = await getSubmissionByIdService(id);
+    if (!submission) {
+      return sendError(res, 'Coding submission not found', 404);
+    }
+
+    const callerId = req.user?.userId || req.user?.id;
+    const role = (req.user?.role || '').toLowerCase();
+    if (role === 'student' && String(submission.student_id) !== String(callerId)) {
+      return sendError(res, 'Access denied: You can only view your own coding submissions', 403);
+    }
+
     return sendSuccess(res, 'Coding submission retrieved successfully', submission, 200);
   } catch (error) {
     if (error.statusCode) {
@@ -93,6 +104,12 @@ export const getCodingSubmissionById = async (req, res, next) => {
 export const getStudentCodingSubmissions = async (req, res, next) => {
   try {
     const { studentId } = req.params;
+    // BOLA / IDOR Defense: Students can only view their own submissions
+    const role = (req.user?.role || '').toLowerCase();
+    const callerId = req.user?.userId || req.user?.id;
+    if (role === 'student' && String(callerId) !== String(studentId)) {
+      return sendError(res, 'Access denied: You can only view your own submissions', 403);
+    }
     const result = await getStudentSubmissionsService(studentId);
     return sendSuccess(res, 'Student coding submissions retrieved successfully', result, 200);
   } catch (error) {
@@ -118,6 +135,31 @@ export const getAllCodingSubmissionsAdmin = async (req, res, next) => {
       page,
     });
     return sendSuccess(res, 'Coding submissions retrieved successfully', submissions, 200);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.message, error.statusCode);
+    }
+    next(error);
+  }
+};
+
+/**
+ * Update / save optional review feedback on a coding submission
+ * PATCH /api/v1/coding-submissions/:id/feedback
+ */
+export const updateSubmissionFeedbackController = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { feedback } = req.body || {};
+    const reviewerName = req.user?.name || (req.user?.role === 'mentor' ? 'Mentor' : 'Admin');
+
+    const result = await submitCodeFeedbackService({
+      submission_id: id,
+      feedback,
+      feedback_by: reviewerName,
+    });
+
+    return sendSuccess(res, 'Feedback saved successfully', result, 200);
   } catch (error) {
     if (error.statusCode) {
       return sendError(res, error.message, error.statusCode);

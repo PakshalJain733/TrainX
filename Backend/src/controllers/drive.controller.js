@@ -42,7 +42,8 @@ export const getDrives = async (req, res, next) => {
 export const startDrive = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const studentId = req.user?.userId || req.user?.id || 6;
+    const studentId = req.user?.userId || req.user?.id;
+    if (!studentId) return sendError(res, 'Authentication required', 401);
     const result = await startMockDriveService(id, studentId);
     return sendSuccess(res, result.message, result.participation);
   } catch (error) {
@@ -56,7 +57,8 @@ export const startDrive = async (req, res, next) => {
 export const submitDriveSection = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const studentId = req.user?.userId || req.user?.id || 6;
+    const studentId = req.user?.userId || req.user?.id;
+    if (!studentId) return sendError(res, 'Authentication required', 401);
     const updated = await submitDriveSectionService(id, studentId, req.body);
     return sendSuccess(res, 'Section submitted successfully', updated);
   } catch (error) {

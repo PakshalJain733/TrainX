@@ -818,3 +818,25 @@
 .sa-approve-status-pending {
   color: #d97706;
 }
+
+@media (max-width: 768px) {
+  .sa-approve-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .sa-approve-col-span-2 {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .sa-approve-card {
+    padding: 16px;
+  }
+
+  .sa-approve-table-actions-wrap {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

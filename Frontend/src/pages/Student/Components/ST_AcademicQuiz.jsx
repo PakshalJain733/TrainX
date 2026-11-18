@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { GraduationCap, Clock, CalendarDays, CheckCircle2, PlayCircle, AlertCircle, Timer, Trophy, Target, ArrowLeft, ArrowRight, ChevronLeft, Send, RotateCcw, X, CheckCheck, Circle, Flag } from "lucide-react";
+import { GraduationCap, Clock, CalendarDays, CheckCircle2, PlayCircle, AlertCircle, Timer, Trophy, Target, ArrowLeft, ArrowRight, ChevronLeft, Send, RotateCcw, X, CheckCheck, Circle, Flag, Lock, Maximize2, Minimize2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, CardContent } from "../../../components/ui/Card";
 import "../Styles/ST_AcademicQuiz.css";
 import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt || "";
+    } catch (e) {}
+  }
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -22,8 +30,11 @@ function getAuthHeaders() {
 
 export function formatScoreDisplay(scoreVal, totalQs = 5, totalMarks = null) {
   const safeTotal = typeof totalQs === "number" && totalQs > 0 ? totalQs : parseInt(totalQs, 10) || 5;
-  if (!scoreVal || String(scoreVal).trim() === "" || String(scoreVal).toLowerCase() === "completed" || String(scoreVal).toLowerCase() === "score: completed") {
-    return `Score: ${safeTotal}/${safeTotal}`;
+  if (!scoreVal || String(scoreVal).trim() === "") {
+    return `Score: --/${safeTotal}`;
+  }
+  if (String(scoreVal).toLowerCase() === "completed" || String(scoreVal).toLowerCase() === "score: completed") {
+    return "Completed";
   }
   const clean = String(scoreVal).trim();
   if (/Score:\s*\d+\s*\/\s*\d+/i.test(clean)) {
@@ -108,7 +119,7 @@ async function fetchApiQuizzes() {
           return cached.startsWith('Score:') ? cached : `Score: ${cached}`;
         }
       }
-      return `Score: ${totalQs}/${totalQs}`;
+      return `Score: --/${totalQs}`;
     };
 
     // Map assessment DB shape -> student quiz shape
@@ -147,8 +158,9 @@ async function fetchApiQuizzes() {
       };
     });
 
-    const shared = await getSharedQuizzes([]);
     const existingIds = new Set(dbList.map(q => String(q.id)));
+
+    const shared = await getSharedQuizzes([]);
     const sharedMapped = shared
       .filter(s => !existingIds.has(String(s.id)))
       .map(s => {
@@ -176,7 +188,18 @@ async function fetchApiQuizzes() {
         };
       });
 
-    return [...sharedMapped, ...dbList];
+    // Preserve every quiz distinctly by its unique ID
+    const seenIds = new Set();
+    const uniqueList = [];
+    for (const q of [...dbList, ...sharedMapped]) {
+      const idKey = String(q.id);
+      if (!seenIds.has(idKey)) {
+        seenIds.add(idKey);
+        uniqueList.push(q);
+      }
+    }
+
+    return uniqueList;
   } catch (err) {
     console.error("Failed to load API quizzes:", err);
     const shared = await getSharedQuizzes([]);
@@ -232,18 +255,80 @@ function useTimer(initialSecs, onExpire) {
 }
 
 /* ─── Quiz Platform (Google-Forms style) ──────────────────────── */
+function isAnswerCorrect(userAnswerIndex, qItem) {
+  if (userAnswerIndex === null || userAnswerIndex === undefined) return false;
+  if (typeof qItem?.correct === "number") {
+    return userAnswerIndex === qItem.correct;
+  }
+  const optKeys = ["a", "b", "c", "d"];
+  const selectedKey = optKeys[userAnswerIndex];
+  const targetKey = String(qItem?.correct ?? "").trim().toLowerCase();
+  if (selectedKey === targetKey) return true;
+  if (String(userAnswerIndex) === targetKey) return true;
+  if (Array.isArray(qItem?.options) && qItem.options[userAnswerIndex]) {
+    return String(qItem.options[userAnswerIndex]).trim().toLowerCase() === targetKey;
+  }
+  return false;
+}
+
 function normalizeAdminQuestion(q, idx) {
-  // Admin questions: { id, text, options: {a,b,c,d}, correct: 'a' }
-  // -> standard: { id, question, options: [], correct: index, explanation }
+  if (!q) return defaultQuizQuestions[0];
+
+  let optionsArr = [];
+  if (Array.isArray(q.options) && q.options.length > 0) {
+    optionsArr = q.options.filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  } else if (q.options && typeof q.options === 'object') {
+    const rawOpts = q.options;
+    optionsArr = [
+      rawOpts.a ?? rawOpts.A ?? rawOpts.option_a ?? q.option_a ?? '',
+      rawOpts.b ?? rawOpts.B ?? rawOpts.option_b ?? q.option_b ?? '',
+      rawOpts.c ?? rawOpts.C ?? rawOpts.option_c ?? q.option_c ?? '',
+      rawOpts.d ?? rawOpts.D ?? rawOpts.option_d ?? q.option_d ?? '',
+    ].filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  } else if (q.option_a || q.option_b) {
+    optionsArr = [
+      q.option_a || '',
+      q.option_b || '',
+      q.option_c || '',
+      q.option_d || '',
+    ].filter(v => v !== null && v !== undefined && v !== 'N/A' && String(v).trim() !== '');
+  }
+
+  if (optionsArr.length === 0) {
+    optionsArr = ["Option A", "Option B", "Option C", "Option D"];
+  }
+
   const optKeys = ['a', 'b', 'c', 'd'];
-  const optionsArr = optKeys.map(k => q.options[k] || '').filter(v => v && v !== 'N/A');
-  const correctIdx = optKeys.indexOf(q.correct);
+  const rawCorrect = (q.correct_option ?? q.correct ?? q.correctOptionVerified ?? q.answer ?? 'a').toString().trim().toLowerCase();
+
+  let correctIdx = 0;
+  if (rawCorrect === 'a' || rawCorrect === '0' || rawCorrect === 'option a' || rawCorrect === 'option 1') {
+    correctIdx = 0;
+  } else if (rawCorrect === 'b' || rawCorrect === '1' || rawCorrect === 'option b' || rawCorrect === 'option 2') {
+    correctIdx = 1;
+  } else if (rawCorrect === 'c' || rawCorrect === '2' || rawCorrect === 'option c' || rawCorrect === 'option 3') {
+    correctIdx = 2;
+  } else if (rawCorrect === 'd' || rawCorrect === '3' || rawCorrect === 'option d' || rawCorrect === 'option 4') {
+    correctIdx = 3;
+  } else {
+    const textIdx = optionsArr.findIndex(o => String(o).trim().toLowerCase() === rawCorrect);
+    if (textIdx >= 0) {
+      correctIdx = textIdx;
+    } else {
+      const parsedNum = parseInt(rawCorrect, 10);
+      if (!isNaN(parsedNum) && parsedNum >= 0 && parsedNum < optionsArr.length) {
+        correctIdx = parsedNum;
+      }
+    }
+  }
+
+  const optLetter = optKeys[correctIdx] ? optKeys[correctIdx].toUpperCase() : 'A';
   return {
     id: q.id || idx + 1,
-    question: q.text || `Question ${idx + 1}`,
+    question: q.question_text || q.text || q.question || `Question ${idx + 1}`,
     options: optionsArr,
-    correct: correctIdx >= 0 ? correctIdx : 0,
-    explanation: `The correct answer is Option ${(q.correct || 'A').toUpperCase()}.`
+    correct: correctIdx,
+    explanation: q.explanation || `The correct answer is Option ${optLetter}: "${optionsArr[correctIdx] || ''}".`
   };
 }
 
@@ -310,36 +395,322 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   const [current, setCurrent] = useState(0);
   const [submitted, setSubmitted] = useState(isReview);
 
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(document.fullscreenElement));
+  const [isProctorActive, setIsProctorActive] = useState(() => Boolean(document.fullscreenElement));
+  const [proctorTerminated, setProctorTerminated] = useState(false);
+  const [terminationReason, setTerminationReason] = useState("");
+  const [clipboardWarning, setClipboardWarning] = useState("");
+  const [proctorConfirmModal, setProctorConfirmModal] = useState(null); // { title, message, onConfirm, isDanger }
+
+  const proctorArmedRef = useRef(false);
+  const proctorViolationsRef = useRef(0);
+  const lastViolationTimeRef = useRef(0);
+  const hasAutoSubmittedRef = useRef(false);
+  const submitRef = useRef(null);
+
+  const user = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
   const { display: timeDisplay, secs: timeLeft } = useTimer(
     isReview ? 0 : quiz.durationSecs,
-    () => !isReview && handleSubmit()
+    () => !isReview && (submitRef.current ? submitRef.current() : handleSubmit())
   );
 
   const [attemptId, setAttemptId] = useState(null);
   const [apiResult, setApiResult] = useState(null);
   const [resultLoading, setResultLoading] = useState(false);
 
+  // Scoped key generator for quiz proctoring strikes in sessionStorage
+  const getProctorStorageKey = (attId = attemptId) => {
+    const sId = user?.userId || user?.id || "guest";
+    const qId = String(quiz?.id || "unknown");
+    const aId = attId || (typeof window !== "undefined" && sessionStorage.getItem(`quiz_active_attempt_${sId}_${qId}`)) || "active";
+    return `proctor_strikes_quiz_${sId}_${qId}_${aId}`;
+  };
+
+  const getProctorAttemptInitKey = (attId = attemptId) => {
+    const sId = user?.userId || user?.id || "guest";
+    const qId = String(quiz?.id || "unknown");
+    const aId = attId || (typeof window !== "undefined" && sessionStorage.getItem(`quiz_active_attempt_${sId}_${qId}`)) || "active";
+    return `proctor_initialized_quiz_${sId}_${qId}_${aId}`;
+  };
+
+  const getStoredProctorStrikes = (attId = attemptId) => {
+    try {
+      const val = sessionStorage.getItem(getProctorStorageKey(attId));
+      const num = parseInt(val, 10);
+      return !isNaN(num) && num >= 0 ? num : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const setStoredProctorStrikes = (count, attId = attemptId) => {
+    try {
+      sessionStorage.setItem(getProctorStorageKey(attId), String(count));
+    } catch {}
+  };
+
+  const clearStoredProctorStrikes = (attId = attemptId) => {
+    try {
+      sessionStorage.removeItem(getProctorStorageKey(attId));
+      sessionStorage.removeItem(getProctorAttemptInitKey(attId));
+    } catch {}
+  };
+
+  // Sync ref with persisted storage on mount/quiz start
+  useEffect(() => {
+    if (!isReview && quiz?.id) {
+      const initKey = getProctorAttemptInitKey();
+      if (!sessionStorage.getItem(initKey)) {
+        if (!submitted) {
+          clearStoredProctorStrikes();
+        }
+        sessionStorage.setItem(initKey, "1");
+      }
+      proctorViolationsRef.current = getStoredProctorStrikes();
+    }
+  }, [quiz?.id, isReview, attemptId]);
+
+  const showToast = (msg) => {
+    setClipboardWarning(msg);
+    setTimeout(() => setClipboardWarning(""), 3500);
+  };
+
+  const endQuizDueToViolation = (reason, description) => {
+    if (hasAutoSubmittedRef.current || submitted) return;
+    hasAutoSubmittedRef.current = true;
+    proctorArmedRef.current = false;
+    setProctorTerminated(true);
+    setTerminationReason(reason);
+
+    if (submitRef.current) {
+      submitRef.current({ isAutoSubmit: true, reason });
+    } else {
+      handleSubmit({ isAutoSubmit: true, reason });
+    }
+  };
+
+  const handleProctorViolation = (reason, description) => {
+    if (isReview || submitted || !proctorArmedRef.current) return;
+    if (reason !== "exit_fullscreen") return;
+
+    // Debounce to prevent duplicate strikes when blur and visibilitychange fire simultaneously
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current < 1500) {
+      return;
+    }
+    lastViolationTimeRef.current = now;
+
+    const currentStrikes = getStoredProctorStrikes() + 1;
+    proctorViolationsRef.current = currentStrikes;
+    setStoredProctorStrikes(currentStrikes);
+
+    if (currentStrikes < 3) {
+      const remaining = 3 - currentStrikes;
+      showToast(
+        `⚠️ Warning ${currentStrikes}/2: ${description} You have ${remaining} chance${remaining === 1 ? '' : 's'} left before automatic submission.`
+      );
+    } else {
+      clearStoredProctorStrikes();
+      endQuizDueToViolation(reason, `${description} Maximum violation limit (2 warnings) reached.`);
+    }
+  };
+
+  const exitFullscreenSafely = () => {
+    try {
+      if (typeof document !== "undefined") {
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+          (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen)?.call(document).catch(() => {});
+        }
+      }
+    } catch (_) {}
+    setIsFullscreen(false);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+      if (!isReview) setIsProctorActive(true);
+    } else {
+      exitFullscreenSafely();
+    }
+  };
+
+  const handleEnterFullscreenAndStart = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    } catch (err) {
+      console.warn("Fullscreen permission error:", err);
+      setIsFullscreen(true);
+      setIsProctorActive(true);
+    }
+  };
+
+  const handleToggleFullscreenClick = () => {
+    if (!isReview && !submitted) {
+      const strikes = getStoredProctorStrikes();
+      const nextStrike = strikes + 1;
+      if (nextStrike < 3) {
+        setProctorConfirmModal({
+          title: "Exit Full-Screen Mode?",
+          message: `Exiting full-screen is an examination violation. This action will count as Warning ${nextStrike}/2. Are you sure you want to proceed?`,
+          isDanger: false,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            }
+            handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+          }
+        });
+      } else {
+        setProctorConfirmModal({
+          title: "Final Warning: Submission Will Trigger",
+          message: "Exiting full-screen now will exceed your 2 allowed warnings. Your quiz will be ended and current answers will be automatically submitted. Proceed?",
+          isDanger: true,
+          onConfirm: () => {
+            setProctorConfirmModal(null);
+            if (document.fullscreenElement) {
+              document.exitFullscreen?.().catch(() => {});
+            }
+            handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+          }
+        });
+      }
+      return;
+    }
+    toggleFullscreen();
+  };
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFs = Boolean(document.fullscreenElement);
+      setIsFullscreen(isFs);
+
+      if (!isReview && !submitted && proctorArmedRef.current && !isFs) {
+        handleProctorViolation("exit_fullscreen", "Full-screen mode was exited!");
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
+  }, [isReview, submitted]);
+
+  // Tab switching, blur, and anti-cheat keyboard shortcuts
+  useEffect(() => {
+    if (isReview || submitted) return;
+
+    let armTimer = null;
+    if (isProctorActive && isFullscreen) {
+      armTimer = setTimeout(() => {
+        proctorArmedRef.current = true;
+      }, 2500);
+    } else {
+      proctorArmedRef.current = false;
+    }
+
+    const handleTabSwitchEvent = () => {
+      if (proctorArmedRef.current && !submitted) {
+        endQuizDueToViolation("tab_switch", "Tab switch or leaving the quiz window detected!");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && proctorArmedRef.current && !submitted) {
+        handleTabSwitchEvent();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Only count window blur as a violation when the window is actually hidden
+      if (document.hidden && proctorArmedRef.current && !submitted) {
+        handleTabSwitchEvent();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      const key = (e.key || "").toLowerCase();
+      const code = e.code || "";
+
+      if (e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        showToast("⚠️ Alt key navigation is disabled during proctored assessments.");
+        return;
+      }
+
+      if (isMod && (key === "tab" || code === "Tab" || key === "w" || key === "t" || key === "n")) {
+        e.preventDefault();
+        e.stopPropagation();
+        showToast("⚠️ Tab switching shortcuts are disabled during this assessment.");
+        return;
+      }
+
+      if (key === "f11" || code === "F11" || key === "f12" || code === "F12") {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      if (armTimer) clearTimeout(armTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isReview, submitted, isProctorActive, isFullscreen]);
+
   // Initialize or start assessment attempt with API
   useEffect(() => {
-    if (quiz.source === "admin" && !isReview && quiz.id) {
+    const isRealQuiz = quiz.id && (quiz.source === "admin" || !isNaN(Number(quiz.id)));
+    if (isRealQuiz && !isReview) {
       apiFetch(`/assessments/${quiz.id}/start`, { method: "POST" })
         .then((data) => {
           console.log("[Quiz Start Response]", data);
+          let foundAttemptId = null;
           // Success path: attempt just created
           if (data.success && data.data?.attempt?.id) {
-            setAttemptId(data.data.attempt.id);
+            foundAttemptId = data.data.attempt.id;
           } else if (data.data?.attemptId) {
-            setAttemptId(data.data.attemptId);
+            foundAttemptId = data.data.attemptId;
           } else if (data.data?.attempt_id) {
-            setAttemptId(data.data.attempt_id);
+            foundAttemptId = data.data.attempt_id;
           }
           // 409 = already attempted — grab the attemptId from error detail
           else if (!data.success && data.details) {
             const hint = Array.isArray(data.details) ? data.details[0]?.hint : data.details;
             if (hint) {
               const match = String(hint).match(/(\d+)/);
-              if (match) setAttemptId(parseInt(match[1], 10));
+              if (match) foundAttemptId = parseInt(match[1], 10);
             }
+          }
+          if (foundAttemptId) {
+            setAttemptId(foundAttemptId);
+            const sId = user?.userId || user?.id || "guest";
+            const qId = String(quiz?.id || "unknown");
+            sessionStorage.setItem(`quiz_active_attempt_${sId}_${qId}`, String(foundAttemptId));
           }
         })
         .catch((err) => console.error("Failed to start attempt:", err));
@@ -358,13 +729,21 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   const [wasSubmitted, setWasSubmitted] = useState(false);
   const [finalScoreText, setFinalScoreText] = useState(null);
 
-      async function handleSubmit() {
-    if (submitted) return;
+  async function handleSubmit(opts = {}) {
+    const isAuto = Boolean(opts && opts.isAutoSubmit === true);
+    if (submitted && !isAuto) return;
     setSubmitted(true);
     setWasSubmitted(true);
+    proctorArmedRef.current = false;
+    setIsProctorActive(false);
+
+    // After the user clicks on submit, only then leave full screen
+    if (!isAuto) {
+      exitFullscreenSafely();
+    }
 
     const calculatedScore = questions.reduce(
-      (acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0),
+      (acc, qItem, i) => acc + (isAnswerCorrect(answers[i], qItem) ? 1 : 0),
       0
     );
     const scoreText = `Score: ${calculatedScore}/${questions.length}`;
@@ -392,7 +771,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       window.dispatchEvent(new Event('portal_quiz_updated'));
     } catch (e) {}
 
-    if (quiz.source !== "admin") return; // builtin quizzes don't need backend
+    if (quiz.source === "practice" && isNaN(Number(quiz.id))) return; // builtin static practice doesn't need backend
 
     const optKeys = ["a", "b", "c", "d"];
     const formattedAnswers = questions.map((q, idx) => {
@@ -464,13 +843,15 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
     }
   }
 
+  submitRef.current = handleSubmit;
+
   const answered = answers.filter((a) => a !== null).length;
   const safeCurrent = Math.min(Math.max(0, current), questions.length - 1);
   const q = questions[safeCurrent] || questions[0] || defaultQuizQuestions[0];
   const userAnswer = answers[safeCurrent];
 
   const score = submitted
-    ? questions.reduce((acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0), 0)
+    ? questions.reduce((acc, qItem, i) => acc + (isAnswerCorrect(answers[i], qItem) ? 1 : 0), 0)
     : 0;
 
   // Determine status for review sidebar
@@ -479,7 +860,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       if (reviewMarks[idx]) return "review";
       return answers[idx] !== null ? "completed" : "unattempted";
     }
-    return answers[idx] === questions[idx]?.correct ? "correct" : "wrong";
+    return isAnswerCorrect(answers[idx], questions[idx]) ? "correct" : "wrong";
   }
 
   return createPortal(
@@ -487,7 +868,28 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       {/* Header */}
       <div className="qp-header">
         <div className="qp-header-left">
-          <button className="qp-back-btn" onClick={() => onExit(wasSubmitted, finalScoreText || `Score: ${score}/${questions.length}`)}>
+          <button
+            className="qp-back-btn"
+            onClick={() => {
+              if (!isReview && !submitted) {
+                setProctorConfirmModal({
+                  title: "Leave Proctored Assessment?",
+                  message: "Leaving this page will exit the proctored quiz. Are you sure you want to return to the quizzes list?",
+                  isDanger: true,
+                  onConfirm: () => {
+                    setProctorConfirmModal(null);
+                    proctorArmedRef.current = false;
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen?.().catch(() => {});
+                    }
+                    onExit(wasSubmitted, finalScoreText || `Score: ${score}/${questions.length}`);
+                  }
+                });
+                return;
+              }
+              onExit(wasSubmitted, finalScoreText || `Score: ${score}/${questions.length}`);
+            }}
+          >
             <ChevronLeft size={18} /> Back
           </button>
           <div className="qp-header-title-block">
@@ -497,12 +899,31 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
         </div>
 
         <div className="qp-header-right">
+          {!isReview && (
+            <div className="cp-proctor-live-badge" title="This assessment is actively proctored. Exiting full-screen or switching tabs will trigger violation warnings.">
+              <span className="cp-proctor-live-pulse" />
+              <span>Proctored Quiz</span>
+            </div>
+          )}
+
           {!isReview && !submitted && (
             <div className={`qp-timer ${timeLeft <= 120 ? "qp-timer--urgent" : ""}`}>
               <Timer size={15} />
               {timeDisplay}
             </div>
           )}
+
+          {!isReview && (
+            <button
+              type="button"
+              className="cp-fs-toggle-btn"
+              onClick={handleToggleFullscreenClick}
+              title={isFullscreen ? (!submitted ? "Locked Full-Screen (Exiting Triggers Warning)" : "Exit Full Screen") : "Full Screen"}
+            >
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            </button>
+          )}
+
           {submitted && !isReview && (
             <div className="qp-score-pill">
               <Trophy size={15} /> Score: {score}/{questions.length}
@@ -669,15 +1090,24 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
             ) : submitted ? (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit qp-nav-arrow--finish"
-                onClick={() => onExit(true)}
-                
+                onClick={() => {
+                  try {
+                    if (typeof document !== "undefined" && (document.fullscreenElement || document.webkitFullscreenElement)) {
+                      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document).catch(() => {});
+                    }
+                  } catch (_) {}
+                  onExit(true);
+                }}
               >
                 <CheckCircle2 size={16} /> Finish & Return to Dashboard
               </button>
             ) : (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
-                onClick={handleSubmit}
+                onClick={() => {
+                  exitFullscreenSafely();
+                  handleSubmit({ userInitiated: true });
+                }}
               >
                 <Send size={16} /> Submit Quiz
               </button>
@@ -685,6 +1115,132 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
           </div>
         </main>
       </div>
+
+      {/* ── Anti-Cheat / Proctor Violation Toast ── */}
+      {clipboardWarning && (
+        <div className="cp-clipboard-toast">
+          <span>{clipboardWarning}</span>
+        </div>
+      )}
+
+      {/* ── Proctored Full-Screen Gate Overlay ── */}
+      {!isReview && !submitted && !isFullscreen && !proctorTerminated && (
+        <div className="proctor-fullscreen-gate-overlay">
+          <div className="proctor-gate-card">
+            <div className="proctor-gate-badge">
+              <Lock size={14} /> PROCTORED ACADEMIC ASSESSMENT
+            </div>
+            <h2 className="proctor-gate-title">Full-Screen Mode Required</h2>
+            <p className="proctor-gate-subtitle">
+              This academic assessment is monitored under examination mode. Once started, strict proctoring is enforced:
+            </p>
+            <div className="proctor-gate-rules">
+              <div className="proctor-rule-item">
+                <span className="proctor-rule-icon">🖥️</span>
+                <div>
+                  <strong>Full-Screen is Mandatory:</strong> Exiting full-screen will trigger warnings; on the 3rd exit your quiz is automatically submitted and closed.
+                </div>
+              </div>
+              <div className="proctor-rule-item">
+                <span className="proctor-rule-icon">🚫</span>
+                <div>
+                  <strong>Tab Switching Disabled:</strong> Leaving the quiz window, switching tabs, or minimizing will trigger warnings and count toward auto-submission.
+                </div>
+              </div>
+              <div className="proctor-rule-item">
+                <span className="proctor-rule-icon">⏱️</span>
+                <div>
+                  <strong>Timed Evaluation:</strong> The timer runs continuously. Auto-submission occurs if time expires or if 3 violations occur.
+                </div>
+              </div>
+              <div className="proctor-rule-item">
+                <span className="proctor-rule-icon">🔒</span>
+                <div>
+                  <strong>Single Attempt Locked:</strong> Once submitted or ended due to violations, answers and marks are locked.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleEnterFullscreenAndStart}
+              className="proctor-gate-btn"
+            >
+              <Maximize2 size={18} />
+              <span>Enter Full-Screen & Start Quiz</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Proctored Violation / Termination Modal ── */}
+      {proctorTerminated && (
+        <div className="proctor-termination-modal-overlay">
+          <div className="proctor-termination-card">
+            <div className="proctor-termination-icon-wrap">
+              <AlertCircle size={38} color="#dc2626" />
+            </div>
+            <h3 className="proctor-term-title">Quiz Ended — Exam Policy Violation</h3>
+            <p className="proctor-term-desc">
+              {terminationReason === "exit_fullscreen"
+                ? "You exited full-screen mode during this proctored quiz. As per examination guidelines, your quiz has been ended and your current answers were automatically submitted."
+                : "Tab switching or leaving the examination window was detected. As per examination guidelines, your quiz has been ended and your current answers were automatically submitted."}
+            </p>
+            <div className="proctor-term-status-box">
+              <span>🔒 The assessment is now locked. Your answers have been recorded and your score is calculated.</span>
+            </div>
+            <div className="proctor-term-btn-row">
+              <button
+                type="button"
+                onClick={() => setProctorTerminated(false)}
+                className="proctor-term-btn-review"
+              >
+                Review Answers & Explanations
+              </button>
+              <button
+                type="button"
+                onClick={() => onExit(true, finalScoreText || `Score: ${score}/${questions.length}`)}
+                className="proctor-term-btn-exit"
+              >
+                Return to Quizzes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Custom In-App Proctor Confirmation Dialog ── */}
+      {proctorConfirmModal && (
+        <div className="proctor-termination-modal-overlay" style={{ zIndex: 1000001 }}>
+          <div className="proctor-termination-card" style={{ borderColor: proctorConfirmModal.isDanger ? "#fecaca" : "#fed7aa" }}>
+            <div className="proctor-termination-icon-wrap" style={{ background: proctorConfirmModal.isDanger ? "#fee2e2" : "#ffedd5", borderColor: proctorConfirmModal.isDanger ? "#fca5a5" : "#fdba74" }}>
+              <AlertCircle size={36} color={proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c"} />
+            </div>
+            <h3 className="proctor-term-title" style={{ color: proctorConfirmModal.isDanger ? "#991b1b" : "#9a3412" }}>
+              {proctorConfirmModal.title}
+            </h3>
+            <p className="proctor-term-desc">
+              {proctorConfirmModal.message}
+            </p>
+            <div className="proctor-term-btn-row">
+              <button
+                type="button"
+                onClick={() => setProctorConfirmModal(null)}
+                className="proctor-term-btn-review"
+              >
+                Cancel / Stay in Exam
+              </button>
+              <button
+                type="button"
+                onClick={proctorConfirmModal.onConfirm}
+                className="proctor-term-btn-exit"
+                style={{ background: proctorConfirmModal.isDanger ? "#dc2626" : "#ea580c" }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body
   );
@@ -809,7 +1365,20 @@ export default function AcademicQuiz() {
                 </div>
 
                 <div className="quiz-main-info">
-                  <h3 className="quiz-title">{quiz.title}</h3>
+                  <h3 className="quiz-title">
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      fontFamily: 'ui-monospace, monospace',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      border: '1px solid #bfdbfe',
+                      padding: '1.5px 6px',
+                      borderRadius: '5px',
+                      marginRight: '6px'
+                    }}>ID #{quiz.id}</span>
+                    {quiz.title}
+                  </h3>
                   <p className="quiz-subject">{quiz.subject} • {quiz.topic}</p>
                 </div>
 

@@ -35,11 +35,7 @@ export default function AD_ApproveUsers() {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
         // Both Super Admin and College Admin receive their respective pending users directly from the backend API
-        const verifiedOnly = res.data.filter((u) => {
-          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-        });
-        setPendingUsers(verifiedOnly);
+        setPendingUsers(res.data);
       } else {
         setPendingUsers([]);
       }
@@ -68,23 +64,29 @@ export default function AD_ApproveUsers() {
   };
 
   const handleApprove = async (user) => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || actionLoadingId === user.id) return;
+    
+    // Instant Optimistic Feedback - zero lag
     setActionLoadingId(user.id);
+    const backupList = [...pendingUsers];
+    setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
+    if (selectedUserModal?.id === user.id) {
+      setSelectedUserModal(null);
+    }
+    showToast(`Account approved for ${user.name}!`);
+
     try {
       const res = await apiFetch(`/admin/users/${user.id}/approve`, {
         method: "PATCH",
       });
-      if (res && (res.success || !res.error)) {
-        showToast(`Account approved for ${user.name}!`);
-        setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
-        if (selectedUserModal?.id === user.id) {
-          setSelectedUserModal(null);
-        }
-      } else {
+      if (!res || (res.error && !res.success)) {
+        // Rollback if server returned failure
+        setPendingUsers(backupList);
         showToast(res?.error || "Failed to approve user", "error");
       }
     } catch (err) {
       console.error("Error approving user:", err);
+      setPendingUsers(backupList);
       showToast("Server error when approving user", "error");
     } finally {
       setActionLoadingId(null);
@@ -131,6 +133,8 @@ export default function AD_ApproveUsers() {
         matchesRole = roleLower.includes("mentor") || roleLower.includes("faculty");
       } else if (selectedRole === "coordinator") {
         matchesRole = roleLower.includes("coordinator");
+      } else if (selectedRole === "trainer") {
+        matchesRole = roleLower.includes("trainer");
       } else {
         matchesRole = roleLower === selectedRole.toLowerCase();
       }
@@ -169,6 +173,7 @@ export default function AD_ApproveUsers() {
 
   // College Admin counts
   const studentCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "student").length;
+  const trainerCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "trainer").length;
   const mentorCount = pendingUsers.filter(
     (u) => String(u.role).toLowerCase() === "mentor" || String(u.role).toLowerCase() === "faculty"
   ).length;
@@ -306,6 +311,17 @@ export default function AD_ApproveUsers() {
 
             <div className="approve-stat-card">
               <div>
+                <div className="approve-stat-lbl">Trainers</div>
+                <div className="approve-stat-val">{trainerCount}</div>
+                <div className="approve-stat-sub">Trainer requests</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--emerald">
+                <Briefcase size={24} />
+              </div>
+            </div>
+
+            <div className="approve-stat-card">
+              <div>
                 <div className="approve-stat-lbl">Mentors</div>
                 <div className="approve-stat-val">{mentorCount}</div>
                 <div className="approve-stat-sub">Mentor requests</div>
@@ -394,6 +410,13 @@ export default function AD_ApproveUsers() {
                 onClick={() => setSelectedRole("coordinator")}
               >
                 Coordinators ({coordCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "trainer" ? "active" : ""}`}
+                onClick={() => setSelectedRole("trainer")}
+              >
+                Trainers ({trainerCount})
               </button>
             </div>
           </div>
@@ -486,6 +509,10 @@ export default function AD_ApproveUsers() {
               avatarClass = "user-avatar--coordinator";
               roleBadgeBg = "#fef3c7";
               roleBadgeColor = "#b45309";
+            } else if (roleStr.includes("trainer")) {
+              avatarClass = "user-avatar--trainer";
+              roleBadgeBg = "#ecfdf5";
+              roleBadgeColor = "#047857";
             }
 
             return (
@@ -555,32 +582,9 @@ export default function AD_ApproveUsers() {
                             borderRadius: "6px",
                           }}
                         >
-                          <Clock size={12} /> Pending Approval
+                          <Clock size={12} /> Unapproved
                         </span>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            fontSize: "11px",
-                            fontWeight: "650",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
-                            color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
-                            border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
-                          }}
-                        >
-                          {u.is_verified || u.two_factor_enabled ? (
-                            <>
-                              <ShieldCheck size={12} /> Verified (2FA)
-                            </>
-                          ) : (
-                            <>
-                              <AlertCircle size={12} /> Unverified
-                            </>
-                          )}
-                        </span>
+                        
                       </div>
                     </div>
                   </div>
@@ -668,7 +672,10 @@ export default function AD_ApproveUsers() {
 
                   <button
                     type="button"
-                    onClick={() => setSelectedUserModal(u)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedUserModal(u);
+                    }}
                     className="btn-card-details"
                     title="View Full Profile Details"
                   >
@@ -708,6 +715,8 @@ export default function AD_ApproveUsers() {
                     avatarClass = "user-avatar--mentor";
                   } else if (roleStr.includes("coordinator")) {
                     avatarClass = "user-avatar--coordinator";
+                  } else if (roleStr.includes("trainer")) {
+                    avatarClass = "user-avatar--trainer";
                   }
 
                   return (
@@ -795,32 +804,9 @@ export default function AD_ApproveUsers() {
                               fontWeight: "700",
                             }}
                           >
-                            <Clock size={13} /> Pending Approval
+                            <Clock size={13} /> Unapproved
                           </span>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "11px",
-                              fontWeight: "650",
-                              padding: "2px 8px",
-                              borderRadius: "6px",
-                              background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
-                              color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
-                              border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
-                            }}
-                          >
-                            {u.is_verified || u.two_factor_enabled ? (
-                              <>
-                                <ShieldCheck size={12} /> Verified (2FA)
-                              </>
-                            ) : (
-                              <>
-                                <AlertCircle size={12} /> Unverified
-                              </>
-                            )}
-                          </span>
+                          
                         </div>
                       </td>
 
@@ -871,7 +857,10 @@ export default function AD_ApproveUsers() {
 
                           <button
                             type="button"
-                            onClick={() => setSelectedUserModal(u)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUserModal(u);
+                            }}
                             style={{
                               padding: "7px 10px",
                               borderRadius: "8px",
@@ -951,7 +940,7 @@ export default function AD_ApproveUsers() {
                   </div>
                   <div className="approve-modal-hero-status-row">
                     <span className="approve-status-pill">
-                      <Clock size={12} /> Pending Approval
+                      <Clock size={12} /> Unapproved
                     </span>
                     {selectedUserModal.created_at && (
                       <span className="approve-registered-time">

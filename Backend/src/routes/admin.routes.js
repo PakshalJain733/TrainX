@@ -6,6 +6,7 @@ import {
   getAdminPendingUsers,
   approveUserAdmin,
   rejectUserAdmin,
+  resendStaffActivationAdmin,
   createUserAdmin,
   bulkCreateUsersAdmin,
   updateUserAdmin,
@@ -22,18 +23,22 @@ import {
   deleteAdminBroadcast,
   getAdminPerformance,
   assignMentorToStudents,
+  unassignMentorFromStudents,
   getMentorAssignments,
   getAdminC2CEnrollments,
-  triggerUser2FAAdmin,
   getAdminSupportTickets,
   updateAdminSupportTicket,
   escalateSupportTicketToSuperAdmin,
   createAdminSupportTicket,
+  handleCareerGatewayInboundSync,
+  handleCareerGatewayOutboundSync,
+  handleCareerGatewaySyncStatus,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
-import { getAllCodingSubmissionsAdmin } from '../controllers/codingSubmission.controller.js';
+import { getAllCodingSubmissionsAdmin, updateSubmissionFeedbackController } from '../controllers/codingSubmission.controller.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
@@ -44,14 +49,14 @@ router.use(authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN));
 router.get('/', getAdminData);
 router.get('/stats', getAdminStats);
 router.get('/users', getAdminUsers);
-router.get('/pending-users', getAdminPendingUsers);
-router.patch('/users/:id/approve', approveUserAdmin);
-router.patch('/users/:id/reject', rejectUserAdmin);
+router.get('/pending-users', requireFeature('adminApproveUsers'), getAdminPendingUsers);
+router.patch('/users/:id/approve', requireFeature('adminApproveUsers'), approveUserAdmin);
+router.patch('/users/:id/reject', requireFeature('adminApproveUsers'), rejectUserAdmin);
+router.post('/users/:id/resend-activation', resendStaffActivationAdmin);
 router.post('/users', createUserAdmin);
 router.post('/users/bulk-upload', bulkCreateUsersAdmin);
 router.put('/users/:id', updateUserAdmin);
 router.delete('/users/:id', deleteUserAdmin);
-router.post('/users/:id/trigger-2fa', authorizeRoles(ROLES.SUPER_ADMIN), triggerUser2FAAdmin);
 
 // Admin Profile
 router.get('/profile', getAdminProfile);
@@ -64,6 +69,8 @@ router.put('/practice-problems/:id', updateAdminPracticeProblem);
 router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 router.get('/practice-problems/submissions', getAllCodingSubmissionsAdmin);
+router.patch('/practice-problems/submissions/:id/feedback', updateSubmissionFeedbackController);
+router.post('/practice-problems/submissions/:id/feedback', updateSubmissionFeedbackController);
 
 // Broadcast Notifications Center
 router.get('/broadcast', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getAdminBroadcasts);
@@ -76,6 +83,8 @@ router.get('/performance', getAdminPerformance);
 // Faculty Mentor Assignment Routes
 router.post('/assign-mentor', assignMentorToStudents);
 router.get('/assign-mentor', getMentorAssignments);
+router.delete('/assign-mentor', unassignMentorFromStudents);
+router.post('/unassign-mentor', unassignMentorFromStudents);
 
 // C2C 2029 Training Enrollments
 router.get('/c2c/enrollments', getAdminC2CEnrollments);
@@ -85,5 +94,11 @@ router.get('/support/tickets', getAdminSupportTickets);
 router.post('/support/tickets', createAdminSupportTicket);
 router.put('/support/tickets/:id', updateAdminSupportTicket);
 router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
+
+
+// Career Gateway Data Bridge Routes
+router.post('/career-gateway/sync-inbound', requireFeature('adminCareerGatewaySync'), handleCareerGatewayInboundSync);
+router.post('/career-gateway/sync-outbound', requireFeature('adminCareerGatewaySync'), handleCareerGatewayOutboundSync);
+router.get('/career-gateway/sync-status', requireFeature('adminCareerGatewaySync'), handleCareerGatewaySyncStatus);
 
 export default router;

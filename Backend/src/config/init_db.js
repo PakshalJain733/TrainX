@@ -124,24 +124,42 @@ export async function initializeDatabase() {
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
         target_track VARCHAR(150) NULL,
-        two_factor_secret VARCHAR(255) NULL,
-        two_factor_enabled BOOLEAN DEFAULT FALSE,
-        two_factor_reset BOOLEAN DEFAULT FALSE,
-        is_active BOOLEAN DEFAULT TRUE,
+        is_active BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
       )
     `);
 
-    try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL UNIQUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL`); } catch (_) { }
+
+    // Prune redundant duplicate auto-generated indexes on users and students tables
+    try {
+      const [redundantIndexes] = await conn.query(`
+        SELECT DISTINCT TABLE_NAME, INDEX_NAME 
+        FROM INFORMATION_SCHEMA.STATISTICS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME IN ('users', 'students') 
+          AND (
+            INDEX_NAME REGEXP '.*_[0-9]+$' 
+            OR (COLUMN_NAME = 'email' AND INDEX_NAME NOT IN ('email', 'PRIMARY', 'users_email_unique'))
+          )
+          AND INDEX_NAME != 'PRIMARY'
+      `);
+      for (const row of (redundantIndexes || [])) {
+        try {
+          await conn.query(`ALTER TABLE \`${row.TABLE_NAME}\` DROP INDEX \`${row.INDEX_NAME}\``);
+          console.log(`[DB Init] Pruned redundant duplicate index: ${row.TABLE_NAME}.${row.INDEX_NAME}`);
+        } catch (_) {}
+      }
+    } catch (idxErr) {
+      console.warn('[DB Init] Notice checking redundant indexes:', idxErr.message);
+    }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student', 'trainer') NOT NULL DEFAULT 'student'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users DROP COLUMN password`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users MODIFY COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_reset BOOLEAN DEFAULT FALSE`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN is_active BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
@@ -152,6 +170,14 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN department_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_approved BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN profile_pic VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN experience VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
+    try {
+      await conn.query(
+        `UPDATE users SET is_active = 0 WHERE role != 'super_admin' AND (is_verified = 0 OR is_verified IS NULL)`
+      );
+    } catch (_) { }
 
     // 4.05 Ensure Coordinator Departments Mapping Table
     await conn.query(`
@@ -222,6 +248,19 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE students DROP COLUMN linkedin_url`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN cgpa DECIMAL(4, 2) DEFAULT 8.50`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN live_kt INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN dead_kt INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placement_status VARCHAR(50) DEFAULT 'Unplaced'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placed_company VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN placement_opt_in BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN portfolio_link VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN resume_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN cg_synced_at TIMESTAMP NULL DEFAULT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_milestones TINYINT(1) DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_weekly_report TINYINT(1) DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN notif_interview TINYINT(1) DEFAULT 1`); } catch (_) { }
 
     // 6. Ensure Assessments Table
     await conn.query(`
@@ -319,17 +358,30 @@ export async function initializeDatabase() {
         marked_by INT NULL,
         remarks VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
     try {
+      await conn.query(`ALTER TABLE attendance ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`);
+    } catch (_) { }
+
+    try {
       await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);
     } catch (_) { }
 
     try {
-      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_user_session_date UNIQUE (user_id, session_date)`);
+      await conn.query(`ALTER TABLE attendance ADD INDEX idx_attendance_user (user_id)`);
+    } catch (_) { }
+
+    try {
+      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_user_batch_date UNIQUE (batch_id, user_id, session_date)`);
+    } catch (_) { }
+
+    try {
+      await conn.query(`ALTER TABLE attendance DROP INDEX unique_user_session_date`);
     } catch (_) { }
 
     // 9c. Ensure Attendance Summary Table
@@ -435,6 +487,43 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN created_by_name VARCHAR(255) DEFAULT 'Admin'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN sender_role VARCHAR(100) DEFAULT 'Admin'`); } catch (_) { }
 
+    // 10b. Ensure Notifications & Per-User Notification State Tracking Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT NULL,
+        college_id INT DEFAULT 1,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'alert',
+        category VARCHAR(50) DEFAULT 'general',
+        priority VARCHAR(50) DEFAULT 'General Announcement',
+        target VARCHAR(100) DEFAULT 'All Batches',
+        created_by INT DEFAULT NULL,
+        created_by_name VARCHAR(100) DEFAULT NULL,
+        sender_role VARCHAR(50) DEFAULT NULL,
+        action_url VARCHAR(255) DEFAULT NULL,
+        action_label VARCHAR(100) DEFAULT NULL,
+        action_color VARCHAR(50) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_notif_user (user_id),
+        INDEX idx_notif_college (college_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notification_user_states (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        notification_id VARCHAR(100) NOT NULL,
+        is_read TINYINT(1) DEFAULT 1,
+        is_deleted TINYINT(1) DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_user_notif (user_id, notification_id),
+        INDEX idx_user_notif_state (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
     // 11. Ensure Live Sessions Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS live_sessions (
@@ -460,6 +549,25 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN student_name VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN notes TEXT NULL`); } catch (_) { }
 
+    // 11b. Ensure User OAuth Tokens (Google Meet / Calendar)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_oauth_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        provider VARCHAR(50) NOT NULL DEFAULT 'google',
+        email VARCHAR(255) NULL,
+        refresh_token TEXT NULL,
+        access_token TEXT NULL,
+        expiry_date BIGINT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_provider (user_id, provider),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    try { await conn.query(`ALTER TABLE users ADD COLUMN google_calendar_email VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN google_refresh_token TEXT NULL`); } catch (_) { }
+
     // 12. Ensure Study Materials Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS study_materials (
@@ -482,6 +590,9 @@ export async function initializeDatabase() {
     } catch (_) { }
     try {
       await conn.query(`ALTER TABLE study_materials ADD COLUMN link VARCHAR(500) NULL`);
+    } catch (_) { }
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN deadline VARCHAR(100) NULL`);
     } catch (_) { }
 
     // 13. Ensure Support Tickets Table
@@ -696,6 +807,8 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN completed_topics JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN quizzes INT DEFAULT 0`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN exercises INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) { }
@@ -825,6 +938,19 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    // 27.5 Ensure Batch Trainers Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
     // 28. Ensure Batch Tasks Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS batch_tasks (
@@ -859,6 +985,8 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    try { await conn.query(`ALTER TABLE task_submissions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+
     // 30. Ensure Student Quiz Completions Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS student_quiz_completions (
@@ -873,6 +1001,110 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    
+    // 30b. Ensure Batch Trainers and Career Gateway Sync Log Tables
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_trainers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_sync_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sync_direction ENUM('inbound_from_cg', 'outbound_to_cg') NOT NULL,
+        entity_type VARCHAR(50) NOT NULL DEFAULT 'students',
+        total_records INT NOT NULL DEFAULT 0,
+        success_count INT NOT NULL DEFAULT 0,
+        failure_count INT NOT NULL DEFAULT 0,
+        status ENUM('success', 'partial', 'failed') NOT NULL DEFAULT 'success',
+        details JSON NULL,
+        triggered_by VARCHAR(100) DEFAULT 'scheduled_job',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_cg_sync_direction (sync_direction),
+        INDEX idx_cg_sync_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 30b. Ensure Career Gateway On-Demand Sync Executions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_sync_executions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sync_id VARCHAR(100) NOT NULL UNIQUE,
+        request_id VARCHAR(100) NULL,
+        sync_type ENUM('manual_student', 'manual_college', 'scheduled_daily') NOT NULL DEFAULT 'manual_student',
+        trigger_source ENUM('career_gateway', 'trainx_admin', 'scheduler') NOT NULL DEFAULT 'career_gateway',
+        requested_by VARCHAR(150) NULL,
+        college_id INT NULL,
+        career_gateway_college_id VARCHAR(100) NULL,
+        career_gateway_student_id INT NULL,
+        trainx_user_id INT NULL,
+        export_id VARCHAR(100) NULL,
+        status ENUM('queued', 'processing', 'completed', 'partial', 'failed') NOT NULL DEFAULT 'queued',
+        records_processed INT NOT NULL DEFAULT 0,
+        records_failed INT NOT NULL DEFAULT 0,
+        payload_summary JSON NULL,
+        error_summary TEXT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_sync_tenant_req (college_id, trigger_source, request_id),
+        INDEX idx_cg_sync_request_id (request_id),
+        INDEX idx_cg_sync_status (status),
+        INDEX idx_cg_sync_college_id (college_id),
+        INDEX idx_cg_sync_student_id (career_gateway_student_id),
+        INDEX idx_cg_sync_started (started_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    try {
+      await conn.query(`ALTER TABLE career_gateway_sync_executions ADD UNIQUE KEY uq_sync_tenant_req (college_id, trigger_source, request_id)`);
+    } catch (_) {}
+
+    // 30c. Ensure Career Gateway Student Mappings Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS career_gateway_student_mappings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        trainx_user_id INT NOT NULL,
+        career_gateway_student_id INT NOT NULL,
+        clg_id VARCHAR(100) NULL,
+        assigned_batch VARCHAR(100) NULL,
+        source_system VARCHAR(50) NOT NULL DEFAULT 'career_gateway',
+        eligibility_status ENUM('eligible', 'revoked', 'pending') NOT NULL DEFAULT 'eligible',
+        provisioned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_synced_at TIMESTAMP NULL DEFAULT NULL,
+        revoked_at TIMESTAMP NULL DEFAULT NULL,
+        metadata JSON NULL,
+        UNIQUE KEY unique_cg_student (career_gateway_student_id),
+        UNIQUE KEY unique_tx_user (trainx_user_id),
+        FOREIGN KEY (trainx_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_mapping_status (eligibility_status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    // 30d. Ensure Account Activations Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS account_activations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        consumed_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_activation_user (user_id),
+        INDEX idx_activation_token (token_hash)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+
+    try { await conn.query("ALTER TABLE batches ADD COLUMN mentor VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE batches ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE batches ADD COLUMN trainer_id INT NULL"); } catch (e) {}
+
     // 31. Ensure Mentor Assignments Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS mentor_assignments (
@@ -884,6 +1116,66 @@ export async function initializeDatabase() {
         UNIQUE KEY unique_mentor_student (mentor_name, student_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_email VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN student_id VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments ADD COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE mentor_assignments MODIFY COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE students ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE students ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE users ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE users ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE broadcasts ADD COLUMN desc_text TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE live_sessions ADD COLUMN batch_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE support_tickets ADD COLUMN escalated_to VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE support_tickets ADD COLUMN target_role VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN college_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN title VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE leave_requests ADD COLUMN remarks TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE practice_problems ADD COLUMN language VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE student_quiz_completions ADD COLUMN score_text VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN title VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE weekly_reports ADD COLUMN status VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN current_step INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN final_score VARCHAR(50) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE drive_participations ADD COLUMN feedback TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE training_programs ADD COLUMN upi_id VARCHAR(100) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE training_programs ADD COLUMN upi_payee_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE assessment_attempts ADD COLUMN completed_at TIMESTAMP NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback TEXT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_by VARCHAR(255) NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN feedback_at DATETIME NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (e) {}
+    try { await conn.query("ALTER TABLE coding_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN attempt_number INT DEFAULT 1"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN is_retake BOOLEAN DEFAULT FALSE"); } catch (e) {}
+    try { await conn.query("ALTER TABLE task_submissions ADD COLUMN retake_permission_id INT NULL"); } catch (e) {}
+
+    // 31b. Ensure Coding Retake Permissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS coding_retake_permissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        target_type VARCHAR(20) NOT NULL,
+        target_id INT NOT NULL,
+        batch_id INT NULL,
+        student_id INT NOT NULL,
+        granted_by INT NOT NULL,
+        granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'pending',
+        used_at TIMESTAMP NULL,
+        submission_id INT NULL,
+        reason VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_retake_lookup (target_type, target_id, student_id, status),
+        INDEX idx_retake_student (student_id),
+        INDEX idx_retake_target (target_type, target_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+
 
     // 32. Ensure Interventions Table
     await conn.query(`
@@ -1085,36 +1377,15 @@ export async function initializeDatabase() {
       console.warn('[DB Init] College seed notice:', e.message);
     }
 
-    // B. Ensure default Department
-    let defaultDeptId = 1;
+    // B. Department check (no hardcoded seeds)
+    let defaultDeptId = null;
     try {
       const [depts] = await conn.query(`SELECT id FROM departments WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
-      if (!depts || depts.length === 0) {
-        const [ins] = await conn.query(`
-          INSERT INTO departments (college_id, name, code, status)
-          VALUES (?, 'Computer Engineering', 'CE', 'Active')
-        `, [defaultCollegeId]);
-        defaultDeptId = ins.insertId;
-        console.log(`[DB Init] Seeded default Department (ID: ${defaultDeptId})`);
-      } else {
+      if (depts && depts.length > 0) {
         defaultDeptId = depts[0].id;
       }
     } catch (e) {
-      console.warn('[DB Init] Department seed notice:', e.message);
-    }
-
-    // C. Ensure default Batch
-    try {
-      const [batches] = await conn.query(`SELECT id FROM batches WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
-      if (!batches || batches.length === 0) {
-        await conn.query(`
-          INSERT INTO batches (college_id, department_id, name, status, year, division)
-          VALUES (?, ?, 'Batch A', 'active', 'TE', 'A')
-        `, [defaultCollegeId, defaultDeptId]);
-        console.log('[DB Init] Seeded default Batch for College');
-      }
-    } catch (e) {
-      console.warn('[DB Init] Batch seed notice:', e.message);
+      console.warn('[DB Init] Department check notice:', e.message);
     }
 
     // D. Ensure default C2C 2026 Training Program exists
@@ -1133,20 +1404,29 @@ export async function initializeDatabase() {
 
     // E. Ensure Super Admin Account
     try {
-      const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+      const superEmail = process.env.SUPER_ADMIN_EMAIL ? process.env.SUPER_ADMIN_EMAIL.trim().toLowerCase() : null;
       const superPass = process.env.SUPER_ADMIN_PASSWORD;
-      const superPasswordHash = superPass ? await bcrypt.hash(superPass, 12) : null;
-      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
-      if (!superUsers || superUsers.length === 0) {
-        await conn.query(
-          `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, 'super_admin', NULL, 1)`,
-          [superEmail, superPasswordHash]
-        );
-        console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
-      } else if (superPasswordHash) {
-        await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
+      const superName = process.env.SUPER_ADMIN_NAME || 'Super Admin';
+      const superMobile = process.env.SUPER_ADMIN_MOBILE || '9876543210';
+
+      if (superEmail) {
+        const superPasswordHash = superPass ? await bcrypt.hash(superPass, 12) : null;
+        const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
+        if (!superUsers || superUsers.length === 0) {
+          if (superPasswordHash) {
+            await conn.query(
+              `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, 'super_admin', NULL, 1, 1, 1)`,
+              [superName, superEmail, superMobile, superPasswordHash]
+            );
+            console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
+          }
+        } else if (superPasswordHash) {
+          await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
+        } else {
+          await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        }
       } else {
-        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        console.log('[DB Init] SUPER_ADMIN_EMAIL not set in .env; skipping automated Super Admin seeding.');
       }
     } catch (e) {
       console.warn('[DB Init] Super Admin seed notice:', e.message);

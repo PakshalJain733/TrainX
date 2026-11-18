@@ -27,13 +27,43 @@ uploadDirs.forEach((dir) => {
 export const primaryUploadDir = uploadDirs[0];
 
 // Configure Multer Memory Storage for safe validation and streaming to local disk
-const storage = multer.memoryStorage();
+// High-concurrency disk storage streams chunks directly to disk instead of filling Node heap memory
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, primaryUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const originalName = file.originalname || 'file';
+    const fileExtension = path.extname(originalName) || '';
+    const baseNameWithoutExt = path.basename(originalName, fileExtension).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const localFileName = `${Date.now()}_${baseNameWithoutExt}${fileExtension}`;
+    cb(null, localFileName);
+  },
+});
+
+// Allowed safe file extensions for documents, training media, and coursework
+const SAFE_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.csv',
+  '.txt', '.png', '.jpg', '.jpeg', '.webp', '.mp4', '.zip', '.rar', '.7z'
+]);
+
+// Explicitly blocked executable and script extensions (anti-malware & anti-XSS)
+const DANGEROUS_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.sh', '.php', '.phtml', '.php3', '.php4',
+  '.html', '.htm', '.svg', '.js', '.vbs', '.ps1', '.msi', '.jar', '.dll'
+]);
 
 export const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max limit
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB max limit (prevents memory and disk exhaustion)
   fileFilter: (req, file, cb) => {
-    // Allow documents, presentations, spreadsheets, archives, images, videos, audio, and code
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (DANGEROUS_EXTENSIONS.has(ext)) {
+      return cb(new Error(`File upload rejected: '${ext}' files are prohibited for security reasons.`), false);
+    }
+    if (ext && !SAFE_EXTENSIONS.has(ext)) {
+      return cb(new Error(`File upload rejected: '${ext}' is not an authorized file type.`), false);
+    }
     cb(null, true);
   },
 });
@@ -47,6 +77,23 @@ export const upload = multer({
  */
 export const uploadFileToStorage = async (file) => {
   if (!file) return null;
+
+  // Direct diskStorage efficiency: file is already safely streamed to primaryUploadDir
+  if (file.filename) {
+    uploadDirs.forEach((dir) => {
+      if (dir !== primaryUploadDir) {
+        try {
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          const src = path.join(primaryUploadDir, file.filename);
+          const dest = path.join(dir, file.filename);
+          if (fs.existsSync(src) && !fs.existsSync(dest)) {
+            fs.copyFileSync(src, dest);
+          }
+        } catch (_) {}
+      }
+    });
+    return `/uploads/${file.filename}`;
+  }
 
   // Clean the original filename to be URL-safe while preserving extension
   const originalName = file.originalname || 'file';

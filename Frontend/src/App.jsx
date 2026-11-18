@@ -5,11 +5,15 @@ import MaintenanceGuard from './components/Common/MaintenanceGuard';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import DesktopNotificationListener from './components/Common/DesktopNotificationListener';
 import MeetingReminderBanner from './components/Common/MeetingReminderBanner';
+import GlobalTooltipManager from './components/Common/GlobalTooltipManager';
 import RouteLoadingFallback from './components/Common/RouteLoadingFallback';
+import ForcePasswordChangeModal from './components/Common/ForcePasswordChangeModal';
 
 // ── Auth & Registration Pages (Lazy Loaded) ──
 const Login = lazy(() => import('./pages/authentication/login'));
 const Register = lazy(() => import('./pages/authentication/register'));
+const SetupInstitution = lazy(() => import('./pages/authentication/SetupInstitution'));
+const ActivateAccount = lazy(() => import('./pages/authentication/ActivateAccount'));
 const TrainingRegistrationPage = lazy(() => import('./pages/Student/Components/TrainingRegistrationPage'));
 
 // ── Student Workspace Pages (Lazy Loaded) ──
@@ -50,6 +54,7 @@ const AdminWeeklyReports = lazy(() => import('./pages/Admin/Components/AD_Weekly
 const AdminTrainings = lazy(() => import('./pages/Admin/Components/AD_Trainings'));
 const AdminApproveUsers = lazy(() => import('./pages/Admin/Components/AD_ApproveUsers'));
 const AdminDepartmentsPage = lazy(() => import('./pages/Admin/Components/AD_Departments'));
+const AdminCareerGatewaySync = lazy(() => import('./pages/Admin/Components/AD_CareerGatewaySync'));
 
 // ── Super Admin Workspace Pages (Lazy Loaded) ──
 const SuperAdminLayout = lazy(() => import('./pages/SuperAdmin/Components/SA_Layout'));
@@ -85,6 +90,7 @@ const MentorHelp = lazy(() => import('./pages/Mentor/Components/MN_Help'));
 const MentorQuizzes = lazy(() => import('./pages/Mentor/Components/MN_Quizzes'));
 const MentorPerformance = lazy(() => import('./pages/Mentor/Components/MN_Performance'));
 const MentorBroadcast = lazy(() => import('./pages/Mentor/Components/MN_Broadcast'));
+const MentorPracticeProblems = lazy(() => import('./pages/Mentor/Components/MN_PracticeProblems'));
 
 // ── Coordinator Workspace Pages (Lazy Loaded) ──
 const CoordinatorLayout = lazy(() => import('./pages/Coordinator/Components/CO_Layout'));
@@ -107,17 +113,30 @@ const CoordinatorHelp = lazy(() => import('./pages/Coordinator/Components/CO_Hel
 const CoordinatorBroadcast = lazy(() => import('./pages/Coordinator/Components/CO_Broadcast'));
 const CoordinatorLeaderboard = lazy(() => import('./pages/Coordinator/Components/CO_Leaderboard'));
 
+// ── Trainer Workspace Pages (Lazy Loaded) ──
+const TrainerLayout = lazy(() => import('./pages/Trainer/Components/TR_Layout'));
+const TrainerOverview = lazy(() => import('./pages/Trainer/Components/TR_Overview'));
+const TrainerBatches = lazy(() => import('./pages/Trainer/Components/TR_Batches'));
+const TrainerTasks = lazy(() => import('./pages/Trainer/Components/TR_Tasks'));
+const TrainerSubmissions = lazy(() => import('./pages/Trainer/Components/TR_Submissions'));
+const TrainerLeaderboard = lazy(() => import('./pages/Trainer/Components/TR_Leaderboard'));
+const TrainerProfile = lazy(() => import('./pages/Trainer/Components/TR_Profile'));
+
 function App() {
   return (
     <SystemMaintenanceProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <DesktopNotificationListener />
         <MeetingReminderBanner />
+        <GlobalTooltipManager />
+        <ForcePasswordChangeModal />
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
             {/* Auth & Public Routes */}
             <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
             <Route path="/register" element={<MaintenanceGuard moduleKey="userRegistration"><Register /></MaintenanceGuard>} />
+            <Route path="/setup-institution" element={<SetupInstitution />} />
+            <Route path="/activate-account" element={<ActivateAccount />} />
             <Route path="/trainings/register" element={<MaintenanceGuard moduleKey="trainingRegistration"><TrainingRegistrationPage /></MaintenanceGuard>} />
 
             {/* Student Workspace Routes */}
@@ -130,6 +149,7 @@ function App() {
               }
             >
               <Route index element={<MaintenanceGuard moduleKey="studentDashboard"><Overview /></MaintenanceGuard>} />
+              <Route path="overview" element={<MaintenanceGuard moduleKey="studentDashboard"><Overview /></MaintenanceGuard>} />
               <Route path="roadmap" element={<MaintenanceGuard moduleKey="aiRoadmaps"><AIRoadmap /></MaintenanceGuard>} />
               <Route path="learning" element={<MaintenanceGuard moduleKey="learningContent"><LearningContent /></MaintenanceGuard>} />
               <Route path="ai-interview" element={<MaintenanceGuard moduleKey="aiInterviews"><AIInterview /></MaintenanceGuard>} />
@@ -160,11 +180,11 @@ function App() {
             >
               <Route index element={<MaintenanceGuard moduleKey="adminDashboard"><AdminOverview /></MaintenanceGuard>} />
               <Route path="users" element={<MaintenanceGuard moduleKey="manageUsers"><AdminUsers /></MaintenanceGuard>} />
-              <Route path="approve-users" element={<MaintenanceGuard moduleKey="adminBulkUserImport"><AdminApproveUsers /></MaintenanceGuard>} />
+              <Route path="approve-users" element={<MaintenanceGuard moduleKey="adminApproveUsers"><AdminApproveUsers /></MaintenanceGuard>} />
               <Route path="batches" element={<MaintenanceGuard moduleKey="adminBatches"><AdminBatches /></MaintenanceGuard>} />
               <Route path="departments" element={<MaintenanceGuard moduleKey="adminDepartments"><AdminDepartmentsPage /></MaintenanceGuard>} />
-              <Route path="trainings" element={<MaintenanceGuard moduleKey="adminC2C"><AdminTrainings /></MaintenanceGuard>} />
-              <Route path="c2c" element={<MaintenanceGuard moduleKey="adminC2C"><AdminTrainings /></MaintenanceGuard>} />
+              <Route path="trainings" element={<MaintenanceGuard moduleKey="adminC2CEnrollments"><AdminTrainings /></MaintenanceGuard>} />
+              <Route path="c2c" element={<MaintenanceGuard moduleKey="adminC2CEnrollments"><AdminTrainings /></MaintenanceGuard>} />
               <Route path="attendance" element={<MaintenanceGuard moduleKey="adminAttendance"><AdminAttendance /></MaintenanceGuard>} />
               <Route path="learning" element={<MaintenanceGuard moduleKey="adminLearningContent"><AdminLearningContent /></MaintenanceGuard>} />
               <Route path="quiz" element={<MaintenanceGuard moduleKey="adminQuizzes"><AdminQuizzes /></MaintenanceGuard>} />
@@ -177,6 +197,7 @@ function App() {
               <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="adminWeeklyReports"><AdminWeeklyReports /></MaintenanceGuard>} />
               <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
               <Route path="help" element={<MaintenanceGuard moduleKey="adminHelp"><AdminHelp /></MaintenanceGuard>} />
+              <Route path="career-gateway" element={<MaintenanceGuard moduleKey="adminCareerGatewaySync"><AdminCareerGatewaySync /></MaintenanceGuard>} />
               <Route path="profile" element={<MaintenanceGuard moduleKey="adminProfile"><AdminProfile /></MaintenanceGuard>} />
             </Route>
 
@@ -191,6 +212,8 @@ function App() {
             >
               <Route index element={<MaintenanceGuard moduleKey="mentorDashboard"><MentorOverview /></MaintenanceGuard>} />
               <Route path="students" element={<MaintenanceGuard moduleKey="mentorStudents"><MentorStudents /></MaintenanceGuard>} />
+              <Route path="coding-practice" element={<MaintenanceGuard moduleKey="mentorCodingPractice"><MentorPracticeProblems /></MaintenanceGuard>} />
+              <Route path="practice-problems" element={<MaintenanceGuard moduleKey="mentorCodingPractice"><MentorPracticeProblems /></MaintenanceGuard>} />
               <Route path="quizzes" element={<MaintenanceGuard moduleKey="mentorQuizzes"><MentorQuizzes /></MaintenanceGuard>} />
               <Route path="assessments" element={<MaintenanceGuard moduleKey="mentorQuizzes"><MentorQuizzes /></MaintenanceGuard>} />
               <Route path="roadmaps" element={<MaintenanceGuard moduleKey="mentorRoadmaps"><MentorRoadmaps /></MaintenanceGuard>} />
@@ -202,7 +225,7 @@ function App() {
               <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
               <Route path="study-material" element={<MaintenanceGuard moduleKey="mentorStudyMaterial"><MentorStudyMaterial /></MaintenanceGuard>} />
               <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="mentorWeeklyReports"><MentorWeeklyReports /></MaintenanceGuard>} />
-              <Route path="batches" element={<MaintenanceGuard moduleKey="mentorStudents"><MentorBatches /></MaintenanceGuard>} />
+              <Route path="batches" element={<MaintenanceGuard moduleKey="mentorBatches"><MentorBatches /></MaintenanceGuard>} />
               <Route path="assignments" element={<MaintenanceGuard moduleKey="mentorAssignments"><MentorAssignments /></MaintenanceGuard>} />
               <Route path="sessions" element={<MaintenanceGuard moduleKey="mentorSessions"><MentorLiveSessions /></MaintenanceGuard>} />
               <Route path="notifications" element={<MaintenanceGuard moduleKey="mentorNotifications"><MentorNotifications /></MaintenanceGuard>} />
@@ -239,10 +262,28 @@ function App() {
               <Route path="broadcast" element={<MaintenanceGuard moduleKey="coordinatorBroadcast"><CoordinatorBroadcast /></MaintenanceGuard>} />
               <Route path="support" element={<MaintenanceGuard moduleKey="coordinatorHelp"><CoordinatorHelp /></MaintenanceGuard>} />
               <Route path="help" element={<MaintenanceGuard moduleKey="coordinatorHelp"><CoordinatorHelp /></MaintenanceGuard>} />
-              <Route path="leaderboard" element={<MaintenanceGuard moduleKey="studentLeaderboard"><CoordinatorLeaderboard /></MaintenanceGuard>} />
+              <Route path="leaderboard" element={<MaintenanceGuard moduleKey="coordinatorLeaderboard"><CoordinatorLeaderboard /></MaintenanceGuard>} />
               <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="mentorWeeklyReports"><AdminWeeklyReports /></MaintenanceGuard>} />
               <Route path="profile" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
               <Route path="settings" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
+            </Route>
+
+            {/* Trainer Workspace Routes */}
+            <Route
+              path="/trainer"
+              element={
+                <ProtectedRoute allowedRoles={["trainer"]}>
+                  <TrainerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<TrainerOverview />} />
+              <Route path="batches" element={<TrainerBatches />} />
+              <Route path="tasks" element={<TrainerTasks />} />
+              <Route path="submissions" element={<TrainerSubmissions />} />
+              <Route path="leaderboard" element={<TrainerLeaderboard />} />
+              <Route path="profile" element={<TrainerProfile />} />
+              <Route path="help" element={<MentorHelp />} />
             </Route>
 
             {/* Super Admin Workspace Routes */}
@@ -266,7 +307,7 @@ function App() {
               <Route path="students" element={<MaintenanceGuard moduleKey="superAdminUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />
               <Route path="tickets" element={<MaintenanceGuard moduleKey="superAdminTickets"><SuperAdminTickets /></MaintenanceGuard>} />
               <Route path="support" element={<MaintenanceGuard moduleKey="superAdminTickets"><SuperAdminTickets /></MaintenanceGuard>} />
-              <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
+              <Route path="maintenance" element={<MaintenanceGuard moduleKey="superAdminFeatureSwitches"><SuperAdminMaintenanceControls /></MaintenanceGuard>} />
               <Route path="leaderboard" element={<MaintenanceGuard moduleKey="adminLeaderboard"><AdminLeaderboard /></MaintenanceGuard>} />
               <Route path="attendance" element={<MaintenanceGuard moduleKey="superAdminPerformance"><SuperAdminPerformancePage /></MaintenanceGuard>} />
               <Route path="coding-practice" element={<MaintenanceGuard moduleKey="superAdminPerformance"><SuperAdminPerformancePage /></MaintenanceGuard>} />
@@ -279,6 +320,8 @@ function App() {
             </Route>
             <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
             <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/super_admin/*" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/super_admin" element={<Navigate to="/super-admin" replace />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

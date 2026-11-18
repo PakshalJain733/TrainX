@@ -42,6 +42,16 @@ export default function TrainingRegistrationPage() {
   const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
+    try {
+      const u = JSON.parse(sessionStorage.getItem("user") || "{}");
+      const c = u.college_name || u.college || "";
+      if (c) {
+        setFormData((prev) => ({ ...prev, college: c }));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     apiFetch("/departments")
       .then((res) => {
         const list = res?.data || res || [];
@@ -291,8 +301,8 @@ export default function TrainingRegistrationPage() {
               )}
 
               {/* Student Details Grid */}
-              <div className="reg-form-grid">
-                <div>
+              <div className="reg-form-grid mobile-pair-2">
+                <div className="mobile-field-full">
                   <label className="reg-label">
                     Full Name <span className="req">*</span>
                   </label>
@@ -306,7 +316,7 @@ export default function TrainingRegistrationPage() {
                   />
                 </div>
 
-                <div>
+                <div className="mobile-field-full">
                   <label className="reg-label">
                     Email Address <span className="req">*</span>
                   </label>
@@ -348,7 +358,7 @@ export default function TrainingRegistrationPage() {
                   />
                 </div>
 
-                <div>
+                <div className="mobile-field-full">
                   <label className="reg-label">College Name</label>
                   <input
                     type="text"
@@ -395,7 +405,7 @@ export default function TrainingRegistrationPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="mobile-field-full">
                   <label className="reg-label">Division & Batch</label>
                   <div style={{ display: "flex", gap: "8px" }}>
                     <input

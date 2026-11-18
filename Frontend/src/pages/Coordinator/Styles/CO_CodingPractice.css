@@ -92,7 +92,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background-color: #0f172a;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -104,7 +104,7 @@
 }
 
 .coord-cp-btn-dark:hover {
-  background-color: #1e293b;
+  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
 }
 
 .coord-cp-btn-secondary {
@@ -850,7 +850,7 @@
 }
 
 .coord-cp-modal-header {
-  background-color: #0f172a;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
   color: #ffffff;
   padding: 16px 24px;
   display: flex;
@@ -896,7 +896,7 @@
 
 .coord-cp-modal-close-btn:hover {
   color: #ffffff;
-  background-color: #1e293b;
+  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
 }
 
 .coord-cp-modal-body {

@@ -24,8 +24,8 @@ export default function AdminWeeklyReports() {
           const mapped = dataList.map((item, index) => ({
             id: item.id || index + 1,
             title: item.title || item.report_name || `Weekly Progress Report #${item.id || index + 1}`,
-            batch: item.batch_name || item.batch || "General Batch",
-            department: item.department || "Engineering",
+            batch: item.batch_name || item.batch || "—",
+            department: item.department || "—",
             author: item.mentorName || item.author || "Coordinator",
             submittedAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent",
             attendanceRate: item.attendance_score || "85%",
@@ -268,7 +268,7 @@ export default function AdminWeeklyReports() {
                 </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "10px" }}>
+              <div className="form-grid-2" style={{ gap: "1rem", background: "#f8fafc", padding: "1rem", borderRadius: "10px" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Batch</span>
                   <div style={{ fontWeight: 600, color: "#1e293b" }}>{selectedReport.batch}</div>

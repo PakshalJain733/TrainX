@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, RotateCcw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2, Search, Mail, GraduationCap, Maximize2, Minimize2, Download, MessageSquare, PowerOff, FileSpreadsheet } from "lucide-react";
+import GrantRetakeModal from "../../../components/Common/GrantRetakeModal";
+import { downloadBatchTaskReport } from "../../../utils/batchReportExporter";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -9,7 +11,7 @@ import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Batches.css";
 
 /* ── Inline dropdown for Admin Batches (CSS: AdminBatches.css .admin-batch-select-*) ── */
-function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction, emptyMessage = 'No options found' }) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
   const triggerRef = useRef(null);
@@ -64,14 +66,14 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
     <div className={`admin-batch-select-wrap${isOpen ? ' admin-batch-select-wrap--open' : ''}`} ref={triggerRef}>
       <button type="button" onClick={handleToggle} className={`admin-batch-select-trigger${isOpen ? ' admin-batch-select-trigger--open' : ''}`}>
         {Icon && <Icon className="admin-batch-select-icon" />}
-        <span className="admin-batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="admin-batch-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <ChevronDown className={`admin-batch-select-arrow${isOpen ? ' admin-batch-select-arrow--rotate' : ''}`} />
       </button>
 
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="admin-batch-select-dropdown"
+          className={`admin-batch-select-dropdown${coords.dropUp ? ' admin-batch-select-dropdown--up' : ''}`}
           style={{
             position: 'fixed',
             top: coords.dropUp ? 'auto' : `${coords.top}px`,
@@ -83,15 +85,21 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
             zIndex: 99999,
           }}
         >
-          {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
-                <span className="admin-batch-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-batch-select-check" />}
-              </div>
-            );
-          })}
+          {safeOptions.length === 0 ? (
+            <div className="admin-batch-select-empty">
+              {emptyMessage}
+            </div>
+          ) : (
+            safeOptions.map(opt => {
+              const isSel = String(opt.value) === String(value);
+              return (
+                <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
+                  <span className="admin-batch-select-option-label">{opt.label}</span>
+                  {isSel && <Check className="admin-batch-select-check" />}
+                </div>
+              );
+            })
+          )}
         </div>,
         document.body
       )}
@@ -103,11 +111,14 @@ import { apiFetch } from "../../../utils/api";
 
 const CODE_DURATION_MS = 5 * 60 * 1000; // 5 minutes validity for batch join codes
 
-const generateJoinCode = (batchName = "") => {
-  const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
-  const prefix = clean ? clean.slice(0, 4).toUpperCase() : "BTCH";
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${randomPart}`;
+const generateJoinCode = (length = 8) => {
+  // Generate a clean 8-character uppercase alphanumeric code (e.g. 8K2P9X4M)
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 const getInitials = (name) => {
@@ -150,6 +161,9 @@ export default function AdminBatches() {
   const [joinCode, setJoinCode] = useState("");
   const [copiedId, setCopiedId] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [enlargedBatchCode, setEnlargedBatchCode] = useState(null);
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
 
   // Visit Batch modal state
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -158,11 +172,13 @@ export default function AdminBatches() {
   const [batchLeaderboard, setBatchLeaderboard] = useState([]);
   const [batchTasks, setBatchTasks] = useState([]);
   const [batchFeedback, setBatchFeedback] = useState({ type: "", message: "" });
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const [taskForm, setTaskForm] = useState({
     title: "",
     topic: "",
     difficulty: "Medium",
     points: 100,
+    taskDate: new Date().toISOString().split("T")[0],
     deadline: "",
     desc: "",
     language: "Java",
@@ -174,9 +190,84 @@ export default function AdminBatches() {
 
   // Task Submissions Modal state
   const [activeTaskForSubmissions, setActiveTaskForSubmissions] = useState(null);
+  const [retakeModalTarget, setRetakeModalTarget] = useState(null);
   const [taskSubmissions, setTaskSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [viewingCodeSubmission, setViewingCodeSubmission] = useState(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [isSubmissionsFullScreen, setIsSubmissionsFullScreen] = useState(false);
+  const [isCodeFullScreen, setIsCodeFullScreen] = useState(false);
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [submissionFilter, setSubmissionFilter] = useState("all"); // 'all' | 'passed' | 'failed'
+  const [submissionFeedbackText, setSubmissionFeedbackText] = useState("");
+  const [isSavingFeedback, setIsSavingFeedback] = useState(false);
+  const [feedbackSaveSuccess, setFeedbackSaveSuccess] = useState(false);
+
+  const handleSaveSubmissionFeedback = async () => {
+    if (!viewingCodeSubmission) return;
+    setIsSavingFeedback(true);
+    setFeedbackSaveSuccess(false);
+    try {
+      await apiFetch(`/batches/submissions/${viewingCodeSubmission.id}/feedback`, {
+        method: "POST",
+        body: JSON.stringify({ feedback: submissionFeedbackText })
+      });
+      const updatedSub = { ...viewingCodeSubmission, feedback: submissionFeedbackText };
+      setViewingCodeSubmission(updatedSub);
+      setTaskSubmissions((prev) =>
+        prev.map((s) => (s.id === viewingCodeSubmission.id ? { ...s, feedback: submissionFeedbackText } : s))
+      );
+      setFeedbackSaveSuccess(true);
+      setTimeout(() => setFeedbackSaveSuccess(false), 3000);
+    } catch (err) {
+      console.warn("Saved feedback locally fallback:", err);
+      const updatedSub = { ...viewingCodeSubmission, feedback: submissionFeedbackText };
+      setViewingCodeSubmission(updatedSub);
+      setTaskSubmissions((prev) =>
+        prev.map((s) => (s.id === viewingCodeSubmission.id ? { ...s, feedback: submissionFeedbackText } : s))
+      );
+      setFeedbackSaveSuccess(true);
+      setTimeout(() => setFeedbackSaveSuccess(false), 3000);
+    } finally {
+      setIsSavingFeedback(false);
+    }
+  };
+
+  const downloadSubmissionCode = (sub, task) => {
+    if (!sub) return;
+    const code = sub.code_submission || sub.submitted_code || "";
+    const lang = (sub.language || task?.language || "java").toLowerCase();
+    const ext = lang === "python" ? "py" : lang.includes("c++") || lang.includes("cpp") ? "cpp" : "java";
+    const studentName = (sub.name || "Student").replace(/[^a-zA-Z0-9]/g, "_");
+    const taskName = (task?.title || sub.task_title || "Solution").replace(/[^a-zA-Z0-9]/g, "_");
+    const filename = `${studentName}_${taskName}.${ext}`;
+    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const fetchTrainers = async () => {
+    setLoadingTrainers(true);
+    try {
+      const res = await apiFetch("/admin/users?role=trainer");
+      const list = res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(list)) {
+        const onlyTrainers = list.filter(u => String(u.role || "").toLowerCase() === "trainer");
+        setTrainers(onlyTrainers);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch trainers for batch creation:", err);
+    } finally {
+      setLoadingTrainers(false);
+    }
+  };
 
   const fetchBatches = async () => {
     setLoading(true);
@@ -200,6 +291,7 @@ export default function AdminBatches() {
 
   useEffect(() => {
     fetchBatches();
+    fetchTrainers();
     const handleBatchUpdate = () => fetchBatches();
     window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
     return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
@@ -216,28 +308,31 @@ export default function AdminBatches() {
   const handleOpenForm = () => {
     const nextState = !showAddForm;
     setShowAddForm(nextState);
-    if (nextState && !joinCode) {
-      setJoinCode(generateJoinCode(name));
+    if (nextState) {
+      fetchTrainers();
+      if (!joinCode) {
+        setJoinCode(generateJoinCode());
+      }
     }
   };
 
   const handleGenerateFormCode = () => {
-    setJoinCode(generateJoinCode(name || "BATCH"));
+    setJoinCode(generateJoinCode());
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSubmitting(true);
-    const finalCode = (joinCode || "").trim() || generateJoinCode(name);
+    const finalCode = (joinCode || "").trim() || generateJoinCode();
     const expiresAt = Date.now() + CODE_DURATION_MS;
 
     const newBatchObj = {
       id: Date.now(),
       name: name.trim(),
       schedule: (schedule || "Mon, Wed, Fri (10:00 AM - 12:00 PM)").trim(),
-      mentor: (mentor || "Faculty Mentor").trim(),
-      trainer: (mentor || "Faculty Mentor").trim(),
+      mentor: (mentor || "Mentor").trim(),
+      trainer: (mentor || "Mentor").trim(),
       joinCode: finalCode,
       join_code: finalCode,
       codeExpiresAt: expiresAt,
@@ -259,6 +354,7 @@ export default function AdminBatches() {
     setSubmitting(false);
 
     try {
+      const selectedTrainerObj = trainers.find(t => t.name === mentor);
       await apiFetch("/batches", {
         method: "POST",
         body: JSON.stringify({
@@ -269,9 +365,9 @@ export default function AdminBatches() {
           schedule: newBatchObj.schedule,
           mentor: newBatchObj.mentor,
           trainer: newBatchObj.mentor,
+          trainer_id: selectedTrainerObj?.id || null,
           students: 0,
           status: "active",
-          college_id: 1,
         }),
       });
       window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: newBatchObj }));
@@ -294,28 +390,80 @@ export default function AdminBatches() {
     const newExpiresAt = Date.now() + CODE_DURATION_MS;
 
     // Optimistically update UI
-    setBatches(
-      batches.map((b) =>
+    setBatches((prev) =>
+      prev.map((b) =>
         b.id === id
           ? {
-              ...b,
-              joinCode: newCode,
-              join_code: newCode,
-              codeExpiresAt: newExpiresAt,
-              code_expires_at: newExpiresAt,
-            }
+            ...b,
+            code: newCode,
+            joinCode: newCode,
+            join_code: newCode,
+            codeExpiresAt: newExpiresAt,
+            code_expires_at: newExpiresAt,
+          }
           : b
       )
     );
 
+    // If enlarged modal is active for this batch, update its code immediately
+    setEnlargedBatchCode((prev) =>
+      prev && (prev.batchId === id || prev.id === id || prev.name === batchName)
+        ? { ...prev, code: newCode }
+        : prev
+    );
+
     try {
-      await apiFetch(`/batches/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          join_code: newCode,
-          code_expires_at: newExpiresAt,
-        }),
-      });
+      const payload = {
+        code: newCode,
+        join_code: newCode,
+        joinCode: newCode,
+        code_expires_at: newExpiresAt,
+        codeExpiresAt: newExpiresAt,
+      };
+
+      const res = await apiFetch(`/batches/${id}/regenerate-code`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }).catch(() =>
+        apiFetch(`/batches/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        })
+      );
+
+      if (res && (res.data || res.success)) {
+        const saved = res.data || {};
+        const savedCode = saved.join_code || saved.code || saved.joinCode || newCode;
+        const savedExpires = saved.code_expires_at || saved.codeExpiresAt || newExpiresAt;
+
+        setBatches((prev) =>
+          prev.map((b) =>
+            b.id === id
+              ? {
+                ...b,
+                ...saved,
+                code: savedCode,
+                joinCode: savedCode,
+                join_code: savedCode,
+                codeExpiresAt: Number(savedExpires),
+                code_expires_at: Number(savedExpires),
+              }
+              : b
+          )
+        );
+
+        setEnlargedBatchCode((prev) =>
+          prev && (prev.batchId === id || prev.id === id || prev.name === batchName)
+            ? { ...prev, code: savedCode }
+            : prev
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(EVENTS.BATCH_UPDATED, {
+            detail: { id, code: savedCode, join_code: savedCode, joinCode: savedCode },
+          })
+        );
+      }
     } catch (err) {
       console.error("Failed to update regenerated code in DB:", err);
     }
@@ -356,6 +504,8 @@ export default function AdminBatches() {
     setActiveTaskForSubmissions(task);
     setLoadingSubmissions(true);
     setTaskSubmissions([]);
+    setSubmissionSearch("");
+    setSubmissionFilter("all");
     try {
       const res = await apiFetch(`/batches/tasks/${task.id}/submissions`);
       if (res && res.data && Array.isArray(res.data)) {
@@ -400,6 +550,25 @@ export default function AdminBatches() {
     }
   };
 
+  const handleDownloadTaskReport = async () => {
+    if (!selectedBatch?.id) return;
+    setDownloadingReport(true);
+    try {
+      const result = await downloadBatchTaskReport(selectedBatch.id, selectedBatch.name);
+      setBatchFeedback({
+        type: result.success ? "success" : "error",
+        message: result.message,
+      });
+    } catch (err) {
+      setBatchFeedback({
+        type: "error",
+        message: err.message || "Failed to download task submission report.",
+      });
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   const handleTaskSubmit = async (e) => {
     e.preventDefault();
     if (!taskForm.title || !selectedBatch) return;
@@ -411,6 +580,8 @@ export default function AdminBatches() {
       topic: taskForm.topic || "General Assignment",
       difficulty: taskForm.difficulty || "Medium",
       points: taskForm.points || 100,
+      task_date: taskForm.taskDate || new Date().toISOString().split("T")[0],
+      taskDate: taskForm.taskDate || new Date().toISOString().split("T")[0],
       deadline: taskForm.deadline || "",
       description: taskForm.desc || "",
       language: taskForm.language || "Java",
@@ -424,6 +595,7 @@ export default function AdminBatches() {
       topic: "",
       difficulty: "Medium",
       points: 100,
+      taskDate: new Date().toISOString().split("T")[0],
       deadline: "",
       desc: "",
       language: "Java",
@@ -438,21 +610,28 @@ export default function AdminBatches() {
         method: "POST",
         body: JSON.stringify({
           batch_id: selectedBatch.id,
+          task_date: taskForm.taskDate || new Date().toISOString().split("T")[0],
           ...taskForm,
         }),
       });
-      setBatchFeedback({ type: "success", message: `Task "${taskForm.title}" successfully assigned to batch "${selectedBatch.name}"!` });
+      setBatchFeedback({
+        type: "success",
+        message: `Task "${taskForm.title}" successfully assigned to batch "${selectedBatch.name}"!`,
+      });
       setTaskForm(resetForm);
       fetchBatchTasks(selectedBatch.id);
     } catch (err) {
-      setBatchFeedback({ type: "success", message: `Task "${taskForm.title}" assigned successfully to batch "${selectedBatch.name}"!` });
-      setTaskForm(resetForm);
+      console.error("Failed to assign task:", err);
+      setBatchFeedback({
+        type: "error",
+        message: err?.message || `Failed to assign task "${taskForm.title}".`,
+      });
       fetchBatchTasks(selectedBatch.id);
     }
   };
 
-  const handleDeleteBatch = async (batchId, batchName) => {
-    if (!window.confirm(`Are you sure you want to move batch "${batchName}" to Inactive?`)) {
+  const handleDeactivateBatch = async (batchId, batchName) => {
+    if (!window.confirm(`Are you sure you want to make batch "${batchName}" inactive?`)) {
       return;
     }
     setBatches((prev) =>
@@ -467,6 +646,7 @@ export default function AdminBatches() {
       console.warn("Updated batch status in local state fallback:", err);
     }
   };
+  const handleDeleteBatch = handleDeactivateBatch;
 
   const handleReactivateBatch = async (batchId, batchName) => {
     setBatches((prev) =>
@@ -539,6 +719,32 @@ export default function AdminBatches() {
               </div>
               <h1 style={{ fontSize: "22px", fontWeight: "800", margin: "2px 0 0 0", color: "#0f172a" }}>{selectedBatch.name}</h1>
             </div>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleDownloadTaskReport}
+              disabled={downloadingReport}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "9px 18px",
+                background: "#059669",
+                border: "1px solid #059669",
+                borderRadius: "10px",
+                color: "#ffffff",
+                fontSize: "13px",
+                fontWeight: "700",
+                cursor: downloadingReport ? "not-allowed" : "pointer",
+                transition: "all 0.15s ease",
+                boxShadow: "0 2px 4px rgba(5, 150, 105, 0.2)"
+              }}
+              title="Download Task Submission Report (.xlsx)"
+            >
+              <FileSpreadsheet size={16} />
+              {downloadingReport ? "Generating Report..." : "Download Report"}
+            </button>
           </div>
         </div>
 
@@ -666,9 +872,18 @@ export default function AdminBatches() {
           {/* TAB 2: Batch Leaderboard */}
           {batchTab === "leaderboard" && (
             <div className="batch-tab-section">
-              <div className="batch-tab-header" style={{ marginBottom: "16px" }}>
-                <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Batch Performance Leaderboard</h3>
-                <p className="batch-tab-sub">Rankings based on XP points, problem solving & quiz scores for {selectedBatch.name}</p>
+              <div className="batch-tab-header" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h3 className="batch-tab-title" style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>Batch Performance Leaderboard</h3>
+                  <p className="batch-tab-sub" style={{ fontSize: "13.5px", color: "#64748b", margin: 0 }}>
+                    Rankings based on XP points, problem solving & quiz scores for <strong style={{ color: "#334155" }}>{selectedBatch.name}</strong>
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#2563eb", background: "#eff6ff", padding: "6px 14px", borderRadius: "20px", border: "1px solid #bfdbfe", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <Sparkles size={13} /> Top Performers ({batchLeaderboard.length})
+                  </span>
+                </div>
               </div>
               <div className="batch-leaderboard-list">
                 {batchLeaderboard.length === 0 ? (
@@ -685,10 +900,12 @@ export default function AdminBatches() {
                       style={{ padding: "16px 20px" }}
                     >
                       <div className="leaderboard-rank-left">
-                        <span className="rank-badge" style={{ width: "36px", height: "36px", fontSize: "14px" }}>#{idx + 1}</span>
+                        <span className="rank-badge" style={{ width: "36px", height: "36px", fontSize: "14px" }}>
+                          {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
+                        </span>
                         <div>
                           <div className="rank-student-name" style={{ fontSize: "15px" }}>{item.name}</div>
-                          <div className="rank-student-dept">{item.department || "Enrolled Student"}</div>
+                          <div className="rank-student-dept">{item.department || "Enrolled Student"}{item.rollNo ? ` • ${item.rollNo}` : ""}</div>
                         </div>
                       </div>
                       <span className="rank-xp-pill" style={{ padding: "6px 16px", fontSize: "13px" }}>{item.xp || "0 XP"}</span>
@@ -713,9 +930,9 @@ export default function AdminBatches() {
                   </div>
                 </div>
 
-                <form onSubmit={handleTaskSubmit} className="add-task-form-body">
+                <form onSubmit={handleTaskSubmit} className="add-task-form-body mobile-fields-grid">
                   <div className="form-row-2">
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <FileText size={14} color="#4f46e5" />
                         <span>Task Title *</span>
@@ -729,7 +946,7 @@ export default function AdminBatches() {
                         onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))}
                       />
                     </div>
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <BookOpen size={14} color="#4f46e5" />
                         <span>Target Topic / Module *</span>
@@ -745,7 +962,7 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-row-4">
+                  <div className="form-row-3">
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Code size={14} color="#4f46e5" />
@@ -782,7 +999,7 @@ export default function AdminBatches() {
                         ]}
                       />
                     </div>
-                    <div className="form-group-admin">
+                    <div className="form-group-admin mobile-field-full">
                       <label className="add-task-label">
                         <Sparkles size={14} color="#d97706" />
                         <span>XP Points Awarded</span>
@@ -795,9 +1012,25 @@ export default function AdminBatches() {
                         onChange={(e) => setTaskForm((p) => ({ ...p, points: e.target.value }))}
                       />
                     </div>
+                  </div>
+
+                  <div className="form-row-2">
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Calendar size={14} color="#4f46e5" />
+                        <span>Task Date / Scheduled For *</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        className="form-input-admin"
+                        value={taskForm.taskDate}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, taskDate: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Clock size={14} color="#4f46e5" />
                         <span>Submission Deadline</span>
                       </label>
                       <input
@@ -809,7 +1042,7 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-group-admin">
+                  <div className="form-group-admin mobile-field-full">
                     <label className="add-task-label">
                       <FileText size={14} color="#64748b" />
                       <span>Task Instructions & Description</span>
@@ -939,11 +1172,11 @@ export default function AdminBatches() {
               {batchTasks.length === 0 ? (
                 <div className="admin-empty-state-card" style={{ padding: "60px 20px" }}>
                   <CheckSquare size={44} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
-                  <p className="admin-empty-state-title" style={{ fontSize: "16px" }}>No tasks assigned yet</p>
+                  <p className="admin-empty-state-title" style={{ fontSize: "16px" }}>No tasks assigned to this batch yet</p>
                   <p className="admin-empty-state-sub" style={{ fontSize: "14px" }}>Click "Create New Task" or "Add Batch Task" above to assign problem sets to this batch.</p>
                 </div>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+                <div className="responsive-card-grid" style={{ gap: "20px" }}>
                   {batchTasks.map((t) => {
                     const parsedTestCases = typeof t.test_cases === "string" ? JSON.parse(t.test_cases || "[]") : (t.test_cases || []);
                     return (
@@ -1005,10 +1238,17 @@ export default function AdminBatches() {
                           )}
                         </div>
 
-                        <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "#64748b" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <Clock size={14} /> Deadline: {t.deadline || "No deadline"}
-                          </span>
+                        <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "#64748b", flexWrap: "wrap", gap: "8px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                            {(t.task_date || t.taskDate || t.date) && (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#4f46e5", fontWeight: "600" }}>
+                                <Calendar size={14} /> Date: {t.task_date || t.taskDate || t.date}
+                              </span>
+                            )}
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              <Clock size={14} /> Deadline: {t.deadline || "No deadline"}
+                            </span>
+                          </div>
                           <span style={{ fontWeight: "600", color: "#334155" }}>
                             {parsedTestCases.length} Test Case{parsedTestCases.length !== 1 ? "s" : ""}
                           </span>
@@ -1036,30 +1276,56 @@ export default function AdminBatches() {
                               transition: "all 0.15s ease"
                             }}
                           >
-                            <Eye size={15} /> View Submissions
+                            <Eye size={15} /> Submissions
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteTask(t.id)}
-                            disabled={deletingTaskId === t.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRetakeModalTarget(t);
+                            }}
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
                               gap: "6px",
                               padding: "8px 12px",
-                              background: "#fef2f2",
-                              color: "#ef4444",
-                              border: "1px solid #fecaca",
+                              background: "#f0fdf4",
+                              color: "#16a34a",
+                              border: "1px solid #bbf7d0",
                               borderRadius: "8px",
                               fontSize: "12px",
                               fontWeight: "700",
                               cursor: "pointer",
                               transition: "all 0.15s ease"
                             }}
-                            title="Delete Task"
+                            title="Grant Retake to Specific Students"
                           >
-                            <Trash2 size={15} /> {deletingTaskId === t.id ? "Deleting..." : "Delete"}
+                            <RotateCcw size={14} /> Grant Retake
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTask(t.id);
+                            }}
+                            disabled={deletingTaskId === t.id}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "8px 10px",
+                              background: "#fef2f2",
+                              color: "#ef4444",
+                              border: "1px solid #fecaca",
+                              borderRadius: "8px",
+                              cursor: deletingTaskId === t.id ? "not-allowed" : "pointer",
+                              transition: "all 0.15s ease",
+                              opacity: deletingTaskId === t.id ? 0.6 : 1
+                            }}
+                            title={deletingTaskId === t.id ? "Deleting..." : "Delete Task"}
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
@@ -1070,120 +1336,499 @@ export default function AdminBatches() {
             </div>
           )}
 
-          {/* Modal for View Submissions */}
-          {activeTaskForSubmissions && (
-            <div
-              style={{
-                position: "fixed",
-                inset: 0,
-                backgroundColor: "rgba(15, 23, 42, 0.6)",
-                backdropFilter: "blur(4px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 9999,
-                padding: "20px"
-              }}
-            >
+          {/* Modal for View Submissions (Full Viewport Portal Covering Sidebar) */}
+          {activeTaskForSubmissions && (() => {
+            const totalSubmissionsCount = taskSubmissions.length;
+            const passedSubmissionsCount = taskSubmissions.filter((s) => s.status === "Passed" || s.status === "Completed").length;
+            const passRatePercent = totalSubmissionsCount > 0 ? Math.round((passedSubmissionsCount / totalSubmissionsCount) * 100) : 0;
+            const avgScoreVal = totalSubmissionsCount > 0 ? (taskSubmissions.reduce((acc, s) => acc + Number(s.marks_obtained ?? s.score ?? 0), 0) / totalSubmissionsCount).toFixed(1) : 0;
+            const maxPossiblePoints = activeTaskForSubmissions?.points || 100;
+
+            const filteredSubs = taskSubmissions.filter((sub) => {
+              const q = (submissionSearch || "").trim().toLowerCase();
+              const matchesSearch = !q ||
+                (sub.name && sub.name.toLowerCase().includes(q)) ||
+                (sub.email && sub.email.toLowerCase().includes(q)) ||
+                (sub.roll_number && sub.roll_number.toLowerCase().includes(q));
+
+              if (!matchesSearch) return false;
+              const isPassed = sub.status === "Passed" || sub.status === "Completed";
+              if (submissionFilter === "passed") return isPassed;
+              if (submissionFilter === "failed") return !isPassed;
+              return true;
+            });
+
+            return createPortal(
               <div
                 style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  maxWidth: "700px",
-                  width: "100%",
-                  maxHeight: "85vh",
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(15, 23, 42, 0.65)",
+                  backdropFilter: "blur(8px)",
                   display: "flex",
-                  flexDirection: "column",
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
-                  overflow: "hidden"
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 99999,
+                  padding: isSubmissionsFullScreen ? "0px" : "16px",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setActiveTaskForSubmissions(null);
+                  setIsSubmissionsFullScreen(false);
                 }}
               >
-                {/* Modal Header */}
-                <div style={{ padding: "20px 24px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f8fafc" }}>
-                  <div>
-                    <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
-                      Submissions: {activeTaskForSubmissions.title}
-                    </h3>
-                    <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
-                      Student code submissions for {selectedBatch.name}
-                    </p>
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: isSubmissionsFullScreen ? "0px" : "18px",
+                    width: isSubmissionsFullScreen ? "100vw" : "min(1440px, calc(100vw - 32px))",
+                    height: isSubmissionsFullScreen ? "100vh" : "min(880px, calc(100vh - 32px))",
+                    maxWidth: isSubmissionsFullScreen ? "100vw" : "1440px",
+                    maxHeight: isSubmissionsFullScreen ? "100vh" : "880px",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
+                    overflow: "hidden",
+                    border: isSubmissionsFullScreen ? "none" : "1px solid #cbd5e1"
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Clean White Modal Header matching Assign Topics Portal */}
+                  <div style={{
+                    padding: "16px 24px",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "#ffffff",
+                    flexShrink: 0
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                      <div style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "12px",
+                        background: "rgba(79, 70, 229, 0.08)",
+                        color: "#4f46e5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <Code2 size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                          <h3 style={{ fontSize: "19px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                            Submissions: {activeTaskForSubmissions.title}
+                          </h3>
+                          <span style={{
+                            background: "#e0e7ff",
+                            color: "#4338ca",
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 700
+                          }}>
+                            {selectedBatch?.name || "Batch"}
+                          </span>
+                          <span style={{
+                            background: "#f1f5f9",
+                            color: "#475569",
+                            padding: "3px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600
+                          }}>
+                            Language: {(activeTaskForSubmissions?.language || "Java").toUpperCase()}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "13px", color: "#64748b", margin: "3px 0 0 0" }}>
+                          Student code submissions & auto-evaluation results • Max Score: {maxPossiblePoints} pts
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsSubmissionsFullScreen(!isSubmissionsFullScreen)}
+                        title={isSubmissionsFullScreen ? "Exit Fullscreen" : "Fullscreen View"}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "10px",
+                          width: "36px",
+                          height: "36px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#f8fafc"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
+                      >
+                        {isSubmissionsFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTaskForSubmissions(null);
+                          setIsSubmissionsFullScreen(false);
+                        }}
+                        style={{
+                          background: "#f1f5f9",
+                          border: "none",
+                          borderRadius: "10px",
+                          width: "36px",
+                          height: "36px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#64748b",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTaskForSubmissions(null)}
-                    style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
 
-                {/* Modal Content */}
-                <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
-                  {loadingSubmissions ? (
-                    <div style={{ textAlign: "center", padding: "40px 0", color: "#64748b" }}>
-                      <RefreshCw size={28} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "8px" }} />
-                      <p>Loading student submissions...</p>
+                  {/* Summary KPI Banner & Filters Bar */}
+                  <div style={{
+                    padding: "16px 28px",
+                    background: "#ffffff",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px"
+                  }}>
+                    {/* KPI Cards Row */}
+                    <div className="form-grid-3" style={{ gap: "14px" }}>
+                      <div style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e0e7ff", color: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Users size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Total Submissions</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>{totalSubmissionsCount}</div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#dcfce7", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <CheckCircle2 size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#15803d", textTransform: "uppercase" }}>Pass Rate</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#166534" }}>
+                            {passedSubmissionsCount} / {totalSubmissionsCount} ({passRatePercent}%)
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: "#f8fafc",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "12px",
+                        padding: "12px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px"
+                      }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Award size={20} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Average Score</div>
+                          <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>
+                            {avgScoreVal} <span style={{ fontSize: "13px", fontWeight: 600, color: "#64748b" }}>/ {maxPossiblePoints} pts</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : taskSubmissions.length === 0 ? (
-                    <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
-                      <FileText size={40} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
-                      <p className="admin-empty-state-title" style={{ fontSize: "15px" }}>No submissions yet</p>
-                      <p className="admin-empty-state-sub" style={{ fontSize: "13px" }}>Students in {selectedBatch.name} have not submitted code for this task yet.</p>
+
+                    {/* Filter and Search Bar */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+                      <div style={{ position: "relative", flex: "1 1 320px", maxWidth: "450px" }}>
+                        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                        <input
+                          type="text"
+                          value={submissionSearch}
+                          onChange={(e) => setSubmissionSearch(e.target.value)}
+                          placeholder="Search student name, email, or roll number..."
+                          style={{
+                            width: "100%",
+                            padding: "8px 14px 8px 36px",
+                            borderRadius: "10px",
+                            border: "1px solid #cbd5e1",
+                            fontSize: "13px",
+                            outline: "none",
+                            background: "#ffffff",
+                            transition: "border-color 0.15s ease"
+                          }}
+                          onFocus={(e) => (e.target.style.borderColor = "#4f46e5")}
+                          onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+                        />
+                      </div>
+
+                      {/* Filter Tabs */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "#f1f5f9", padding: "4px", borderRadius: "10px" }}>
+                        {[
+                          { id: "all", label: `All (${totalSubmissionsCount})` },
+                          { id: "passed", label: `Passed (${passedSubmissionsCount})` },
+                          { id: "failed", label: `Needs Review (${totalSubmissionsCount - passedSubmissionsCount})` },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setSubmissionFilter(tab.id)}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: "8px",
+                              border: "none",
+                              fontSize: "12.5px",
+                              fontWeight: submissionFilter === tab.id ? 700 : 500,
+                              background: submissionFilter === tab.id ? "#ffffff" : "transparent",
+                              color: submissionFilter === tab.id ? "#4f46e5" : "#64748b",
+                              boxShadow: submissionFilter === tab.id ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease"
+                            }}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="admin-users-table-card" style={{ border: "1px solid #e2e8f0" }}>
-                      <div className="admin-users-table-responsive">
-                        <table className="admin-users-table">
+                  </div>
+
+                  {/* Modal Content / Submissions Table */}
+                  <div style={{ padding: "20px 28px", overflowY: "auto", flex: 1, background: "#f8fafc" }}>
+                    {loadingSubmissions ? (
+                      <div style={{ textAlign: "center", padding: "80px 0", color: "#64748b" }}>
+                        <RefreshCw size={32} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "12px" }} />
+                        <p style={{ fontSize: "14px", fontWeight: 600 }}>Loading student submissions...</p>
+                      </div>
+                    ) : taskSubmissions.length === 0 ? (
+                      <div className="admin-empty-state-card" style={{ padding: "60px 20px", background: "#ffffff", borderRadius: "14px", border: "1px dashed #cbd5e1", textAlign: "center" }}>
+                        <FileText size={48} style={{ color: "#94a3b8", margin: "0 auto 14px" }} />
+                        <p className="admin-empty-state-title" style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>No submissions yet</p>
+                        <p className="admin-empty-state-sub" style={{ fontSize: "13px", color: "#64748b" }}>Students in {selectedBatch?.name || "this batch"} have not submitted code for this task yet.</p>
+                      </div>
+                    ) : filteredSubs.length === 0 ? (
+                      <div className="admin-empty-state-card" style={{ padding: "50px 20px", background: "#ffffff", borderRadius: "14px", border: "1px dashed #cbd5e1", textAlign: "center" }}>
+                        <Search size={40} style={{ color: "#94a3b8", margin: "0 auto 12px" }} />
+                        <p style={{ fontSize: "15px", fontWeight: 700, color: "#1e293b", margin: 0 }}>No matching submissions</p>
+                        <p style={{ fontSize: "13px", color: "#64748b", margin: "4px 0 12px 0" }}>No students match &quot;{submissionSearch}&quot; with filter &quot;{submissionFilter}&quot;.</p>
+                        <button
+                          type="button"
+                          onClick={() => { setSubmissionSearch(""); setSubmissionFilter("all"); }}
+                          style={{
+                            padding: "6px 14px",
+                            background: "#e0e7ff",
+                            color: "#4338ca",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Clear Filters
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                           <thead>
-                            <tr>
-                              <th>Student Details</th>
-                              <th>Roll Number</th>
-                              <th>Submission Result</th>
-                              <th>Marks / Score</th>
-                              <th style={{ textAlign: "right" }}>Submitted At</th>
+                            <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: "12px", color: "#475569", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                              <th style={{ padding: "14px 20px" }}>Student Details</th>
+                              <th style={{ padding: "14px 18px" }}>Roll Number</th>
+                              <th style={{ padding: "14px 18px" }}>Submission Result</th>
+                              <th style={{ padding: "14px 18px" }}>Marks & Test Cases</th>
+                              <th style={{ padding: "14px 18px" }}>Submitted At</th>
+                              <th style={{ padding: "14px 20px", textAlign: "center" }}>Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {taskSubmissions.map((sub) => {
+                            {filteredSubs.map((sub, idx) => {
                               const isPassed = sub.status === "Passed" || sub.status === "Completed";
                               const isPartial = sub.status === "Partial";
-                              const statusCls = isPassed ? "status-badge--active" : isPartial ? "status-badge--warning" : "status-badge--inactive";
                               const marksVal = sub.marks_obtained ?? sub.score ?? 0;
-                              const maxPoints = sub.total_marks || activeTaskForSubmissions?.points || 100;
+                              const maxPoints = sub.total_marks || maxPossiblePoints;
+                              const scorePercent = maxPoints > 0 ? Math.round((marksVal / maxPoints) * 100) : 0;
+
                               return (
-                                <tr key={sub.id}>
-                                  <td>
-                                    <div className="user-cell">
-                                      <div className="user-avatar" style={{ width: "34px", height: "34px", fontSize: "12px" }}>
+                                <tr
+                                  key={sub.id || idx}
+                                  style={{
+                                    borderBottom: idx === filteredSubs.length - 1 ? "none" : "1px solid #f1f5f9",
+                                    transition: "background 0.15s ease"
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                                  onMouseLeave={(e) => (e.currentTarget.style.background = "#ffffff")}
+                                >
+                                  {/* Student Details */}
+                                  <td style={{ padding: "16px 20px" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                      <div style={{
+                                        width: "38px",
+                                        height: "38px",
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                                        color: "#ffffff",
+                                        fontWeight: 700,
+                                        fontSize: "13px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0
+                                      }}>
                                         {getInitials(sub.name)}
                                       </div>
                                       <div>
-                                        <div className="user-name-title" style={{ fontSize: "13.5px" }}>{sub.name || "Student"}</div>
-                                        <div className="user-email-sub" style={{ fontSize: "11.5px" }}>{sub.email}</div>
+                                        <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
+                                          {sub.name || "Student"}
+                                        </div>
+                                        <div style={{ fontSize: "12px", color: "#64748b" }}>
+                                          {sub.email}
+                                        </div>
                                       </div>
                                     </div>
                                   </td>
-                                  <td>
-                                    <span className="roster-badge-roll">{sub.roll_number || "N/A"}</span>
+
+                                  {/* Roll Number */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <span style={{
+                                      fontFamily: "monospace",
+                                      fontWeight: 700,
+                                      fontSize: "12px",
+                                      background: "#f1f5f9",
+                                      color: "#334155",
+                                      padding: "4px 10px",
+                                      borderRadius: "6px",
+                                      border: "1px solid #e2e8f0"
+                                    }}>
+                                      {sub.roll_number || "N/A"}
+                                    </span>
                                   </td>
-                                  <td>
-                                    <span className={`status-badge ${statusCls}`}>
-                                      <span className="status-dot"></span>
+
+                                  {/* Submission Result */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <span style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      padding: "5px 12px",
+                                      borderRadius: "9999px",
+                                      fontSize: "12px",
+                                      fontWeight: 700,
+                                      background: isPassed ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2",
+                                      color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c",
+                                      border: `1px solid ${isPassed ? "#bbf7d0" : isPartial ? "#fde68a" : "#fecaca"}`
+                                    }}>
+                                      <span style={{
+                                        width: "7px",
+                                        height: "7px",
+                                        borderRadius: "50%",
+                                        background: "currentColor"
+                                      }} />
                                       {sub.status || "Submitted"}
                                     </span>
                                   </td>
-                                  <td>
-                                    <div style={{ fontWeight: 700, color: isPassed ? "#16a34a" : isPartial ? "#d97706" : "#475569", fontSize: "13px" }}>
-                                      {marksVal} / {maxPoints} pts
+
+                                  {/* Marks & Feedback */}
+                                  <td style={{ padding: "16px 18px" }}>
+                                    <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                                      <span style={{
+                                        fontSize: "15px",
+                                        fontWeight: 800,
+                                        color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c"
+                                      }}>
+                                        {marksVal} / {maxPoints} pts
+                                      </span>
+                                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>
+                                        ({scorePercent}%)
+                                      </span>
                                     </div>
                                     {sub.feedback && (
-                                      <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                                      <div style={{
+                                        fontSize: "11.5px",
+                                        color: "#64748b",
+                                        marginTop: "4px",
+                                        maxWidth: "260px",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap"
+                                      }} title={sub.feedback}>
                                         {sub.feedback}
                                       </div>
                                     )}
                                   </td>
-                                  <td style={{ textAlign: "right", fontSize: "12.5px", color: "#64748b" }}>
+
+                                  {/* Submitted At */}
+                                  <td style={{ padding: "16px 18px", fontSize: "12.5px", color: "#64748b" }}>
                                     {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
+                                  </td>
+
+                                  {/* Action: View Code */}
+                                  <td style={{ padding: "16px 20px", textAlign: "center" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setViewingCodeSubmission(sub);
+                                        setCodeCopied(false);
+                                        setSubmissionFeedbackText(sub.feedback || "");
+                                        setFeedbackSaveSuccess(false);
+                                      }}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        padding: "8px 16px",
+                                        background: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        borderRadius: "8px",
+                                        fontSize: "12.5px",
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        boxShadow: "0 2px 6px rgba(79, 70, 229, 0.25)",
+                                        transition: "all 0.15s ease",
+                                        whiteSpace: "nowrap"
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.transform = "translateY(-1px)";
+                                        e.currentTarget.style.boxShadow = "0 4px 10px rgba(79, 70, 229, 0.35)";
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "0 2px 6px rgba(79, 70, 229, 0.25)";
+                                      }}
+                                    >
+                                      <Code2 size={15} />
+                                      View Code
+                                    </button>
                                   </td>
                                 </tr>
                               );
@@ -1191,31 +1836,538 @@ export default function AdminBatches() {
                           </tbody>
                         </table>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {/* Modal Footer */}
-                <div style={{ padding: "16px 24px", borderTop: "1px solid #e2e8f0", background: "#f8fafc", textAlign: "right" }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTaskForSubmissions(null)}
-                    style={{
-                      padding: "8px 20px",
-                      background: "#e2e8f0",
-                      color: "#334155",
-                      border: "none",
-                      borderRadius: "9999px",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      cursor: "pointer"
-                    }}
-                  >
-                    Close
-                  </button>
+                  {/* Modal Footer */}
+                  <div style={{
+                    padding: "16px 28px",
+                    borderTop: "1px solid #e2e8f0",
+                    background: "#f8fafc",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexShrink: 0
+                  }}>
+                    <span style={{ fontSize: "12.5px", color: "#64748b" }}>
+                      Showing {filteredSubs.length} of {totalSubmissionsCount} total submissions
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTaskForSubmissions(null);
+                        setIsSubmissionsFullScreen(false);
+                      }}
+                      style={{
+                        padding: "9px 24px",
+                        background: "#e2e8f0",
+                        color: "#334155",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        transition: "background 0.15s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#cbd5e1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </div>,
+              document.body
+            );
+          })()}
+
+          {/* Modal for Viewing Student Submitted Code (Plain Clean Code Viewer) */}
+          {viewingCodeSubmission && (() => {
+            const rawCode = viewingCodeSubmission.code_submission || viewingCodeSubmission.submitted_code || "";
+            const submissionLang = (viewingCodeSubmission.language || activeTaskForSubmissions?.language || "java").toLowerCase();
+            const fileExtension = submissionLang === "python" ? "py" : submissionLang.includes("c++") || submissionLang.includes("cpp") ? "cpp" : "java";
+            const fileName = `Solution.${fileExtension}`;
+            const isPassed = viewingCodeSubmission.status === "Passed" || viewingCodeSubmission.status === "Completed";
+            const isPartial = viewingCodeSubmission.status === "Partial";
+            const marksVal = viewingCodeSubmission.marks_obtained ?? viewingCodeSubmission.score ?? 0;
+            const maxPoints = viewingCodeSubmission.total_marks || activeTaskForSubmissions?.points || 100;
+
+            return createPortal(
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  backgroundColor: "rgba(15, 23, 42, 0.65)",
+                  backdropFilter: "blur(8px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 100000,
+                  padding: isCodeFullScreen ? "0px" : "16px",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setViewingCodeSubmission(null);
+                  setIsCodeFullScreen(false);
+                }}
+              >
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: isCodeFullScreen ? "0px" : "16px",
+                    width: isCodeFullScreen ? "100vw" : "min(940px, calc(100vw - 32px))",
+                    height: isCodeFullScreen ? "100vh" : "auto",
+                    maxWidth: isCodeFullScreen ? "100vw" : "940px",
+                    maxHeight: isCodeFullScreen ? "100vh" : "90vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
+                    overflow: "hidden",
+                    border: isCodeFullScreen ? "none" : "1px solid #cbd5e1"
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Clean Header Bar */}
+                  <div style={{
+                    padding: "16px 24px",
+                    borderBottom: "1px solid #e2e8f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "#ffffff",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                    flexShrink: 0
+                  }}>
+                    {/* Left: Student Info */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "10px",
+                        background: "rgba(79, 70, 229, 0.08)",
+                        color: "#4f46e5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <Code2 size={22} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <h3 style={{ fontSize: "17px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                            {viewingCodeSubmission.name || "Student"}&apos;s Submitted Code
+                          </h3>
+                          <span style={{
+                            fontSize: "11.5px",
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: "6px",
+                            background: "#f1f5f9",
+                            color: "#334155",
+                            fontFamily: "monospace"
+                          }}>
+                            {viewingCodeSubmission.roll_number || "N/A"}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
+                          Task: <strong style={{ color: "#334155" }}>{activeTaskForSubmissions?.title || viewingCodeSubmission.task_title || "Assignment"}</strong>
+                          {viewingCodeSubmission.department ? ` • ${viewingCodeSubmission.department}` : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right: Badges & Actions */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{
+                        background: "#4f46e5",
+                        color: "#ffffff",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "11.5px"
+                      }}>
+                        {(viewingCodeSubmission.language || activeTaskForSubmissions?.language || "Java").toUpperCase()}
+                      </span>
+                      <span style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "11.5px",
+                        background: isPassed ? "#dcfce7" : isPartial ? "#fef3c7" : "#fee2e2",
+                        color: isPassed ? "#15803d" : isPartial ? "#b45309" : "#b91c1c",
+                        border: `1px solid ${isPassed ? "#bbf7d0" : isPartial ? "#fde68a" : "#fecaca"}`
+                      }}>
+                        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "currentColor" }} />
+                        {viewingCodeSubmission.status || "Submitted"}
+                      </span>
+                      <span style={{
+                        background: "#f8fafc",
+                        color: "#0f172a",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        border: "1px solid #e2e8f0"
+                      }}>
+                        Score: {marksVal} / {maxPoints} pts
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(rawCode);
+                          setCodeCopied(true);
+                          setTimeout(() => setCodeCopied(false), 2000);
+                        }}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "5px 12px",
+                          background: codeCopied ? "#16a34a" : "#ffffff",
+                          color: codeCopied ? "#ffffff" : "#334155",
+                          border: `1px solid ${codeCopied ? "#16a34a" : "#cbd5e1"}`,
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        {codeCopied ? <Check size={13} /> : <Copy size={13} />}
+                        {codeCopied ? "Copied!" : "Copy Code"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => downloadSubmissionCode(viewingCodeSubmission, activeTaskForSubmissions)}
+                        title="Download Solution"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "5px 12px",
+                          background: "#ffffff",
+                          color: "#334155",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer"
+                        }}
+                      >
+                        <Download size={13} />
+                        Download
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCodeFullScreen(!isCodeFullScreen)}
+                        title={isCodeFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "6px",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#475569",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {isCodeFullScreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingCodeSubmission(null);
+                          setIsCodeFullScreen(false);
+                        }}
+                        style={{
+                          background: "#f1f5f9",
+                          border: "none",
+                          borderRadius: "6px",
+                          width: "32px",
+                          height: "32px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#64748b",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; e.currentTarget.style.color = "#dc2626"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Modal Body: Plain Code + Evaluation */}
+                  <div style={{
+                    padding: "20px 24px",
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                    background: "#f8fafc"
+                  }}>
+                    {/* Plain Code Snippet Box */}
+                    <div style={{
+                      borderRadius: "10px",
+                      overflow: "hidden",
+                      border: "1px solid #1e293b",
+                      background: "#0f172a",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                    }}>
+                      <div style={{
+                        padding: "8px 16px",
+                        background: "#1e293b",
+                        borderBottom: "1px solid #334155",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <span style={{ fontSize: "12px", color: "#94a3b8", fontFamily: "monospace", fontWeight: 600 }}>
+                          {fileName}
+                        </span>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "monospace" }}>
+                          {rawCode.length} characters
+                        </span>
+                      </div>
+                      <pre style={{
+                        margin: 0,
+                        padding: "16px 20px",
+                        color: "#f8fafc",
+                        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace",
+                        fontSize: "13.5px",
+                        lineHeight: "1.65",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        maxHeight: isCodeFullScreen ? "calc(100vh - 280px)" : "420px",
+                        overflowY: "auto"
+                      }}>
+                        <code>{rawCode || "// No code submitted by student"}</code>
+                      </pre>
+                    </div>
+
+                    {/* Auto-Evaluation Result Banner */}
+                    <div style={{
+                      padding: "12px 16px",
+                      borderRadius: "10px",
+                      background: isPassed ? "#f0fdf4" : viewingCodeSubmission.status === "Compilation Error" ? "#fef2f2" : "#ffffff",
+                      border: `1px solid ${isPassed ? "#bbf7d0" : viewingCodeSubmission.status === "Compilation Error" ? "#fecaca" : "#e2e8f0"}`
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        marginBottom: viewingCodeSubmission.feedback ? "8px" : "0"
+                      }}>
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          color: isPassed ? "#15803d" : viewingCodeSubmission.status === "Compilation Error" ? "#991b1b" : "#334155"
+                        }}>
+                          <Terminal size={15} />
+                          <span>
+                            {viewingCodeSubmission.status === "Compilation Error"
+                              ? "Compilation / Runtime Error Details"
+                              : "Auto-Evaluation: " + (viewingCodeSubmission.status || "Submitted")}
+                          </span>
+                        </div>
+                        <span style={{
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          color: isPassed ? "#15803d" : "#475569"
+                        }}>
+                          Score: {marksVal} / {maxPoints} pts
+                        </span>
+                      </div>
+                      {viewingCodeSubmission.feedback && (
+                        <pre style={{
+                          margin: 0,
+                          padding: "10px 14px",
+                          background: "#0f172a",
+                          color: isPassed ? "#86efac" : viewingCodeSubmission.status === "Compilation Error" ? "#fca5a5" : "#94a3b8",
+                          borderRadius: "8px",
+                          fontFamily: "monospace",
+                          fontSize: "12px",
+                          lineHeight: "1.5",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "break-all",
+                          maxHeight: "140px",
+                          overflowY: "auto"
+                        }}>
+                          {viewingCodeSubmission.feedback}
+                        </pre>
+                      )}
+                    </div>
+
+                    {/* Evaluator / Admin Code Review Feedback (Optional) */}
+                    <div style={{
+                      borderRadius: "10px",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      padding: "16px",
+                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)"
+                    }}>
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginBottom: "6px"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <MessageSquare size={16} color="#4f46e5" />
+                          <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a" }}>
+                            Instructor Feedback
+                          </span>
+                          <span style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
+                            background: "#f1f5f9",
+                            color: "#64748b"
+                          }}>
+                            Optional
+                          </span>
+                        </div>
+                        {feedbackSaveSuccess && (
+                          <span style={{
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#16a34a",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}>
+                            <Check size={14} /> Feedback saved successfully!
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: "0 0 8px 0" }}>
+                        Give optional comments, edge-case suggestions, or performance feedback to the student.
+                      </p>
+                      <textarea
+                        value={submissionFeedbackText}
+                        onChange={(e) => setSubmissionFeedbackText(e.target.value)}
+                        placeholder="Write code feedback, suggestions, or pointers for the student (optional)..."
+                        rows={3}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "8px",
+                          border: "1px solid #cbd5e1",
+                          fontSize: "13px",
+                          fontFamily: "inherit",
+                          outline: "none",
+                          resize: "vertical",
+                          background: "#f8fafc",
+                          color: "#0f172a",
+                          boxSizing: "border-box",
+                          transition: "border-color 0.15s ease"
+                        }}
+                        onFocus={(e) => (e.target.style.borderColor = "#4f46e5")}
+                        onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={handleSaveSubmissionFeedback}
+                          disabled={isSavingFeedback}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "6px 16px",
+                            background: "#4f46e5",
+                            color: "#ffffff",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: isSavingFeedback ? "not-allowed" : "pointer",
+                            opacity: isSavingFeedback ? 0.7 : 1,
+                            transition: "all 0.15s ease"
+                          }}
+                          onMouseEnter={(e) => { if (!isSavingFeedback) e.currentTarget.style.background = "#4338ca"; }}
+                          onMouseLeave={(e) => { if (!isSavingFeedback) e.currentTarget.style.background = "#4f46e5"; }}
+                        >
+                          {isSavingFeedback ? <RefreshCw size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={12} />}
+                          {isSavingFeedback ? "Saving..." : viewingCodeSubmission.feedback ? "Update Feedback" : "Save Feedback"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div style={{
+                    padding: "12px 24px",
+                    borderTop: "1px solid #e2e8f0",
+                    background: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexShrink: 0
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px" }}>
+                      <Clock size={14} />
+                      <span>Submitted: {viewingCodeSubmission.submitted_at ? new Date(viewingCodeSubmission.submitted_at).toLocaleString() : "N/A"}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewingCodeSubmission(null);
+                        setIsCodeFullScreen(false);
+                      }}
+                      style={{
+                        padding: "8px 20px",
+                        background: "#e2e8f0",
+                        color: "#334155",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        transition: "background 0.15s ease"
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#cbd5e1")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                    >
+                      Close Code Viewer
+                    </button>
+                  </div>
+                </div>
+              </div>,
+              document.body
+            );
+          })()}
+
+          {/* Grant Retake Modal for Coursework Tasks */}
+          {retakeModalTarget && (
+            <GrantRetakeModal
+              isOpen={Boolean(retakeModalTarget)}
+              onClose={() => setRetakeModalTarget(null)}
+              targetType="task"
+              targetId={retakeModalTarget.id || retakeModalTarget.taskId}
+              targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id || retakeModalTarget.taskId}`}
+              onRetakeGranted={() => {
+                if (selectedBatch) fetchBatchTasks(selectedBatch.id);
+              }}
+            />
           )}
         </div>
       </div>
@@ -1271,8 +2423,8 @@ export default function AdminBatches() {
                     value={name}
                     onChange={(e) => {
                       setName(e.target.value);
-                      if (!joinCode || joinCode.startsWith("BTCH") || joinCode.startsWith("BATC")) {
-                        setJoinCode(generateJoinCode(e.target.value));
+                      if (!joinCode) {
+                        setJoinCode(generateJoinCode());
                       }
                     }}
                     placeholder="e.g. Node.js Backend - Batch A"
@@ -1281,7 +2433,7 @@ export default function AdminBatches() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Weekly Schedule *</label>
                     <input
@@ -1294,12 +2446,16 @@ export default function AdminBatches() {
                   </div>
                   <div className="form-group-admin">
                     <label>Assigned Trainer *</label>
-                    <input
-                      className="form-input-admin"
+                    <AdminBatchSelect
                       value={mentor}
-                      onChange={(e) => setMentor(e.target.value)}
-                      placeholder="e.g. Dr. Kulkarni"
-                      required
+                      options={trainers.map((t) => ({
+                        value: t.name,
+                        label: t.name,
+                      }))}
+                      onChange={(val) => setMentor(val)}
+                      placeholder="Select Trainer..."
+                      emptyMessage="No trainer found"
+                      icon={Users}
                     />
                   </div>
                 </div>
@@ -1311,7 +2467,7 @@ export default function AdminBatches() {
                       className="form-input-admin"
                       value={joinCode}
                       onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                      placeholder="e.g. NODE-A7X9"
+                      placeholder="e.g. 8K2P9X4M"
                     />
                     <button type="button" className="batch-code-gen-btn" onClick={handleGenerateFormCode} title="Auto-generate join code">
                       <Sparkles size={14} /> Generate Code
@@ -1429,6 +2585,15 @@ export default function AdminBatches() {
                           <Key size={13} /> Join Batch Code
                         </span>
                         <div className="batch-code-header-right">
+                          <button
+                            type="button"
+                            className="batch-enlarge-icon-btn"
+                            onClick={() => setEnlargedBatchCode({ code: b.joinCode || b.join_code || b.code || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor, batchId: b.id })}
+                            title="Enlarge Join Code for presentation"
+                            aria-label="Enlarge Join Code"
+                          >
+                            <Maximize2 size={12} />
+                          </button>
                           <span className={`batch-code-expiry-badge ${timerInfo.expired ? "batch-code-expiry-badge--expired" : ""}`}>
                             {timerInfo.expired ? (
                               <>
@@ -1443,36 +2608,34 @@ export default function AdminBatches() {
                         </div>
                       </div>
                       <div className="batch-join-code-display">
-                        <span className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}>
-                          {b.joinCode || "NO-CODE"}
+                        <span
+                          className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}
+                          onClick={() => setEnlargedBatchCode({ code: b.joinCode || b.join_code || b.code || "NO-CODE", name: b.name, trainer: b.trainer || b.mentor, batchId: b.id })}
+                          title="Click to enlarge join code"
+                          style={{ cursor: "pointer" }}
+                        >
+                          {b.joinCode || b.join_code || b.code || "NO-CODE"}
                         </span>
-                        {timerInfo.expired ? (
-                          <button
-                            type="button"
-                            className="batch-renew-code-btn"
-                            onClick={() => handleRegenerateCode(b.id, b.name)}
-                            title="Generate a new active 5-minute code"
-                          >
-                            <RefreshCw size={12} /> Renew Code
-                          </button>
-                        ) : (
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                           <button
                             type="button"
                             className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
-                            onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
-                            title="Copy Code to Clipboard"
+                            onClick={() => handleCopyCode(b.id, b.joinCode || b.join_code || b.code, timerInfo.expired)}
+                            title={copiedId === b.id ? "Copied!" : "Copy Code"}
+                            aria-label="Copy Code"
                           >
-                            {copiedId === b.id ? (
-                              <>
-                                <Check size={13} /> Copied!
-                              </>
-                            ) : (
-                              <>
-                                <Copy size={13} /> Copy Code
-                              </>
-                            )}
+                            {copiedId === b.id ? <Check size={14} /> : <Copy size={14} />}
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            className={`batch-renew-code-btn ${!timerInfo.expired ? "batch-renew-code-btn--active" : ""}`}
+                            onClick={() => handleRegenerateCode(b.id, b.name)}
+                            title={timerInfo.expired ? "Renew expired join code" : "Regenerate join code"}
+                            aria-label="Regenerate Join Code"
+                          >
+                            <RefreshCw size={14} />
+                          </button>
+                        </div>
                       </div>
                       {timerInfo.expired && (
                         <span className="batch-expired-hint">This code expired after 5 minutes. Click "Renew Code" to create a fresh access code.</span>
@@ -1489,7 +2652,7 @@ export default function AdminBatches() {
                     >
                       Visit Batch <ArrowRight size={14} />
                     </Button>
-                    
+
                     {isInactive ? (
                       <button
                         type="button"
@@ -1516,18 +2679,18 @@ export default function AdminBatches() {
                     ) : (
                       <button
                         type="button"
-                        className="batch-delete-card-btn"
-                        onClick={() => handleDeleteBatch(b.id, b.name)}
-                        title="Move to Inactive"
+                        className="batch-inactive-card-btn"
+                        onClick={() => handleDeactivateBatch(b.id, b.name)}
+                        title="Make Batch Inactive"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           justifyContent: "center",
                           gap: "6px",
                           padding: "10px 14px",
-                          background: "#fff1f2",
-                          color: "#e11d48",
-                          border: "1px solid #fecdd3",
+                          background: "#fffbeb",
+                          color: "#b45309",
+                          border: "1px solid #fde68a",
                           borderRadius: "10px",
                           fontWeight: 600,
                           fontSize: "13px",
@@ -1535,7 +2698,7 @@ export default function AdminBatches() {
                           transition: "all 0.2s ease"
                         }}
                       >
-                        <Trash2 size={16} /> Delete
+                        <PowerOff size={15} /> Make Inactive
                       </button>
                     )}
                   </div>
@@ -1545,6 +2708,220 @@ export default function AdminBatches() {
           })
         )}
       </div>
+
+      {/* Enlarge Batch Code Modal */}
+      {enlargedBatchCode && createPortal(
+        <div
+          className="batch-enlarge-overlay"
+          onClick={() => setEnlargedBatchCode(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(6px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            animation: "fadeIn 0.2s ease",
+          }}
+        >
+          <div
+            className="batch-enlarge-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "520px",
+              background: "#ffffff",
+              borderRadius: "24px",
+              padding: "36px 32px 32px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setEnlargedBatchCode(null)}
+              style={{
+                position: "absolute",
+                top: "18px",
+                right: "18px",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                background: "#f1f5f9",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#64748b",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#e2e8f0"; e.currentTarget.style.color = "#0f172a"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#f1f5f9"; e.currentTarget.style.color = "#64748b"; }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "16px",
+              background: "#eff6ff",
+              color: "#2563eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "16px",
+            }}>
+              <Key size={28} />
+            </div>
+
+            <div style={{ fontSize: "12px", fontWeight: "800", color: "#6366f1", letterSpacing: "1px", textTransform: "uppercase", marginBottom: "4px" }}>
+              JOIN BATCH ACCESS CODE
+            </div>
+
+            <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#0f172a", margin: "0 0 6px" }}>
+              {enlargedBatchCode.name}
+            </h2>
+
+            {enlargedBatchCode.trainer && (
+              <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 24px" }}>
+                Trainer: <strong style={{ color: "#334155" }}>{enlargedBatchCode.trainer}</strong>
+              </p>
+            )}
+
+            {/* Giant Enlarge Code Pill */}
+            <div style={{
+              width: "100%",
+              padding: "24px 20px",
+              background: "linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)",
+              border: "2px dashed #93c5fd",
+              borderRadius: "18px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              marginBottom: "24px",
+            }}>
+              <span style={{
+                fontFamily: "monospace, 'Courier New', sans-serif",
+                fontSize: "44px",
+                fontWeight: "900",
+                letterSpacing: "4px",
+                color: "#1e40af",
+                textShadow: "0 2px 4px rgba(30, 64, 175, 0.1)",
+                userSelect: "all",
+              }}>
+                {enlargedBatchCode.code}
+              </span>
+              <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
+                Students enter this code in their portal to join
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "flex", gap: "12px", width: "100%", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(enlargedBatchCode.code);
+                  setCopiedId(enlargedBatchCode.code);
+                  setTimeout(() => setCopiedId(null), 2000);
+                }}
+                style={{
+                  flex: 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  padding: "12px 20px",
+                  background: copiedId === enlargedBatchCode.code ? "#16a34a" : "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                }}
+              >
+                {copiedId === enlargedBatchCode.code ? (
+                  <><Check size={16} /> Copied to Clipboard!</>
+                ) : (
+                  <><Copy size={16} /> Copy Join Code</>
+                )}
+              </button>
+              {enlargedBatchCode.batchId && (
+                <button
+                  type="button"
+                  onClick={() => handleRegenerateCode(enlargedBatchCode.batchId, enlargedBatchCode.name)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    padding: "12px 18px",
+                    background: "#eff6ff",
+                    color: "#2563eb",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "12px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                  }}
+                  title="Generate and update new code in database"
+                >
+                  <RefreshCw size={15} /> Regenerate
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setEnlargedBatchCode(null)}
+                style={{
+                  padding: "12px 20px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Grant Retake Modal */}
+      {retakeModalTarget && (
+        <GrantRetakeModal
+          isOpen={Boolean(retakeModalTarget)}
+          onClose={() => setRetakeModalTarget(null)}
+          targetType="task"
+          targetId={retakeModalTarget.id || retakeModalTarget.taskId}
+          targetTitle={retakeModalTarget.title || retakeModalTarget.name || `Task #${retakeModalTarget.id || retakeModalTarget.taskId}`}
+          onRetakeGranted={() => {
+            if (selectedBatch) fetchBatchTasks(selectedBatch.id);
+          }}
+        />
+      )}
     </div>
   );
 }

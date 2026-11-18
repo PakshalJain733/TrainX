@@ -21,8 +21,10 @@ export const pool = mysql.createPool({
   password: dbPassword,
   database: dbName,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '40', 10),
+  queueLimit: parseInt(process.env.DB_QUEUE_LIMIT || '500', 10),
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
   ...(dbSsl ? { ssl: dbSsl } : {}),
   connectTimeout: connectTimeout,
 });
@@ -38,6 +40,103 @@ export const checkDatabaseConnection = async () => {
     const connection = await pool.getConnection();
     connection.release();
     console.log(`[Database] Connected successfully to MySQL database: ${dbName}`);
+
+    // Ensure extended profile columns exist on users table
+    try {
+      const existingCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+      );
+      const colSet = new Set((existingCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      const colsToAdd = [
+        { name: 'current_year', def: 'VARCHAR(50) DEFAULT NULL' },
+        { name: 'area_of_expertise', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'specialization', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'avatar_url', def: 'LONGTEXT DEFAULT NULL' },
+        { name: 'bio', def: 'TEXT DEFAULT NULL' },
+        { name: 'force_password_change', def: 'TINYINT(1) DEFAULT 0' },
+        { name: 'email_delivery_status', def: "ENUM('pending', 'sent', 'failed', 'bounced') DEFAULT 'pending'" },
+        { name: 'activation_status', def: "ENUM('pending', 'completed') DEFAULT 'pending'" },
+        { name: 'approval_status', def: "ENUM('pending', 'approved', 'rejected') DEFAULT 'pending'" },
+      ];
+      for (const col of colsToAdd) {
+        if (!colSet.has(col.name.toLowerCase())) {
+          await query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.def}`);
+          console.log(`[Database Migration] Added column ${col.name} to users table.`);
+        }
+      }
+    } catch (migErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply users schema extensions: ${migErr.message}`);
+    }
+
+    // Ensure email and delivery status columns exist on secure_codes table
+    try {
+      const existingScCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'secure_codes'"
+      );
+      const scColSet = new Set((existingScCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      const scColsToAdd = [
+        { name: 'email', def: 'VARCHAR(255) DEFAULT NULL' },
+        { name: 'email_delivery_status', def: "ENUM('pending', 'sent', 'failed', 'bounced') DEFAULT 'pending'" },
+        { name: 'invitation_id', def: 'VARCHAR(100) DEFAULT NULL' },
+      ];
+      for (const col of scColsToAdd) {
+        if (!scColSet.has(col.name.toLowerCase())) {
+          await query(`ALTER TABLE secure_codes ADD COLUMN ${col.name} ${col.def}`);
+          console.log(`[Database Migration] Added column ${col.name} to secure_codes table.`);
+        }
+      }
+    } catch (scErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply secure_codes schema extensions: ${scErr.message}`);
+    }
+
+    // Ensure updated_at exists on attendance table
+    try {
+      const attCols = await query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'attendance'"
+      );
+      const attColSet = new Set((attCols || []).map(c => c.COLUMN_NAME.toLowerCase()));
+      if (!attColSet.has('updated_at')) {
+        await query(`ALTER TABLE attendance ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`);
+        console.log(`[Database Migration] Added column updated_at to attendance table.`);
+      }
+    } catch (attMigErr) {
+      console.warn(`[Database Migration Warning] Could not verify/apply attendance schema extensions: ${attMigErr.message}`);
+    }
+
+    // Auto-normalize student semesters according to academic year (FE -> 1, SE -> 3, TE -> 5, BE -> 7)
+    try {
+      await query(`
+        UPDATE students 
+        SET semester = CASE 
+          WHEN UPPER(TRIM(year)) IN ('FE', '1', 'FIRST') THEN '1'
+          WHEN UPPER(TRIM(year)) IN ('SE', '2', 'SECOND') THEN '3'
+          WHEN UPPER(TRIM(year)) IN ('TE', '3', 'THIRD') THEN '5'
+          WHEN UPPER(TRIM(year)) IN ('BE', '4', 'FINAL') THEN '7'
+          ELSE semester
+        END
+        WHERE semester IS NULL OR semester IN ('', '1', 'Semester 1', 'Semester 6')
+      `);
+    } catch (_) {}
+
+    // Auto-create essential performance indexes for 500+ concurrent users
+    try {
+      const performanceIndexes = [
+        { table: 'assessment_attempts', name: 'idx_perf_attempts_user_assessment', sql: 'CREATE INDEX idx_perf_attempts_user_assessment ON assessment_attempts (user_id, assessment_id, status)' },
+        { table: 'attendance', name: 'idx_perf_attendance_batch_date', sql: 'CREATE INDEX idx_perf_attendance_batch_date ON attendance (batch_id, session_date)' },
+        { table: 'users', name: 'idx_perf_users_role_active', sql: 'CREATE INDEX idx_perf_users_role_active ON users (role, is_active, college_id)' },
+        { table: 'practice_problems', name: 'idx_perf_practice_college_batch', sql: 'CREATE INDEX idx_perf_practice_college_batch ON practice_problems (college_id, batch_id)' },
+      ];
+      for (const idx of performanceIndexes) {
+        try {
+          const existingIdx = await query(`SHOW INDEX FROM \`${idx.table}\` WHERE Key_name = ?`, [idx.name]);
+          if (!existingIdx || existingIdx.length === 0) {
+            await query(idx.sql);
+            console.log(`[Database Migration] Created performance index ${idx.name} on ${idx.table}.`);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+
     return true;
   } catch (error) {
     console.warn(`[Database Warning] Database connection failed (${error.message}). Server running with fallback mode.`);

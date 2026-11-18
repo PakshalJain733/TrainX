@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2, Sparkles, ArrowRight } from "lucide-react";
+import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2, Sparkles, ArrowRight, Medal, Crown, Zap, RotateCcw } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 import "../Styles/ST_Batches.css";
@@ -34,7 +34,18 @@ const getInitials = (name) => {
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase();
+};
+
+const isDeadlinePassed = (deadline) => {
+  if (!deadline) return false;
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none' || clean.toLowerCase() === 'flexible deadline') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
 };
 
 function mapApiBatch(b) {
@@ -88,7 +99,7 @@ export default function Batches() {
       if (data.success && Array.isArray(data.data)) {
         const activeOnly = data.data.filter(b => {
           const st = (b.status || "").toLowerCase();
-          return st !== "inactive" && st !== "deleted";
+          return st !== "deleted";
         });
         const mapped = activeOnly.map(mapApiBatch);
         setEnrolledBatches(mapped);
@@ -110,39 +121,159 @@ export default function Batches() {
       const res = await fetch(`${API_BASE}/batches/${batch.id}/tasks`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        const customTasks = data.data.map((t, idx) => ({
-          id: t.id,
-          taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
-          title: t.title,
-          type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
-          due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
-          status: t.status || "Pending",
-          platform: t.platform || "coding",
-          points: Number(t.points) || 100,
-          scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
-          alreadySubmitted: Boolean(t.alreadySubmitted),
-          language: t.language || "",
-          description: t.description || t.desc || "",
-          testCases: t.testCases || t.test_cases || [],
-          batch_id: t.batch_id || batch.id,
-        }));
+        const customTasks = data.data.map((t, idx) => {
+          const isExpired = Boolean(t.isExpired) || (isDeadlinePassed(t.deadline) && !t.alreadySubmitted && (t.status || '').toLowerCase() !== 'completed');
+          const finalStatus = (t.status || '').toLowerCase() === 'completed' || t.alreadySubmitted ? 'Completed' : (isExpired ? 'Expired' : (t.status || 'Pending'));
+          return {
+            id: t.id,
+            taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
+            title: t.title,
+            type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} pts)`,
+            taskDate: t.task_date || t.taskDate || t.date || "",
+            due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
+            deadline: t.deadline || "",
+            status: finalStatus,
+            isExpired,
+            platform: t.platform || "coding",
+            points: Number(t.points) || 100,
+            scoreObtained: t.scoreObtained ?? t.marksObtained ?? null,
+            alreadySubmitted: Boolean(t.alreadySubmitted),
+            retakeAvailable: Boolean(t.retakeAvailable),
+            language: t.language || "",
+            description: t.description || t.desc || "",
+            testCases: t.testCases || t.test_cases || [],
+            batch_id: t.batch_id || batch.id,
+          };
+        });
 
         // Batch XP calculates according to task marks obtained
         const completedXp = customTasks
           .reduce((sum, t) => sum + (t.scoreObtained != null ? Number(t.scoreObtained) : ((t.status || "").toLowerCase() === "completed" ? (t.points || 100) : 0)), 0);
 
-        setSelectedBatch((prev) => ({
-          ...prev,
-          apiTasks: customTasks,
-          leaderboard: [
+        let finalLeaderboard = [];
+        try {
+          const currentUserName = getStoredUserName();
+          let currentSessionUser = null;
+          try {
+            currentSessionUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+          } catch {}
+
+          const stRes = await fetch(`${API_BASE}/batches/${batch.id}/students`, { headers: getAuthHeaders() });
+          const stData = await stRes.json();
+
+          if (stData && stData.success && Array.isArray(stData.data) && stData.data.length > 0) {
+            const myIds = new Set(
+              [currentSessionUser?.id, currentSessionUser?.userId, currentSessionUser?.user_id, currentSessionUser?.student_id]
+                .filter(Boolean)
+                .map(String)
+            );
+            const myEmail = (currentSessionUser?.email || "").trim().toLowerCase();
+            const myName = (currentUserName || currentSessionUser?.name || "").trim().toLowerCase();
+
+            let foundSelf = false;
+            const mapped = stData.data.map((st, idx) => {
+              const stIds = [st.id, st.user_id, st.userId, st.student_id].filter(Boolean).map(String);
+              const hasIdMatch = stIds.some(id => myIds.has(id));
+              const hasEmailMatch = Boolean(myEmail && st.email && myEmail === st.email.trim().toLowerCase());
+              const hasNameMatch = Boolean(myName && st.name && myName === st.name.trim().toLowerCase());
+
+              const isSelf = hasIdMatch || hasEmailMatch || hasNameMatch;
+              if (isSelf) foundSelf = true;
+
+              const studentXp = isSelf
+                ? Math.max(completedXp, Number(st.xp || 0))
+                : (st.xp != null && !isNaN(Number(st.xp)) ? Number(st.xp) : Math.max(20, 240 - idx * 45));
+
+              return {
+                id: st.id || idx + 1,
+                name: isSelf ? `${st.name || currentUserName} (You)` : (st.name || `Student ${idx + 1}`),
+                rawName: st.name || currentUserName,
+                email: st.email || "",
+                xp: studentXp,
+                initials: getInitials(st.name || currentUserName),
+                self: isSelf,
+                department: st.department || "COMPS",
+                rollNo: st.rollNo || st.roll_number || `STU-${idx + 1}`,
+              };
+            });
+
+            if (!foundSelf) {
+              const alreadyExists = mapped.some(m => 
+                (myName && m.rawName && myName === m.rawName.trim().toLowerCase()) ||
+                (myEmail && m.email && myEmail === m.email.trim().toLowerCase())
+              );
+              if (alreadyExists) {
+                const item = mapped.find(m => 
+                  (myName && m.rawName && myName === m.rawName.trim().toLowerCase()) ||
+                  (myEmail && m.email && myEmail === m.email.trim().toLowerCase())
+                );
+                if (item) {
+                  item.self = true;
+                  item.name = `${item.rawName || currentUserName} (You)`;
+                  item.xp = Math.max(completedXp, Number(item.xp || 0));
+                }
+              } else {
+                mapped.push({
+                  id: currentSessionUser?.id || "me",
+                  name: `${currentUserName} (You)`,
+                  rawName: currentUserName,
+                  email: myEmail,
+                  xp: completedXp,
+                  initials: getInitials(currentUserName),
+                  self: true,
+                  department: currentSessionUser?.department || "Enrolled Student",
+                  rollNo: currentSessionUser?.roll_number || "Self",
+                });
+              }
+            }
+
+            // Strict deduplication: no student can ever be listed twice
+            const uniqueMap = new Map();
+            for (const item of mapped) {
+              const normName = (item.rawName || item.name || "").replace(/\s*\(you\)$/i, "").trim().toLowerCase();
+              const emailKey = item.email ? item.email.trim().toLowerCase() : "";
+              const key = emailKey || normName || String(item.id);
+
+              if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, item);
+              } else {
+                const existing = uniqueMap.get(key);
+                if (item.self) {
+                  uniqueMap.set(key, { ...item, xp: Math.max(item.xp, existing.xp) });
+                } else {
+                  existing.xp = Math.max(existing.xp, item.xp);
+                }
+              }
+            }
+
+            const dedupedList = Array.from(uniqueMap.values());
+            dedupedList.sort((a, b) => b.xp - a.xp);
+            finalLeaderboard = dedupedList.map((item, i) => ({
+              ...item,
+              rank: i + 1,
+            }));
+          }
+        } catch (stErr) {
+          console.warn("Could not retrieve batch enrolled student leaderboard:", stErr);
+        }
+
+        if (finalLeaderboard.length === 0) {
+          finalLeaderboard = [
             {
               rank: 1,
               name: `${getStoredUserName()} (You)`,
               xp: completedXp,
               initials: getInitials(getStoredUserName()),
               self: true,
+              department: "Enrolled Cohort",
             }
-          ],
+          ];
+        }
+
+        setSelectedBatch((prev) => ({
+          ...prev,
+          apiTasks: customTasks,
+          leaderboard: finalLeaderboard,
           stats: {
             ...prev.stats,
             pendingTasks: customTasks.filter(t => t.status !== "Completed").length,
@@ -169,6 +300,13 @@ export default function Batches() {
       .finally(() => {
         fetchMyBatches();
       });
+
+    window.addEventListener("batchJoined", fetchMyBatches);
+    window.addEventListener("portal_batch_updated", fetchMyBatches);
+    return () => {
+      window.removeEventListener("batchJoined", fetchMyBatches);
+      window.removeEventListener("portal_batch_updated", fetchMyBatches);
+    };
   }, []);
 
   // Handle batch join submission
@@ -206,11 +344,16 @@ export default function Batches() {
         setModalSuccess(data.message || "Successfully joined batch!");
         setJoinCodeInput("");
         await fetchMyBatches();
+        window.dispatchEvent(new Event("batchJoined"));
+        window.dispatchEvent(new Event("portal_batch_updated"));
         setTimeout(() => {
           setShowJoinModal(false);
           setModalSuccess("");
-        }, 1500);
+        }, 1200);
       } else {
+        if (data.message && data.message.toLowerCase().includes("already joined")) {
+          fetchMyBatches();
+        }
         setModalError(data.message || "Failed to join batch. Please check code.");
       }
     } catch (err) {
@@ -314,7 +457,7 @@ export default function Batches() {
             <div className="cw-stat-info-col">
               <p className="cw-stat-label">Task Completion Rate</p>
               <h4 className="cw-stat-value">
-                {totalBatchTasks > 0 ? Math.round((selectedBatch.stats.completedTasks / totalBatchTasks) * 100) : 100}%
+                {totalBatchTasks > 0 ? Math.round((selectedBatch.stats.completedTasks / totalBatchTasks) * 100) : 0}%
               </h4>
             </div>
           </div>
@@ -339,7 +482,7 @@ export default function Batches() {
         {/* Split Arena */}
         <div className="cw-content-split-grid">
           <div className="cw-left-pane">
-            <div className="cw-unified-container">
+            <div className={`cw-unified-container ${batchTasksList.length === 0 ? "cw-unified-container--empty" : ""}`}>
               <div className="cw-unified-header">
                 <div className="cw-unified-title-wrap">
                   <BookOpen size={20} className="cw-unified-title-icon" />
@@ -349,33 +492,45 @@ export default function Batches() {
               </div>
 
               <div className="cw-unified-modules-stack">
-                <div className="cw-module-items-stack">
+                <div className={`cw-module-items-stack ${batchTasksList.length === 0 ? "cw-module-items-stack--empty" : ""}`}>
                   {batchTasksList.length === 0 ? (
-                    <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
+                    <div className="admin-empty-state-card" style={{ padding: "30px 20px", minHeight: "180px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                       <BookOpen size={36} className="admin-empty-state-icon" style={{ margin: "0 auto 8px" }} />
-                      <p className="admin-empty-state-title">No tasks currently assigned</p>
+                      <p className="admin-empty-state-title">No tasks assigned</p>
                       <p className="admin-empty-state-sub">Your mentor/admin will post new problem sets and assignments here.</p>
                     </div>
                   ) : (
                     batchTasksList.map((task, idx) => {
-                      const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
                       const platform = task.platform || "coding";
-                      let taskHref = `/student/coding-platform/${taskSlug}`;
+                      let taskHref = `/student/coding-platform/task-${task.id}`;
                       if (platform === "mcq") taskHref = `/student/quiz`;
                       else if (platform === "gd") taskHref = `/student/ai-interview`;
-                      else if (platform === "submission") taskHref = `/student/coding-platform`;
+                      else if (platform === "submission") taskHref = `/student/coding-platform/task-${task.id}`;
 
                       return (
                         <Link
                           to={taskHref}
-                          state={{ task }}
+                          state={{ task: { ...task, retakeAvailable: Boolean(task.retakeAvailable) }, batchTasks: batchTasksList, batchId: selectedBatch?.id, fromBatchCoursework: true, enterFullscreen: true, isRetake: Boolean(task.retakeAvailable) }}
                           key={idx}
                           className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
+                          onClick={async () => {
+                            if (platform === "coding" || platform === "submission") {
+                              try {
+                                if (!document.fullscreenElement) {
+                                  await document.documentElement.requestFullscreen?.();
+                                }
+                              } catch (err) {
+                                console.warn("Fullscreen request error on coursework click:", err);
+                              }
+                            }
+                          }}
                         >
                           <div className="cw-item-left">
                             <span className="cw-task-num-badge">{task.taskNumber}</span>
                             {task.status === "Completed" ? (
                               <CheckCircle2 size={18} className="cw-item-icon-done" />
+                            ) : (task.status === "Expired" || task.status === "Failed") ? (
+                              <AlertCircle size={18} style={{ color: "#dc2626" }} />
                             ) : (
                               <Clock3 size={18} className="cw-item-icon-pending" />
                             )}
@@ -383,8 +538,14 @@ export default function Batches() {
                               <h5 className="cw-item-title">{task.title}</h5>
                               <p className="cw-item-meta-sub">
                                 <span>{task.type}</span>
+                                {task.taskDate && (
+                                  <>
+                                    <span>•</span>
+                                    <span style={{ color: "#4f46e5", fontWeight: 600 }}>Date: {task.taskDate}</span>
+                                  </>
+                                )}
                                 <span>•</span>
-                                <span className={task.urgent ? "cw-item-due--urgent" : ""}>
+                                <span className={task.status === "Expired" ? "cw-item-due--urgent" : (task.urgent ? "cw-item-due--urgent" : "")}>
                                   {task.due}
                                 </span>
                               </p>
@@ -392,6 +553,24 @@ export default function Batches() {
                           </div>
 
                           <div className="cw-item-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {task.retakeAvailable && (
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  backgroundColor: "#fef3c7",
+                                  color: "#b45309",
+                                  border: "1px solid #fde68a",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <RotateCcw size={11} /> Retake Available
+                              </span>
+                            )}
                             {task.scoreObtained != null && (
                               <span style={{ fontSize: "12px", fontWeight: 700, color: task.status === "Completed" ? "#16a34a" : "#d97706" }}>
                                 {task.scoreObtained} / {task.points} pts
@@ -401,6 +580,8 @@ export default function Batches() {
                               variant={
                                 task.status === "Completed"
                                   ? "success"
+                                  : (task.status === "Expired" || task.status === "Failed")
+                                  ? "danger"
                                   : task.status === "Partial"
                                   ? "warning"
                                   : task.urgent
@@ -421,35 +602,94 @@ export default function Batches() {
           </div>
 
           <div className="cw-right-pane">
-            <div className="cw-leaderboard-card">
+            <div className={`cw-leaderboard-card ${(!selectedBatch.leaderboard || selectedBatch.leaderboard.length === 0) ? "cw-leaderboard-card--empty" : ""}`}>
               <div className="cw-section-header-row">
                 <div className="cw-lb-title-wrap">
-                  <Trophy size={18} className="cw-lb-icon" />
-                  <h3 className="cw-section-title">Batch Leaderboard</h3>
-                </div>
-                <Badge variant="outline">Top Performers</Badge>
-              </div>
-
-              <div className="cw-lb-list">
-                {selectedBatch.leaderboard.map((student) => (
-                  <div
-                    key={student.rank}
-                    className={`cw-lb-item ${student.self ? "cw-lb-item--self" : ""}`}
-                  >
-                    <div className="cw-lb-item-left">
-                      <span className={`cw-lb-rank ${student.rank <= 3 ? "cw-lb-rank--top" : ""}`}>
-                        #{student.rank}
-                      </span>
-                      <div className={`cw-lb-avatar ${student.self ? "cw-lb-avatar--self" : ""}`}>
-                        {student.initials}
-                      </div>
-                      <span className="cw-lb-name">{student.name}</span>
-                    </div>
-
-                    <span className="cw-lb-xp">{student.xp} XP</span>
+                  <div className="cw-lb-trophy-pill">
+                    <Trophy size={18} className="cw-lb-icon" />
                   </div>
-                ))}
+                  <div>
+                    <h3 className="cw-section-title">Batch Leaderboard</h3>
+                    <p className="cw-section-subtitle">Real-time cohort ranking & XP</p>
+                  </div>
+                </div>
+                <div className="cw-top-performers-badge">
+                  <Sparkles size={13} />
+                  <span>Top Performers</span>
+                </div>
               </div>
+
+              {/* Leaderboard entries */}
+              <div className="cw-lb-list">
+                {selectedBatch.leaderboard && selectedBatch.leaderboard.length > 0 ? (
+                  selectedBatch.leaderboard.map((student) => {
+                    const isTop1 = student.rank === 1;
+                    const isTop2 = student.rank === 2;
+                    const isTop3 = student.rank === 3;
+                    return (
+                      <div
+                        key={student.id || student.rank}
+                        className={`cw-lb-item ${student.self ? "cw-lb-item--self" : ""} ${isTop1 ? "cw-lb-item--rank1" : isTop2 ? "cw-lb-item--rank2" : isTop3 ? "cw-lb-item--rank3" : ""}`}
+                      >
+                        <div className="cw-lb-item-left">
+                          <span className={`cw-lb-rank ${isTop1 ? "cw-lb-rank--1" : isTop2 ? "cw-lb-rank--2" : isTop3 ? "cw-lb-rank--3" : ""}`}>
+                            {isTop1 ? "🥇" : isTop2 ? "🥈" : isTop3 ? "🥉" : `#${student.rank}`}
+                          </span>
+                          <div className={`cw-lb-avatar ${student.self ? "cw-lb-avatar--self" : ""} ${isTop1 ? "cw-lb-avatar--gold" : ""}`}>
+                            {student.initials}
+                          </div>
+                          <div className="cw-lb-student-meta">
+                            <div className="cw-lb-name-row">
+                              <span className="cw-lb-name">{student.name}</span>
+                              {student.self && (
+                                <span className="cw-lb-you-tag">YOU</span>
+                              )}
+                            </div>
+                            <span className="cw-lb-subtext">
+                              {student.department || "Enrolled Student"}
+                              {student.rollNo && student.rollNo !== "ME" && student.rollNo !== "Self" ? ` • ${student.rollNo}` : ""}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={`cw-lb-xp-pill ${isTop1 ? "cw-lb-xp-pill--gold" : ""}`}>
+                          <Zap size={12} className="cw-lb-xp-icon" />
+                          <span>{student.xp} XP</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="cw-lb-empty">
+                    <Trophy size={32} className="cw-lb-empty-icon" />
+                    <p className="cw-lb-empty-text">No leaderboard entries yet</p>
+                    <span className="cw-lb-empty-sub">Submit batch coursework to earn points and claim #1 rank!</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Summary standing footer */}
+              {(() => {
+                const selfItem = selectedBatch.leaderboard?.find(s => s.self);
+                const totalStudents = selectedBatch.leaderboard?.length || 1;
+                return (
+                  <div className="cw-lb-footer-card">
+                    <div className="cw-lb-standing-info">
+                      <div className="cw-lb-standing-badge">
+                        <Award size={14} />
+                        <span>Your Standing</span>
+                      </div>
+                      <span className="cw-lb-standing-rank">
+                        Rank #{selfItem ? selfItem.rank : 1} of {totalStudents} {totalStudents === 1 ? "Student" : "Students"}
+                      </span>
+                    </div>
+                    <Link to="/student/leaderboard" className="cw-lb-full-link">
+                      <span>Full Campus Board</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -488,17 +728,7 @@ export default function Batches() {
             View your active C2C batches, faculty-led sessions, curriculum completion rates, and learning resources.
           </p>
         </div>
-        <button
-          type="button"
-          className="join-batch-header-btn"
-          onClick={() => {
-            setModalError("");
-            setModalSuccess("");
-            setShowJoinModal(true);
-          }}
-        >
-          <Plus size={16} /> Join Batch
-        </button>
+
       </div>
 
       {/* Summary KPI Bar */}
@@ -709,7 +939,11 @@ export default function Batches() {
 
             <form onSubmit={handleJoinSubmit}>
               <div className="modal-body">
-                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalError && (
+                  <div className={`modal-feedback-alert ${modalError.toLowerCase().includes("already") ? "modal-feedback--warning" : "modal-feedback--error"}`}>
+                    {modalError}
+                  </div>
+                )}
                 {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
 
                 <div className="form-group-admin">

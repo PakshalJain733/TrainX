@@ -1,6 +1,8 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../config/jwt.js';
+import { socketCorsConfig } from '../config/cors.js';
+import { verifyUserIsActive } from '../middleware/auth.middleware.js';
 import {
   generateOpeningQuestion,
   generateFollowUpQuestion,
@@ -11,24 +13,59 @@ import {
 } from '../ai/interview.ai.js';
 import { ingestDocument, clearOwnerKnowledge } from '../services/rag/rag.service.js';
 import { createInterviewSessionModel } from '../models/interview.model.js';
+import { checkInterviewLock, recordInterviewStart } from '../utils/rateLimitChecker.js';
+import { query } from '../config/db.js';
 
 const activeSessions = new Map();
+// Map<userId, Set<Socket>> to track live socket connections for immediate revocation enforcement
+const activeUserSockets = new Map();
+
+/**
+ * Disconnects all active Socket.IO connections for a given user immediately.
+ * Called when a student is revoked or deactivated.
+ */
+export function disconnectUserSockets(userId, reason = 'User account has been deactivated or revoked.') {
+  if (!userId) return;
+  const numUserId = Number(userId);
+  const sockets = activeUserSockets.get(numUserId);
+  if (sockets && sockets.size > 0) {
+    for (const socket of sockets) {
+      try {
+        socket.emit('auth:revoked', { message: reason });
+        socket.disconnect(true);
+      } catch (_) {}
+    }
+    activeUserSockets.delete(numUserId);
+  }
+}
 
 function normalizeSessionId(id) {
   return String(id || '').trim();
 }
 
+/**
+ * TENANT-02: Generates tenant-scoped Socket.IO room names to ensure strict multi-tenant isolation.
+ */
+export function getInterviewRoom(collegeId, sessionId) {
+  const cId = collegeId !== null && collegeId !== undefined ? collegeId : 'global';
+  return `college:${cId}:session:${normalizeSessionId(sessionId)}`;
+}
+
 function getOrCreateSession(sessionId, payload) {
   const key = normalizeSessionId(sessionId);
   const existing = activeSessions.get(key);
-  // Never let a session created by one user be reused by another user.
+  // TENANT-02: Never let a session created by one user or one college be reused by another user/college
   if (existing && payload?.userId && existing.userId && existing.userId !== payload.userId) {
+    activeSessions.delete(key);
+  }
+  if (existing && payload?.collegeId && existing.collegeId && existing.collegeId !== payload.collegeId) {
     activeSessions.delete(key);
   }
   if (!activeSessions.has(key)) {
     activeSessions.set(key, {
       id: key,
       userId: null,
+      collegeId: null,
       role: null,
       topic: null,
       difficulty: 'Medium',
@@ -49,6 +86,7 @@ function getOrCreateSession(sessionId, payload) {
     session.topic = payload.topic || session.topic;
     session.difficulty = payload.difficulty || session.difficulty;
     session.userId = payload.userId || session.userId;
+    session.collegeId = payload.collegeId ?? session.collegeId;
     session.totalQuestions = Number(payload.totalQuestions) || session.totalQuestions || 10;
     session.owner = payload.owner || session.owner;
   }
@@ -112,43 +150,61 @@ async function finalizeSession(io, socket, session, reason = 'completed', explic
   socket.emit('interview:complete', summary);
 
   try {
-    await createInterviewSessionModel({
-      user_id: session.userId,
-      interview_type: session.topic || session.role || 'Technical Mock',
-      overall_score: finalReport.overallScore,
-      grade: finalReport.grade || 'Average',
-      feedback: finalReport.feedback || '',
-      status: 'Completed',
-      details: {
-        role: session.role,
-        topic: session.topic,
-        difficulty: session.difficulty,
-        startedAt: session.startedAt,
-        endedAt: session.endedAt,
-        durationSeconds,
-        questionsAnswered: session.evaluationHistory.length,
-        questions: session.evaluationHistory.map((e) => e.question),
-        answers: session.evaluationHistory.map((e) => e.answer),
-        questionScores: session.evaluationHistory.map((e) => e.score),
-        questionFeedbacks: session.evaluationHistory.map((e) => e.feedback),
-        modelAnswers: session.evaluationHistory.map((e) => e.modelAnswer),
-        overallScore: finalReport.overallScore,
-        technical: finalReport.technical,
-        communication: finalReport.communication,
-        problemSolving: finalReport.problemSolving,
-        strengths: finalReport.strengths,
-        weaknesses: finalReport.improvementAreas,
-        skillGaps: finalReport.recommendedTopics,
-        recommendations: finalReport.improvementAreas,
-        feedback: finalReport.feedback,
-        readiness: finalReport.readiness,
-        grade: finalReport.grade,
-        evaluationHistory: session.evaluationHistory,
-        scorecard: finalReport,
-        endReason: finalEndReason,
-        proctoringWarnings,
-      },
-    });
+    const detailsPayload = {
+      role: session.role,
+      topic: session.topic,
+      difficulty: session.difficulty,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      durationSeconds,
+      questionsAnswered: session.evaluationHistory.length,
+      questions: session.evaluationHistory.map((e) => e.question),
+      answers: session.evaluationHistory.map((e) => e.answer),
+      questionScores: session.evaluationHistory.map((e) => e.score),
+      questionFeedbacks: session.evaluationHistory.map((e) => e.feedback),
+      modelAnswers: session.evaluationHistory.map((e) => e.modelAnswer),
+      overallScore: finalReport.overallScore,
+      technical: finalReport.technical,
+      communication: finalReport.communication,
+      problemSolving: finalReport.problemSolving,
+      strengths: finalReport.strengths,
+      weaknesses: finalReport.improvementAreas,
+      skillGaps: finalReport.recommendedTopics,
+      recommendations: finalReport.improvementAreas,
+      feedback: finalReport.feedback,
+      readiness: finalReport.readiness,
+      grade: finalReport.grade,
+      evaluationHistory: session.evaluationHistory,
+      scorecard: finalReport,
+      endReason: finalEndReason,
+      proctoringWarnings,
+    };
+
+    if (session.dbSessionId) {
+      await query(
+        `UPDATE interview_sessions
+         SET interview_type = ?, overall_score = ?, grade = ?, feedback = ?, status = 'Completed', details = ?
+         WHERE id = ?`,
+        [
+          session.topic || session.role || 'Technical Mock',
+          finalReport.overallScore,
+          finalReport.grade || 'Average',
+          finalReport.feedback || '',
+          JSON.stringify(detailsPayload),
+          session.dbSessionId,
+        ]
+      );
+    } else {
+      await createInterviewSessionModel({
+        user_id: session.userId,
+        interview_type: session.topic || session.role || 'Technical Mock',
+        overall_score: finalReport.overallScore,
+        grade: finalReport.grade || 'Average',
+        feedback: finalReport.feedback || '',
+        status: 'Completed',
+        details: detailsPayload,
+      });
+    }
   } catch (err) {
     console.warn(`[Interview Socket] Could not persist session ${session.id}: ${err.message}`);
   }
@@ -158,17 +214,16 @@ async function finalizeSession(io, socket, session, reason = 'completed', explic
 
 export function initInterviewSocket(httpServer) {
   const io = new Server(httpServer, {
-    cors: {
-      origin: true,
-      credentials: true,
-      methods: ['GET', 'POST'],
-    },
+    cors: socketCorsConfig,
     path: '/socket.io',
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   const interviews = io.of('/interviews');
 
-  interviews.use((socket, next) => {
+  interviews.use(async (socket, next) => {
     try {
       const token =
         socket.handshake.auth?.token ||
@@ -179,19 +234,12 @@ export function initInterviewSocket(httpServer) {
 
       let decoded = null;
       try {
-        decoded = jwt.verify(token, getJwtSecret());
+        decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
       } catch (err) {
         decoded = null;
       }
 
-      if (!decoded && process.env.NODE_ENV !== 'production') {
-        try {
-          const raw = jwt.decode(token);
-          if (raw && (raw.userId || raw.id)) {
-            decoded = raw;
-          }
-        } catch (e) {}
-      }
+      // Insecure unverified jwt.decode removed for production security
 
       if (!decoded) {
         console.warn('[InterviewSocket] Token verification failed for incoming socket handshake');
@@ -199,11 +247,20 @@ export function initInterviewSocket(httpServer) {
       }
 
       const userId = decoded.userId || decoded.id;
+      const collegeId = decoded.collegeId || decoded.college_id || null;
       const role = decoded.role || 'student';
       if (!userId) return next(new Error('Malformed token: userId missing'));
 
+      // SEC-01: Verify referenced user exists and is active before allowing socket handshake
+      const isActive = await verifyUserIsActive(userId);
+      if (!isActive) {
+        console.warn(`[InterviewSocket] Connection rejected: user ${userId} is inactive or revoked`);
+        return next(new Error('User account has been deactivated or revoked'));
+      }
+
       socket.data.user = {
-        userId,
+        userId: Number(userId),
+        collegeId: collegeId ? Number(collegeId) : null,
         role,
         name: decoded.name || 'Candidate',
         email: decoded.email || '',
@@ -216,7 +273,29 @@ export function initInterviewSocket(httpServer) {
   });
 
   interviews.on('connection', (socket) => {
-    const { userId } = socket.data.user;
+    const { userId, collegeId } = socket.data.user;
+    const numUserId = Number(userId);
+
+    // Track active socket connection for immediate event-driven revocation
+    if (!activeUserSockets.has(numUserId)) {
+      activeUserSockets.set(numUserId, new Set());
+    }
+    activeUserSockets.get(numUserId).add(socket);
+
+    // SEC-01: Packet-level middleware on all incoming socket events to catch in-session revocations
+    socket.use(async ([event, ...args], next) => {
+      try {
+        const stillActive = await verifyUserIsActive(numUserId);
+        if (!stillActive) {
+          socket.emit('auth:revoked', { message: 'Your account has been deactivated or revoked.' });
+          socket.disconnect(true);
+          return next(new Error('Account revoked'));
+        }
+        next();
+      } catch (err) {
+        return next(new Error('Active verification failed'));
+      }
+    });
 
     socket.emit('interview:connected', {
       userId,
@@ -225,16 +304,34 @@ export function initInterviewSocket(httpServer) {
 
     socket.on('interview:start', async (payload = {}) => {
       try {
+        const userRole = socket.data.user?.role || 'student';
+        const lock = await checkInterviewLock(userId, userRole);
+        if (lock.isLocked) {
+          socket.emit('interview:error', {
+            message: lock.message,
+            isLocked: true,
+            lockedUntil: lock.lockedUntil,
+            remainingDays: lock.remainingDays,
+            remainingHours: lock.remainingHours,
+          });
+          return;
+        }
+
         const sessionId = normalizeSessionId(payload.sessionId || `${userId}-${Date.now()}`);
         const owner = String(`${userId}-${sessionId}`);
         const session = getOrCreateSession(sessionId, {
           userId,
+          collegeId,
           role: payload.role,
           topic: payload.topic,
           difficulty: payload.difficulty,
           totalQuestions: payload.totalQuestions,
           owner,
         });
+
+        // Record the start immediately to activate the 7-day cooldown
+        const dbSessionId = await recordInterviewStart(userId, payload.role, payload.topic);
+        session.dbSessionId = dbSessionId;
 
         // Fresh interview — reset runtime state
         session.askedTopics = [];
@@ -245,7 +342,9 @@ export function initInterviewSocket(httpServer) {
         session.startedAt = Date.now();
         session.endedAt = null;
 
-        socket.join(sessionId);
+        // TENANT-02: Join tenant-scoped room
+        const roomName = getInterviewRoom(collegeId, sessionId);
+        socket.join(roomName);
 
         if (payload.knowledge && String(payload.knowledge).trim()) {
           await clearOwnerKnowledge(session.owner);
@@ -300,6 +399,17 @@ export function initInterviewSocket(httpServer) {
           socket.emit('interview:error', { message: 'Session not found. Please restart.' });
           return;
         }
+
+        // TENANT-02: Enforce tenant and user boundary
+        if (session.userId && session.userId !== Number(userId)) {
+          socket.emit('interview:error', { message: 'Unauthorized session access.' });
+          return;
+        }
+        if (session.collegeId && collegeId && session.collegeId !== collegeId) {
+          socket.emit('interview:error', { message: 'Unauthorized college session access.' });
+          return;
+        }
+
         if (session.status !== 'in_progress') {
           socket.emit('interview:error', { message: 'This interview has already ended.' });
           return;
@@ -396,6 +506,14 @@ export function initInterviewSocket(httpServer) {
           socket.emit('interview:error', { message: 'Session not found. Please restart.' });
           return;
         }
+        if (session.userId && session.userId !== Number(userId)) {
+          socket.emit('interview:error', { message: 'Unauthorized session access.' });
+          return;
+        }
+        if (session.collegeId && collegeId && session.collegeId !== collegeId) {
+          socket.emit('interview:error', { message: 'Unauthorized college session access.' });
+          return;
+        }
         if (reason) session.endReason = reason;
         if (Array.isArray(proctoringWarnings) && proctoringWarnings.length > 0) {
           session.proctoringWarnings = proctoringWarnings;
@@ -410,6 +528,8 @@ export function initInterviewSocket(httpServer) {
       const key = normalizeSessionId(sessionId);
       const session = activeSessions.get(key);
       if (session) {
+        if (session.userId && session.userId !== Number(userId)) return;
+        if (session.collegeId && collegeId && session.collegeId !== collegeId) return;
         if (!session.proctoringWarnings) session.proctoringWarnings = [];
         session.proctoringWarnings.push({
           type: type || 'FLAG',
@@ -423,6 +543,14 @@ export function initInterviewSocket(httpServer) {
       const key = normalizeSessionId(sessionId);
       const session = activeSessions.get(key);
       if (session) {
+        if (session.userId && session.userId !== Number(userId)) {
+          socket.emit('interview:error', { message: 'Unauthorized session access.' });
+          return;
+        }
+        if (session.collegeId && collegeId && session.collegeId !== collegeId) {
+          socket.emit('interview:error', { message: 'Unauthorized college session access.' });
+          return;
+        }
         session.askedTopics = [];
         session.priorQa = [];
         session.evaluationHistory = [];
@@ -435,8 +563,11 @@ export function initInterviewSocket(httpServer) {
     });
 
     socket.on('disconnect', () => {
-      // Room state is cleaned when the socket leaves; completed sessions stay
-      // in memory for result retrieval until process restart.
+      const set = activeUserSockets.get(numUserId);
+      if (set) {
+        set.delete(socket);
+        if (set.size === 0) activeUserSockets.delete(numUserId);
+      }
     });
   });
 

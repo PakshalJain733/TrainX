@@ -7,197 +7,6 @@ import { EVENTS } from "../../../utils/sharedStore";
 import { isSameDepartment } from "../../../utils/departmentHelper";
 import "../Styles/CO_Students.css";
 
-const careerTracks = [
-  { id: "python-backend", name: "Python Backend Developer" },
-  { id: "react-frontend", name: "React Frontend Developer" },
-  { id: "fullstack", name: "Full Stack Engineer" },
-  { id: "data-ai", name: "Data Science & AI Engineer" },
-  { id: "cloud-devops", name: "Cloud & DevOps Specialist" },
-];
-
-const roadmapData = {
-  "python-backend": [
-    {
-      id: 1,
-      title: "Milestone 1: Python Fundamentals",
-      desc: "Syntax, data types, control flow, functions and error handling.",
-      status: "completed",
-      progress: 100,
-      tags: ["Variables & Types", "Loops", "Functions", "Exceptions"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Object Oriented Programming",
-      desc: "Classes, inheritance, polymorphism and design principles.",
-      status: "completed",
-      progress: 100,
-      tags: ["Classes", "Inheritance", "Magic Methods", "SOLID"],
-      quizzes: 3,
-      exercises: 10,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: SQL & Databases",
-      desc: "Relational modelling, joins, indexing and query optimisation.",
-      status: "in-progress",
-      progress: 55,
-      tags: ["Joins", "Aggregations", "Indexes", "Transactions"],
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 4,
-      title: "Milestone 4: REST APIs with FastAPI",
-      desc: "Routing, validation, auth and API documentation.",
-      status: "in-progress",
-      progress: 20,
-      tags: ["Routing", "Pydantic", "JWT Auth", "Testing"],
-      quizzes: 2,
-      exercises: 9,
-    },
-    {
-      id: 5,
-      title: "Milestone 5: React Frontend Basics",
-      desc: "Components, state, hooks and consuming APIs.",
-      status: "locked",
-      progress: 0,
-      tags: ["JSX", "Hooks", "Routing", "State"],
-      quizzes: 3,
-      exercises: 10,
-    },
-  ],
-  "react-frontend": [
-    {
-      id: 1,
-      title: "Milestone 1: Modern JavaScript (ES6+)",
-      desc: "Async/await, closures, prototypes, array methods, and event loop.",
-      status: "completed",
-      progress: 100,
-      tags: ["ES6 Modules", "Promises", "Destructuring", "DOM API"],
-      quizzes: 5,
-      exercises: 14,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: React Core & Component Design",
-      desc: "JSX, virtual DOM, props vs state, and component life cycles.",
-      status: "in-progress",
-      progress: 70,
-      tags: ["Components", "Props", "Hooks", "Event Handling"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: State Management & Routing",
-      desc: "Zustand, Context API, Redux Toolkit, and React Router v6.",
-      status: "locked",
-      progress: 0,
-      tags: ["Context API", "Zustand", "React Router", "Global State"],
-      quizzes: 3,
-      exercises: 8,
-    },
-  ],
-  fullstack: [
-    {
-      id: 1,
-      title: "Milestone 1: Full Stack Architecture Foundations",
-      desc: "Client-Server model, HTTP protocols, REST conventions, and MVC.",
-      status: "completed",
-      progress: 100,
-      tags: ["HTTP/HTTPS", "REST", "JSON", "Architecture"],
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Backend & Database Engineering",
-      desc: "Node.js / Express or Python backend with PostgreSQL and ORM.",
-      status: "in-progress",
-      progress: 65,
-      tags: ["Express", "PostgreSQL", "Prisma", "Authentication"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: Frontend Integration & State",
-      desc: "Connecting React frontend with resilient API clients and caching.",
-      status: "locked",
-      progress: 0,
-      tags: ["Axios", "TanStack Query", "Forms", "UI Layouts"],
-      quizzes: 3,
-      exercises: 10,
-    },
-  ],
-  "data-ai": [
-    {
-      id: 1,
-      title: "Milestone 1: Python for Data Science & Pandas",
-      desc: "NumPy vectorization, Pandas DataFrames, and data cleaning.",
-      status: "completed",
-      progress: 100,
-      tags: ["NumPy", "Pandas", "Data Cleaning", "Matplotlib"],
-      quizzes: 4,
-      exercises: 15,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Classical Machine Learning",
-      desc: "Supervised & Unsupervised ML algorithms, Scikit-learn, and evaluation.",
-      status: "completed",
-      progress: 100,
-      tags: ["Regression", "Random Forest", "K-Means", "Scikit-Learn"],
-      quizzes: 5,
-      exercises: 14,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: Deep Learning & PyTorch",
-      desc: "Neural network architectures, Backpropagation, and PyTorch tensors.",
-      status: "in-progress",
-      progress: 40,
-      tags: ["PyTorch", "CNNs", "Loss Functions", "Tensors"],
-      quizzes: 3,
-      exercises: 10,
-    },
-  ],
-  "cloud-devops": [
-    {
-      id: 1,
-      title: "Milestone 1: Linux Administration & Shell Scripting",
-      desc: "Bash commands, file permissions, networking, and systemd services.",
-      status: "completed",
-      progress: 100,
-      tags: ["Linux", "Bash", "SSH", "Systemd"],
-      quizzes: 4,
-      exercises: 10,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Docker Containerization",
-      desc: "Building Dockerfiles, multi-stage builds, and Docker Compose.",
-      status: "in-progress",
-      progress: 80,
-      tags: ["Docker", "Containers", "Images", "Compose"],
-      quizzes: 3,
-      exercises: 9,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: Kubernetes & AWS Cloud",
-      desc: "Cluster orchestration, Pods, Deployments, and AWS EKS.",
-      status: "locked",
-      progress: 0,
-      tags: ["Kubernetes", "AWS EKS", "Ingress", "Helm"],
-      quizzes: 4,
-      exercises: 11,
-    },
-  ],
-};
-
 export default function CoordinatorStudents() {
   const [coordUser, setCoordUser] = useState(() => {
     try {
@@ -215,10 +24,9 @@ export default function CoordinatorStudents() {
   const [riskFilter, setRiskFilter] = useState("All");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeTab, setActiveTab] = useState("roadmap");
-  const [selectedGoal, setSelectedGoal] = useState("python-backend");
+  const [studentRoadmap, setStudentRoadmap] = useState(null);
   const [studentMilestones, setStudentMilestones] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationSuccess, setGenerationSuccess] = useState("");
+  const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
 
   const coordDept = useMemo(() => {
     return (
@@ -300,25 +108,11 @@ export default function CoordinatorStudents() {
 
   const handleOpenStudentDetail = async (student) => {
     setSelectedStudent(student);
-    setGenerationSuccess("");
     setActiveTab("roadmap");
+    setStudentRoadmap(null);
+    setStudentMilestones([]);
+    setIsRoadmapLoading(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
-
-    // Determine initial goal track
-    let initialGoal = "python-backend";
-    if (student.selectedGoalName) {
-      const match = careerTracks.find(
-        (t) =>
-          t.name.toLowerCase() === student.selectedGoalName.toLowerCase() ||
-          t.id.toLowerCase() === student.selectedGoalName.toLowerCase()
-      );
-      if (match) initialGoal = match.id;
-    }
-    setSelectedGoal(initialGoal);
-
-    // Initialise milestones
-    const fallback = roadmapData[initialGoal] || roadmapData["python-backend"];
-    setStudentMilestones(fallback);
 
     // Fetch real saved roadmap if available
     try {
@@ -334,19 +128,15 @@ export default function CoordinatorStudents() {
           Array.isArray(res.data.milestones) &&
           res.data.milestones.length > 0
         ) {
+          setStudentRoadmap(res.data);
           setStudentMilestones(res.data.milestones);
-          if (res.data.targetRole || res.data.careerTrack) {
-            const roleName = res.data.targetRole || res.data.careerTrack;
-            const matched = careerTracks.find(
-              (t) =>
-                t.name.toLowerCase() === roleName.toLowerCase() ||
-                t.id.toLowerCase() === roleName.toLowerCase()
-            );
-            if (matched) setSelectedGoal(matched.id);
-          }
         }
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn("[CO_Students] Failed to load student roadmap:", err);
+    } finally {
+      setIsRoadmapLoading(false);
+    }
   };
 
   const getInitials = (nameStr) => {
@@ -392,93 +182,6 @@ export default function CoordinatorStudents() {
 
     return { total, avgAtt, avgQuiz, highRisk, enrolledRoadmaps };
   }, [filteredStudents]);
-
-  const milestones = studentMilestones.length > 0
-    ? studentMilestones
-    : (roadmapData[selectedGoal] || roadmapData["python-backend"]);
-
-  const handleGenerate = async () => {
-    if (!selectedStudent || isGenerating) return;
-    setIsGenerating(true);
-    setGenerationSuccess("");
-
-    const targetTrackObj = careerTracks.find((t) => t.id === selectedGoal) || {
-      id: selectedGoal,
-      name: selectedGoal,
-    };
-    const targetRoleName = targetTrackObj.name;
-    const studentIdentifier =
-      selectedStudent.userId ||
-      selectedStudent.studentId ||
-      (selectedStudent.id ? String(selectedStudent.id).replace("st-", "") : "");
-
-    try {
-      const res = await apiFetch(`/roadmaps/student/${studentIdentifier}/generate`, {
-        method: "POST",
-        body: JSON.stringify({
-          targetRole: targetRoleName,
-          careerTrack: targetRoleName,
-        }),
-      });
-
-      let updatedList = null;
-      if (
-        res &&
-        res.data &&
-        Array.isArray(res.data.milestones) &&
-        res.data.milestones.length > 0
-      ) {
-        updatedList = res.data.milestones;
-      } else if (roadmapData[selectedGoal]) {
-        updatedList = roadmapData[selectedGoal];
-      } else {
-        updatedList = roadmapData["python-backend"];
-      }
-
-      setStudentMilestones(updatedList);
-
-      // Update student details in view
-      setSelectedStudent((prev) => ({
-        ...prev,
-        selectedGoalName: targetRoleName,
-      }));
-
-      // Update student in main table list
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.id === selectedStudent.id ||
-          s.studentId === selectedStudent.studentId ||
-          (selectedStudent.userId && s.userId === selectedStudent.userId)
-            ? { ...s, selectedGoalName: targetRoleName }
-            : s
-        )
-      );
-
-      setGenerationSuccess(`AI Roadmap for "${targetRoleName}" generated & assigned successfully!`);
-      setTimeout(() => setGenerationSuccess(""), 5000);
-    } catch (err) {
-      console.warn("[CO_Students] Backend generate error:", err);
-      const fallbackList = roadmapData[selectedGoal] || roadmapData["python-backend"];
-      setStudentMilestones(fallbackList);
-      setSelectedStudent((prev) => ({
-        ...prev,
-        selectedGoalName: targetRoleName,
-      }));
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.id === selectedStudent.id ||
-          s.studentId === selectedStudent.studentId ||
-          (selectedStudent.userId && s.userId === selectedStudent.userId)
-            ? { ...s, selectedGoalName: targetRoleName }
-            : s
-        )
-      );
-      setGenerationSuccess(`AI Roadmap for "${targetRoleName}" assigned successfully!`);
-      setTimeout(() => setGenerationSuccess(""), 5000);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -580,103 +283,113 @@ export default function CoordinatorStudents() {
         </div>
 
         {/* TAB 1: FULLSCREEN AI ROADMAP INTERFACE */}
-        {activeTab === "roadmap" && (
-          <div className="student-detail-wrapper">
-            {/* Career Goal Generator Card */}
-            <div className="student-roadmap-generator-card">
-              <div className="student-roadmap-title-row">
-                <div className="student-roadmap-icon-badge">
-                  <Sparkles size={20} color="#2563eb" />
-                </div>
-                <div>
-                  <h3 className="student-roadmap-generator-title">
-                    Student AI Career Roadmap Assignment
-                  </h3>
-                  <p className="student-roadmap-generator-desc">
-                    As Department Coordinator, review this student's milestone progress or generate a personalized AI learning path tailored to their career track, assessment history, and detected skill gaps.
+        {activeTab === "roadmap" && (() => {
+          const hasMilestones = Array.isArray(studentMilestones) && studentMilestones.length > 0;
+          const trackTitle = studentRoadmap?.targetRole || studentRoadmap?.careerTrack || selectedStudent?.selectedGoalName || "";
+          const completedCount = hasMilestones ? studentMilestones.filter((m) => m.status === "completed").length : 0;
+          const totalCount = hasMilestones ? studentMilestones.length : 0;
+          const overallProgress = totalCount > 0 
+            ? Math.round(studentMilestones.reduce((acc, m) => acc + (Number(m.progress) || 0), 0) / totalCount) 
+            : 0;
+
+          return (
+            <div className="student-detail-wrapper">
+              {isRoadmapLoading ? (
+                <div className="student-roadmap-generator-card" style={{ textAlign: "center", padding: "40px 20px", background: "#f8fafc", border: "1.5px solid #e2e8f0" }}>
+                  <Sparkles size={28} className="student-spin" style={{ color: "#2563eb", margin: "0 auto 12px" }} />
+                  <p style={{ color: "#64748b", margin: 0, fontWeight: 500 }}>
+                    Loading student's AI career roadmap...
                   </p>
                 </div>
-              </div>
+              ) : hasMilestones ? (
+                <>
+                  {/* Student Active AI Roadmap Read-Only Overview */}
+                  <div className="student-roadmap-generator-card" style={{ background: "linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)", border: "1px solid #bfdbfe", padding: "20px 24px" }}>
+                    <div className="student-roadmap-title-row">
+                      <div className="student-roadmap-icon-badge" style={{ background: "#dbeafe", color: "#2563eb" }}>
+                        <Sparkles size={22} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                          <div>
+                            <span style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#2563eb" }}>
+                              Student Career Track
+                            </span>
+                            <h3 className="student-roadmap-generator-title" style={{ margin: "2px 0 0", color: "#1e3a8a", fontSize: "18px" }}>
+                              {trackTitle || "Personalized AI Career Path"}
+                            </h3>
+                          </div>
+                          <span className="coord-chip coord-chip--success" style={{ fontWeight: 600, fontSize: "13px", padding: "6px 12px" }}>
+                            {completedCount} of {totalCount} Milestones Completed ({overallProgress}%)
+                          </span>
+                        </div>
+                        <p className="student-roadmap-generator-desc" style={{ marginTop: "8px", color: "#475569", fontSize: "13px" }}>
+                          This AI roadmap is actively pursued by the student. Milestones and progress reflect live completions from their student portal.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-              {generationSuccess && (
-                <div className="student-roadmap-success-banner">
-                  <CheckCircle2 size={16} color="#059669" />
-                  <span>{generationSuccess}</span>
+                  {/* Milestones Timeline */}
+                  <div className="student-roadmap-timeline">
+                    {studentMilestones.map((m, idx) => (
+                      <div key={m.id || idx} className={`student-roadmap-milestone-card milestone-status-${m.status || "locked"}`}>
+                        <div className="student-milestone-top-row">
+                          <div className="student-milestone-title-group">
+                            {m.status === "completed" && <CheckCircle2 size={20} color="#10b981" />}
+                            {m.status === "in-progress" && <CircleDot size={20} color="#2563eb" />}
+                            {(!m.status || m.status === "locked") && <Lock size={18} color="#94a3b8" />}
+                            <h4 className="student-milestone-title">
+                              {m.title}
+                            </h4>
+                          </div>
+                          {getStatusBadge(m.status || "locked")}
+                        </div>
+
+                        <p className="student-milestone-desc">{m.desc || m.description}</p>
+
+                        {/* Progress Bar */}
+                        <div className="student-milestone-progress-track">
+                          <div
+                            className={`student-milestone-progress-bar ${m.status || "locked"}`}
+                            style={{ width: `${m.progress || 0}%` }}
+                          />
+                        </div>
+
+                        {/* Tags & Meta Stats */}
+                        <div className="student-milestone-meta-row">
+                          <div className="student-tag-list">
+                            {(Array.isArray(m.tags) ? m.tags : (m.topics ? (Array.isArray(m.topics) ? m.topics : String(m.topics).split(",")) : [])).map((tag, tIdx) => (
+                              <span key={tIdx} className="student-tag-pill">
+                                {typeof tag === "object" ? (tag.name || tag.title || "Topic") : String(tag).trim()}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="student-milestone-stats-text">
+                            {Array.isArray(m.quizzes) ? m.quizzes.length : (m.quizzes || 3)} quizzes · {Array.isArray(m.exercises) ? m.exercises.length : (m.exercises || 5)} exercises
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* Empty State: Student Has Not Created Roadmap Yet */
+                <div className="student-roadmap-generator-card" style={{ textAlign: "center", padding: "48px 24px", background: "#f8fafc", border: "1px dashed #cbd5e1" }}>
+                  <div className="student-roadmap-icon-badge" style={{ margin: "0 auto 16px", background: "#f1f5f9", color: "#64748b" }}>
+                    <Sparkles size={24} />
+                  </div>
+                  <h3 className="student-roadmap-generator-title" style={{ color: "#334155", marginBottom: "8px", fontSize: "17px" }}>
+                    No AI Career Roadmap Generated Yet
+                  </h3>
+                  <p className="student-roadmap-generator-desc" style={{ maxWidth: "540px", margin: "0 auto", color: "#64748b", lineHeight: 1.6 }}>
+                    {selectedStudent?.name || "This student"} has not yet selected a career goal or generated an AI learning roadmap in their Student Portal. Once the student initializes their roadmap, their learning milestones and progress will appear here for review.
+                  </p>
                 </div>
               )}
-
-              <div className="student-roadmap-actions-row">
-                <div className="student-roadmap-select-input">
-                  <CustomSelect
-                    value={selectedGoal}
-                    options={careerTracks.map(t => ({ value: t.id, label: t.name }))}
-                    onChange={(val) => {
-                      setSelectedGoal(val);
-                      if (roadmapData[val]) {
-                        setStudentMilestones(roadmapData[val]);
-                      }
-                    }}
-                    placeholder="Select career track / specialization..."
-                    icon={Target}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="coord-btn coord-btn--primary student-btn-generate"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                >
-                  <Sparkles size={16} className={isGenerating ? "student-spin" : ""} />
-                  {isGenerating ? "Generating AI Roadmap..." : "Generate & Assign AI Roadmap"}
-                </button>
-              </div>
             </div>
-
-            {/* Milestones Timeline */}
-            <div className="student-roadmap-timeline">
-              {milestones.map((m) => (
-                <div key={m.id} className={`student-roadmap-milestone-card milestone-status-${m.status}`}>
-                  <div className="student-milestone-top-row">
-                    <div className="student-milestone-title-group">
-                      {m.status === "completed" && <CheckCircle2 size={20} color="#10b981" />}
-                      {m.status === "in-progress" && <CircleDot size={20} color="#2563eb" />}
-                      {m.status === "locked" && <Lock size={18} color="#94a3b8" />}
-                      <h4 className="student-milestone-title">
-                        {m.title}
-                      </h4>
-                    </div>
-                    {getStatusBadge(m.status)}
-                  </div>
-
-                  <p className="student-milestone-desc">{m.desc}</p>
-
-                  {/* Progress Bar */}
-                  <div className="student-milestone-progress-track">
-                    <div
-                      className={`student-milestone-progress-bar ${m.status}`}
-                      style={{ width: `${m.progress}%` }}
-                    />
-                  </div>
-
-                  {/* Tags & Meta Stats */}
-                  <div className="student-milestone-meta-row">
-                    <div className="student-tag-list">
-                      {m.tags.map((tag) => (
-                        <span key={tag} className="student-tag-pill">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="student-milestone-stats-text">
-                      {m.quizzes} quizzes · {m.exercises} coding exercises
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* TAB 2: OVERVIEW & ACADEMICS */}
         {activeTab === "overview" && (

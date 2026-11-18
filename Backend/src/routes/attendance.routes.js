@@ -14,25 +14,31 @@ import {
   createLeaveRequest,
   updateLeaveRequestStatus,
   deleteLeaveRequest,
+  getBatchAttendanceHistory,
+  getSessionRoster,
 } from '../controllers/attendance.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
 // Protect all attendance routes
 router.use(authenticateToken);
+router.use(requireFeature('attendance'));
 
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
 router.get('/scans', getMyAttendanceScans);
+router.get('/history-records', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR), getBatchAttendanceHistory);
+router.get('/session-roster', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getSessionRoster);
 
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);
 router.post('/leave-requests', createLeaveRequest);
-router.put('/leave-requests/:id/status', updateLeaveRequestStatus);
-router.patch('/leave-requests/:id/status', updateLeaveRequestStatus);
+router.put('/leave-requests/:id/status', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), updateLeaveRequestStatus);
+router.patch('/leave-requests/:id/status', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), updateLeaveRequestStatus);
 router.delete('/leave-requests/:id', deleteLeaveRequest);
 
 // 1. Logged in student personal summary & history

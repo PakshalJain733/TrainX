@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck, Pencil, BarChart2, Users, Search, Clock } from "lucide-react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck, Pencil, BarChart2, Users, Search, Clock, ArrowLeft } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
+import { getSharedQuizzes, deleteSharedItem, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Quizzes.css";
 
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -14,13 +14,20 @@ function AdminQuizSelect(props) {
   return <CustomSelect {...props} />;
 }
 
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
-
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt || "";
+    } catch (e) {}
+  }
 
   return {
     "Content-Type": "application/json",
@@ -94,6 +101,7 @@ export default function AdminQuizzes() {
 
   // Quiz Form Fields
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [batch, setBatch] = useState("All Batches");
   const [numQuestions, setNumQuestions] = useState("10");
   const [timeLimit, setTimeLimit] = useState("15");
@@ -108,6 +116,7 @@ export default function AdminQuizzes() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [editingQIdx, setEditingQIdx] = useState(null);
   const [editingQData, setEditingQData] = useState(null);
+  const [verifyFilter, setVerifyFilter] = useState("all"); // 'all' | 'approved' | 'rejected' | 'edited'
 
   // Manual Questions State
   const [showManualModal, setShowManualModal] = useState(false);
@@ -234,13 +243,23 @@ export default function AdminQuizzes() {
         headers: getAuthHeaders(),
       });
       const data = await res.json();
+      let list = [];
       if (data.success && data.data?.results) {
-        setSubmissionsList(data.data.results);
+        list = data.data.results;
       } else if (data.success && Array.isArray(data.data)) {
-        setSubmissionsList(data.data);
+        list = data.data;
       } else {
-        setSubmissionsList([]);
+        list = [];
       }
+      setSubmissionsList(list);
+
+      // Reconcile and synchronize the count between modal and quiz card in real-time
+      const validSubmissions = list.filter(
+        s => s.status !== 'in_progress' && (s.submitted_at || s.completed_at)
+      );
+      const accurateCount = validSubmissions.length;
+      setQuizzes(prev => prev.map(item => String(item.id) === String(quiz.id) ? { ...item, submissions: accurateCount } : item));
+      setViewSubmissionsQuiz(prev => prev ? { ...prev, submissions: accurateCount } : prev);
     } catch (err) {
       console.error("Failed to load submissions:", err);
       setSubmissionsList([]);
@@ -298,37 +317,59 @@ export default function AdminQuizzes() {
       if (data.success && Array.isArray(data.data)) {
         list = data.data.map(mapAssessment);
       }
+      const existingIds = new Set(list.map(q => String(q.id)));
+
       const shared = await getSharedQuizzes([]);
-      const existingIds = new Set(list.map(q => q.id));
       const sharedItems = shared
-        .filter(s => !existingIds.has(s.id))
+        .filter(s => !existingIds.has(String(s.id)))
         .map(s => ({
           id: s.id,
           title: s.title,
           batch: s.batch_name || s.data?.batch || "All Batches",
-          questionsCount: s.data?.questionsCount || 10,
+          questionsCount: s.data?.questionsCount || (s.data?.questions ? s.data.questions.length : 10),
           type: "Manual",
           status: s.status || "Active",
           submissions: 0,
           questionsList: s.data?.questions || [],
           description: s.description || ""
         }));
-      setQuizzes([...list, ...sharedItems]);
+
+      // Preserve all quizzes distinctly by their unique ID - duplicate quiz names are never dropped!
+      const seenIds = new Set();
+      const uniqueQuizzes = [];
+      for (const q of [...list, ...sharedItems]) {
+        const idKey = String(q.id);
+        if (!seenIds.has(idKey)) {
+          seenIds.add(idKey);
+          uniqueQuizzes.push(q);
+        }
+      }
+
+      setQuizzes(uniqueQuizzes);
     } catch (err) {
       console.error("Failed to load quizzes:", err);
       const shared = await getSharedQuizzes([]);
       if (shared.length > 0) {
-        setQuizzes(shared.map(s => ({
-          id: s.id,
-          title: s.title,
-          batch: s.batch_name || s.data?.batch || "All Batches",
-          questionsCount: s.data?.questionsCount || 10,
-          type: "Manual",
-          status: "Active",
-          submissions: 0,
-          questionsList: s.data?.questions || [],
-          description: s.description || ""
-        })));
+        const seenIds = new Set();
+        const fallbackList = [];
+        for (const s of shared) {
+          const idKey = String(s.id);
+          if (!seenIds.has(idKey)) {
+            seenIds.add(idKey);
+            fallbackList.push({
+              id: s.id,
+              title: s.title,
+              batch: s.batch_name || s.data?.batch || "All Batches",
+              questionsCount: s.data?.questionsCount || 10,
+              type: "Manual",
+              status: "Active",
+              submissions: 0,
+              questionsList: s.data?.questions || [],
+              description: s.description || ""
+            });
+          }
+        }
+        setQuizzes(fallbackList);
       }
     } finally {
       setLoading(false);
@@ -354,17 +395,7 @@ export default function AdminQuizzes() {
     const selectedBatchObj = availableBatches.find(b => b.name === batch);
     const batchId = selectedBatchObj ? selectedBatchObj.id : null;
 
-    // Broadcast to DB-backed shared store across all dashboards
-    await addSharedQuiz({
-      title: title.trim(),
-      batch: batch,
-      questionsCount: questionsList.length,
-      questions: questionsList,
-      duration_minutes: parseInt(timeLimit, 10) || 15,
-      description: `${quizType} quiz for ${batch}`,
-    });
-
-    // 1. Create the assessment
+    // 1. Create the assessment in backend MySQL database with questions included
     const assessRes = await fetch(`${API_BASE}/assessments`, {
       method: "POST",
       headers: getAuthHeaders(),
@@ -372,12 +403,13 @@ export default function AdminQuizzes() {
         title: title.trim(),
         batch_id: batchId,
         batch_name: batch,
-        category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz",
-        description: `${quizType} quiz for ${batch}`,
+        category: quizType === "AI Generated" ? "AI Generated" : (quizType === "Bulk Upload" ? "Bulk Upload" : "Technical Quiz"),
+        description: description && description.trim() ? description.trim() : `${quizType} quiz for ${batch}`,
         status: "published",
         is_published: true,
         total_marks: questionsList.length * 10,
         duration_minutes: parseInt(timeLimit, 10) || Math.max(10, questionsList.length * 2),
+        questions: questionsList,
       }),
     });
     const assessData = await assessRes.json();
@@ -385,21 +417,23 @@ export default function AdminQuizzes() {
     const assessmentId = assessData.data?.id || assessData.data?.insertId;
     if (!assessmentId) throw new Error("No assessment ID returned");
 
-    // 2. Add each question
-    for (const q of questionsList) {
-      await fetch(`${API_BASE}/assessments/${assessmentId}/questions`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          question_text: q.text,
-          option_a: q.options.a,
-          option_b: q.options.b,
-          option_c: q.options.c !== "N/A" ? q.options.c : null,
-          option_d: q.options.d !== "N/A" ? q.options.d : null,
-          correct_option: q.correct,
-          marks: 10,
-        }),
-      });
+    // 2. Add each question if not already stored
+    if (!assessData.data?.questions || assessData.data.questions.length === 0) {
+      for (const q of questionsList) {
+        await fetch(`${API_BASE}/assessments/${assessmentId}/questions`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            question_text: q.text || q.question_text,
+            option_a: q.options?.a || q.option_a,
+            option_b: q.options?.b || q.option_b,
+            option_c: q.options?.c !== "N/A" ? (q.options?.c || q.option_c) : null,
+            option_d: q.options?.d !== "N/A" ? (q.options?.d || q.option_d) : null,
+            correct_option: q.correct || q.correct_option || 'a',
+            marks: 10,
+          }),
+        });
+      }
     }
 
     return assessmentId;
@@ -427,13 +461,14 @@ export default function AdminQuizzes() {
   };
 
   // Live Google Gemini AI Question Generator via Backend API
-  const fetchLiveAIQuestions = async (quizTitle, count) => {
+  const fetchLiveAIQuestions = async (quizTitle, count, quizDescription = "") => {
     const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
         title: quizTitle,
         count: parseInt(count, 10) || 10,
+        description: quizDescription || "",
       }),
     });
     const data = await res.json();
@@ -444,12 +479,12 @@ export default function AdminQuizzes() {
   };
 
   // Run auto-verification on generated questions
-  const verifyQuestionsWithAI = async (questions, topic) => {
+  const verifyQuestionsWithAI = async (questions, topic, quizDescription = "") => {
     try {
       const res = await fetch(`${API_BASE}/assessments/verify-ai-questions`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ questions, topic }),
+        body: JSON.stringify({ questions, topic, description: quizDescription || "" }),
       });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) return data.data;
@@ -591,12 +626,12 @@ export default function AdminQuizzes() {
       setIsGenerating(true);
       setGeneratingPhase("generating");
       try {
-        const aiQs = await fetchLiveAIQuestions(title, numQuestions);
+        const aiQs = await fetchLiveAIQuestions(title, numQuestions, description);
         const alreadyVerified = Array.isArray(aiQs) && aiQs.length > 0 && aiQs[0].verified !== undefined;
         let verified = aiQs;
         if (!alreadyVerified) {
           setGeneratingPhase("verifying");
-          verified = await verifyQuestionsWithAI(aiQs, title);
+          verified = await verifyQuestionsWithAI(aiQs, title, description);
         }
         setVerifiedQuestions(verified);
         setShowVerifyModal(true);
@@ -639,7 +674,7 @@ export default function AdminQuizzes() {
   };
 
   const resetForm = () => {
-    setTitle(""); setBatch("All Batches"); setNumQuestions("10");
+    setTitle(""); setDescription(""); setBatch("All Batches"); setNumQuestions("10");
     setManualQuestions([]); setShowForm(false); setShowManualModal(false);
     setShowVerifyModal(false); setVerifiedQuestions([]);
     setParsedBulkQuestions([]); setShowBulkPreview(false); setBulkFileName("");
@@ -648,8 +683,10 @@ export default function AdminQuizzes() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
     try {
-      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
-      setQuizzes(quizzes.filter(q => q.id !== id));
+      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() }).catch(() => {});
+      await deleteSharedItem(id).catch(() => {});
+      setQuizzes(prev => prev.filter(q => q.id !== id));
+      window.dispatchEvent(new Event(EVENTS.QUIZ_UPDATED));
     } catch (err) {
       alert("Failed to delete quiz: " + err.message);
     }
@@ -662,7 +699,7 @@ export default function AdminQuizzes() {
   return (
     <div className="admin-quizzes-container">
       <div className="ui-section-header-AD">
-        <div className="ui-section-main-AD">
+        <div className="ui-section-main-Quiz-AD">
           <div>
             <h2 className="ui-section-title">
               <GraduationCap size={22} className="ui-section-title-icon" />
@@ -673,8 +710,13 @@ export default function AdminQuizzes() {
             </p>
           </div>
           <div className="ui-section-action">
-            <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
-              <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
+            <button
+              type="button"
+              onClick={() => setShowForm(!showForm)}
+              className={`add-quiz-btn ${showForm ? "add-quiz-btn--cancel" : ""}`}
+            >
+              {showForm ? <X size={16} /> : <Plus size={16} strokeWidth={2.4} />}
+              <span>{showForm ? "Cancel" : "Create Quiz"}</span>
             </button>
           </div>
         </div>
@@ -836,6 +878,63 @@ export default function AdminQuizzes() {
                   </div>
                 </div>
 
+                {/* AI Generation Topics & Description Section */}
+                {mode === "ai" && (
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                      <label style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>
+                        Description & Target Topics <span style={{ color: '#4f46e5', fontWeight: 500, fontSize: '12px' }}>(AI generates questions specifically on these topics)</span>
+                      </label>
+                      <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px', fontWeight: 500 }}>
+                        Recommended
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Focus on OOP Concepts: Class & Object, Polymorphism, Method Overriding vs Overloading, Abstract Classes, Interfaces, and Exception Handling."
+                      style={{
+                        width: '100%',
+                        minHeight: '74px',
+                        resize: 'vertical',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                        lineHeight: 1.5,
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                      Specify the syllabus modules, subtopics, or key concepts you want the AI to emphasize.
+                    </p>
+                  </div>
+                )}
+                {mode !== "ai" && (
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label style={{ marginBottom: '2px' }}>Quiz Description (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      placeholder="e.g. Comprehensive technical assessment for evaluation."
+                      style={{
+                        width: '100%',
+                        minHeight: '56px',
+                        resize: 'vertical',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* DEDICATED COMPACT EXCEL BULK UPLOAD SECTION */}
                 {mode === "bulk" && (
                   <div className="compact-excel-container">
@@ -975,32 +1074,50 @@ export default function AdminQuizzes() {
             <div className="modal-header verify-modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap verify-header-icon">
-                  <ShieldCheck size={20} />
+                  <ShieldCheck size={22} />
                 </div>
                 <div>
-                  <h2 className="modal-title">AI Verification Report</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h2 className="modal-title">AI Verification Report</h2>
+                  </div>
                   <p className="modal-subtitle">
-                    Gemini verified {verifiedQuestions.length} questions for <strong>"{title}"</strong> — review before publishing.
+                    Gemini verified {verifiedQuestions.length} questions for <strong>"{title.trim()}"</strong> — review, quick-swap answers, or publish directly.
                   </p>
                 </div>
               </div>
-              <div className="verify-header-stats">
-                <span className="vstat vstat--pass">
-                  <ShieldCheck size={13} />
-                  {verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length} Approved
-                </span>
-                <span className="vstat vstat--fail">
-                  <ShieldX size={13} />
-                  {verifiedQuestions.filter(q => q.verified === false && !q._forceInclude).length} Rejected
-                </span>
+
+              <div className="verify-header-right">
+                <div className="verify-header-stats">
+                  <span className="vstat vstat--pass">
+                    <ShieldCheck size={13} />
+                    {verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length} Approved
+                  </span>
+                  {verifiedQuestions.filter(q => q.verified === false && !q._forceInclude).length > 0 && (
+                    <span className="vstat vstat--fail">
+                      <ShieldX size={13} />
+                      {verifiedQuestions.filter(q => q.verified === false && !q._forceInclude).length} Rejected
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="verify-close-btn"
+                  onClick={() => { setShowVerifyModal(false); setShowForm(true); }}
+                  title="Close report and back to editor"
+                  aria-label="Close modal"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </div>
 
-            {/* Verification Summary Banner */}
+            {/* Verification Summary & Interactive Filter Bar */}
             <div className="verify-summary-bar">
               {(() => {
                 const total = verifiedQuestions.length;
-                const passed = verifiedQuestions.filter(q => q.verified !== false).length;
+                const passed = verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length;
+                const rejected = verifiedQuestions.filter(q => q.verified === false && !q._forceInclude).length;
+                const edited = verifiedQuestions.filter(q => q.manuallyEdited).length;
                 const highConf = verifiedQuestions.filter(q => q.confidence === 'high').length;
                 const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
                 return (
@@ -1010,11 +1127,45 @@ export default function AdminQuizzes() {
                         <div className="verify-progress-fill" style={{ width: `${pct}%` }}></div>
                       </div>
                       <span className="verify-pct">{pct}% Quality Score</span>
+                      <span className="vleg vleg--high">({highConf} High Confidence)</span>
                     </div>
-                    <div className="verify-legend">
-                      <span className="vleg vleg--high">● {highConf} High Confidence</span>
-                      <span className="vleg vleg--med">● {verifiedQuestions.filter(q => q.confidence === 'medium').length} Medium</span>
-                      <span className="vleg vleg--low">● {verifiedQuestions.filter(q => q.confidence === 'low').length} Low / Flagged</span>
+
+                    <div className="verify-filter-tabs">
+                      <button
+                        type="button"
+                        className={`verify-filter-tab ${verifyFilter === 'all' ? 'verify-filter-tab--active' : ''}`}
+                        onClick={() => setVerifyFilter('all')}
+                      >
+                        All ({total})
+                      </button>
+                      <button
+                        type="button"
+                        className={`verify-filter-tab ${verifyFilter === 'approved' ? 'verify-filter-tab--active' : ''}`}
+                        onClick={() => setVerifyFilter('approved')}
+                      >
+                        <ShieldCheck size={12} />
+                        Approved ({passed})
+                      </button>
+                      {rejected > 0 && (
+                        <button
+                          type="button"
+                          className={`verify-filter-tab verify-filter-tab--rejected ${verifyFilter === 'rejected' ? 'verify-filter-tab--active' : ''}`}
+                          onClick={() => setVerifyFilter('rejected')}
+                        >
+                          <ShieldX size={12} />
+                          Needs Review ({rejected})
+                        </button>
+                      )}
+                      {edited > 0 && (
+                        <button
+                          type="button"
+                          className={`verify-filter-tab ${verifyFilter === 'edited' ? 'verify-filter-tab--active' : ''}`}
+                          onClick={() => setVerifyFilter('edited')}
+                        >
+                          <Pencil size={11} />
+                          Edited ({edited})
+                        </button>
+                      )}
                     </div>
                   </>
                 );
@@ -1023,191 +1174,229 @@ export default function AdminQuizzes() {
 
             {/* Instruction Banner */}
             <div className="verify-instruction-banner">
-              <Sparkles size={14} style={{ color: "#2563eb", flexShrink: 0 }} />
-              <span>
-                <strong>Quick Edit:</strong> Click any option box directly to change the correct answer, or click <strong>Edit Question</strong> to modify question text and choices.
-              </span>
+              <div className="verify-instruction-icon">
+                <Sparkles size={14} />
+              </div>
+              <div className="verify-instruction-text">
+                <strong>Quick Edit:</strong> Click any option box directly to switch the correct answer instantly, or click <strong>Edit Question</strong> to rewrite text and options.
+              </div>
             </div>
 
             {/* Questions List */}
             <div className="verify-questions-scroll">
-              {verifiedQuestions.map((q, idx) => {
-                const isPassed = q.verified !== false;
-                const isForced = q._forceInclude;
-                const conf = q.confidence || 'medium';
-                const isEditing = editingQIdx === idx;
+              {(() => {
+                const filtered = verifiedQuestions
+                  .map((q, idx) => ({ q, idx }))
+                  .filter(({ q }) => {
+                    if (verifyFilter === 'approved') return q.verified !== false || q._forceInclude;
+                    if (verifyFilter === 'rejected') return q.verified === false && !q._forceInclude;
+                    if (verifyFilter === 'edited') return !!q.manuallyEdited;
+                    return true;
+                  });
 
-                return (
-                  <div
-                    key={q.id || idx}
-                    className={`verify-q-card ${isPassed ? 'verify-q--pass' : isForced ? 'verify-q--forced' : 'verify-q--fail'}`}
-                  >
-                    <div className="verify-q-header">
-                      <span className="verify-q-num">Q{idx + 1}</span>
-                      <p className="verify-q-text">{q.text || q.question_text}</p>
-                      <div className="verify-q-badges">
-                        {q.manuallyEdited && (
-                          <span className="vbadge vbadge--manual" title="Manually edited/verified by Admin">
-                            <Pencil size={11} /> Edited
-                          </span>
-                        )}
-                        {isPassed ? (
-                          <span className={`vbadge vbadge--${conf}`}>
-                            {conf === 'high' ? <ShieldCheck size={11} /> : conf === 'medium' ? <AlertTriangle size={11} /> : <ShieldX size={11} />}
-                            {conf === 'high' ? 'Verified' : conf === 'medium' ? 'Acceptable' : 'Low Quality'}
-                          </span>
-                        ) : (
-                          <span className="vbadge vbadge--rejected">
-                            <ShieldX size={11} /> Rejected
-                          </span>
-                        )}
-                      </div>
+                if (filtered.length === 0) {
+                  return (
+                    <div className="verify-empty-filtered">
+                      <HelpCircle size={32} style={{ color: "#94a3b8" }} />
+                      <p>No questions matched the "{verifyFilter}" view.</p>
+                      <button
+                        type="button"
+                        className="verify-empty-reset-btn"
+                        onClick={() => setVerifyFilter("all")}
+                      >
+                        Show All Questions
+                      </button>
                     </div>
+                  );
+                }
 
-                    {isEditing ? (
-                      /* Inline Full Editor */
-                      <div className="verify-inline-edit-box">
-                        <label className="verify-edit-label">Question Text:</label>
-                        <textarea
-                          className="verify-edit-input"
-                          value={editingQData?.text || ''}
-                          onChange={(e) => setEditingQData({ ...editingQData, text: e.target.value })}
-                          rows={3}
-                          placeholder="Type question text..."
-                        />
+                return filtered.map(({ q, idx }) => {
+                  const isPassed = q.verified !== false;
+                  const isForced = q._forceInclude;
+                  const conf = q.confidence || 'high';
+                  const isEditing = editingQIdx === idx;
 
-                        <label className="verify-edit-label" style={{ marginTop: '8px' }}>
-                          Options &amp; Correct Answer (select radio for correct option):
-                        </label>
-                        <div className="verify-edit-options-grid">
-                          {['a', 'b', 'c', 'd'].map((key) => (
-                            <div key={key} className="verify-edit-opt-item">
-                              <div className="verify-edit-opt-header">
-                                <label className="verify-edit-radio-label">
-                                  <input
-                                    type="radio"
-                                    name={`edit-correct-${idx}`}
-                                    checked={editingQData?.correct === key}
-                                    onChange={() => setEditingQData({ ...editingQData, correct: key })}
-                                  />
-                                  <span>Option {key.toUpperCase()} {editingQData?.correct === key ? '(Correct)' : ''}</span>
-                                </label>
-                              </div>
-                              <input
-                                type="text"
-                                className="verify-edit-input"
-                                value={editingQData?.options?.[key] || ''}
-                                onChange={(e) => setEditingQData({
-                                  ...editingQData,
-                                  options: { ...editingQData.options, [key]: e.target.value }
-                                })}
-                                placeholder={`Option ${key.toUpperCase()}`}
-                              />
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="verify-edit-actions-row">
-                          <button
-                            type="button"
-                            className="verify-edit-save-btn"
-                            onClick={() => handleSaveEditedQ(idx)}
-                          >
-                            <Check size={13} /> Save Changes
-                          </button>
-                          <button
-                            type="button"
-                            className="verify-edit-cancel-btn"
-                            onClick={handleCancelEditQ}
-                          >
-                            <X size={13} /> Cancel
-                          </button>
+                  return (
+                    <div
+                      key={q.id || idx}
+                      className={`verify-q-card ${isPassed ? 'verify-q--pass' : isForced ? 'verify-q--forced' : 'verify-q--fail'}`}
+                    >
+                      <div className="verify-q-header">
+                        <span className="verify-q-num">Q{idx + 1}</span>
+                        <p className="verify-q-text">{q.text || q.question_text}</p>
+                        <div className="verify-q-badges">
+                          {q.manuallyEdited && (
+                            <span className="vbadge vbadge--manual" title="Manually edited/verified by Admin">
+                              <Pencil size={11} /> Edited
+                            </span>
+                          )}
+                          {isPassed ? (
+                            <span className={`vbadge vbadge--${conf}`}>
+                              {conf === 'high' ? <ShieldCheck size={11} /> : conf === 'medium' ? <AlertTriangle size={11} /> : <ShieldX size={11} />}
+                              {conf === 'high' ? 'Verified' : conf === 'medium' ? 'Acceptable' : 'Low Quality'}
+                            </span>
+                          ) : (
+                            <span className="vbadge vbadge--rejected">
+                              <ShieldX size={11} /> Rejected
+                            </span>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <>
-                        {/* Options preview with 1-click select */}
-                        <div className="verify-q-options">
-                          {Object.entries(q.options || {}).map(([key, val]) => {
-                            const currentCorrect = ((q.correctOptionVerified || q.correct) || '').toLowerCase();
-                            const isCorrect = currentCorrect === key.toLowerCase();
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                className={`verify-opt ${isCorrect ? 'verify-opt--correct' : ''}`}
-                                onClick={() => handleSetCorrectAnswer(idx, key.toLowerCase())}
-                                title={`Click to set Option ${key.toUpperCase()} as correct answer`}
-                              >
-                                <span className="verify-opt-radio">
-                                  {isCorrect && <span className="verify-opt-radio-inner" />}
-                                </span>
-                                <span>
-                                  <strong>{key.toUpperCase()}.</strong> {val}
-                                </span>
-                                {isCorrect && <span className="correct-tick" title="Correct Answer">✓</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
 
-                        {/* Verification note */}
-                        {q.verificationNote && (
-                          <p className="verify-q-note">
-                            <AlertTriangle size={11} /> {q.verificationNote}
-                          </p>
-                        )}
+                      {isEditing ? (
+                        /* Inline Full Editor */
+                        <div className="verify-inline-edit-box">
+                          <label className="verify-edit-label">Question Text:</label>
+                          <textarea
+                            className="verify-edit-input"
+                            value={editingQData?.text || ''}
+                            onChange={(e) => setEditingQData({ ...editingQData, text: e.target.value })}
+                            rows={3}
+                            placeholder="Type question text..."
+                          />
 
-                        {/* Actions */}
-                        <div className="verify-q-actions">
-                          <button
-                            type="button"
-                            className="verify-edit-btn"
-                            onClick={() => handleStartEditQ(idx, q)}
-                            title="Edit question text and answers"
-                          >
-                            <Pencil size={13} /> Edit Question
-                          </button>
-                          {!isPassed && (
+                          <label className="verify-edit-label" style={{ marginTop: '10px' }}>
+                            Options &amp; Correct Answer (select radio for correct option):
+                          </label>
+                          <div className="verify-edit-options-grid">
+                            {['a', 'b', 'c', 'd'].map((key) => (
+                              <div key={key} className="verify-edit-opt-item">
+                                <div className="verify-edit-opt-header">
+                                  <label className="verify-edit-radio-label">
+                                    <input
+                                      type="radio"
+                                      name={`edit-correct-${idx}`}
+                                      checked={editingQData?.correct === key}
+                                      onChange={() => setEditingQData({ ...editingQData, correct: key })}
+                                    />
+                                    <span>Option {key.toUpperCase()} {editingQData?.correct === key ? '(Correct)' : ''}</span>
+                                  </label>
+                                </div>
+                                <input
+                                  type="text"
+                                  className="verify-edit-input"
+                                  value={editingQData?.options?.[key] || ''}
+                                  onChange={(e) => setEditingQData({
+                                    ...editingQData,
+                                    options: { ...editingQData.options, [key]: e.target.value }
+                                  })}
+                                  placeholder={`Option ${key.toUpperCase()}`}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="verify-edit-actions-row">
                             <button
                               type="button"
-                              className={`verify-force-btn ${isForced ? 'verify-force-btn--active' : ''}`}
-                              onClick={() => handleToggleForceInclude(idx)}
-                              title={isForced ? "Remove from publish" : "Force include despite rejection"}
+                              className="verify-edit-save-btn"
+                              onClick={() => handleSaveEditedQ(idx)}
                             >
-                              {isForced ? <CheckCircle2 size={13} /> : <Plus size={13} />}
-                              {isForced ? 'Included (Override)' : 'Force Include'}
+                              <Check size={13} /> Save Changes
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="verify-remove-btn"
-                            onClick={() => handleRemoveVerifiedQ(idx)}
-                            title="Remove this question"
-                          >
-                            <Trash2 size={13} /> Remove
-                          </button>
+                            <button
+                              type="button"
+                              className="verify-edit-cancel-btn"
+                              onClick={handleCancelEditQ}
+                            >
+                              <X size={13} /> Cancel
+                            </button>
+                          </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                      ) : (
+                        <>
+                          {/* Options preview with 1-click select */}
+                          <div className="verify-q-options">
+                            {Object.entries(q.options || {}).map(([key, val]) => {
+                              const currentCorrect = ((q.correctOptionVerified || q.correct) || '').toLowerCase();
+                              const isCorrect = currentCorrect === key.toLowerCase();
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  className={`verify-opt ${isCorrect ? 'verify-opt--correct' : ''}`}
+                                  onClick={() => handleSetCorrectAnswer(idx, key.toLowerCase())}
+                                  title={`Click to set Option ${key.toUpperCase()} as correct answer`}
+                                >
+                                  <span className={`verify-opt-letter ${isCorrect ? 'verify-opt-letter--correct' : ''}`}>
+                                    {key.toUpperCase()}
+                                  </span>
+                                  <span className="verify-opt-text">{val}</span>
+                                  {isCorrect && (
+                                    <span className="verify-opt-correct-tag">
+                                      <Check size={11} strokeWidth={3} /> Correct
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* AI Explanation / Verification note */}
+                          {q.verificationNote && (
+                            <div className={`verify-q-note ${isPassed ? 'verify-q-note--insight' : 'verify-q-note--alert'}`}>
+                              {isPassed ? (
+                                <Sparkles size={13} className="verify-q-note-icon verify-q-note-icon--sparkle" />
+                              ) : (
+                                <AlertTriangle size={13} className="verify-q-note-icon verify-q-note-icon--alert" />
+                              )}
+                              <div className="verify-q-note-body">
+                                <strong>{isPassed ? "AI Explanation:" : "Quality Alert:"}</strong> {q.verificationNote}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          <div className="verify-q-actions">
+                            <button
+                              type="button"
+                              className="verify-edit-btn"
+                              onClick={() => handleStartEditQ(idx, q)}
+                              title="Edit question text and answers"
+                            >
+                              <Pencil size={13} /> Edit Question
+                            </button>
+                            {!isPassed && (
+                              <button
+                                type="button"
+                                className={`verify-force-btn ${isForced ? 'verify-force-btn--active' : ''}`}
+                                onClick={() => handleToggleForceInclude(idx)}
+                                title={isForced ? "Remove from publish" : "Force include despite rejection"}
+                              >
+                                {isForced ? <CheckCircle2 size={13} /> : <Plus size={13} />}
+                                {isForced ? 'Included (Override)' : 'Force Include'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="verify-remove-btn"
+                              onClick={() => handleRemoveVerifiedQ(idx)}
+                              title="Remove this question"
+                            >
+                              <Trash2 size={13} /> Remove
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             {/* Footer actions */}
             <div className="verify-modal-footer">
               <button
                 type="button"
-                className="quiz-cancel-btn"
+                className="verify-back-btn"
                 onClick={() => { setShowVerifyModal(false); setShowForm(true); }}
                 disabled={isPublishing}
               >
-                ← Back to Form
+                <ArrowLeft size={14} /> Back to Editor
               </button>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div className="verify-footer-right">
                 <span className="verify-publish-info">
-                  Publishing {verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length} of {verifiedQuestions.length} questions
+                  Publishing <strong>{verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length}</strong> of <strong>{verifiedQuestions.length}</strong> questions
                 </span>
                 <button
                   type="button"
@@ -1218,7 +1407,7 @@ export default function AdminQuizzes() {
                   {isPublishing ? (
                     <><span className="spinner"></span> Publishing...</>
                   ) : (
-                    <><Send size={15} /> Publish Verified Quiz</>
+                    <><Send size={15} /> Publish Verified Quiz ({verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length})</>
                   )}
                 </button>
               </div>
@@ -1445,15 +1634,16 @@ export default function AdminQuizzes() {
             <div style={{ padding: '20px 24px', overflowY: 'auto', maxHeight: '72vh' }}>
               {/* KPI Summary Cards */}
               {(() => {
-                const total = submissionsList.length;
-                const avg = total > 0 ? Math.round(submissionsList.reduce((acc, s) => acc + (parseFloat(s.percentage || s.score || 0)), 0) / total) : 0;
-                const passed = submissionsList.filter(s => (parseFloat(s.percentage || 0) >= 50 || s.status === 'passed')).length;
+                const validSubmissions = submissionsList.filter(s => s.status !== 'in_progress' && (s.submitted_at || s.completed_at));
+                const total = validSubmissions.length;
+                const avg = total > 0 ? Math.round(validSubmissions.reduce((acc, s) => acc + (parseFloat(s.percentage || s.score || 0)), 0) / total) : 0;
+                const passed = validSubmissions.filter(s => (parseFloat(s.percentage || 0) >= 50 || s.status === 'passed')).length;
                 const failed = total - passed;
                 return (
                   <div className="submissions-kpi-grid">
                     <div className="sub-kpi-card">
                       <span className="sub-kpi-val" style={{ color: '#2563eb' }}>{total}</span>
-                      <span className="sub-kpi-lbl">Total Attempts</span>
+                      <span className="sub-kpi-lbl">Total Submissions</span>
                     </div>
                     <div className="sub-kpi-card">
                       <span className="sub-kpi-val" style={{ color: '#d97706' }}>{avg}%</span>
@@ -1516,7 +1706,7 @@ export default function AdminQuizzes() {
                   <RefreshCw size={24} className="spin" style={{ color: '#3b82f6', marginBottom: 10 }} />
                   <p>Loading real-time submissions from database...</p>
                 </div>
-              ) : submissionsList.length === 0 ? (
+              ) : submissionsList.filter(s => s.status !== 'in_progress' && (s.submitted_at || s.completed_at)).length === 0 ? (
                 <div className="submissions-empty-state">
                   <Users size={38} className="sub-empty-icon" />
                   <h4>No Submissions Yet</h4>
@@ -1542,6 +1732,7 @@ export default function AdminQuizzes() {
                     <tbody>
                       {submissionsList
                         .filter(s => {
+                          if (s.status === 'in_progress' || (!s.submitted_at && !s.completed_at)) return false;
                           const matchesSearch = !submissionSearch.trim() ||
                             (s.student_name || '').toLowerCase().includes(submissionSearch.toLowerCase()) ||
                             (s.student_email || '').toLowerCase().includes(submissionSearch.toLowerCase());
@@ -1648,7 +1839,10 @@ export default function AdminQuizzes() {
                   )}
                 </div>
                 <div className="quiz-info">
-                  <h4 className="quiz-name">{q.title}</h4>
+                  <div className="quiz-title-row">
+                    <span className="quiz-id-badge">ID #{q.id}</span>
+                    <h4 className="quiz-name">{q.title}</h4>
+                  </div>
                   <div className="quiz-meta">
                     <span className="quiz-batch-tag">{q.batch}</span>
                     <span className="quiz-questions">{q.questionsCount} Questions</span>

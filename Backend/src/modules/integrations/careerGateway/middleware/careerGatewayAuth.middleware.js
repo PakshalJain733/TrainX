@@ -1,0 +1,151 @@
+import jwt from 'jsonwebtoken';
+import { sendError } from '../../../../utils/response.js';
+import { authenticateToken } from '../../../../middleware/auth.middleware.js';
+import { authorizeRoles } from '../../../../middleware/role.middleware.js';
+import { ROLES } from '../../../../utils/constants.js';
+
+/**
+ * Middleware to authenticate inbound service-to-service requests from Career Gateway.
+ * Supports:
+ * 1. Cryptographic S2S Bearer JWT (HS256 with claims: iss: career-gateway, aud: trainx, sub: career-gateway-integration-service).
+ * 2. Static Bearer API Key matching TRAINX_API_KEY, CAREER_GATEWAY_INTEGRATION_TOKEN, or configured service secret.
+ */
+export const authenticateCareerGatewayService = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  const correlationId = req.headers['x-correlation-id'] || req.headers['X-Correlation-ID'];
+  if (correlationId) {
+    req.correlationId = String(correlationId).trim();
+  }
+
+  // Dedicated Inbound Secret / API Key agreed with Career Gateway
+  const serviceSecret =
+    process.env.TRAINX_INTEGRATION_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_KEY;
+
+  const validApiKeys = [
+    process.env.TRAINX_API_KEY,
+    process.env.CAREER_GATEWAY_INTEGRATION_TOKEN,
+    serviceSecret,
+  ].filter(k => k && typeof k === 'string' && k.trim().length > 0);
+
+  if (!serviceSecret && validApiKeys.length === 0) {
+    return sendError(
+      res,
+      'Internal Server Error: Inbound service secret is not configured on TrainX. Please set TRAINX_INTEGRATION_SECRET or CAREER_GATEWAY_SERVICE_SECRET in .env',
+      500
+    );
+  }
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return sendError(
+      res,
+      'Unauthorized: Missing Career Gateway service authorization Bearer token',
+      401
+    );
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  // Mode 1: Static Bearer API Key check
+  const isDirectKeyMatch = validApiKeys.some(key => key.trim() === token);
+  if (isDirectKeyMatch) {
+    req.serviceAuth = {
+      type: 'api_key',
+      sub: 'career-gateway-integration-service',
+      scope: 'training_sync',
+      iss: 'career-gateway',
+      aud: 'trainx',
+    };
+    return next();
+  }
+
+  // Mode 2: Cryptographic Bearer JWT verification
+  try {
+    const decoded = jwt.verify(token, serviceSecret, {
+      algorithms: ['HS256'],
+      issuer: 'career-gateway',
+      audience: 'trainx',
+    });
+
+    // SEC-03: Validate expected subject strictly (mandatory subject claim)
+    if (!decoded.sub || decoded.sub !== 'career-gateway-integration-service') {
+      return sendError(res, 'Forbidden: Invalid or missing service token subject', 403);
+    }
+
+    // Validate expected scope (student provisioning or on-demand synchronization)
+    const validScopes = ['student_sync', 'training_sync', 'student', 'college'];
+    if (!decoded.scope || !validScopes.includes(decoded.scope)) {
+      return sendError(res, 'Forbidden: Insufficient token scope for integration operation', 403);
+    }
+
+    req.serviceAuth = {
+      type: 'jwt',
+      ...decoded,
+    };
+    return next();
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return sendError(res, 'Unauthorized: Service token has expired', 401);
+    }
+    return sendError(res, `Unauthorized: Invalid service token (${err.message})`, 401);
+  }
+};
+
+/**
+ * Composite middleware for endpoints that can be accessed by either:
+ * 1. Career Gateway Machine-to-Machine service token
+ * 2. Authenticated TrainX administrator session (Super Admin or College Admin)
+ */
+export const authenticateServiceOrAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return sendError(res, 'Unauthorized: Missing authorization Bearer token', 401);
+  }
+
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  // Try service token authentication first
+  const serviceSecret =
+    process.env.TRAINX_INTEGRATION_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_SECRET ||
+    process.env.CAREER_GATEWAY_SERVICE_KEY;
+
+  const validApiKeys = [
+    process.env.TRAINX_API_KEY,
+    process.env.CAREER_GATEWAY_INTEGRATION_TOKEN,
+    serviceSecret,
+  ].filter(k => k && typeof k === 'string' && k.trim().length > 0);
+
+  if (validApiKeys.some(key => key.trim() === token)) {
+    req.serviceAuth = {
+      type: 'api_key',
+      sub: 'career-gateway-integration-service',
+      scope: 'training_sync',
+    };
+    return next();
+  }
+
+  if (serviceSecret) {
+    try {
+      const decoded = jwt.verify(token, serviceSecret, {
+        algorithms: ['HS256'],
+        issuer: 'career-gateway',
+        audience: 'trainx',
+      });
+
+      if (decoded.sub === 'career-gateway-integration-service') {
+        req.serviceAuth = { type: 'jwt', ...decoded };
+        return next();
+      }
+    } catch (_) {
+      // Not a valid service token; fall through to test user authentication
+    }
+  }
+
+  // Fallback to Admin User authentication
+  return authenticateToken(req, res, (err) => {
+    if (err) return next(err);
+    return authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN)(req, res, next);
+  });
+};

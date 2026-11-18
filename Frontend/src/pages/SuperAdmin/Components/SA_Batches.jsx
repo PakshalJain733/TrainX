@@ -5,11 +5,13 @@ import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
 import { EVENTS } from '../../../utils/sharedStore';
 import "../Styles/SA_Batches.css";
 
-const generateJoinCode = (batchName = "") => {
-  const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
-  const prefix = clean ? clean.slice(0, 4).toUpperCase() : "BTCH";
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${randomPart}`;
+const generateJoinCode = (length = 8) => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
 import CustomSelect from '../../../components/ui/CustomSelect';
@@ -516,7 +518,7 @@ export default function Batches() {
                   />
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Batch Name *</label>
                     <input
@@ -568,7 +570,7 @@ export default function Batches() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Assigned Lead Trainer</label>
                     <input
@@ -596,7 +598,7 @@ export default function Batches() {
                 <button
                   type="button"
                   className="btn-modal-cancel"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => setIsModalOpen(false)}
                 >
                   Cancel
                 </button>
@@ -749,7 +751,7 @@ export default function Batches() {
               }
             }}>
               <div className="modal-body">
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Batch / Batch Name *</label>
                     <input
@@ -799,7 +801,7 @@ export default function Batches() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Assigned Mentor / Trainer</label>
                     <input
@@ -839,7 +841,7 @@ export default function Batches() {
                 <button
                   type="button"
                   className="btn-modal-cancel"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={() => setEditBatch(null)}
                 >
                   Cancel
                 </button>

@@ -33,7 +33,7 @@ const exportRosterToExcel = (record) => {
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   worksheet["!cols"] = [
-    { wch: 6 },  { wch: 14 }, { wch: 24 },
+    { wch: 6 }, { wch: 14 }, { wch: 24 },
     { wch: 18 }, { wch: 18 }, { wch: 14 },
     { wch: 14 }, { wch: 30 }
   ];
@@ -61,7 +61,7 @@ const exportAllHistoryToExcel = (records) => {
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   worksheet["!cols"] = [
-    { wch: 6 },  { wch: 14 }, { wch: 14 },
+    { wch: 6 }, { wch: 14 }, { wch: 14 },
     { wch: 30 }, { wch: 16 }, { wch: 16 },
     { wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 24 }
   ];
@@ -93,53 +93,104 @@ export default function AdminAttendance() {
   const [historyRecords, setHistoryRecords] = useState([]);
   const [selectedHistoryDetail, setSelectedHistoryDetail] = useState(null);
 
+  const loadHistoryRecords = useCallback(async () => {
+    try {
+      const res = await apiFetch("/attendance/history-records");
+      if (res && res.data && Array.isArray(res.data)) {
+        setHistoryRecords(res.data);
+      }
+    } catch (err) {
+      console.warn("Failed to load history records from DB:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistoryRecords();
+  }, [loadHistoryRecords]);
+
+  const handleViewHistoryRoster = async (rec) => {
+    if (rec.roster && rec.roster.length > 0) {
+      setSelectedHistoryDetail(rec);
+      return;
+    }
+    try {
+      const res = await apiFetch(`/attendance/session-roster?batch_id=${rec.batchId}&date=${rec.date}`);
+      const rosterData = (res && res.data && Array.isArray(res.data)) ? res.data : [];
+      setSelectedHistoryDetail({
+        ...rec,
+        roster: rosterData.map(r => ({
+          rollNo: r.rollNo,
+          name: r.name,
+          status: (r.status || '').toLowerCase() === 'present' ? 'Present' : 'Absent',
+          mode: r.mode || 'Manual'
+        }))
+      });
+    } catch (e) {
+      setSelectedHistoryDetail({ ...rec, roster: [] });
+    }
+  };
+
   // QR Modal state
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodePayload, setQrCodePayload] = useState("");
   const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(5); // 5 secs validity
-  const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
+  const [refreshIntervalSec, setRefreshIntervalSec] = useState(5); // Refresh seconds (default 5s)
+  const [maxRefreshCycles, setMaxRefreshCycles] = useState(10); // Number of times it will refresh (default 10 times)
+  const [timeLeft, setTimeLeft] = useState(5);
+  const [autoRefreshCount, setAutoRefreshCount] = useState(0);
   const canvasRef = useRef(null);
   const isDirtyRef = useRef(false);
 
-  // Fetch all active system & enrolled batches from backend API
+  // Fetch all strictly active system batches from backend API (filter out inactive batches)
   useEffect(() => {
     const loadBatches = async () => {
       try {
-        let fetchedList = [];
-        const res = await apiFetch("/batches");
-        const list1 = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
-        if (list1.length > 0) {
-          fetchedList = list1;
-        }
+        const res = await apiFetch("/batches?status=active");
+        const list = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
 
-        const myRes = await apiFetch("/batches/my-batches");
-        const list2 = Array.isArray(myRes) ? myRes : (myRes && Array.isArray(myRes.data) ? myRes.data : []);
-        if (list2.length > 0) {
-          const combined = [...fetchedList];
-          list2.forEach(mb => {
-            if (!combined.some(b => b.id === mb.id || b.code === mb.code || b.join_code === mb.join_code)) {
-              combined.push(mb);
-            }
-          });
-          fetchedList = combined;
-        }
+        // Filter strictly for active batches (excluding inactive, disabled, or archived)
+        const isActiveBatch = (b) => {
+          if (!b) return false;
+          const s = String(b.status || 'Active').toLowerCase().trim();
+          return s === 'active' || s === 'ongoing' || s === 'in progress';
+        };
 
-        if (fetchedList.length > 0) {
-          const mapped = fetchedList.map(b => ({
-            id: b.id,
-            name: b.name || b.title || "Training Batch",
-            code: b.join_code || b.code || `BATCH-${b.id}`
-          }));
-          setBatches(mapped);
-          if (mapped[0]) {
-            setSelectedBatchCode(mapped[0].code);
+        const activeList = list.filter(isActiveBatch);
+
+        // Deduplicate batches by ID and Code
+        const seenIds = new Set();
+        const seenCodes = new Set();
+        const uniqueActive = [];
+
+        for (const b of activeList) {
+          const id = b.id;
+          const code = b.join_code || b.code || `BATCH-${id}`;
+          if (!seenIds.has(id) && !seenCodes.has(code)) {
+            seenIds.add(id);
+            seenCodes.add(code);
+            uniqueActive.push({
+              id: b.id,
+              name: b.name || b.title || "Training Batch",
+              code: code,
+              status: b.status || 'Active'
+            });
           }
+        }
+
+        // Sort alphabetically by batch name
+        uniqueActive.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        setBatches(uniqueActive);
+        if (uniqueActive.length > 0) {
+          setSelectedBatchCode((prev) => {
+            const exists = uniqueActive.some((b) => b.code === prev);
+            return exists ? prev : uniqueActive[0].code;
+          });
         } else {
-          setBatches([]);
+          setSelectedBatchCode("");
         }
       } catch (err) {
-        console.error("Failed to load batches:", err);
+        console.error("Failed to load active batches:", err);
         setBatches([]);
       }
     };
@@ -152,6 +203,10 @@ export default function AdminAttendance() {
     isDirtyRef.current = false;
     const currentBatch = batches.find(b => b.code === selectedBatchCode);
     const batchId = currentBatch ? currentBatch.id : null;
+
+    // Reset current attendance and scan state immediately on date or batch change to prevent cross-date leakage
+    setAttendance({});
+    setQrScannedMap({});
 
     const fetchStudentsAndAttendance = async (isPolling = false) => {
       if (isPolling && isDirtyRef.current) {
@@ -172,28 +227,48 @@ export default function AdminAttendance() {
               status: false
             }));
           }
-        } catch (_) {}
+        } catch (_) { }
       }
-
-      setStudents(fetchedStudents);
 
       // Query database for attendance marked on the selected date or present via live scan
       try {
         const queryDate = sessionDate || new Date().toISOString().split('T')[0];
-        const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}`);
+        const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}&batch_id=${batchId || ''}`);
         const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
-        
+
+        // Dynamic union: ensure students who scanned attendance are included even if not pre-seeded in batch roster
+        const studentMap = new Map();
+        fetchedStudents.forEach(s => studentMap.set(String(s.id), s));
+
+        dbList.forEach(d => {
+          const dId = String(d.id || d.student_id || d.user_id || d.studentId || d.userId || '');
+          if (dId && !studentMap.has(dId) && (d.today_status === 'present' || d.is_scanned || String(d.status || '').toLowerCase() === 'present')) {
+            const extraStudent = {
+              id: dId,
+              userId: d.userId || d.user_id || dId,
+              studentId: d.studentId || d.student_id || dId,
+              rollNo: d.roll_number || d.rollNo || `STU-${dId}`,
+              name: d.student_name || d.name || d.studentName || 'Student User',
+              status: true
+            };
+            studentMap.set(dId, extraStudent);
+          }
+        });
+
+        const unifiedStudents = Array.from(studentMap.values());
+        setStudents(unifiedStudents);
+
         const attendanceMap = {};
         const scannedMap = {};
 
-        fetchedStudents.forEach((s) => {
+        unifiedStudents.forEach((s) => {
           // Check if student has marked attendance present on DB (by ID, roll number, or student name)
           const record = dbList.find(d => {
             const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
             const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
             const matchesRoll = d.roll_number && s.rollNo && String(d.roll_number).trim().toLowerCase() === String(s.rollNo).trim().toLowerCase();
             const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
-                                (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
+              (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
             return matchesId || matchesRoll || matchesName;
           });
           const isPresentInDb = record ? (
@@ -202,25 +277,14 @@ export default function AdminAttendance() {
             String(record.status || '').toLowerCase() === 'present'
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
-          if (isPresentInDb || (record && record.is_scanned)) scannedMap[s.id] = true;
+          if (record && record.is_scanned) scannedMap[s.id] = true;
         });
 
-        // Merge previous active scans so a freshly scanned student is never wiped out by background polling
-        setAttendance((prev) => {
-          const merged = { ...attendanceMap };
-          Object.keys(prev || {}).forEach((k) => {
-            if (prev[k]) merged[k] = true;
-          });
-          return merged;
-        });
-        setQrScannedMap((prev) => {
-          const merged = { ...scannedMap };
-          Object.keys(prev || {}).forEach((k) => {
-            if (prev[k]) merged[k] = true;
-          });
-          return merged;
-        });
+        // Set attendance strictly for THIS sessionDate (no bleed-through from other dates!)
+        setAttendance(attendanceMap);
+        setQrScannedMap(scannedMap);
       } catch (_) {
+        setStudents(fetchedStudents);
         const initialMap = {};
         fetchedStudents.forEach(s => { initialMap[s.id] = false; });
         setAttendance(initialMap);
@@ -266,7 +330,7 @@ export default function AdminAttendance() {
           if (scans && scans[0]) {
             handleQrScanCheckIn(scans[0].studentName, scans[0].studentId || scans[0].userId);
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     };
 
@@ -279,12 +343,12 @@ export default function AdminAttendance() {
   }, [handleQrScanCheckIn]);
 
   // Generate unique payload string
-  const generateNewQrCode = useCallback(() => {
+    const generateNewQrCode = useCallback(() => {
     const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
     const payload = `${selectedBatchCode || "JAVA-QRVL"}:${randomSalt}`;
     setQrCodePayload(payload);
-    setTimeLeft(5);
-  }, [selectedBatchCode]);
+    setTimeLeft(refreshIntervalSec);
+  }, [selectedBatchCode, refreshIntervalSec]);
 
   // Manual regenerate button resets auto-refresh counter
   const handleManualRegenerate = () => {
@@ -313,7 +377,7 @@ export default function AdminAttendance() {
     }
   }, [qrModalOpen, qrCodePayload]);
 
-  // QR Validity Timer & 18 Auto-Refresh Logic (5s per cycle)
+  // QR Validity Timer & Auto-Refresh Logic with custom interval & times
   useEffect(() => {
     let timer = null;
     if (qrModalOpen) {
@@ -322,15 +386,15 @@ export default function AdminAttendance() {
           setTimeLeft(prev => prev - 1);
         }, 1000);
       } else if (timeLeft === 0) {
-        // Trigger auto-refresh up to 18 times
-        if (autoRefreshCount < 18) {
+        // Trigger auto-refresh up to maxRefreshCycles
+        if (autoRefreshCount < maxRefreshCycles - 1) {
           setAutoRefreshCount(prev => prev + 1);
           generateNewQrCode();
         }
       }
     }
     return () => { if (timer) clearInterval(timer); };
-  }, [qrModalOpen, timeLeft, autoRefreshCount, generateNewQrCode]);
+  }, [qrModalOpen, timeLeft, autoRefreshCount, maxRefreshCycles, generateNewQrCode]);
 
   const openQrModal = () => {
     setAutoRefreshCount(0);
@@ -380,6 +444,7 @@ export default function AdminAttendance() {
   });
 
   const handleSave = async () => {
+    isDirtyRef.current = false;
     try {
       const payloadAttendance = {};
       students.forEach(s => {
@@ -388,7 +453,7 @@ export default function AdminAttendance() {
         payloadAttendance[targetKey] = isPresent;
       });
 
-      await apiFetch("/attendance/mark", {
+      const res = await apiFetch("/attendance/mark", {
         method: "POST",
         body: JSON.stringify({
           batch_id: currentBatchObj ? currentBatchObj.id : 1,
@@ -396,35 +461,18 @@ export default function AdminAttendance() {
           attendance: payloadAttendance
         })
       });
-    } catch (e) {}
 
-    isDirtyRef.current = false;
-
-    // Save to Previous Attendance History list
-    const newHistoryEntry = {
-      id: `HIST-${Date.now()}`,
-      date: sessionDate,
-      batchCode: selectedBatchCode,
-      batchName: currentBatchObj ? currentBatchObj.name : selectedBatchCode,
-      total: totalCount,
-      present: presentCount,
-      absent: totalCount - presentCount,
-      rate: ratePct,
-      savedBy: "System Admin",
-      savedAt: new Date().toLocaleString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }),
-      roster: students.map(s => ({
-        rollNo: s.rollNo,
-        name: s.name,
-        status: attendance[s.id] ? "Present" : "Absent",
-        mode: qrScannedMap[s.id] ? "QR Scan" : "Manual"
-      }))
-    };
-
-    const updatedHistory = [newHistoryEntry, ...historyRecords];
-    setHistoryRecords(updatedHistory);
-
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+      if (res && res.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 4000);
+        loadHistoryRecords();
+      } else {
+        alert(res?.message || "Failed to save attendance");
+      }
+    } catch (e) {
+      console.error("Save attendance error:", e);
+      alert("Error saving attendance to database: " + (e.message || "Unknown error"));
+    }
   };
 
   const formatTimer = (seconds) => {
@@ -472,16 +520,22 @@ export default function AdminAttendance() {
                     alignItems: "center",
                     justifyContent: "center",
                     gap: "8px",
-                    background: "rgba(255, 255, 255, 0.88)",
+                    background: "rgba(255, 255, 255, 0.94)",
                     borderRadius: "14px",
                     padding: "16px",
                     textAlign: "center"
                   }}>
                     <XCircle size={36} color="#ef4444" />
-                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>5 second session window reached</span>
-                    <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
-                      <RefreshCw size={14} /> Regenerate QR
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
+                      {autoRefreshCount + 1 >= maxRefreshCycles ? "QR Session Completed" : "Refreshing QR..."}
+                    </span>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>
+                      {autoRefreshCount + 1 >= maxRefreshCycles 
+                        ? `All ${maxRefreshCycles} auto-refresh cycles (${refreshIntervalSec}s each) finished.` 
+                        : `${refreshIntervalSec} second window reached. Generating next cycle...`}
+                    </span>
+                    <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "6px", background: "#2563eb", color: "#ffffff", border: "none" }}>
+                      <RefreshCw size={14} /> Restart QR Cycles
                     </button>
                   </div>
                 )}
@@ -490,12 +544,17 @@ export default function AdminAttendance() {
                 </div>
               </div>
 
-              {/* Timer Countdown */}
+              {/* Timer Countdown & Cycle Progress */}
               <div className="admin-qr-details">
-                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "none" }}>
-                  <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
-                  <span>Valid for: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
-                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (5-Sec Limit)</span>}
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", justifyContent: "center", flexWrap: "wrap", width: "100%" }}>
+                  <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "1px solid #e2e8f0" }}>
+                    <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
+                    <span>Valid: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
+                  </div>
+                  <div className="admin-qr-timer-box" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                    <RefreshCw size={14} color="#6366f1" />
+                    <span>Cycle: <strong>{autoRefreshCount + 1}</strong> of <strong>{maxRefreshCycles}</strong> ({refreshIntervalSec}s)</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -553,8 +612,8 @@ export default function AdminAttendance() {
                       <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Batch Code: {selectedHistoryDetail.batchCode} · Saved by {selectedHistoryDetail.savedBy}</p>
                     </div>
                     <div style={{ display: "flex", gap: "16px" }}>
-                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Present</span><br/><strong style={{ color: "#16a34a" }}>{selectedHistoryDetail.present} / {selectedHistoryDetail.total}</strong></div>
-                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Attendance Rate</span><br/><strong style={{ color: "#2563eb" }}>{selectedHistoryDetail.rate}%</strong></div>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Present</span><br /><strong style={{ color: "#16a34a" }}>{selectedHistoryDetail.present} / {selectedHistoryDetail.total}</strong></div>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Attendance Rate</span><br /><strong style={{ color: "#2563eb" }}>{selectedHistoryDetail.rate}%</strong></div>
                     </div>
                   </div>
 
@@ -634,7 +693,7 @@ export default function AdminAttendance() {
                             </td>
                             <td>
                               <button
-                                onClick={() => setSelectedHistoryDetail(rec)}
+                                onClick={() => handleViewHistoryRoster(rec)}
                                 style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", cursor: "pointer" }}
                               >
                                 <Eye size={14} /> View Roster
@@ -726,6 +785,41 @@ export default function AdminAttendance() {
               onChange={e => setSessionDate(e.target.value)}
             />
           </div>
+
+          {/* Refresh Seconds & Number of Times Input Boxes */}
+          <div className="attendance-qr-config-inputs">
+            <div className="qr-config-field" title="Select refresh interval in seconds">
+              <label className="qr-config-label">
+                <Clock size={13} />
+                <span>Refresh Sec:</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                className="qr-config-input"
+                value={refreshIntervalSec}
+                onChange={(e) => setRefreshIntervalSec(Math.max(1, Number(e.target.value) || 5))}
+              />
+            </div>
+
+            <div className="qr-config-field qr-config-field--times" title="Type how many times the QR will refresh">
+              <label className="qr-config-label">
+                <RefreshCw size={13} />
+                <span>Times:</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                className="qr-config-input qr-config-input--times"
+                placeholder="Times"
+                value={maxRefreshCycles}
+                onChange={(e) => setMaxRefreshCycles(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              />
+            </div>
+          </div>
+
           <button className="admin-create-qr-btn" onClick={openQrModal}>
             <QrCode size={18} />
             Create Session QR

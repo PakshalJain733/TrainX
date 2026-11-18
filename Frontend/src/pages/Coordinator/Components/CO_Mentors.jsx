@@ -73,7 +73,7 @@ export default function CoordinatorMentors() {
     specialization: "",
     assignedBatch: "",
     experience: "",
-    department: "Computer Engineering",
+    department: coordDept || "",
   });
 
   const fetchMentors = () => {
@@ -86,7 +86,7 @@ export default function CoordinatorMentors() {
 
         const mapped = list.map((m, idx) => ({
           id: m.id || idx + 1,
-          name: m.name || m.trainer || "Faculty Mentor",
+          name: m.name || m.trainer || "Mentor",
           rating: m.rating || "5.0",
           specialization: m.specialization || m.target_track || m.track || "General Domain",
           assignedBatch: m.assignedBatch || m.batch_name || "Unassigned",
@@ -169,9 +169,9 @@ export default function CoordinatorMentors() {
       name: "",
       email: "",
       specialization: "",
-      assignedBatch: "CSE 2026 Alpha Cohort",
-      experience: "5+ Yrs",
-      department: "Computer Engineering",
+      assignedBatch: "",
+      experience: "",
+      department: coordDept || "",
     });
 
     apiFetch("/coordinator/mentors", {
@@ -412,7 +412,7 @@ export default function CoordinatorMentors() {
                 />
               </div>
 
-              <div className="coord-form-grid-2">
+              <div className="coord-form-grid-2 mobile-pair-2">
                 <div className="coord-form-group">
                   <label className="coord-form-label">Department</label>
                   <CustomSelect

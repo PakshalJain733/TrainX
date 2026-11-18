@@ -296,40 +296,7 @@ export default function Colleges() {
   const [deptErrors, setDeptErrors] = useState({});
   const [isSavingDept, setIsSavingDept] = useState(false);
 
-  const handleTrigger2FAForCollegeAdmin = async (college) => {
-    const rawEmail = college.adminEmail || college.contact_email || college.email;
-    const adminEmail = (rawEmail && rawEmail !== '-' && rawEmail.trim()) ? rawEmail.trim() : null;
-
-    try {
-      const usersRes = await apiFetch('/admin/users');
-      let adminUser = null;
-      const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
-      if (userList.length > 0) {
-        if (adminEmail) {
-          adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
-        }
-        if (!adminUser) {
-          adminUser = userList.find(u => String(u.college_id) === String(college.id) && String(u.role).toLowerCase().includes('admin'));
-        }
-      }
-      if (!adminUser) {
-        alert(`No active College Admin account found for ${college.name}. Please edit this college record to set an Administrator Email first.`);
-        return;
-      }
-      const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
-        method: 'POST',
-      });
-      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
-        alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminUser.email} (${college.name}). 2FA setup is now required on their next sign-in.`);
-      } else {
-        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
-      }
-    } catch (err) {
-      console.error('Trigger 2FA error:', err);
-      alert(err?.message || 'Failed to trigger two-step verification.');
-    }
-  };
-
+  
   const handleDeleteCollege = async (id) => {
     try {
       await collegeAPI.deleteCollege(id);
@@ -625,7 +592,7 @@ export default function Colleges() {
               </div>
 
               <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-grid-2">
                   <div className="form-group-admin">
                     <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Department Code</label>
                     <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewDeptModal.code || '—'}</p>
@@ -810,11 +777,6 @@ export default function Colleges() {
                             label: 'Explore Departments',
                             icon: GraduationCap,
                             onClick: () => navigate(`/super-admin/colleges/${college.id}`),
-                          },
-                          {
-                            label: 'Re-trigger 2FA Setup',
-                            icon: ShieldCheck,
-                            onClick: () => handleTrigger2FAForCollegeAdmin(college),
                           }
                         ]}
                       />
@@ -855,7 +817,7 @@ export default function Colleges() {
                   </div>
                 )}
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>College Full Name *</label>
                     <input
@@ -898,7 +860,7 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>City &amp; Location *</label>
                     <input
@@ -1075,7 +1037,7 @@ export default function Colleges() {
                     <span>{editErrors._general}</span>
                   </div>
                 )}
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>College Name *</label>
                     <input
@@ -1116,7 +1078,7 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-row-2">
+                <div className="form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>City &amp; Location *</label>
                     <input
@@ -1296,7 +1258,7 @@ export default function Colleges() {
             </div>
 
             <div className="modal-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-grid-2 mobile-pair-2">
                 <div className="form-group-admin">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Short Code</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewCollegeModal.code || '—'}</p>
@@ -1313,11 +1275,11 @@ export default function Colleges() {
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Email Domain</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#4f46e5', fontSize: '13.5px' }}>{viewCollegeModal.domain ? `@${viewCollegeModal.domain.replace(/^@/, '')}` : '—'}</p>
                 </div>
-                <div className="form-group-admin">
+                <div className="form-group-admin mobile-field-full">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>College Administrator</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{viewCollegeModal.adminName || viewCollegeModal.admin_name || '—'}</p>
                 </div>
-                <div className="form-group-admin">
+                <div className="form-group-admin mobile-field-full">
                   <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Admin Email Address</label>
                   <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#2563eb', fontSize: '13.5px' }}>{viewCollegeModal.adminEmail || viewCollegeModal.contact_email || '—'}</p>
                 </div>

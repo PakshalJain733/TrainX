@@ -20,6 +20,11 @@ export const getApiBaseUrl = () => {
     if (host.includes("trainingportal.getflytechnologies.com")) {
       return "https://api.trainingportal.getflytechnologies.com/api/v1";
     }
+
+    // Production Custom Domains & Vercel Deployments (proxied via /api/v1 rewrite)
+    if (host.includes("trainx.vppcoe.tech") || host.includes("trainx-vppcoe.tech") || host.endsWith(".vercel.app")) {
+      return "/api/v1";
+    }
   }
 
   // Deployed production API (Render live backend fallback)
@@ -52,15 +57,45 @@ export const getBackendOrigin = () => {
 //   sessionStorage → Remember Me was OFF (cleared when browser closes)
 //   localStorage   → Remember Me was ON  (persists across restarts)
 export function getAuthToken() {
-  return (
+  const directToken =
     sessionStorage.getItem("token") ||
     localStorage.getItem("token") ||
     sessionStorage.getItem("authToken") ||
     localStorage.getItem("authToken") ||
     sessionStorage.getItem("auth_token") ||
-    localStorage.getItem("auth_token") ||
-    null
-  );
+    localStorage.getItem("auth_token");
+  if (directToken) return directToken;
+
+  try {
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (raw) {
+      const u = JSON.parse(raw);
+      return (
+        u?.token ||
+        u?.authToken ||
+        u?.auth_token ||
+        u?.accessToken ||
+        u?.jwt ||
+        null
+      );
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+export function isTokenExpired(rawToken) {
+  if (!rawToken || typeof rawToken !== "string") return true;
+  try {
+    const parts = rawToken.split(".");
+    if (parts.length < 2) return true;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.exp) return false;
+    const nowSec = Math.floor(Date.now() / 1000);
+    return payload.exp < nowSec;
+  } catch {
+    return false;
+  }
 }
 
 export async function apiFetch(endpoint, options = {}) {
@@ -95,6 +130,35 @@ export async function apiFetch(endpoint, options = {}) {
       const errorData = await res.json().catch(() => ({}));
       const message = errorData.message || `Request failed with status ${res.status}`;
       console.warn(`[apiFetch] ${endpoint}: ${message}`);
+
+      // Handle invalid or dead session tokens ONLY if the token itself is genuinely expired
+      if (res.status === 401 && token) {
+        const isAuthEndpoint = endpoint.includes('/auth/login') || endpoint.includes('/auth/verify-otp') || endpoint.includes('/auth/register');
+        const tokenIsExpired = isTokenExpired(token);
+        if (!isAuthEndpoint && tokenIsExpired) {
+          sessionStorage.removeItem("token");
+          sessionStorage.removeItem("authToken");
+          sessionStorage.removeItem("auth_token");
+          sessionStorage.removeItem("user");
+          sessionStorage.removeItem("role");
+          localStorage.removeItem("token");
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("role");
+
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.startsWith("/login") &&
+            !window.location.pathname.startsWith("/activate-account") &&
+            !window.location.pathname.startsWith("/register") &&
+            !window.location.pathname.startsWith("/setup-institution")
+          ) {
+            window.location.href = "/login?session_expired=1";
+          }
+        }
+      }
+
       return { data: null, error: message, status: res.status };
     }
 

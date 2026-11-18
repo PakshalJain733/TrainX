@@ -25,6 +25,7 @@ import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { wrapCodeWithHarness } from './codeHarness.service.js';
 
 const COMPILER_IMAGE = process.env.CODE_RUNNER_IMAGE || 'trainx-code-runner';
 const COMPILER_MEMORY_MB = parseInt(process.env.CODE_RUNNER_MEMORY_MB || '256', 10);
@@ -42,8 +43,6 @@ export const LANGUAGE_ALIASES = {
   python: 'python',
   node: 'node',
   javascript: 'node',
-  typescript: 'node',
-  ts: 'node',
   sql: 'sql',
   go: 'go',
   golang: 'go',
@@ -51,6 +50,20 @@ export const LANGUAGE_ALIASES = {
 
 export const isLanguageSupported = (language) =>
   typeof language === 'string' && Boolean(LANGUAGE_ALIASES[language.toLowerCase()]);
+
+export const getCanonicalLanguage = (lang) => {
+  if (!lang) return null;
+  const l = String(lang).toLowerCase().trim();
+  if (['all', 'any', 'any language', 'none', ''].includes(l)) return null;
+  if (l.includes('py')) return 'python';
+  if (l.includes('java') && !l.includes('script')) return 'java';
+  if (l.includes('c++') || l.includes('cpp')) return 'cpp';
+  if (l === 'c') return 'c';
+  if (l.includes('node') || l.includes('js') || l.includes('script') || l.includes('ts') || l.includes('type')) return 'node';
+  if (l.includes('sql')) return 'sql';
+  if (l.includes('go')) return 'go';
+  return LANGUAGE_ALIASES[l] || l;
+};
 
 const SOURCE_FILENAMES = {
   c: 'main.c',
@@ -98,7 +111,7 @@ let dockerProbeAt = 0;
 const DOCKER_PROBE_TTL_MS = 30000;
 
 const probeDocker = () =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     execFile(getDockerBinary(), ['version', '--format', '{{.Server.Version}}'], { timeout: 5000 }, (err, stdout) => {
       if (!err && stdout && stdout.trim()) resolve(true);
       else resolve(false);
@@ -127,15 +140,20 @@ export const compilerUnavailableError = () => {
 
 // Concurrency cap: each run boots a container, so limit how many can be in
 // flight at once to protect the host from unbounded `docker run` spawns.
-const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10));
+const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '12', 10));
 let activeRuns = 0;
 const runWaiters = [];
+const MAX_WAITING_RUNS = Math.max(50, parseInt(process.env.CODE_RUNNER_MAX_QUEUE || '200', 10));
 
 const acquireRunSlot = () =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     if (activeRuns < MAX_CONCURRENT_RUNS) {
       activeRuns += 1;
       resolve();
+    } else if (runWaiters.length >= MAX_WAITING_RUNS) {
+      const err = new Error('Compiler queue is at peak capacity. Please retry your submission in a moment.');
+      err.statusCode = 429;
+      reject(err);
     } else {
       runWaiters.push(resolve);
     }
@@ -179,9 +197,20 @@ const resolveSourceFilename = (language, code) => {
  * Leading whitespace inside lines is preserved (indented output matters).
  */
 export const normalizeOutput = (text = '') => {
-  const lines = String(text)
+  const clean = String(text ?? '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
+    .trim();
+
+  // If output represents structured JSON (array or object), normalize formatting
+  // so that whitespace differences like "[0, 1]" vs "[0,1]" never cause false negatives.
+  if ((clean.startsWith('[') && clean.endsWith(']')) || (clean.startsWith('{') && clean.endsWith('}'))) {
+    try {
+      return JSON.stringify(JSON.parse(clean));
+    } catch (_) {}
+  }
+
+  const lines = clean
     .split('\n')
     .map((line) => line.trimEnd()); // trim trailing spaces per line only
   // Drop all trailing blank lines
@@ -206,7 +235,7 @@ export const runCodeInSandbox = async (params) => {
   }
 };
 
-const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSeconds }) => {
+const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSeconds, functionName, function_name }) => {
   const langKey = LANGUAGE_ALIASES[String(language || '').toLowerCase()];
   if (!langKey) {
     const error = new Error(`Unsupported language: ${language}`);
@@ -220,6 +249,13 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
     throw error;
   }
 
+  const effectiveFunctionName = functionName || function_name || null;
+  const executableCode = wrapCodeWithHarness({
+    language: langKey,
+    code,
+    functionName: effectiveFunctionName,
+  });
+
   const maxTimeout = COMPILER_MAX_TIMEOUT_S;
   const execTimeout = Math.min(
     Math.max(parseInt(timeoutSeconds, 10) || COMPILER_TIMEOUT_S, 1),
@@ -229,13 +265,13 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
   const available = await isDockerAvailable();
   if (available) {
     try {
-      return await runDockerSandbox({ langKey, code, stdin, execTimeout });
+      return await runDockerSandbox({ langKey, code: executableCode, stdin, execTimeout });
     } catch (dockerErr) {
       console.warn(`[Code Executor] Docker sandbox failed (${dockerErr.message}). Engaging isolated host runner fallback.`);
     }
   }
 
-  return await runLocalSandbox({ langKey, code, stdin, execTimeout });
+  return await runLocalSandbox({ langKey, code: executableCode, userCode: code, stdin, execTimeout });
 };
 
 const runDockerSandbox = async ({ langKey, code, stdin, execTimeout }) => {
@@ -383,7 +419,66 @@ const runDockerSandbox = async ({ langKey, code, stdin, execTimeout }) => {
  * Used when Docker is not installed, daemon is stopped, or deployed in serverless
  * environments (e.g. Render) without Docker socket access.
  */
-const runLocalSandbox = async ({ langKey, code, stdin = '', execTimeout = 5 }) => {
+const DANGEROUS_PATTERNS = [
+  // Node.js dangerous patterns (allow reading stdin via fs.readFileSync(0) / fs.readFileSync('/dev/stdin'))
+  /\bchild_process\b/i,
+  /\bcluster\b/i,
+  /\bworker_threads\b/i,
+  /\bprocess\s*\.\s*(env|kill|abort|chdir|binding|dlopen)\b/i,
+  /\brequire\s*\(\s*['"`](child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]\s*\)/i,
+  /\bimport\s+.*['"`](child_process|net|dgram|http|https|tls|dns|cluster|worker_threads|vm|v8)['"`]/i,
+  /\bfs\s*\.\s*(writeFile|writeFileSync|appendFile|appendFileSync|unlink|unlinkSync|rm|rmSync|rmdir|mkdir|chmod|chown|truncate|rename|copyFile)\b/i,
+  /\b(eval|Function)\s*\(/i,
+  /\b(globalThis|global)\s*\[/i,
+  // Python dangerous patterns (allow import sys for sys.stdin / sys.stdout reading)
+  /\b(import\s+os|from\s+os\s+import)\b/i,
+  /\b(import\s+subprocess|from\s+subprocess\s+import)\b/i,
+  /\b(import\s+shutil|from\s+shutil\s+import)\b/i,
+  /\b(import\s+socket|from\s+socket\s+import)\b/i,
+  /\b(import\s+pty|from\s+pty\s+import)\b/i,
+  /\b(__import__|__builtins__|builtins)\b/i,
+  /\b(open|file)\s*\(/i,
+  /\b(eval|exec|compile)\s*\(/i,
+  // Java dangerous patterns
+  /\bjava\s*\.\s*lang\s*\.\s*Runtime\b/i,
+  /\bRuntime\s*\.\s*getRuntime\b/i,
+  /\bProcessBuilder\b/i,
+  /\bjava\s*\.\s*io\s*\.\s*(File|FileInputStream|FileOutputStream)\b/i,
+  /\bjava\s*\.\s*net\b/i,
+  /\bSystem\s*\.\s*(exit|load|loadLibrary)\b/i,
+  // C / C++ dangerous patterns
+  /#\s*include\s*[<"](sys\/|windows\.h|winsock|unistd\.h)[>"]/i,
+  /\b(system|popen|fork|execl|execv|execvp)\s*\(/i,
+  /\b(remove|rename|unlink|rmdir)\s*\(/i,
+];
+
+export const isCodeSafeForHostExecution = (code) => {
+  const codeStr = String(code || '');
+  for (const pattern of DANGEROUS_PATTERNS) {
+    if (pattern.test(codeStr)) {
+      return {
+        safe: false,
+        reason: 'Security violation: System calls, network access, and file operations are strictly prohibited in the code execution sandbox.',
+      };
+    }
+  }
+  return { safe: true };
+};
+
+const runLocalSandbox = async ({ langKey, code, userCode = null, stdin = '', execTimeout = 5 }) => {
+  const safetyCheck = isCodeSafeForHostExecution(userCode || code);
+  if (!safetyCheck.safe) {
+    return {
+      stdout: '',
+      stderr: safetyCheck.reason,
+      exitCode: 1,
+      executionTime: 0,
+      timedOut: false,
+      compilationError: true,
+      sandbox: 'security-guard',
+    };
+  }
+
   const hostDir = await fs.mkdtemp(path.join(os.tmpdir(), 'trainx-local-run-'));
   const startedAt = Date.now();
 

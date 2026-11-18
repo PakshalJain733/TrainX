@@ -41,9 +41,11 @@ export const evaluateStudentDefaulterStatus = async (studentId) => {
   const overallScore = studentPerf.overall_score !== undefined ? studentPerf.overall_score : 55;
   
   // Format rich weak areas so that skillName, level, score, and suggestedImprovement are never blank
-  const rawWeak = skillGapData && Array.isArray(skillGapData.weakAreas) && skillGapData.weakAreas.length > 0
-    ? skillGapData.weakAreas
-    : ['Database Indexing & Joins', 'API Error Handling & Validation'];
+  const rawWeak = skillGapData && Array.isArray(skillGapData.weak_areas || skillGapData.weakAreas) && (skillGapData.weak_areas || skillGapData.weakAreas).length > 0
+    ? (skillGapData.weak_areas || skillGapData.weakAreas)
+    : (skillGapData && Array.isArray(skillGapData.all_evaluated_skills)
+        ? skillGapData.all_evaluated_skills.filter(s => s.is_weak || s.score < 65)
+        : []);
 
   const weakAreas = rawWeak.map((item, idx) => {
     if (typeof item === 'string') {
@@ -127,9 +129,9 @@ export const scanAndDetectDefaulters = async (filters = {}) => {
         name: st.name,
         email: st.email,
         roll_number: st.roll_number || '—',
-        department: st.department_name || st.department || 'Computer Engineering',
-        department_name: st.department_name || st.department || 'Computer Engineering',
-        batch_name: st.batch_name || 'Active Cohort',
+        department: st.department_name || st.department || null,
+        department_name: st.department_name || st.department || null,
+        batch_name: st.batch_name || null,
         overall_score: st.overall_score || res.overallScore,
         overallPerformance: st.overall_score || res.overallScore,
         attendance_score: st.attendance_score || res.attendance,

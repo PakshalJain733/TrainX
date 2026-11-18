@@ -480,3 +480,20 @@
   cursor: pointer;
 }
 
+@media (max-width: 768px) {
+  .coord-requests-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .coord-requests-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .coord-requests-form-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

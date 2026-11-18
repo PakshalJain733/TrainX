@@ -5,12 +5,33 @@ import {
   findInterviewSessionsByUserModel,
   getInterviewSessionByIdModel,
 } from '../models/interview.model.js';
+import { checkInterviewLock } from '../utils/rateLimitChecker.js';
+
+export const getInterviewLockStatus = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = req.user?.role || 'student';
+    const lockStatus = await checkInterviewLock(userId, userRole);
+    return sendSuccess(res, 'Interview lock status retrieved', lockStatus);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getInterviewData = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const sessions = await findInterviewSessionsByUserModel(userId, 10);
-    return sendSuccess(res, 'Interview sessions retrieved successfully', sessions);
+    const userRole = req.user?.role || 'student';
+    const [sessions, lockStatus] = await Promise.all([
+      findInterviewSessionsByUserModel(userId, 10),
+      checkInterviewLock(userId, userRole),
+    ]);
+    return res.status(200).json({
+      success: true,
+      message: 'Interview sessions retrieved successfully',
+      data: sessions,
+      rateLimit: lockStatus,
+    });
   } catch (error) {
     next(error);
   }
@@ -45,6 +66,27 @@ export const saveInterviewSession = async (req, res, next) => {
       grade: grade || details?.grade || details?.scorecard?.grade,
       feedback: feedback || details?.feedback || details?.scorecard?.feedback,
     });
+
+    // Check if an in-progress session exists for this user in the last 2 hours
+    const inProgress = await query(
+      `SELECT id FROM interview_sessions
+       WHERE user_id = ? AND status = 'In Progress' AND created_at >= NOW() - INTERVAL 2 HOUR
+       ORDER BY id DESC LIMIT 1`,
+      [userId]
+    );
+
+    if (inProgress && inProgress.length > 0) {
+      const existingId = inProgress[0].id;
+      const jsonDetails = payload.details ? JSON.stringify(payload.details) : null;
+      await query(
+        `UPDATE interview_sessions
+         SET interview_type = ?, overall_score = ?, grade = ?, feedback = ?, status = 'Completed', details = ?
+         WHERE id = ?`,
+        [payload.interview_type, payload.overall_score, payload.grade, payload.feedback, jsonDetails, existingId]
+      );
+      const updated = await getInterviewSessionByIdModel(existingId);
+      return sendSuccess(res, 'Interview session finalized successfully', updated, 200);
+    }
 
     // Idempotency check: prevent duplicate insertion if socket or recent request already saved in last 30s
     const recent = await query(
@@ -91,4 +133,4 @@ const statsOverall = (d) => {
   const history = Array.isArray(d.evaluationHistory) ? d.evaluationHistory : [];
   if (history.length === 0) return 0;
   return Number(((history.reduce((a, e) => a + (e.score || 0), 0) / history.length) * 10).toFixed(2));
-};
+};

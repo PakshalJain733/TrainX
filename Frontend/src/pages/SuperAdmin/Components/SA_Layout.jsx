@@ -6,8 +6,9 @@ import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/SA_Layout.css";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 
 const defaultNotificationsList = [];
 
@@ -44,33 +45,28 @@ export const fetchSuperAdminNotifications = async () => {
       });
     });
 
-    // 2. Pending user registrations alert
+    // 2. Pending Admin user registrations alert
     const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
       ? pendingRes.data
       : (Array.isArray(pendingRes) ? pendingRes : []);
 
-    const pendingCount = rawPending.filter((u) => {
-      return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-             u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-    }).length;
-
-    if (pendingCount > 0) {
+    rawPending.forEach((u) => {
       notifItems.push({
-        id: 'pending-users-approval-alert',
-        title: `⚠️ ${pendingCount} User Registration(s) Pending Approval`,
-        desc: `New user account(s) have registered and are waiting for administrator review and approval.`,
-        message: `New user account(s) have completed registration & 2FA setup and are waiting for administrator review and approval.`,
-        time: 'Action Required',
+        id: `pending-admin-user-${u.id}`,
+        title: `👤 Admin Approval Needed: ${u.name}`,
+        desc: `${u.name} (${u.college_name || 'College Admin'}) has completed registration and awaits account approval.`,
+        message: `${u.name} (${u.email || u.mobile_number || 'N/A'}) registered as ${String(u.role || '').toUpperCase()} at ${u.college_name || 'Institution'}. Action required: Review and approve or reject this administrator.`,
+        time: u.created_at ? new Date(u.created_at).toLocaleString() : 'Action Required',
         unread: true,
         type: 'alert',
         target: 'Super Admin',
         priority: 'High Priority',
-        created_by_name: 'Registration System',
+        created_by_name: u.name,
         actionUrl: '/super-admin/approve-users',
-        actionLabel: 'Review & Approve Users →',
+        actionLabel: 'Review & Approve →',
         actionColor: '#d97706',
       });
-    }
+    });
 
     // 3. Broadcast announcements
     if (broadcastRes && broadcastRes.data && Array.isArray(broadcastRes.data) && broadcastRes.data.length > 0) {
@@ -449,15 +445,16 @@ export default function SuperAdminLayout() {
 
   const fetchUser = async () => {
     try {
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      const token = getAuthToken();
       if (!token) return;
       const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
-          const name = (typeof data.user.name === 'string' && data.user.name) || (typeof data.user.email === 'string' && data.user.email) || "Super Admin";
+        const userObj = data.data || data.user;
+        if (userObj) {
+          const name = (typeof userObj.name === 'string' && userObj.name) || (typeof userObj.email === 'string' && userObj.email) || "Super Admin";
           const initials = typeof name === 'string' && name.trim()
             ? name.trim()
                 .split(' ')
@@ -468,10 +465,13 @@ export default function SuperAdminLayout() {
             : "SA";
           setUserProfile({
             name,
-            email: data.user.email || "admin@trainingportal.com",
+            email: userObj.email || "admin@trainingportal.com",
             initials: initials || "SA"
           });
-          sessionStorage.setItem('user', JSON.stringify(data.user));
+          const curStored = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+          const merged = { ...curStored, ...userObj, name };
+          sessionStorage.setItem('user', JSON.stringify(merged));
+          if (localStorage.getItem('user')) localStorage.setItem('user', JSON.stringify(merged));
         }
       }
     } catch (err) {
@@ -541,14 +541,15 @@ export default function SuperAdminLayout() {
             {/* Integrated Header Bar Inside the Card */}
             <header className="sa-header">
               <div className="sa-header__left">
-                <button
-                  className="sa-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="sa-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 <GlobalHeaderSearch role="superadmin" />
               </div>
@@ -595,7 +596,6 @@ export default function SuperAdminLayout() {
                     </div>
                     <div className="sa-header__user-info">
                       <span className="sa-header__name">{userProfile.name}</span>
-                      <span className="sa-header__role">{userProfile.role || "Super Admin"}</span>
                     </div>
                   </button>
 
@@ -659,6 +659,7 @@ export default function SuperAdminLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}

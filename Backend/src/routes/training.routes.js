@@ -7,6 +7,7 @@ import {
   createNewTraining,
   updateTrainingDetails,
   changeTrainingStatus,
+  getAllEnrollments,
   getTrainingEnrollments,
   registerForTraining,
   updatePaymentStatus,
@@ -18,8 +19,10 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
+router.use(requireFeature('trainings'));
 
 // ==========================================
 // PUBLIC & WEBHOOK ENDPOINTS (No token required)
@@ -66,6 +69,14 @@ router.post(
   authenticateToken,
   authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
   createNewTraining
+);
+
+// All Training Enrollments (Admin) - Defined before /:id to prevent matching "enrollments" as an ID
+router.get(
+  '/enrollments',
+  authenticateToken,
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN),
+  getAllEnrollments
 );
 
 router.get(

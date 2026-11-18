@@ -407,3 +407,94 @@ export const getStudentAttendanceScans = async (userId, limit = 50) => {
     return [];
   }
 };
+
+
+/**
+ * Task: Get student's enrolled batches attendance breakdown
+ */
+export const getStudentBatchAttendanceBreakdownModel = async (userId) => {
+  try {
+    // 1. Find all distinct batches the student has joined or attended
+    const batchListSql = `
+      SELECT DISTINCT
+        b.id,
+        b.name,
+        COALESCE(b.code, CONCAT('BTCH-', LPAD(b.id, 3, '0'))) AS code,
+        b.trainer,
+        b.topic
+      FROM batches b
+      WHERE b.id IN (
+        SELECT batch_id FROM student_batches WHERE user_id = ?
+        UNION
+        SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
+        UNION
+        SELECT batch_id FROM attendance WHERE user_id = ? AND batch_id IS NOT NULL
+      )
+      ORDER BY b.name ASC
+    `;
+    const batches = await query(batchListSql, [userId, userId, userId]);
+
+    if (!batches || batches.length === 0) {
+      return [];
+    }
+
+    const breakdown = [];
+
+    for (const b of batches) {
+      // Total sessions conducted for this batch
+      const sessionCountSql = `
+        SELECT COUNT(DISTINCT session_date) AS total_sessions
+        FROM attendance
+        WHERE batch_id = ?
+      `;
+      const sessionRes = await query(sessionCountSql, [b.id]);
+      const totalBatchSessions = Number(sessionRes?.[0]?.total_sessions || 0);
+
+      // Student's specific attendance for this batch
+      const studentAttSql = `
+        SELECT 
+          SUM(CASE WHEN LOWER(status) IN ('present', 'late') THEN 1 ELSE 0 END) AS attended_count,
+          SUM(CASE WHEN LOWER(status) = 'absent' THEN 1 ELSE 0 END) AS absent_count,
+          COUNT(DISTINCT session_date) AS student_distinct_days
+        FROM attendance
+        WHERE batch_id = ? AND user_id = ?
+      `;
+      const attRes = await query(studentAttSql, [b.id, userId]);
+      const attended = Number(attRes?.[0]?.attended_count || 0);
+      const studentDays = Number(attRes?.[0]?.student_distinct_days || 0);
+
+      const totalConducted = Math.max(totalBatchSessions, studentDays, attended);
+      const absent = Math.max(0, totalConducted - attended);
+      const pct = totalConducted > 0 ? Math.round((attended / totalConducted) * 100) : 0;
+
+      let safeMargin = "No sessions conducted yet";
+      if (totalConducted > 0) {
+        if (pct >= 75) {
+          const canMiss = Math.floor(attended / 0.75 - totalConducted);
+          safeMargin = canMiss > 0 ? `Can miss ${canMiss} class${canMiss > 1 ? 'es' : ''} safely` : "On track (maintain attendance)";
+        } else {
+          const needed = Math.max(1, Math.ceil(3 * totalConducted - 4 * attended));
+          safeMargin = `Attend next ${needed} class${needed > 1 ? 'es' : ''} to reach 75%`;
+        }
+      }
+
+      breakdown.push({
+        id: b.id,
+        code: b.code || `BTCH-${b.id}`,
+        name: b.name || `Batch ${b.id}`,
+        total: totalConducted,
+        attended,
+        absent,
+        pct,
+        safeMargin,
+        trainer: b.trainer || "Instructor",
+        topic: b.topic || "Technical Training",
+      });
+    }
+
+    return breakdown;
+  } catch (err) {
+    console.warn('[DB getStudentBatchAttendanceBreakdownModel fallback]', err.message);
+    return [];
+  }
+};

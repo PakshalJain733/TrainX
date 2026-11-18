@@ -57,7 +57,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  margin-bottom: 15x;
+  margin-bottom: 16px;
 }
 
 .admin-user-stat-card {
@@ -90,6 +90,7 @@
 .stat-icon--blue { background: #dbeafe; color: #2563eb; }
 .stat-icon--purple { background: #f3e8ff; color: #7e22ce; }
 .stat-icon--emerald { background: #d1fae5; color: #059669; }
+.stat-icon--cyan { background: #e0f2fe; color: #0284c7; }
 
 .admin-user-stat-info {
   display: flex;
@@ -293,6 +294,7 @@
 }
 
 .role-badge--student { background: #dbeafe; color: #1d4ed8; }
+.role-badge--trainer { background: #e0f2fe; color: #0369a1; }
 .role-badge--mentor { background: #ede9fe; color: #6d28d9; }
 .role-badge--coordinator { background: #fef3c7; color: #b45309; }
 .role-badge--admin { background: #fee2e2; color: #b91c1c; }
@@ -309,7 +311,7 @@
 }
 
 .status-badge--active { background: #dcfce7; color: #15803d; }
-.status-badge--inactive { background: #f1f5f9; color: #64748b; }
+.status-badge--inactive { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
 
 .status-dot {
   width: 6px;
@@ -317,7 +319,17 @@
   border-radius: 50%;
 }
 .status-badge--active .status-dot { background: #22c55e; }
-.status-badge--inactive .status-dot { background: #94a3b8; }
+.status-badge--inactive .status-dot { background: #f59e0b; }
+
+.btn-table-action--approve {
+  color: #059669;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+.btn-table-action--approve:hover {
+  background: #059669;
+  color: #ffffff;
+}
 
 /* Actions */
 .action-btns-row {
@@ -393,9 +405,10 @@
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   z-index: 9999;
   padding: 16px;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -404,9 +417,14 @@
   border-radius: 16px;
   width: 100%;
   max-width: 520px;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
   overflow: hidden;
   animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .modal-dialog--sm {
@@ -418,12 +436,22 @@
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+.modal-dialog > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal-header {
   padding: 18px 24px;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
   background: #ffffff;
 }
 
@@ -431,6 +459,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 
 .modal-header-icon-wrap {
@@ -482,6 +512,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -515,6 +546,9 @@
 }
 
 .form-input-admin, .form-select-admin {
+  text-transform: none !important;
+  font-weight: 500 !important;
+  letter-spacing: normal !important;
   height: 40px;
   padding: 0 14px;
   border-radius: 9px;
@@ -563,10 +597,27 @@ textarea.form-input-admin:focus,
   gap: 14px;
 }
 
+.ad-user-fields-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
 @media (max-width: 640px) {
-  .form-row-2 {
+  .form-row-2:not(.form-row-2--mobile-pair) {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
+  }
+
+  .form-row-2--mobile-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .form-row-2--mobile-pair {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -575,7 +626,7 @@ textarea.form-input-admin:focus,
   padding: 16px 24px;
   border-top: 1px solid #f1f5f9;
   display: flex !important;
-  justify-content: space-between !important;
+  justify-content: flex-end !important;
   align-items: center !important;
   gap: 12px !important;
   background: #f8fafc;
@@ -885,35 +936,44 @@ textarea.form-input-admin:focus,
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(8px);
   z-index: 99999;
-  padding: 16px;
+  padding: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
+  overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .fs-portal-dialog {
-  width: 96vw;
-  height: 92vh;
-  max-width: 1440px;
-  max-height: 920px;
-  border-radius: 20px;
+  width: min(1360px, calc(100vw - 24px));
+  height: min(860px, calc(100vh - 24px));
+  max-width: 1360px;
+  max-height: 860px;
+  border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #cbd5e1;
+  margin: auto;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 /* ── Plain White Header (NO DARK/NAVY BACKGROUND, NO GRADIENTS) ── */
 .fs-portal-header {
-  padding: 18px 28px;
+  padding: 14px 24px;
   background: #ffffff;
   color: #0f172a;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .fs-portal-header-left {
@@ -987,43 +1047,49 @@ textarea.form-input-admin:focus,
 /* ── Split Body Layout ── */
 .fs-portal-body {
   flex: 1;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
   display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 20px;
-  padding: 20px;
-  overflow-y: auto;
-  overflow-x: hidden !important;
+  grid-template-columns: minmax(260px, 310px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 18px 18px;
+  overflow: hidden;
   background: #f8fafc;
-  align-items: stretch;
+  box-sizing: border-box;
 }
 
 .fs-portal-panel-sidebar {
   background: #ffffff;
-  padding: 20px;
+  padding: 16px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   overflow-y: auto;
   overflow-x: hidden !important;
-  min-height: 540px;
   height: 100%;
+  min-height: 0;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .fs-portal-panel-main {
   background: #ffffff;
-  padding: 20px;
+  padding: 16px 18px;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .fs-portal-section-title {
@@ -1082,10 +1148,9 @@ textarea.form-input-admin:focus,
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  width: auto !important;
-  align-self: flex-start !important;
+  width: 100% !important;
   white-space: nowrap !important;
-  padding: 11px 22px !important;
+  padding: 11px 20px !important;
   font-size: 13.5px !important;
   font-weight: 700 !important;
   background: #2563eb !important;
@@ -1096,6 +1161,13 @@ textarea.form-input-admin:focus,
   cursor: pointer !important;
   box-sizing: border-box !important;
   transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.fs-portal-submit-mt {
+  margin-top: auto !important;
+  width: 100% !important;
+  flex-shrink: 0 !important;
 }
 
 .btn-portal-submit:hover {
@@ -1426,8 +1498,9 @@ textarea.form-input-admin:focus,
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
 }
 
 .fs-portal-checklist-title {
@@ -1481,6 +1554,7 @@ textarea.form-input-admin:focus,
 .fs-portal-search-wrap {
   width: 100%;
   position: relative;
+  flex-shrink: 0;
 }
 
 .fs-portal-search-icon {
@@ -1915,21 +1989,141 @@ textarea.form-input-admin:focus,
   box-shadow: none !important;
 }
 
+/* ── Bulk Upload Result Summary Styling ── */
+.bulk-result-summary-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bulk-summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.bulk-summary-card {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.bulk-summary-card--total {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.bulk-summary-card--success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.bulk-summary-card--success .bulk-summary-num {
+  color: #059669;
+}
+
+.bulk-summary-card--rejected {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.bulk-summary-card--rejected .bulk-summary-num {
+  color: #dc2626;
+}
+
+.bulk-summary-num {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.bulk-summary-lbl {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.bulk-rejected-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+
+.bulk-rejected-banner-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.bulk-rejected-banner-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.bulk-download-rejected-btn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bulk-download-rejected-btn:hover {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.bulk-dept-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4338ca;
+  background: #e0e7ff;
+  border-radius: 6px;
+}
+
 
 /* ── Multi-Select Students Table System (Horizontal Roster) ── */
 .fs-portal-table-container {
   width: 100%;
-  max-height: 520px;
+  min-width: 0;
+  flex: 1;
+  min-height: 140px;
+  max-height: none;
   overflow-y: auto;
   overflow-x: auto;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 
 .fs-portal-table {
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 13px;
   text-align: left;
@@ -2084,6 +2278,7 @@ textarea.form-input-admin:focus,
   gap: 10px;
   flex-wrap: wrap;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .fs-portal-filter-item {
@@ -2488,3 +2683,513 @@ textarea.form-input-admin:focus,
 
 
 
+
+/* ── Mentor Assignment Status & Reassignment Styles ── */
+.fs-portal-assigned-mentor-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #c7d2fe;
+  max-width: fit-content;
+}
+
+.fs-portal-status-pill--available {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fs-portal-status-pill--assigned {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fs-portal-row--assigned {
+  background-color: #fafbfd;
+}
+
+.fs-portal-row--assigned:hover {
+  background-color: #f1f5f9;
+}
+
+.btn-portal-reassign {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-portal-reassign:hover {
+  background: #eef2ff;
+  border-color: #818cf8;
+  color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.12);
+}
+
+.btn-portal-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-portal-select:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.14);
+}
+
+.btn-portal-select--checked {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #6ee7b7;
+}
+
+.btn-portal-select--checked:hover {
+  background: #d1fae5;
+  border-color: #34d399;
+  color: #047857;
+}
+
+/* ── Reassign Modal Dialog ── */
+.reassign-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.reassign-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 540px;
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.reassign-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.reassign-modal-title-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.reassign-modal-icon {
+  color: #4f46e5;
+  background: #e0e7ff;
+  padding: 6px;
+  border-radius: 10px;
+  box-sizing: content-box;
+}
+
+.reassign-modal-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.reassign-modal-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.reassign-modal-body {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.reassign-student-profile-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.reassign-student-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #4f46e5;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.reassign-student-name {
+  font-size: 14.5px;
+  font-weight: 750;
+  color: #1e293b;
+}
+
+.reassign-student-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.reassign-mentor-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  background: #fdfdfd;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+}
+
+.reassign-compare-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reassign-compare-arrow {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 18px;
+}
+
+.reassign-col-label {
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.reassign-mentor-pill-prev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.reassign-note-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.reassign-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 22px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.reassign-confirm-btn {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.reassign-confirm-btn:hover {
+  background: #4338ca !important;
+}
+
+/* ── Responsive Viewport Protection for Full-Screen Portal ── */
+@media (max-width: 1100px) {
+  .fs-portal-dialog {
+    width: 98vw;
+    height: 94vh;
+  }
+  .fs-portal-body {
+    grid-template-columns: 280px 1fr;
+    gap: 12px;
+    padding: 12px 14px 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .fs-portal-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .fs-portal-panel-sidebar {
+    height: auto;
+    max-height: 320px;
+  }
+  .fs-portal-table-container {
+    min-height: 280px;
+  }
+}
+
+@media (max-height: 820px) {
+  .fs-portal-dialog {
+    height: 96vh;
+    border-radius: 14px;
+  }
+  .fs-portal-header {
+    padding: 10px 18px;
+  }
+  .fs-portal-body {
+    padding: 10px 14px 14px;
+    gap: 10px;
+  }
+  .fs-portal-panel-sidebar,
+  .fs-portal-panel-main {
+    padding: 14px;
+    gap: 10px;
+  }
+  .fs-portal-search-input {
+    height: 38px;
+  }
+  .fs-portal-table th {
+    padding: 9px 12px;
+  }
+  .fs-portal-table td {
+    padding: 8px 12px;
+  }
+}
+
+/* ── Mobile Layout Adjustments (<= 640px) ── */
+@media (max-width: 640px) {
+  .admin-users-container .ui-section-action {
+    gap: 8px !important;
+  }
+
+  .admin-users-container .ui-section-action button {
+    font-size: 12.5px;
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+
+  .admin-users-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* Primary summary card spans full width above 2x2 role cards */
+  .admin-users-stats-grid > .admin-user-stat-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-user-stat-card {
+    padding: 12px 13px;
+    gap: 10px;
+    border-radius: 12px;
+    min-width: 0;
+  }
+
+  .admin-user-stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .admin-user-stat-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .admin-user-stat-info {
+    min-width: 0;
+  }
+
+  .admin-user-stat-num {
+    font-size: 19px;
+    line-height: 1.15;
+  }
+
+  .admin-user-stat-lbl {
+    font-size: 11.5px;
+    line-height: 1.25;
+    margin-top: 2px;
+  }
+
+  /* Compact Create / Edit User Modals on Mobile */
+  .modal-overlay {
+    padding: 14px 12px !important;
+    align-items: center !important;
+  }
+
+  .modal-dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: min(88dvh, 720px) !important;
+    border-radius: 16px !important;
+  }
+
+  .modal-dialog .modal-header {
+    padding: 13px 16px !important;
+    gap: 10px !important;
+  }
+
+  .modal-dialog .modal-header-left {
+    gap: 10px !important;
+  }
+
+  .modal-dialog .modal-header-icon-wrap {
+    width: 34px;
+    height: 34px;
+  }
+
+  .modal-dialog .modal-title {
+    font-size: 15.5px;
+    line-height: 1.2;
+  }
+
+  .modal-dialog .modal-subtitle {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .modal-dialog .modal-close-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    flex-shrink: 0;
+  }
+
+  .modal-dialog .modal-body {
+    padding: 13px 16px !important;
+    gap: 10px !important;
+    max-height: none !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .modal-dialog .form-group-admin {
+    gap: 4px;
+  }
+
+  .modal-dialog .form-group-admin label {
+    font-size: 12px;
+  }
+
+  .modal-dialog .form-input-admin,
+  .modal-dialog .form-select-admin {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 13.5px;
+  }
+
+  .modal-dialog .custom-select-trigger {
+    min-height: 38px;
+    padding: 7px 11px;
+    font-size: 13.5px;
+  }
+
+  .ad-user-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    align-items: start;
+  }
+
+  .ad-user-fields-grid .form-row-2 {
+    display: contents !important;
+  }
+
+  .ad-user-fields-grid .form-group-admin {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ad-user-fields-grid .modal-feedback-alert,
+  .ad-user-fields-grid .admin-user-token-section,
+  .ad-user-fields-grid .ad-field-full-mobile {
+    grid-column: 1 / -1;
+  }
+
+  .modal-dialog .modal-footer-users {
+    padding: 12px 16px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .modal-dialog .btn-modal-submit {
+    width: 100% !important;
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .admin-users-stats-grid,
+  .ad-user-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}

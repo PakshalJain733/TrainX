@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck } from "lucide-react";
+import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck, RefreshCw } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/AD_LearningContent.css";
 
@@ -72,6 +72,68 @@ export default function AdminLearningContent() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [resourceLink, setResourceLink] = useState("");
   const [viewingDocument, setViewingDocument] = useState(null);
+  const [blobDocUrl, setBlobDocUrl] = useState(null);
+  const [blobLoading, setBlobLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!viewingDocument?.url) {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+      return;
+    }
+
+    const url = viewingDocument.url;
+    const isPdfOrDoc = url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)($|\?)/i) || viewingDocument.type === "Document";
+
+    if (isPdfOrDoc && url.startsWith("http")) {
+      setBlobLoading(true);
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("HTTP error " + res.status);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (!active) return;
+          const mimeType = url.match(/\.pdf($|\?)/i) ? "application/pdf" : (blob.type || "application/octet-stream");
+          const newBlobUrl = URL.createObjectURL(new Blob([blob], { type: mimeType }));
+          setBlobDocUrl(newBlobUrl);
+          setBlobLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.warn("[AD_LearningContent] Direct blob fetch failed, falling back to embedded viewer:", err.message);
+          setBlobDocUrl(null);
+          setBlobLoading(false);
+        });
+    } else {
+      setBlobDocUrl(null);
+      setBlobLoading(false);
+    }
+
+    return () => {
+      active = false;
+      if (blobDocUrl) {
+        URL.revokeObjectURL(blobDocUrl);
+      }
+    };
+  }, [viewingDocument?.url]);
+
+  const effectiveDocSrc = useMemo(() => {
+    if (!viewingDocument) return "";
+    if (blobDocUrl) return blobDocUrl;
+
+    const url = viewingDocument.url;
+    if (
+      url.startsWith("http") &&
+      !url.includes("localhost") &&
+      !url.includes("127.0.0.1") &&
+      url.match(/\.(pdf|doc|docx|ppt|pptx|xls|xlsx)($|\?)/i)
+    ) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    }
+    return url;
+  }, [viewingDocument, blobDocUrl]);
 
   const [batchesList, setBatchesList] = useState([]);
 
@@ -176,7 +238,7 @@ export default function AdminLearningContent() {
     setResources(prev => [tempEntry, ...prev]);
 
     try {
-      const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
+      const token = getAuthToken() || "";
 
 
       let res;
@@ -380,14 +442,14 @@ export default function AdminLearningContent() {
       {showForm && createPortal(
         <div 
           className="sa-modal-overlay" 
-          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'fadeIn 0.2s ease-out' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', animation: 'fadeIn 0.2s ease-out' }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
         >
           <div 
             className="sa-modal-dialog" 
-            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
+            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100dvh - 32px)' }}
           >
-            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
+            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
               <div className="sa-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div className="sa-modal-icon-wrap" style={{ background: '#e0e7ff', color: '#4f46e5', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <BookOpen size={20} />
@@ -427,7 +489,7 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-row-2 form-grid-2 mobile-pair-2">
                   <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Type</label>
                     <AdminLcSelect
@@ -458,7 +520,7 @@ export default function AdminLearningContent() {
                 </div>
 
                 {/* Side-by-Side Upload Document & Resource Link inputs */}
-                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                <div className="form-row-2 form-grid-2" style={{ alignItems: 'start' }}>
                   <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span>Upload Document / File {newType !== "Link" ? "*" : ""}</span>
@@ -546,19 +608,39 @@ export default function AdminLearningContent() {
         </div>
       </div>
 
-      {/* Resource Cards Grid */}
-      <div className="learning-resources-grid">
-        {loading ? (
-          <div className="learning-empty-state">
-            <p className="learning-empty-title">Loading learning content...</p>
+      {/* Resource Cards Grid or Centered Empty State */}
+      {loading ? (
+        <div className="learning-empty-card-AD">
+          <RefreshCw size={34} style={{ animation: "spin 1s linear infinite", color: "#4f46e5", marginBottom: "14px" }} />
+          <h3 className="learning-empty-title">Loading learning content...</h3>
+          <p className="learning-empty-desc">Fetching published study guides, lecture notes, and curriculum documentation.</p>
+        </div>
+      ) : filteredResources.length === 0 ? (
+        <div className="learning-empty-card-AD">
+          <div className="learning-empty-icon-wrap">
+            <BookOpen size={36} color="#4f46e5" />
           </div>
-        ) : filteredResources.length === 0 ? (
-          <div className="learning-empty-state">
-            <BookOpen size={36} className="learning-empty-icon" />
-            <p className="learning-empty-title">No learning resources uploaded yet.</p>
-          </div>
-        ) : (
-          filteredResources.map((item) => {
+          <h3 className="learning-empty-title">
+            {searchQuery ? "No Matching Learning Resources" : "No Learning Resources Uploaded Yet"}
+          </h3>
+          <p className="learning-empty-desc">
+            {searchQuery
+              ? `No resources match "${searchQuery}". Try searching with different keywords or clear your query.`
+              : "No learning materials or documentation have been published yet. Click \"Upload Learning Content\" above to add lecture notes, guides, or video resources."}
+          </p>
+          {searchQuery && (
+            <button
+              type="button"
+              className="learning-empty-clear-btn"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="learning-resources-grid">
+          {filteredResources.map((item) => {
             const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_name || (item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null);
@@ -652,9 +734,9 @@ export default function AdminLearningContent() {
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
 
       {/* Dynamic File & Video Viewer Modal */}
@@ -727,11 +809,19 @@ export default function AdminLearningContent() {
                 ) : viewingDocument.url.match(/\.(mp4|webm|ogg)$/i) ? (
                   <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
                 ) : (
-                  <iframe
-                    src={viewingDocument.url}
-                    title={viewingDocument.title}
-                    className="lc-viewer-iframe"
-                  />
+                  <>
+                    {blobLoading && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: '14px', gap: '8px' }}>
+                        <RefreshCw size={18} className="animate-spin" /> Loading document...
+                      </div>
+                    )}
+                    <iframe
+                      src={effectiveDocSrc}
+                      title={viewingDocument.title}
+                      className="lc-viewer-iframe"
+                      style={blobLoading ? { display: 'none' } : {}}
+                    />
+                  </>
                 )
               )}
             </div>

@@ -3,6 +3,7 @@ export const ROLES = {
   COLLEGE_ADMIN: 'college_admin',
   COORDINATOR: 'coordinator',
   MENTOR: 'mentor',
+  TRAINER: 'trainer',
   STUDENT: 'student',
 };
 

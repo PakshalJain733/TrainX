@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS machinetest_data (
+  practical_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  practical_name VARCHAR(255) NOT NULL,
+  description TEXT,
+  batch VARCHAR(255),
+  event_id INT,
+  status TINYINT DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_practical_name (practical_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

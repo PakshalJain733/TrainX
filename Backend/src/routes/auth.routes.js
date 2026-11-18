@@ -1,5 +1,29 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, getCollegeByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail } from '../controllers/auth.controller.js';
+import {
+  sendRegisterOtp,
+  verifyRegisterEmailOtp,
+  verifyRegisterOtp,
+  checkRegistrationStatus,
+  sendOtp,
+  verifyOtpAndLogin,
+  passwordLogin,
+  getMe,
+  updateProfile,
+  changePassword,
+  resetPasswordWithOtp,
+  getDepartmentsByEmail,
+  getCollegeByEmail,
+  registerInstitution,
+  requestSecureCode,
+  getSecureCodeRequests,
+  resolveSecureCodeRequest,
+  deleteSecureCodeRequest,
+  deleteSecureCodeRequestByEmail,
+  verifyInstitutionTokenHandler,
+  completeInstitutionSetupHandler,
+  activateWithCodeHandler,
+  forceChangePasswordHandler,
+} from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -16,15 +40,25 @@ router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOt
 router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']), verifyRegisterEmailOtp);
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 router.post('/request-secure-code', requestSecureCode);
-router.get('/secure-code-requests', getSecureCodeRequests);
-router.patch('/secure-code-requests/:id', resolveSecureCodeRequest);
-router.delete('/secure-code-requests/:id', deleteSecureCodeRequest);
-router.delete('/secure-code-requests/by-email/:email', deleteSecureCodeRequestByEmail);
+// Admin & Super Admin protected management of secure code requests
+router.get('/secure-code-requests', authenticateToken, getSecureCodeRequests);
+router.patch('/secure-code-requests/:id', authenticateToken, resolveSecureCodeRequest);
+router.delete('/secure-code-requests/:id', authenticateToken, deleteSecureCodeRequest);
+router.delete('/secure-code-requests/by-email/:email', authenticateToken, deleteSecureCodeRequestByEmail);
 
-// OTP, TOTP & Password Login flows
+// Private Institution Setup (Option 1: Private Email Invitation Link)
+router.get('/verify-institution-token', verifyInstitutionTokenHandler);
+router.post('/complete-institution-setup', validateRequestBody(['token', 'name', 'email', 'password']), completeInstitutionSetupHandler);
+
+// Account Activation with Secure Code (Part 2 & Part 4)
+router.post('/activate-with-code', validateRequestBody(['email', 'code', 'password', 'confirmPassword']), activateWithCodeHandler);
+
+// Mandatory Force Password Change on First Login (Part 5)
+router.post('/force-change-password', authenticateToken, validateRequestBody(['currentPassword', 'newPassword', 'confirmPassword']), forceChangePasswordHandler);
+
+// OTP & Password Login flows
 router.post('/send-otp', sendOtp);
 router.post('/verify-otp', verifyOtpAndLogin);
-router.post('/verify-totp', verifyTotp);
 router.post('/login-password', passwordLogin);
 router.post('/login', (req, res, next) => {
   if (req.body.password) {
@@ -38,8 +72,6 @@ router.put('/profile', authenticateToken, updateProfile);
 router.patch('/profile', authenticateToken, updateProfile);
 router.post('/change-password', authenticateToken, changePassword);
 router.post('/reset-password-otp', resetPasswordWithOtp);
-router.post('/setup-2fa', authenticateToken, setup2FA);
-router.post('/verify-2fa', authenticateToken, verify2FA);
 
 export default router;
 

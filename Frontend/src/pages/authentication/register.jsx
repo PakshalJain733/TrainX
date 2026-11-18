@@ -8,19 +8,23 @@ import { Card, CardContent } from "../../components/ui/Card";
 import "./register.css";
 
 /* ── Inline dropdown for Register page (CSS: register.css .reg-select-*) ── */
-function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, wrapperClass = '', triggerClass = '' }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
+  const selected = safeOptions.find(o =>
+    String(o.value) === String(value) ||
+    (o.code && String(o.code).toLowerCase() === String(value).toLowerCase()) ||
+    (o.name && String(o.name).toLowerCase() === String(value).toLowerCase())
+  );
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className={`reg-select-wrap${isOpen ? ' reg-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`} title={selected?.fullName || selected?.label || ""}>
+    <div className={`reg-select-wrap ${wrapperClass} ${isOpen ? 'reg-select-wrap--open is-open' : ''}`} ref={ref} style={isOpen ? { position: 'relative', zIndex: 99999 } : {}}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger ${triggerClass} ${isOpen ? 'reg-select-trigger--open' : ''}`} title={selected?.fullName || selected?.label || ""}>
         {Icon && <span className="reg-select-icon">{Icon}</span>}
         <span className="reg-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -28,7 +32,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
       {isOpen && (
         <div className="reg-select-dropdown">
           {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
+            const isSel = String(opt.value) === String(value) || (selected && opt.value === selected.value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`} title={opt.fullName || opt.label}>
                 <span className="reg-select-option-label">{opt.label}</span>
@@ -326,23 +330,17 @@ function Register() {
     }
   }, [searchParams]);
 
-  // TOTP Authenticator Setup State
-  const [totpSetupData, setTotpSetupData] = useState(null);
-  const [showTotpSetup, setShowTotpSetup] = useState(false);
+  // Admin approval pending state
   const [showPendingApproval, setShowPendingApproval] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [redirectCountdown, setRedirectCountdown] = useState(5);
-  const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
-  const totpInputRefs = useRef([]);
 
   // Live polling for Admin approval while on the pending approval screen
   useEffect(() => {
     if (!showPendingApproval || isApproved) return undefined;
 
-    const emailToCheck = registeredEmail || formData.email?.trim() || totpSetupData?.user?.email;
+    const emailToCheck = registeredEmail || formData.email?.trim();
     if (!emailToCheck) return undefined;
 
     const pollApproval = async () => {
@@ -360,7 +358,7 @@ function Register() {
     pollApproval();
     const interval = setInterval(pollApproval, 3000);
     return () => clearInterval(interval);
-  }, [showPendingApproval, isApproved, registeredEmail, formData.email, totpSetupData]);
+  }, [showPendingApproval, isApproved, registeredEmail, formData.email]);
 
   // Auto-redirect countdown when approval is confirmed
   useEffect(() => {
@@ -476,91 +474,6 @@ function Register() {
     }, 2200);
   };
 
-  const handleCopySecret = () => {
-    if (totpSetupData?.secret) {
-      navigator.clipboard.writeText(totpSetupData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    }
-  };
-
-  const handleTotpCodeChange = (e, index) => {
-    const val = e.target.value;
-    if (!/^\d*$/.test(val)) return;
-    const newCode = [...totpCode];
-    newCode[index] = val.substring(val.length - 1);
-    setTotpCode(newCode);
-
-    if (val && index < 5) {
-      totpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleTotpKeyDown = (e, index) => {
-    if (e.key === "Backspace" && !totpCode[index] && index > 0) {
-      totpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleTotpPaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasteData) {
-      const digits = pasteData.split("");
-      const newCode = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        newCode[i] = d;
-      });
-      setTotpCode(newCode);
-      const nextIdx = Math.min(digits.length, 5);
-      totpInputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  const formatSecretKey = (secret) => {
-    if (!secret) return "";
-    return secret.match(/.{1,4}/g)?.join(" ") || secret;
-  };
-
-  const handleVerifyTotpSetup = async (e) => {
-    e.preventDefault();
-    const enteredCode = totpCode.join("");
-    if (enteredCode.length < 6) {
-      setErrorMsg("Please enter complete 6-digit Authenticator code.");
-      return;
-    }
-    setLoading(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const emailToVerify = formData.email || totpSetupData?.user?.email || "";
-      const response = await fetch(`${getApiBaseUrl()}/auth/verify-totp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailToVerify,
-          code: enteredCode,
-        }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setRegisteredEmail(emailToVerify);
-        setShowTotpSetup(false);
-        setShowPendingApproval(true);
-        setErrorMsg("");
-        setSuccessMsg("");
-      } else {
-        setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
-      }
-    } catch (err) {
-      console.error("TOTP verify error:", err);
-      setErrorMsg("Unable to verify Authenticator code. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "email") {
@@ -572,13 +485,18 @@ function Register() {
   };
 
   const validateDetails = () => {
-    if (!role) {
-      setErrorMsg("Please select your role.");
-      return false;
-    }
     const name = (formData.name || "").trim();
     if (!name) {
       setErrorMsg("Please enter your full name.");
+      return false;
+    }
+    const roll = (formData.roll_number || "").trim();
+    if (!roll) {
+      setErrorMsg("Please enter your College ID.");
+      return false;
+    }
+    if (deptOptions.length > 0 && !formData.department) {
+      setErrorMsg("Please select your department.");
       return false;
     }
     const email = (formData.email || "").trim();
@@ -588,6 +506,23 @@ function Register() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setErrorMsg("Please enter a valid college email address.");
+      return false;
+    }
+    const mobile = (formData.mobile_number || "").trim();
+    if (!mobile) {
+      setErrorMsg("Please enter your mobile number.");
+      return false;
+    }
+    if (mobile.length < 10) {
+      setErrorMsg("Please enter a valid 10-digit mobile number.");
+      return false;
+    }
+    if (!formData.year) {
+      setErrorMsg("Please select your academic year.");
+      return false;
+    }
+    if (!(formData.division || "").trim()) {
+      setErrorMsg("Please enter your division.");
       return false;
     }
     if (!formData.password) {
@@ -602,57 +537,10 @@ function Register() {
       setErrorMsg("Passwords do not match. Please re-enter passwords.");
       return false;
     }
-    if (role === "Student") {
-      const roll = (formData.roll_number || "").trim();
-      if (!roll) {
-        setErrorMsg("Please enter your College ID.");
-        return false;
-      }
-      const mobile = (formData.mobile_number || "").trim();
-      if (!mobile) {
-        setErrorMsg("Please enter your mobile number.");
-        return false;
-      }
-      if (mobile.length < 10) {
-        setErrorMsg("Please enter a valid 10-digit mobile number.");
-        return false;
-      }
-      if (deptOptions.length > 0 && !formData.department) {
-        setErrorMsg("Please select your department.");
-        return false;
-      }
-      if (!formData.year) {
-        setErrorMsg("Please select your academic year.");
-        return false;
-      }
-      if (!(formData.division || "").trim()) {
-        setErrorMsg("Please enter your division.");
-        return false;
-      }
-    } else {
-      const mobile = (formData.mobile_number || "").trim();
-      if (mobile && mobile.length < 10) {
-        setErrorMsg("Please enter a valid 10-digit mobile number.");
-        return false;
-      }
-      if (role === "Coordinator") {
-        const dept = (formData.department || "").trim();
-        if (!dept) {
-          setErrorMsg("Please select your department.");
-          return false;
-        }
-      }
-      const secureCode = (formData.secure_code || "").trim();
-      if (!secureCode) {
-        setErrorMsg("Please enter your Secure Access Code.");
-        return false;
-      }
-    }
     return true;
   };
 
   const isFormFullyFilled = () => {
-    if (!role) return false;
     const name = (formData.name || "").trim();
     const email = (formData.email || "").trim();
     const pass = formData.password || "";
@@ -662,21 +550,12 @@ function Register() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
     if (pass.length < 6 || pass !== confirmPass) return false;
 
-    if (role === "Student") {
-      const roll = (formData.roll_number || "").trim();
-      const mobile = (formData.mobile_number || "").trim();
-      const yr = formData.year || "";
-      const div = formData.division || "";
-      if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
-      if (deptOptions.length > 0 && !formData.department) return false;
-    } else if (role === "Coordinator") {
-      const colOrSecure = (formData.secure_code || "").trim();
-      const dept = (formData.department || "").trim();
-      if (!colOrSecure || !dept) return false;
-    } else {
-      const secureCode = (formData.secure_code || "").trim();
-      if (!secureCode) return false;
-    }
+    const roll = (formData.roll_number || "").trim();
+    const mobile = (formData.mobile_number || "").trim();
+    const yr = formData.year || "";
+    const div = formData.division || "";
+    if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
+    if (deptOptions.length > 0 && !formData.department) return false;
 
     return true;
   };
@@ -792,19 +671,25 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Email verification check for Student role
-    if (role === "Student" && !emailVerified) {
-      setErrorMsg("Please request and verify the 6-digit OTP sent to your college email before completing registration.");
+    // Email verification check
+    if (!emailVerified) {
+      if (!emailOtpSent) {
+        await requestEmailOtp();
+        return;
+      }
+      const otp = emailOtp.join("");
+      if (!/^\d{6}$/.test(otp)) {
+        setErrorMsg("Please enter the complete 6-digit verification code sent to your email.");
+        return;
+      }
+      await handleVerifyEmailOtp(otp);
       return;
     }
 
-    let otp = "";
-    if (role === "Student") {
-      otp = emailOtp.join("");
-      if (!/^\d{6}$/.test(otp)) {
-        setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
-        return;
-      }
+    const otp = emailOtp.join("");
+    if (!/^\d{6}$/.test(otp)) {
+      setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
+      return;
     }
 
     setLoading(true);
@@ -818,20 +703,22 @@ function Register() {
         body: JSON.stringify({
           ...formData,
           email: formData.email.trim(),
-          role,
+          secure_code: formData.secure_code || formData.roll_number,
+          code: formData.roll_number,
           otp,
         }),
       });
       const data = await response.json();
-      if (data.success && data.data?.qrCode) {
-        setTotpSetupData(data.data);
-        setShowTotpSetup(true);
-        setSuccessMsg("");
-      } else if (data.success) {
-        setRegisteredEmail(formData.email.trim());
+      if (data.success) {
+        // Approval is completely disabled: accounts are instantly active & verified
+        setIsApproved(true);
         setShowPendingApproval(true);
         setErrorMsg("");
-        setSuccessMsg("");
+        setSuccessMsg(data.data?.message || "Registration completed successfully! Your account is active.");
+        if (data.data?.token) {
+          sessionStorage.setItem("trainx_token", data.data.token);
+          sessionStorage.setItem("token", data.data.token);
+        }
       } else {
         setErrorMsg(data.message || "Registration failed");
       }
@@ -871,20 +758,7 @@ function Register() {
           </div>
         </div>
 
-        {showTotpSetup && (
-          <div className="totp-stepper-bar">
-            <div className="stepper-step completed">
-              <span className="stepper-badge">{Icons.check}</span>
-              <span className="stepper-label">Details</span>
-            </div>
-            <div className="stepper-line active"></div>
-            <div className="stepper-step active">
-              <span className="stepper-badge">{Icons.shield}</span>
-              <span className="stepper-label">Authenticator</span>
-            </div>
-          </div>
-        )}
-
+        
         {errorMsg && (
           <div className="auth-error-msg" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
             <span>{errorMsg}</span>
@@ -909,208 +783,52 @@ function Register() {
             )}
           </div>
         )}
-        {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
+        {!showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
-          <div className={`pending-approval-card ${isApproved ? "approved" : ""}`}>
-            <div className={`pending-approval-icon-wrapper ${isApproved ? "approved" : ""}`}>
-              {isApproved ? (
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              ) : (
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="12 6 12 12 16 14" />
-                </svg>
-              )}
+          <div className="pending-approval-card approved">
+            <div className="pending-approval-icon-wrapper approved">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
             </div>
 
-            <h3 className={`pending-approval-title ${isApproved ? "approved" : ""}`}>
-              {isApproved ? "Registration Approved! 🎉" : "Registration & 2FA Setup Complete!"}
+            <h3 className="pending-approval-title approved">
+              Registration Completed! 🎉
             </h3>
 
             <p className="pending-approval-subtitle">
-              {isApproved
-                ? (role === "Admin"
-                    ? "Your account has been officially approved by the Super Administrator. You can now log in!"
-                    : "Your account has been officially approved by the College Administrator. You can now log in!")
-                : "Your registration details and Authenticator app (2FA) pairing have been successfully verified."}
+              Your account has been created and verified. You can now log in immediately!
             </p>
 
-            <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
-              <div className={`pending-approval-badge-row ${isApproved ? "approved" : ""}`}>
-                <span className={`pending-approval-badge ${isApproved ? "approved" : ""}`}>
-                  {isApproved
-                    ? "Status: Approved"
-                    : (role === "Admin" ? "Status: Pending Super Admin Approval" : "Status: Pending Admin Approval")}
+            <div className="pending-approval-box approved">
+              <div className="pending-approval-badge-row approved">
+                <span className="pending-approval-badge approved">
+                  Status: Active & Verified
                 </span>
               </div>
-              <p className={`pending-approval-desc ${isApproved ? "approved" : ""}`}>
-                {isApproved
-                  ? `Your account is active and verified! Redirecting to login screen automatically in ${redirectCountdown}s...`
-                  : (role === "Admin"
-                      ? "You can login only after the Super Administrator approves your account. Your registration is currently under review."
-                      : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration.")}
+              <p className="pending-approval-desc approved">
+                Your account is fully activated! Redirecting to login screen automatically in {redirectCountdown}s...
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/")}
-              className={`pending-approval-btn ${isApproved ? "approved" : ""}`}
+              className="pending-approval-btn approved"
             >
-              {isApproved ? (
-                <>
-                  <span>Proceed to Login Screen ({redirectCountdown}s)</span>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="19" y1="12" x2="5" y2="12" />
-                    <polyline points="12 19 5 12 12 5" />
-                  </svg>
-                  <span>Return to Login Screen</span>
-                </>
-              )}
+              <span>Proceed to Login Screen ({redirectCountdown}s)</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </button>
           </div>
-        ) : showTotpSetup ? (
-          <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
-            <div className="totp-header">
-              <h3 className="totp-title">Pair Authenticator App</h3>
-              <p className="totp-subtitle">
-                Scan QR Code using Authenticator App.
-              </p>
-            </div>
-
-            {/* Method Tab Selector */}
-            <div className="totp-tab-nav">
-              <button
-                type="button"
-                className={`totp-tab-btn ${totpTab === "qr" ? "active" : ""}`}
-                onClick={() => setTotpTab("qr")}
-              >
-                {Icons.qrCode} Scan QR Code
-              </button>
-              <button
-                type="button"
-                className={`totp-tab-btn ${totpTab === "manual" ? "active" : ""}`}
-                onClick={() => setTotpTab("manual")}
-              >
-                {Icons.key} Manual Key
-              </button>
-            </div>
-
-            {/* Tab 1: QR Code View */}
-            {totpTab === "qr" && (
-              <div className="totp-qr-wrapper">
-                <div className="totp-qr-frame">
-                  <span className="qr-corner top-left"></span>
-                  <span className="qr-corner top-right"></span>
-                  <span className="qr-corner bottom-left"></span>
-                  <span className="qr-corner bottom-right"></span>
-                  {totpSetupData?.qrCode && (
-                    <img src={totpSetupData.qrCode} alt="2FA QR Code" className="totp-qr-img" />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab 2: Secret Key Card (Only shown when Manual Key tab is active) */}
-            {totpTab === "manual" && (
-              <div className="totp-secret-card">
-                <div className="secret-card-header">
-                  <span className="secret-card-label">{Icons.key} Secret Setup Key</span>
-                  <button
-                    type="button"
-                    onClick={handleCopySecret}
-                    className={`totp-copy-btn ${copiedSecret ? "copied" : ""}`}
-                    title="Copy secret key"
-                  >
-                    {copiedSecret ? (
-                      <>
-                        {Icons.check} <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        {Icons.copy} <span>Copy Key</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                <div className="secret-code-display">
-                  <code>{formatSecretKey(totpSetupData?.secret)}</code>
-                </div>
-              </div>
-            )}
-
-            {/* 6-Digit Verification Code Section */}
-            <div className="totp-otp-section">
-              <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-              <div className="login-otp-input-row" onPaste={handleTotpPaste}>
-                {totpCode.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => (totpInputRefs.current[idx] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                    onChange={(e) => handleTotpCodeChange(e, idx)}
-                    onKeyDown={(e) => handleTotpKeyDown(e, idx)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <button type="submit" className="login-send-otp-btn totp-submit-btn" disabled={loading}>
-              {loading ? "Verifying..." : "Verify & Complete Registration"}
-            </button>
-
-            <div className="totp-footer-actions">
-              <button
-                type="button"
-                className="totp-back-link"
-                onClick={() => {
-                  setShowTotpSetup(false);
-                  setErrorMsg("");
-                  setSuccessMsg("");
-                }}
-              >
-                {Icons.arrowLeft} Back to registration
-              </button>
-            </div>
-          </form>
         ) : (
           <form onSubmit={handleSubmit}>
-            {/* ── Select Role ── */}
-            <div className="role-select-container">
-              <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
-              <RegSelect
-                value={role}
-                wrapperClass="reg-select"
-                options={[
-                  { value: "Student", label: "Student" },
-                  { value: "Coordinator", label: "Coordinator" },
-                  { value: "Admin", label: "Admin" },
-                  { value: "Mentor", label: "Mentor" },
-                ]}
-                onChange={(val) => setRole(val)}
-                placeholder="Select your role"
-              />
-            </div>
-
-            {/* ── STUDENT ROLE FIELDS ── */}
-            {role === "Student" && (
-              <div key="Student">
-                {/* Row 1: Full Name | College ID | Mobile Number */}
-                <div className="form-grid-student-row1">
+            <div>
+              {/* Row 1: Full Name | College ID */}
+              <div className="form-grid-2">
                   <div className="input-group">
                     <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
                     <input
@@ -1135,23 +853,25 @@ function Register() {
                       onChange={handleChange}
                     />
                   </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      required
-                      placeholder="Mobile number"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
-                    />
-                  </div>
                 </div>
 
-                {/* Row 2: College Email & Inline 6-Digit OTP Code */}
+                {/* Row 2: Department (Full Width ~420px so long department names are completely visible) */}
+                <div className="input-group" style={{ marginBottom: "11px", position: 'relative', zIndex: 25 }}>
+                  <FieldLabel icon={Icons.dept}>Department</FieldLabel>
+                  <RegSelect
+                    value={formData.department}
+                    wrapperClass="reg-select reg-select-department"
+                    options={deptOptions}
+                    onChange={(val) => setFormData({ ...formData, department: val })}
+                    placeholder={
+                      deptOptions.length > 0
+                        ? "Select Department"
+                        : "No departments found"
+                    }
+                  />
+                </div>
+
+                {/* Row 3: College Email & Inline 6-Digit OTP Code */}
                 <div className="input-group" style={{ marginBottom: "11px" }}>
                   {emailVerified ? (
                     <div className="input-group" style={{ marginBottom: 0 }}>
@@ -1272,22 +992,20 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Department | Year | Division */}
-                <div className="form-grid-student-row3">
+                {/* Row 4: Mobile No. | Year | Division */}
+                <div className="form-grid-3 form-grid-student-mobile-yr-div" style={{ position: 'relative', zIndex: 15 }}>
                   <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Department</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder={
-                        !formData.email || !formData.email.includes("@")
-                          ? "Enter college email first"
-                          : deptOptions.length > 0
-                            ? "Select Dept"
-                            : "No departments found"
-                      }
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      required
+                      placeholder="Mobile number"
+                      value={formData.mobile_number}
+                      onChange={handleChange}
+                      maxLength={10}
+                      className="reg-input-mobile"
                     />
                   </div>
 
@@ -1368,132 +1086,9 @@ function Register() {
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD / Admin) ── */}
-            {role !== "Student" && role !== "" && (
-              <div key={role}>
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      placeholder="Mobile number (optional)"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="user@college.edu"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                {/* Department dropdown for Coordinator */}
-                {role === "Coordinator" && (
-                  <div className="input-group" style={{ marginTop: "4px", marginBottom: "16px" }}>
-                    <FieldLabel icon={Icons.dept}>Coordinator Department *</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder={
-                        deptOptions.length > 0
-                          ? "Select Coordinator Department (e.g. CS, IT)"
-                          : "Select Department"
-                      }
-                    />
-                  </div>
-                )}
-
-                {/* Row: Password | Confirm Password for Staff/Mentors */}
-                <div className="form-grid-2">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
-                    <div className="register-password-wrapper">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        required
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className="register-password-toggle"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
-                    <div className="register-password-wrapper">
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirm_password"
-                        required
-                        placeholder="••••••••"
-                        value={formData.confirm_password}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className="register-password-toggle"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        tabIndex={-1}
-                      >
-                        {showConfirmPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
-                  <div className="register-secure-code-wrap">
-                    <input
-                      type="text"
-                      name="secure_code"
-                      placeholder={`Enter ${role} secure code`}
-                      value={formData.secure_code}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button type="submit" disabled={loading || (role === "Student" && !emailVerified)}>
-              {loading ? "Registering..." : (role === "Student" && !emailVerified ? "Verify Email to Register" : "Register")}
+            <button type="submit" disabled={loading}>
+              {loading ? "Please wait..." : (!emailVerified ? "Verify Email to Register" : "Register")}
             </button>
 
             <div className="links">
@@ -1502,19 +1097,6 @@ function Register() {
                 <Link to="/"> Login</Link>
               </p>
             </div>
-
-            {role === "Admin" && (
-              <div className="request-key-banner">
-                <p className="request-key-text">Don't have an Invitation Access Code for your Institution?</p>
-                <button
-                  type="button"
-                  className="btn-request-key-link"
-                  onClick={() => setIsRequestDemoOpen(true)}
-                >
-                  Request College Demo / Access Key
-                </button>
-              </div>
-            )}
           </form>
         )}
       </div>

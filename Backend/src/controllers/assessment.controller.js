@@ -1,6 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
-import { generateQuizQuestionsAI, verifyQuizQuestions } from '../ai/quiz.ai.js';
+import { generateQuizQuestionsAI, verifyQuizQuestions, buildFallbackQuestions } from '../ai/quiz.ai.js';
 import { filterContentByMentorAssignment, canStudentAccessMentorItem } from '../utils/mentorStudentHelper.js';
 
 let mockAssessments = [];
@@ -13,7 +13,12 @@ export const getAssessments = async (req, res, next) => {
     const { batch } = req.query;
     let result = [];
     try {
-      const dbRows = await query(`SELECT * FROM assessments ORDER BY id DESC`);
+      const dbRows = await query(`
+        SELECT a.*, COALESCE(b.name, 'All Batches') AS batch_name 
+        FROM assessments a 
+        LEFT JOIN batches b ON a.batch_id = b.id 
+        ORDER BY a.id DESC
+      `);
       if (dbRows && dbRows.length > 0) {
         const assessmentIds = dbRows.map(r => r.id);
         let allQuestions = [];
@@ -32,13 +37,15 @@ export const getAssessments = async (req, res, next) => {
           const attemptCounts = await query(
             `SELECT assessment_id, COUNT(*) as count 
              FROM assessment_attempts 
-             WHERE status = 'completed' OR submitted_at IS NOT NULL OR score IS NOT NULL OR marks_obtained IS NOT NULL
+             WHERE status != 'in_progress' 
+               AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL)
              GROUP BY assessment_id`
           ).catch(() => []);
           if (Array.isArray(attemptCounts)) {
             attemptCounts.forEach(row => {
-              if (row.assessment_id) {
-                submissionCounts[row.assessment_id] = (submissionCounts[row.assessment_id] || 0) + Number(row.count);
+              if (row.assessment_id !== null && row.assessment_id !== undefined) {
+                const k = String(row.assessment_id);
+                submissionCounts[k] = (submissionCounts[k] || 0) + Number(row.count);
               }
             });
           }
@@ -50,9 +57,10 @@ export const getAssessments = async (req, res, next) => {
           ).catch(() => []);
           if (Array.isArray(compCounts)) {
             compCounts.forEach(row => {
-              if (row.assessment_id) {
-                const curr = submissionCounts[row.assessment_id] || 0;
-                submissionCounts[row.assessment_id] = Math.max(curr, Number(row.count));
+              if (row.assessment_id !== null && row.assessment_id !== undefined) {
+                const k = String(row.assessment_id);
+                const curr = submissionCounts[k] || 0;
+                submissionCounts[k] = Math.max(curr, Number(row.count));
               }
             });
           }
@@ -60,11 +68,12 @@ export const getAssessments = async (req, res, next) => {
           console.warn('[DB submission counts query]', subErr.message);
         }
 
-        result = dbRows.map(r => {
-          const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === String(r.id));
-          const memoryQs = mockQuestionsByAssessment[r.id] || [];
+        const rawResult = dbRows.map(r => {
+          const idKey = String(r.id);
+          const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === idKey);
+          const memoryQs = mockQuestionsByAssessment[r.id] || mockQuestionsByAssessment[idKey] || [];
           const combinedQs = qsForThis.length > 0 ? qsForThis : memoryQs;
-          const subCount = submissionCounts[r.id] || 0;
+          const subCount = submissionCounts[idKey] !== undefined ? submissionCounts[idKey] : (submissionCounts[r.id] || 0);
           return {
             ...r,
             category: r.category || (r.description?.includes('AI Generated') ? 'AI Generated' : r.description?.includes('Bulk Upload') ? 'Bulk Upload' : 'Manual'),
@@ -75,6 +84,9 @@ export const getAssessments = async (req, res, next) => {
             submissions: subCount
           };
         });
+
+        // Return each quiz distinctly by its unique ID. Quizzes with identical names are fully preserved!
+        result = rawResult;
       }
     } catch (e) {
       console.warn('[DB getAssessments fallback]', e.message);
@@ -134,7 +146,30 @@ export const getAssessmentById = async (req, res, next) => {
     }
 
     const memoryQs = mockQuestionsByAssessment[id] || [];
-    const finalQuestions = questions.length > 0 ? questions : (assessment.questions && assessment.questions.length > 0 ? assessment.questions : memoryQs);
+    const rawQuestions = questions.length > 0 ? questions : (assessment.questions && assessment.questions.length > 0 ? assessment.questions : memoryQs);
+
+    // Prevent Quiz Answer Key and Explanation disclosure to students prior to completion
+    const isStudent = req.user?.role === 'student';
+    let hasCompleted = false;
+    if (isStudent) {
+      try {
+        const attemptRows = await query(
+          `SELECT id, status FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? AND status = 'completed' LIMIT 1`,
+          [id, req.user?.userId || req.user?.id]
+        );
+        if (attemptRows && attemptRows.length > 0) {
+          hasCompleted = true;
+        }
+      } catch (_) {}
+    }
+
+    const finalQuestions = (rawQuestions || []).map((q) => {
+      if (isStudent && !hasCompleted) {
+        const { correct_option, correct_answer, explanation, ...safeQ } = q;
+        return safeQ;
+      }
+      return q;
+    });
 
     return sendSuccess(res, 'Assessment details retrieved', {
       ...assessment,
@@ -241,7 +276,13 @@ export const deleteAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     try {
+      await query(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE assessment_id = ?)`, [id]).catch(() => {});
+      await query(`DELETE FROM assessment_attempts WHERE assessment_id = ?`, [id]).catch(() => {});
+      await query(`DELETE FROM assessment_questions WHERE assessment_id = ?`, [id]).catch(() => {});
       await query(`DELETE FROM assessments WHERE id = ?`, [id]);
+      // Strictly delete by assessment ID so other quizzes with the same name are NOT deleted
+      await query(`DELETE FROM shared_content WHERE type = 'quiz' AND id = ?`, [id]).catch(() => {});
+      await query(`DELETE FROM student_quiz_completions WHERE quiz_id = ?`, [id]).catch(() => {});
     } catch (e) {
       console.warn('[DB deleteAssessment fallback]', e.message);
     }
@@ -254,111 +295,26 @@ export const deleteAssessment = async (req, res, next) => {
 
 export const generateAIQuestions = async (req, res, next) => {
   try {
-    const { title, topic, count = 10 } = req.body;
+    const { title, topic, count = 10, description, topics } = req.body;
+    const topicDescription = description || topics || "";
     const topicName = title || topic || "General Computer Science";
     const num = Math.min(Math.max(parseInt(count, 10) || 5, 1), 30);
 
     let rawQuestions = [];
     try {
       console.log(`[generateAIQuestions] Calling Gemini AI for topic "${topicName}" (${num} questions)...`);
-      rawQuestions = await generateQuizQuestionsAI(topicName, num);
+      rawQuestions = await generateQuizQuestionsAI(topicName, num, topicDescription);
     } catch (aiErr) {
       console.warn('[Gemini AI Question Generation Error]', aiErr.message);
     }
 
     if (!rawQuestions || rawQuestions.length === 0) {
-      const questionTemplates = [
-        {
-          question_text: `What is the core performance characteristic of ${topicName}?`,
-          option_a: "O(1) Constant Lookup Time",
-          option_b: "O(n^2) Quadratic Processing",
-          option_c: "Asynchronous I/O Latency",
-          option_d: "Thread Concurrency Lock",
-          correct_option: "a"
-        },
-        {
-          question_text: `Which architectural design pattern is recommended for ${topicName}?`,
-          option_a: "Singleton Pattern",
-          option_b: "Factory Method",
-          option_c: "Event-Driven Microservices",
-          option_d: "Decorator Pattern",
-          correct_option: "c"
-        },
-        {
-          question_text: `What primary data structure handles operations in ${topicName}?`,
-          option_a: "Linked List",
-          option_b: "Hash Table / Map",
-          option_c: "Binary Search Tree",
-          option_d: "Queue",
-          correct_option: "b"
-        },
-        {
-          question_text: `What is the primary trade-off when scaling ${topicName}?`,
-          option_a: "Latency vs Throughput",
-          option_b: "Memory Space vs Time Complexity",
-          option_c: "CPU Cache vs Network Bandwidth",
-          option_d: "Read Lock vs Write Lock",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which mechanism ensures thread safety in ${topicName}?`,
-          option_a: "Mutex Locks & Semaphore Synchronization",
-          option_b: "Garbage Collector Triggers",
-          option_c: "Asynchronous Promises",
-          option_d: "Buffer Overflows",
-          correct_option: "a"
-        },
-        {
-          question_text: `What is the recommended error handling strategy in ${topicName}?`,
-          option_a: "Silent Error Suppression",
-          option_b: "Structured Exception Handling & Contextual Logging",
-          option_c: "Immediate Process Termination",
-          option_d: "Global Retry Loop without backoff",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which database indexing technique accelerates queries in ${topicName}?`,
-          option_a: "Linear Scan",
-          option_b: "B-Tree / B+ Tree Indexing",
-          option_c: "Randomized Hashing",
-          option_d: "Heap Tree Storage",
-          correct_option: "b"
-        },
-        {
-          question_text: `What is the role of caching in ${topicName} systems?`,
-          option_a: "To eliminate database writes permanently",
-          option_b: "To reduce read latency for frequently accessed data",
-          option_c: "To compress memory consumption",
-          option_d: "To enforce strict ACID properties",
-          correct_option: "b"
-        },
-        {
-          question_text: `Which protocols are commonly used for network communication in ${topicName}?`,
-          option_a: "HTTP/2, gRPC & WebSockets",
-          option_b: "FTP & Telnet",
-          option_c: "SMTP & POP3",
-          option_d: "DNS & DHCP",
-          correct_option: "a"
-        },
-        {
-          question_text: `What is the purpose of unit testing in ${topicName} development?`,
-          option_a: "To verify individual components in isolation",
-          option_b: "To measure production network speed",
-          option_c: "To compile binary executables",
-          option_d: "To manage cloud server provisioning",
-          correct_option: "a"
-        }
-      ];
-
-      rawQuestions = Array.from({ length: num }, (_, i) => {
-        const t = questionTemplates[i % questionTemplates.length];
-        return {
-          id: Date.now() + i,
-          text: t.question_text,
-          options: { a: t.option_a, b: t.option_b, c: t.option_c, d: t.option_d },
-          correct: t.correct_option
-        };
-      });
+      rawQuestions = buildFallbackQuestions(topicName, num, topicDescription, 0);
+    } else if (rawQuestions.length < num) {
+      const extra = buildFallbackQuestions(topicName, num - rawQuestions.length, topicDescription, rawQuestions.length);
+      rawQuestions = [...rawQuestions, ...extra];
+    } else if (rawQuestions.length > num) {
+      rawQuestions = rawQuestions.slice(0, num);
     }
 
     const formatted = rawQuestions.map((q, idx) => {
@@ -392,7 +348,7 @@ export const generateAIQuestions = async (req, res, next) => {
     if (!isAlreadyVerified) {
       try {
         console.log(`[generateAIQuestions] Auto-verifying ${formatted.length} questions for topic "${topicName}"...`);
-        verified = await verifyQuizQuestions(formatted, topicName);
+        verified = await verifyQuizQuestions(formatted, topicName, topicDescription);
       } catch (vErr) {
         console.warn('[generateAIQuestions Auto-verify warning]', vErr.message);
       }
@@ -410,11 +366,12 @@ export const generateAIQuestions = async (req, res, next) => {
  */
 export const verifyAIQuestions = async (req, res, next) => {
   try {
-    const { questions, topic } = req.body;
+    const { questions, topic, description, topics } = req.body;
+    const topicDesc = description || topics || "";
     if (!Array.isArray(questions) || questions.length === 0) {
       return sendError(res, 'questions array is required', 400);
     }
-    const verified = await verifyQuizQuestions(questions, topic || 'General');
+    const verified = await verifyQuizQuestions(questions, topic || 'General', topicDesc);
     return sendSuccess(res, 'Questions verified successfully', verified);
   } catch (error) {
     next(error);
@@ -464,43 +421,96 @@ export const getAssessmentResults = async (req, res, next) => {
     const { id } = req.params;
     let results = [];
     try {
-      results = await query(
-        `SELECT a.*, u.name as student_name, u.email as student_email
+      let assessTitle = '';
+      try {
+        const aRows = await query(`SELECT title FROM assessments WHERE id = ?`, [id]);
+        if (aRows && aRows.length > 0) assessTitle = aRows[0].title;
+      } catch (_) {}
+      if (!assessTitle) {
+        try {
+          const sRows = await query(`SELECT title FROM shared_content WHERE id = ?`, [id]);
+          if (sRows && sRows.length > 0) assessTitle = sRows[0].title;
+        } catch (_) {}
+      }
+
+      // Query assessment attempts strictly for this assessment and only completed/submitted attempts
+      const attempts = await query(
+        `SELECT a.*, 
+                COALESCE(u.name, 'Student') as student_name, 
+                COALESCE(u.email, '') as student_email
          FROM assessment_attempts a
          LEFT JOIN users u ON a.user_id = u.id
          WHERE a.assessment_id = ?
+           AND a.status != 'in_progress'
+           AND (a.submitted_at IS NOT NULL OR a.completed_at IS NOT NULL)
          ORDER BY a.id DESC`,
         [id]
       );
-    } catch (e) {
-      console.warn('[DB getAssessmentResults fallback]', e.message);
-    }
+      if (Array.isArray(attempts) && attempts.length > 0) {
+        results = attempts.map(a => {
+          const marks = a.marks_obtained !== undefined && a.marks_obtained !== null ? Number(a.marks_obtained) : (a.score !== undefined ? Number(a.score) : 0);
+          const total = a.total_marks ? Number(a.total_marks) : 100;
+          const pct = a.percentage !== undefined && a.percentage !== null ? parseFloat(a.percentage) : (total > 0 ? Math.round((marks / total) * 100) : 0);
+          return {
+            id: a.id,
+            user_id: a.user_id,
+            student_name: a.student_name,
+            student_email: a.student_email,
+            marks_obtained: marks,
+            score: marks,
+            total_marks: total,
+            percentage: pct,
+            status: pct >= 50 || a.status === 'passed' ? 'passed' : 'failed',
+            submitted_at: a.submitted_at || a.completed_at
+          };
+        });
+      }
 
-    if (!results || results.length === 0) {
+      // Also merge any submissions from student_quiz_completions
       try {
         const compResults = await query(
-          `SELECT c.id, c.user_id, c.quiz_id AS assessment_id, c.completed_at AS submitted_at,
-                  u.name AS student_name, u.email AS student_email
+          `SELECT c.id, c.user_id, c.quiz_id AS assessment_id, c.score_text, c.completed_at AS submitted_at,
+                  COALESCE(u.name, 'Student') AS student_name, 
+                  COALESCE(u.email, '') AS student_email
            FROM student_quiz_completions c
            LEFT JOIN users u ON c.user_id = u.id
-           WHERE c.quiz_id = ?
+           WHERE c.quiz_id = ? 
            ORDER BY c.id DESC`,
           [id]
         );
-        if (compResults && compResults.length > 0) {
-          results = compResults.map(r => ({
-            id: r.id,
-            user_id: r.user_id,
-            student_name: r.student_name || `Student #${r.user_id}`,
-            student_email: r.student_email || '',
-            marks_obtained: 100,
-            total_marks: 100,
-            percentage: 100,
-            status: 'passed',
-            submitted_at: r.submitted_at,
-          }));
+        if (Array.isArray(compResults) && compResults.length > 0) {
+          const existingUserIds = new Set(results.map(r => String(r.user_id)));
+          compResults.forEach(c => {
+            if (!existingUserIds.has(String(c.user_id))) {
+              let scoreVal = 100;
+              let totalVal = 100;
+              let pctVal = 100;
+              if (c.score_text && c.score_text.includes('/')) {
+                const parts = c.score_text.replace(/[^0-9/]/g, '').split('/');
+                if (parts.length === 2) {
+                  scoreVal = parseInt(parts[0], 10) * 10;
+                  totalVal = parseInt(parts[1], 10) * 10;
+                  pctVal = totalVal > 0 ? Math.round((scoreVal / totalVal) * 100) : 100;
+                }
+              }
+              results.push({
+                id: `comp-${c.id}`,
+                user_id: c.user_id,
+                student_name: c.student_name,
+                student_email: c.student_email,
+                marks_obtained: scoreVal,
+                score: scoreVal,
+                total_marks: totalVal,
+                percentage: pctVal,
+                status: pctVal >= 50 ? 'passed' : 'failed',
+                submitted_at: c.submitted_at || new Date().toISOString(),
+              });
+            }
+          });
         }
       } catch (_) {}
+    } catch (e) {
+      console.warn('[DB getAssessmentResults fallback]', e.message);
     }
 
     if (!results || results.length === 0) {
@@ -572,18 +582,40 @@ export const submitAssessment = async (req, res, next) => {
           const normSelected = optLetters[parseInt(rawSelected, 10)] !== undefined ? optLetters[parseInt(rawSelected, 10)] : rawSelected;
           const normCorrect = optLetters[parseInt(targetCorrect, 10)] !== undefined ? optLetters[parseInt(targetCorrect, 10)] : targetCorrect;
 
-          if (normSelected && normSelected === normCorrect) {
+          let isMatch = normSelected && (normSelected === normCorrect || rawSelected === normCorrect);
+
+          if (!isMatch) {
+            const optTextA = (q.option_a || q.options?.a || '').toString().trim().toLowerCase();
+            const optTextB = (q.option_b || q.options?.b || '').toString().trim().toLowerCase();
+            const optTextC = (q.option_c || q.options?.c || '').toString().trim().toLowerCase();
+            const optTextD = (q.option_d || q.options?.d || '').toString().trim().toLowerCase();
+
+            const correctText = normCorrect === 'a' ? optTextA : normCorrect === 'b' ? optTextB : normCorrect === 'c' ? optTextC : optTextD;
+            if (correctText && (rawSelected === correctText || normSelected === correctText)) {
+              isMatch = true;
+            }
+          }
+
+          if (isMatch) {
             correctCount++;
           }
         }
       });
-    } else {
-      // Fallback if no question schema found
-      correctCount = answers.filter(a => a && (a.selected_option || a.selectedOption || a.answer)).length;
     }
 
-    const totalMarks = totalQuestions * 10;
-    const marksObtained = correctCount * 10;
+    // Determine actual total marks from assessment definition if present
+    let assessmentTotalMarks = totalQuestions * 10;
+    try {
+      if (targetAssessmentId) {
+        const aRows = await query('SELECT total_marks FROM assessments WHERE id = ?', [targetAssessmentId]);
+        if (aRows && aRows.length > 0 && aRows[0].total_marks) {
+          assessmentTotalMarks = Number(aRows[0].total_marks);
+        }
+      }
+    } catch (_) {}
+
+    const totalMarks = assessmentTotalMarks;
+    const marksObtained = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * totalMarks) : 0;
     const percentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
     const status = percentage >= 50 ? 'passed' : 'failed';
 
@@ -604,25 +636,33 @@ export const submitAssessment = async (req, res, next) => {
       if (attemptId && attemptId !== 'attempts') {
         try {
           await query(
-            `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-            [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, correct_answers = ?, attempted_questions = ?, total_questions = ?, status = 'completed', completed_at = NOW(), submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObtained, marksObtained, totalMarks, percentage, correctCount, correctCount, totalQuestions, totalQuestions, attemptId]
           );
         } catch (_) {
           await query(
-            `UPDATE assessment_attempts SET score = ?, percentage = ?, correct_answers = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-            [marksObtained, percentage, correctCount, status, attemptId]
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, percentage = ?, correct_count = ?, status = 'completed', submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObtained, marksObtained, percentage, correctCount, attemptId]
           );
         }
       } else if (targetAssessmentId) {
         try {
           await query(
-            `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, score, marks_obtained, total_marks, percentage, correct_count, correct_answers, attempted_questions, total_questions, status, started_at, completed_at, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), NOW(), NOW())`,
+            [targetAssessmentId, userId, marksObtained, marksObtained, totalMarks, percentage, correctCount, correctCount, totalQuestions, totalQuestions]
           );
         } catch (_) {
           await query(
-            `INSERT INTO assessment_attempts (assessment_id, user_id, score, percentage, correct_answers, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-            [targetAssessmentId, userId, marksObtained, percentage, correctCount, status]
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, 'completed', NOW())`,
+            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount]
           );
         }
       }
@@ -656,7 +696,11 @@ export const getMyAttempts = async (req, res, next) => {
     try {
       if (userId) {
         attempts = await query(
-          `SELECT * FROM assessment_attempts WHERE user_id = ? ORDER BY id DESC`,
+          `SELECT * FROM assessment_attempts 
+           WHERE user_id = ? 
+             AND status != 'in_progress' 
+             AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL) 
+           ORDER BY id DESC`,
           [userId]
         );
         try {
@@ -669,7 +713,12 @@ export const getMyAttempts = async (req, res, next) => {
           }
         } catch (ce) {}
       } else {
-        attempts = await query(`SELECT * FROM assessment_attempts ORDER BY id DESC`);
+        attempts = await query(
+          `SELECT * FROM assessment_attempts 
+           WHERE status != 'in_progress' 
+             AND (submitted_at IS NOT NULL OR completed_at IS NOT NULL) 
+           ORDER BY id DESC`
+        );
       }
     } catch (e) {
       console.warn('[DB getMyAttempts fallback]', e.message);
@@ -707,12 +756,22 @@ export const startAssessment = async (req, res, next) => {
     let attemptId = Date.now();
 
     try {
-      const insertResult = await query(
-        `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
+      // Reuse existing in_progress attempt if already created for this user & assessment to avoid ghost duplicate attempts
+      const existing = await query(
+        `SELECT id FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? AND status = 'in_progress' ORDER BY id DESC LIMIT 1`,
         [id, userId]
-      );
-      if (insertResult && insertResult.insertId) {
-        attemptId = insertResult.insertId;
+      ).catch(() => []);
+
+      if (Array.isArray(existing) && existing.length > 0 && existing[0].id) {
+        attemptId = existing[0].id;
+      } else {
+        const insertResult = await query(
+          `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
+          [id, userId]
+        );
+        if (insertResult && insertResult.insertId) {
+          attemptId = insertResult.insertId;
+        }
       }
     } catch (e) {
       console.warn('[DB startAssessment fallback]', e.message);
@@ -777,6 +836,60 @@ export const markQuizCompleted = async (req, res, next) => {
       } catch (e2) {
         console.warn('[markQuizCompleted fallback]', e2.message);
       }
+    }
+
+    // Also sync completion into assessment_attempts for real-time submission tracking
+    try {
+      let resolvedAssessmentId = null;
+      if (quiz_id && !isNaN(Number(quiz_id)) && Number(quiz_id) > 0) {
+        resolvedAssessmentId = Number(quiz_id);
+      } else if (quiz_title) {
+        const matchingAssessments = await query(
+          `SELECT id, total_questions FROM assessments WHERE title = ? ORDER BY id DESC LIMIT 1`,
+          [quiz_title]
+        ).catch(() => []);
+        if (Array.isArray(matchingAssessments) && matchingAssessments.length > 0) {
+          resolvedAssessmentId = matchingAssessments[0].id;
+        }
+      }
+
+      if (resolvedAssessmentId) {
+        const totalQ = total ? Number(total) : 5;
+        const scoreQ = score !== undefined ? Number(score) : 0;
+        let totalM = totalQ * 10;
+        try {
+          const aRows = await query('SELECT total_marks FROM assessments WHERE id = ?', [resolvedAssessmentId]);
+          if (aRows && aRows.length > 0 && aRows[0].total_marks) {
+            totalM = Number(aRows[0].total_marks);
+          }
+        } catch (_) {}
+        const marksObt = totalQ > 0 ? Math.round((scoreQ / totalQ) * totalM) : 0;
+        const pct = totalQ > 0 ? Math.round((scoreQ / totalQ) * 100) : 0;
+        const status = pct >= 50 ? 'completed' : 'completed';
+
+        const existingAttempts = await query(
+          `SELECT id FROM assessment_attempts WHERE assessment_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1`,
+          [resolvedAssessmentId, userId]
+        ).catch(() => []);
+
+        if (Array.isArray(existingAttempts) && existingAttempts.length > 0) {
+          await query(
+            `UPDATE assessment_attempts 
+             SET score = ?, marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, correct_answers = ?, attempted_questions = ?, total_questions = ?, status = 'completed', completed_at = NOW(), submitted_at = NOW() 
+             WHERE id = ?`,
+            [marksObt, marksObt, totalM, pct, scoreQ, scoreQ, totalQ, totalQ, existingAttempts[0].id]
+          ).catch(() => {});
+        } else {
+          await query(
+            `INSERT INTO assessment_attempts 
+             (assessment_id, user_id, score, marks_obtained, total_marks, percentage, correct_count, correct_answers, attempted_questions, total_questions, status, started_at, completed_at, submitted_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', NOW(), NOW(), NOW())`,
+            [resolvedAssessmentId, userId, marksObt, marksObt, totalM, pct, scoreQ, scoreQ, totalQ, totalQ]
+          ).catch(() => {});
+        }
+      }
+    } catch (syncErr) {
+      console.warn('[markQuizCompleted attempt sync warning]', syncErr.message);
     }
 
     return sendSuccess(res, 'Quiz completion recorded', { user_id: userId, quiz_id, score_text: calculatedScoreText, marked: true });

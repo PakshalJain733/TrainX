@@ -55,16 +55,15 @@
 .overview-hero-avatar {
   width: 54px;
   height: 54px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0052cc 0%, #0066ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 82, 204, 0.35);
   flex-shrink: 0;
 }
 
@@ -89,7 +88,7 @@
 
 .overview-hero-description {
   font-size: 13.5px;
-  color: #e0f2fe;
+  color: #ffffff;
   max-width: 620px;
   line-height: 1.5;
   margin: 0;
@@ -542,4 +541,14 @@
   border-radius: 10px;
   border: 1px solid #ddd6fe;
   line-height: 1.5;
+}
+
+
+@media (max-width: 768px) {
+  .mentor-perf-search-wrap,
+  .mentor-perf-filter-select-wrap {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
 }

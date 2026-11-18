@@ -268,6 +268,29 @@
   gap: 6px;
 }
 
+.batch-enlarge-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.batch-enlarge-icon-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
 .batch-code-expiry-badge {
   display: inline-flex;
   align-items: center;
@@ -338,16 +361,17 @@
 .batch-copy-code-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   color: #334155;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .batch-copy-code-btn:hover {
@@ -365,10 +389,10 @@
 .batch-renew-code-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   border: none;
   border-radius: 6px;
@@ -376,12 +400,73 @@
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .batch-renew-code-btn:hover {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(220, 38, 38, 0.35);
+}
+
+.batch-renew-code-btn--active {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.batch-renew-code-btn--active:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: none !important;
+}
+
+.batch-enlarge-code-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.batch-enlarge-code-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.batch-inactive-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batch-inactive-card-btn:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(180, 83, 9, 0.1);
 }
 
 .batch-expired-hint {
@@ -1045,13 +1130,22 @@
   color: #4f46e5;
 }
 
+.admin-batch-select-empty {
+  padding: 12px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  user-select: none;
+}
+
 /* Active vs Inactive Batch Status Tabs - Modern Pill Bar */
 .batch-status-tabs-container {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 }
 
 .batch-status-tab-btn {

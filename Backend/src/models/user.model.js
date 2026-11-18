@@ -24,8 +24,8 @@ export const findUserByEmailOrMobile = async (identifier) => {
       cleanIdentifier.replace(/[^0-9]/g, ''),
     ].filter(Boolean))];
 
-  const conditions = ['(email IS NOT NULL AND LOWER(email) = ?)'];
-  const params = [emailIdentifier];
+  const conditions = ['(email IS NOT NULL AND (LOWER(TRIM(email)) = ? OR LOWER(email) = ? OR email = ?))'];
+  const params = [emailIdentifier, emailIdentifier, emailIdentifier];
 
   if (mobileIdentifiers.length > 0) {
     conditions.push(`mobile_number IN (${mobileIdentifiers.map(() => '?').join(', ')})`);
@@ -72,18 +72,24 @@ const SAFE_USER_FIELDS = [
   'mobile_number',
   'role',
   'college_id',
+  'college_name',
+  'college',
   'department',
   'department_id',
   'gender',
   'city',
   'emergency_contact',
   'target_track',
-  'two_factor_enabled',
-  'two_factor_reset',
   'is_active',
   'is_verified',
   'is_approved',
   'is_profile_updated',
+  'current_year',
+  'area_of_expertise',
+  'specialization',
+  'experience',
+  'avatar_url',
+  'bio',
   'created_at',
   'updated_at',
 ];
@@ -241,6 +247,94 @@ export const findCollegeByEmailDomain = async (email) => {
   return null;
 };
 
+/**
+ * Resolves the college for any user / student from the database.
+ * Tries: user.college_id -> student.college_id -> batch.college_id -> training_program.college_id -> email domain -> secure_code_requests -> fallback active college
+ */
+export const getCollegeForUser = async (userId, userObj = null, studentProfileObj = null) => {
+  try {
+    let collegeId = userObj?.college_id || studentProfileObj?.college_id || null;
+
+    // 1. If collegeId exists, query colleges table directly
+    if (collegeId) {
+      const rows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [collegeId]);
+      if (rows && rows.length > 0) {
+        return rows[0];
+      }
+    }
+
+    // 2. Check users and students table in DB if not provided
+    if (!collegeId && userId) {
+      const uRows = await query('SELECT college_id, email FROM users WHERE id = ?', [userId]);
+      if (uRows && uRows.length > 0 && uRows[0].college_id) {
+        const cRows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [uRows[0].college_id]);
+        if (cRows && cRows.length > 0) return cRows[0];
+      }
+      const sRows = await query('SELECT college_id, batch_id FROM students WHERE user_id = ?', [userId]);
+      if (sRows && sRows.length > 0 && sRows[0].college_id) {
+        const cRows = await query('SELECT id, name, code, domain, location FROM colleges WHERE id = ?', [sRows[0].college_id]);
+        if (cRows && cRows.length > 0) return cRows[0];
+      }
+    }
+
+    // 3. Check student batch assignment or training enrollments
+    if (userId) {
+      const bRows = await query(
+        `SELECT c.id, c.name, c.code, c.domain, c.location FROM batches b
+         JOIN colleges c ON b.college_id = c.id
+         WHERE b.id = (SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL LIMIT 1)
+            OR b.id = (SELECT batch_id FROM training_enrollments WHERE student_user_id = ? AND batch_id IS NOT NULL ORDER BY id DESC LIMIT 1)
+         LIMIT 1`,
+        [userId, userId]
+      );
+      if (bRows && bRows.length > 0) return bRows[0];
+
+      const tpRows = await query(
+        `SELECT c.id, c.name, c.code, c.domain, c.location FROM training_enrollments te
+         JOIN training_programs tp ON tp.id = te.program_id
+         JOIN colleges c ON tp.college_id = c.id
+         WHERE te.student_user_id = ? AND tp.college_id IS NOT NULL
+         ORDER BY te.id DESC LIMIT 1`,
+        [userId]
+      );
+      if (tpRows && tpRows.length > 0) return tpRows[0];
+    }
+
+    // 4. Try matching college by email domain
+    const email = userObj?.email || (userId ? (await query('SELECT email FROM users WHERE id = ?', [userId]))?.[0]?.email : null);
+    if (email) {
+      const cDomain = await findCollegeByEmailDomain(email);
+      if (cDomain) return cDomain;
+    }
+
+    // 5. Try secure_code_requests
+    if (email) {
+      const scr = await query(
+        `SELECT college_name FROM secure_code_requests WHERE LOWER(email) = LOWER(?) AND college_name IS NOT NULL AND status != 'Rejected' ORDER BY id DESC LIMIT 1`,
+        [email]
+      );
+      if (scr && scr.length > 0 && scr[0].college_name) {
+        const reqName = scr[0].college_name.trim();
+        const cMatch = await query(
+          'SELECT id, name, code, domain, location FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+          [reqName, reqName]
+        );
+        if (cMatch && cMatch.length > 0) return cMatch[0];
+        return { id: null, name: reqName, code: '' };
+      }
+    }
+
+    // 6. Fallback to active college in DB
+    const defCol = await query("SELECT id, name, code, domain, location FROM colleges WHERE LOWER(status) = 'active' OR status IS NULL ORDER BY id ASC LIMIT 1");
+    if (defCol && defCol.length > 0) return defCol[0];
+
+    return null;
+  } catch (err) {
+    console.warn('[User Model Warning] getCollegeForUser error:', err.message);
+    return null;
+  }
+};
+
 export const getDepartmentsByEmailDomain = async (email) => {
   try {
     let college = null;
@@ -304,25 +398,25 @@ export const createUser = async ({
   department_id = null,
   password = '',
   password_hash = '',
-  two_factor_secret = null,
-  is_active = true,
+  is_active = false,
   is_verified = 0,
-  is_approved = 0,
+  is_approved = 1,
 }) => {
   const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim() : null;
   const normalizedMobile = typeof mobile_number === 'string' && mobile_number.trim() ? mobile_number.trim() : null;
   const normalizedDept = typeof department === 'string' && department.trim() ? department.trim() : null;
   const normalizedDeptId = department_id ? parseInt(department_id, 10) : null;
-  const normalizedSecret = typeof two_factor_secret === 'string' && two_factor_secret.trim() ? two_factor_secret.trim() : null;
   const passwordValue = password || password_hash || '';
   const hashedPassword = passwordValue ? await hashPasswordValue(passwordValue) : '';
   const validCollegeId = await getValidCollegeId(college_id);
-  const activeValue = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
   const verifiedValue = is_verified === true || is_verified === 1 || String(is_verified) === '1' ? 1 : 0;
+  const requestedActive = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
+  // Non-super_admin users remain inactive until email activation (is_verified = 1) completes
+  const activeValue = role === ROLES.SUPER_ADMIN || (requestedActive === 1 && verifiedValue === 1) ? 1 : 0;
   const approvedValue = is_approved === true || is_approved === 1 || String(is_approved) === '1' ? 1 : 0;
   const res = await query(
-    'INSERT INTO users (name, email, mobile_number, role, college_id, department, department_id, password_hash, two_factor_secret, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [name, normalizedEmail, normalizedMobile, role, validCollegeId, normalizedDept, normalizedDeptId, hashedPassword, normalizedSecret, activeValue, verifiedValue, approvedValue]
+    'INSERT INTO users (name, email, mobile_number, role, college_id, department, department_id, password_hash, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, normalizedEmail, normalizedMobile, role, validCollegeId, normalizedDept, normalizedDeptId, hashedPassword, activeValue, verifiedValue, approvedValue]
   );
   if (res && res.insertId) {
     if ((role === 'coordinator' || String(role).toLowerCase().includes('coordinator')) && normalizedDeptId) {
@@ -345,7 +439,6 @@ export const createUser = async ({
       is_active: activeValue,
       is_verified: verifiedValue,
       is_approved: approvedValue,
-      two_factor_secret: normalizedSecret,
     };
   }
   throw new Error('Failed to create user in MySQL database');
@@ -369,46 +462,6 @@ export const updateUser = async (userId, updateData) => {
   if (fields.length > 0) {
     values.push(numId);
     await query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
-  }
-};
-
-export const updateUserTwoFactorSecret = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 1 WHERE id = ?', [secret, numId]);
-};
-
-export const resetUserTwoFactorSecret = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 0 WHERE id = ?', [secret, numId]);
-  } catch (_) {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
-  }
-};
-
-export const triggerUserTwoFactorReset = async (userId, secret) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
-  } catch (err) {
-    if (err.message && err.message.includes("Unknown column 'two_factor_reset'")) {
-      try {
-        await query('ALTER TABLE users ADD COLUMN two_factor_reset BOOLEAN DEFAULT FALSE');
-        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
-      } catch (alterErr) {
-        console.warn(`[User Model] Failed to add two_factor_reset column: ${alterErr.message}`);
-        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
-      }
-    }
-  }
-};
-
-export const enableTwoFactorForUser = async (userId) => {
-  const numId = parseInt(userId, 10);
-  try {
-    await query('UPDATE users SET two_factor_enabled = 1, two_factor_reset = 0 WHERE id = ?', [numId]);
-  } catch (_) {
-    await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);
   }
 };
 
@@ -531,16 +584,32 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
   const placeholders = identifierCandidates.map(() => '?').join(', ');
   try {
     const results = await query(
-      `SELECT id FROM otps
-       WHERE email IN (${placeholders}) AND otp = ? AND expires_at > NOW()
+      `SELECT id, otp, COALESCE(attempts, 0) as attempts FROM otps
+       WHERE email IN (${placeholders}) AND expires_at > NOW()
        ORDER BY id DESC LIMIT 1`,
-      [...identifierCandidates, cleanOtp]
+      identifierCandidates
     );
-    if (results && results.length > 0) {
-      const matchedId = results[0].id;
-      await query('DELETE FROM otps WHERE id = ?', [matchedId]).catch(() => { });
+    if (!results || results.length === 0) {
+      return false;
+    }
+
+    const record = results[0];
+    if (record.attempts >= 5) {
+      // Invalidate locked OTP record due to brute-force attempts
+      await query('DELETE FROM otps WHERE id = ?', [record.id]).catch(() => { });
+      return false;
+    }
+
+    if (String(record.otp).trim() === cleanOtp) {
+      await query('DELETE FROM otps WHERE id = ?', [record.id]).catch(() => { });
       return true;
     }
+
+    // Increment failed attempt counter
+    try {
+      await query('UPDATE otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+    } catch (_) {}
+
     return false;
   } catch (_) {
     return false;
@@ -690,6 +759,56 @@ export const invalidateRegistrationOtps = async (identifier) => {
 };
 
 
+
+/**
+ * Resolves all related college IDs for an institution alias (e.g. PVPPCOE & VPPCOE)
+ * while preserving strict tenant isolation against different institutions.
+ */
+export const getRelatedCollegeIds = async (collegeId) => {
+  if (!collegeId) return [];
+  const targetId = parseInt(collegeId, 10);
+  if (isNaN(targetId)) return [];
+
+  try {
+    const rows = await query('SELECT id, name, code, domain FROM colleges');
+    if (!rows || !Array.isArray(rows) || rows.length === 0) return [targetId];
+
+    const target = rows.find((r) => r.id === targetId);
+    if (!target) return [targetId];
+
+    const tCode = String(target.code || '').trim().toLowerCase();
+    const tName = String(target.name || '').trim().toLowerCase();
+
+    // Match the target college or duplicate/alias records for the same institution (e.g., PVPPCOE & VPPCOE / Vasant)
+    const matched = rows.filter((r) => {
+      if (r.id === targetId) return true;
+      const c = String(r.code || '').trim().toLowerCase();
+      const n = String(r.name || '').trim().toLowerCase();
+      if (tCode && c && tCode === c) return true;
+      if (tName && n && tName === n) return true;
+      const isPvppA = tCode.includes('pvpp') || tCode.includes('vpp') || tName.includes('vasant');
+      const isPvppB = c.includes('pvpp') || c.includes('vpp') || n.includes('vasant');
+      if (isPvppA && isPvppB) return true;
+      return false;
+    });
+
+    const ids = matched.map((m) => m.id);
+    return ids.length > 0 ? ids : [targetId];
+  } catch (_) {
+    return [targetId];
+  }
+};
+
+/**
+ * Checks whether two college IDs represent the same institution (including aliases)
+ */
+export const isSameCollegeOrAlias = async (collegeIdA, collegeIdB) => {
+  if (!collegeIdA || !collegeIdB) return false;
+  if (String(collegeIdA) === String(collegeIdB)) return true;
+  const relatedA = await getRelatedCollegeIds(collegeIdA);
+  return relatedA.includes(parseInt(collegeIdB, 10));
+};
+
 /**
  * Get all users from MySQL DB with College Isolation filtering support
  * @param {number|null} collegeId - If provided, restricts to only this college
@@ -697,31 +816,54 @@ export const invalidateRegistrationOtps = async (identifier) => {
 export const getAllUsersModel = async (collegeId = null, department = null) => {
   let sql = `
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.created_at,
-           u.two_factor_enabled, u.two_factor_secret, u.two_factor_reset,
            c.name as college_name,
            s.roll_number,
-           COALESCE(s.department_id, u.department_id) as department_id,
+           COALESCE(s.department_id, u.department_id, d.id) as department_id,
            s.batch_id,
-           COALESCE(s.department, u.department) as department,
+           COALESCE(s.department, u.department, d.name) as department,
            s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
            COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
            COALESCE(s.target_track, u.target_track) as target_track,
-           COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated
+           COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated,
+           COALESCE(m_u.id, msa.mentor_id, s.mentor_id, u.mentor_id, ma.mentor_id) as mentor_id,
+           COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name) as mentor_name,
+           COALESCE(m_u.email, ma.mentor_email) as mentor_email,
+           (CASE 
+             WHEN (COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name) IS NOT NULL 
+                   AND TRIM(COALESCE(m_u.name, s.mentor_name, u.mentor_name, ma.mentor_name)) != '')
+             THEN 'Already Assigned'
+             ELSE 'Available'
+           END) as mentor_assignment_status
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON (u.department_id = d.id OR s.department_id = d.id)
+    LEFT JOIN mentor_student_assignments msa ON msa.student_id = u.id
+    LEFT JOIN users m_u ON msa.mentor_id = m_u.id
+    LEFT JOIN (
+      SELECT student_id, MAX(mentor_id) as mentor_id, MAX(mentor_name) as mentor_name, MAX(mentor_email) as mentor_email
+      FROM mentor_assignments
+      GROUP BY student_id
+    ) ma ON (ma.student_id COLLATE utf8mb4_unicode_ci = CAST(u.id AS CHAR) COLLATE utf8mb4_unicode_ci OR ma.student_id COLLATE utf8mb4_unicode_ci = CAST(s.id AS CHAR) COLLATE utf8mb4_unicode_ci)
     WHERE 1=1
   `;
   const params = [];
   if (collegeId) {
-    sql += ' AND u.college_id = ?';
-    params.push(collegeId);
+    const relatedIds = await getRelatedCollegeIds(collegeId);
+    if (relatedIds.length === 1) {
+      sql += ' AND (u.college_id = ? OR (u.college_id IS NULL AND (s.college_id = ? OR u.role = \'trainer\')))';
+      params.push(relatedIds[0], relatedIds[0]);
+    } else if (relatedIds.length > 1) {
+      const placeholders = relatedIds.map(() => '?').join(',');
+      sql += ` AND (u.college_id IN (${placeholders}) OR (u.college_id IS NULL AND (s.college_id IN (${placeholders}) OR u.role = 'trainer')))`;
+      params.push(...relatedIds, ...relatedIds);
+    }
   }
   if (department && department !== 'all' && department !== 'All') {
     const cleanDept = String(department).trim().toLowerCase();
-    sql += ' AND (LOWER(COALESCE(s.department, u.department)) LIKE ? OR LOWER(COALESCE(s.department, u.department)) = ? OR CAST(COALESCE(s.department_id, u.department_id) AS CHAR) = ?)';
+    sql += ' AND (LOWER(COALESCE(s.department, u.department, d.name)) LIKE ? OR LOWER(COALESCE(s.department, u.department, d.name)) = ? OR CAST(COALESCE(s.department_id, u.department_id, d.id) AS CHAR) = ?)';
     params.push(`%${cleanDept}%`, cleanDept, cleanDept);
   }
   sql += ' ORDER BY u.id DESC';
@@ -735,12 +877,12 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
  */
 export const getPendingUsersModel = async (collegeId = null) => {
   let sql = `
-    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.two_factor_enabled, u.created_at,
+    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.is_verified, u.is_approved, u.created_at,
            c.name as college_name,
            s.roll_number,
-           COALESCE(s.department_id, u.department_id) as department_id,
+           COALESCE(s.department_id, u.department_id, d.id) as department_id,
            s.batch_id,
-           COALESCE(s.department, u.department) as department,
+           COALESCE(s.department, u.department, d.name) as department,
            s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
@@ -749,15 +891,22 @@ export const getPendingUsersModel = async (collegeId = null) => {
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN departments d ON (u.department_id = d.id OR s.department_id = d.id)
     WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false OR u.is_approved = 0)
       AND u.role != 'super_admin'
       AND (u.password_hash IS NOT NULL AND u.password_hash != '')
-      AND (u.is_verified = 1 OR u.two_factor_enabled = 1)
   `;
   const params = [];
   if (collegeId) {
-    sql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
-    params.push(collegeId);
+    const relatedIds = await getRelatedCollegeIds(collegeId);
+    if (relatedIds.length === 1) {
+      sql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
+      params.push(relatedIds[0]);
+    } else if (relatedIds.length > 1) {
+      const placeholders = relatedIds.map(() => '?').join(',');
+      sql += ` AND (u.college_id IN (${placeholders}) OR u.college_id IS NULL)`;
+      params.push(...relatedIds);
+    }
   }
   sql += ' ORDER BY u.id DESC';
 
@@ -799,9 +948,14 @@ export const updateUserModel = async (id, data) => {
     is_profile_updated,
     is_verified,
     is_approved,
-    two_factor_secret,
-    two_factor_enabled,
-    two_factor_reset,
+    current_year,
+    currentYear,
+    area_of_expertise,
+    areaOfExpertise,
+    specialization,
+    avatar_url,
+    avatarUrl,
+    bio,
   } = data;
 
   const rollVal = roll_number || rollNo || roll_no || null;
@@ -815,6 +969,12 @@ export const updateUserModel = async (id, data) => {
   const cityVal = city !== undefined ? city : null;
   const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
   const trackVal = target_track !== undefined ? target_track : (track !== undefined ? track : null);
+  const specVal = specialization !== undefined ? specialization : (trackVal || null);
+  const currentYearVal = data.current_year !== undefined ? data.current_year : (data.currentYear !== undefined ? data.currentYear : null);
+  const areaOfExpVal = data.area_of_expertise !== undefined ? data.area_of_expertise : (data.areaOfExpertise !== undefined ? data.areaOfExpertise : (specVal || null));
+  const avatarVal = avatar_url !== undefined ? avatar_url : (avatarUrl !== undefined ? avatarUrl : null);
+  const bioVal = bio !== undefined ? bio : null;
+
   const nameVal = name || null;
   const emailVal = email || null;
   const roleVal = role || null;
@@ -825,55 +985,104 @@ export const updateUserModel = async (id, data) => {
   const isApprovedVal = is_approved !== undefined ? (is_approved ? 1 : 0) : null;
   const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : null;
 
-  const deptVal = department !== undefined ? (department || null) : null;
-  const deptIdVal = department_id !== undefined ? (department_id ? parseInt(department_id, 10) : null) : null;
+  // Resolve user current state from DB
+  const [currentUserRow] = await query('SELECT id, role, college_id, department, department_id FROM users WHERE id = ?', [numId]);
+  const effectiveRole = String(roleVal || currentUserRow?.role || '').toLowerCase();
+  const effectiveCollegeId = validCollegeId || currentUserRow?.college_id || 1;
+
+  let resolvedDeptId = department_id !== undefined ? (department_id ? parseInt(department_id, 10) : null) : (currentUserRow?.department_id || null);
+  let resolvedDeptVal = department !== undefined ? (department || null) : (currentUserRow?.department || null);
+  let resolvedDeptCode = null;
+  let resolvedDeptName = null;
+
+  if (department !== undefined || department_id !== undefined) {
+    const searchVal = department !== undefined && department !== null ? String(department).trim() : null;
+    const searchId = department_id !== undefined && department_id !== null && department_id !== '' ? parseInt(department_id, 10) : null;
+
+    if (searchId || searchVal) {
+      const deptRows = await query(
+        `SELECT id, name, code, college_id FROM departments
+         WHERE (college_id = ? OR college_id IS NULL)
+           AND (
+             (? IS NOT NULL AND id = ?)
+             OR (? IS NOT NULL AND (
+               code = ? OR name = ?
+               OR LOWER(TRIM(code)) = LOWER(TRIM(?))
+               OR LOWER(TRIM(name)) = LOWER(TRIM(?))
+               OR LOWER(TRIM(code)) LIKE LOWER(CONCAT('%', ?, '%'))
+               OR LOWER(TRIM(name)) LIKE LOWER(CONCAT('%', ?, '%'))
+             ))
+           )
+         ORDER BY (college_id = ?) DESC, id ASC LIMIT 1`,
+        [
+          effectiveCollegeId,
+          searchId, searchId,
+          searchVal, searchVal, searchVal, searchVal, searchVal, searchVal, searchVal,
+          effectiveCollegeId
+        ]
+      );
+      if (deptRows && deptRows.length > 0) {
+        const d = deptRows[0];
+        resolvedDeptId = d.id;
+        resolvedDeptCode = d.code;
+        resolvedDeptName = d.name;
+        if (searchVal && searchVal.toLowerCase() === (d.name || '').toLowerCase()) {
+          resolvedDeptVal = d.name;
+        } else if (searchVal && searchVal.toLowerCase() === (d.code || '').toLowerCase()) {
+          resolvedDeptVal = d.code;
+        } else {
+          resolvedDeptVal = d.code || d.name;
+        }
+      }
+    }
+  }
 
   await query(
-    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), department = COALESCE(?, department), department_id = COALESCE(?, department_id), is_active = COALESCE(?, is_active), is_verified = COALESCE(?, is_verified), is_approved = COALESCE(?, is_approved), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
-    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, deptVal, deptIdVal, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal, isProfileUpdatedVal, numId]
+    `UPDATE users SET
+       name = COALESCE(?, name),
+       email = COALESCE(?, email),
+       mobile_number = COALESCE(?, mobile_number),
+       password_hash = COALESCE(?, password_hash),
+       role = COALESCE(?, role),
+       college_id = COALESCE(?, college_id),
+       department = COALESCE(?, department),
+       department_id = COALESCE(?, department_id),
+       is_active = COALESCE(?, is_active),
+       is_verified = COALESCE(?, is_verified),
+       is_approved = COALESCE(?, is_approved),
+       gender = COALESCE(?, gender),
+       city = COALESCE(?, city),
+       emergency_contact = COALESCE(?, emergency_contact),
+       target_track = COALESCE(?, target_track),
+       is_profile_updated = COALESCE(?, is_profile_updated),
+       current_year = COALESCE(?, current_year),
+       area_of_expertise = COALESCE(?, area_of_expertise),
+       specialization = COALESCE(?, specialization),
+       avatar_url = COALESCE(?, avatar_url),
+       bio = COALESCE(?, bio)
+     WHERE id = ?`,
+    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, resolvedDeptVal, resolvedDeptId, isActiveVal, isVerifiedVal, isApprovedVal, genderVal, cityVal, emergencyVal, trackVal || specVal, isProfileUpdatedVal, currentYearVal, areaOfExpVal, areaOfExpVal || specVal, avatarVal, bioVal, numId]
   );
 
-  if (deptIdVal && (roleVal === 'coordinator' || (!roleVal && data.role === 'coordinator'))) {
+  if (resolvedDeptId && (effectiveRole === 'coordinator' || effectiveRole.includes('coordinator'))) {
     try {
       await query(
         'INSERT INTO coordinator_departments (coordinator_id, department_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE department_id = VALUES(department_id)',
-        [numId, deptIdVal]
+        [numId, resolvedDeptId]
       );
     } catch (_) { }
   }
 
-  if (two_factor_secret !== undefined) {
+  if (data.experience !== undefined) {
     try {
-      await query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [two_factor_secret, numId]);
-    } catch (_) { }
-  }
-  if (two_factor_enabled !== undefined) {
-    try {
-      await query('UPDATE users SET two_factor_enabled = ? WHERE id = ?', [two_factor_enabled ? 1 : 0, numId]);
-    } catch (_) { }
-  }
-  if (two_factor_reset !== undefined) {
-    try {
-      await query('UPDATE users SET two_factor_reset = ? WHERE id = ?', [two_factor_reset ? 1 : 0, numId]);
+      await query('UPDATE users SET experience = ? WHERE id = ?', [data.experience, numId]);
     } catch (_) { }
   }
 
-  if (
-    rollVal !== undefined ||
-    department !== undefined ||
-    department_id !== undefined ||
-    batch_id !== undefined ||
-    year !== undefined ||
-    division !== undefined ||
-    semester !== undefined ||
-    cgpa !== undefined ||
-    skills !== undefined ||
-    genderVal !== null ||
-    cityVal !== null ||
-    emergencyVal !== null ||
-    trackVal !== null ||
-    is_profile_updated !== undefined
-  ) {
+  
+
+  // Only manage students table if this user is actually a student!
+  if (effectiveRole === 'student') {
     const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
     if (existing && existing.length > 0) {
       try {
@@ -899,10 +1108,10 @@ export const updateUserModel = async (id, data) => {
           [
             rollVal,
             phoneVal,
-            validCollegeId,
-            department_id || null,
+            effectiveCollegeId,
+            resolvedDeptId,
             batch_id || null,
-            department || null,
+            resolvedDeptVal,
             year || null,
             division || null,
             semester || null,
@@ -937,10 +1146,10 @@ export const updateUserModel = async (id, data) => {
            WHERE user_id = ?`,
           [
             rollVal,
-            validCollegeId,
-            department_id || null,
+            effectiveCollegeId,
+            resolvedDeptId,
             batch_id || null,
-            department || null,
+            resolvedDeptVal,
             year || null,
             division || null,
             semester || null,
@@ -961,14 +1170,14 @@ export const updateUserModel = async (id, data) => {
           `INSERT INTO students 
             (user_id, college_id, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', phoneVal, department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          [numId, effectiveCollegeId, resolvedDeptId, batch_id || null, rollVal || '', phoneVal, resolvedDeptVal || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
         );
       } catch (_) {
         await query(
           `INSERT INTO students 
             (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          [numId, effectiveCollegeId, resolvedDeptId, batch_id || null, rollVal || '', resolvedDeptVal || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
         );
       }
     }
@@ -977,6 +1186,10 @@ export const updateUserModel = async (id, data) => {
   return {
     id: numId,
     ...data,
+    department: resolvedDeptVal,
+    department_id: resolvedDeptId,
+    departmentCode: resolvedDeptCode,
+    departmentName: resolvedDeptName,
     gender: genderVal,
     city: cityVal,
     emergency_contact: emergencyVal,
@@ -992,16 +1205,20 @@ export const deleteUserModel = async (id) => {
 };
 
 export const getUserStatsModel = async (collegeId = null) => {
-  const users = await getAllUsersModel(collegeId);
-  const totalUsers = users.length;
-  const students = users.filter((u) => u.role === ROLES.STUDENT).length;
-  const mentors = users.filter((u) => u.role === ROLES.MENTOR).length;
-  const coordinators = users.filter((u) => u.role === ROLES.COORDINATOR).length;
-  const admins = users.filter((u) => u.role === ROLES.COLLEGE_ADMIN || u.role === ROLES.SUPER_ADMIN).length;
+  const allUsers = await getAllUsersModel(collegeId);
+  // Total registered non-admin users belonging to this college
+  const registeredUsers = allUsers.filter((u) => !String(u.role || '').toLowerCase().includes('admin'));
+  const students = registeredUsers.filter((u) => u.role === ROLES.STUDENT).length;
+  const trainers = registeredUsers.filter((u) => u.role === ROLES.TRAINER).length;
+  const mentors = registeredUsers.filter((u) => u.role === ROLES.MENTOR).length;
+  const coordinators = registeredUsers.filter((u) => u.role === ROLES.COORDINATOR).length;
+  const totalUsers = students + trainers + mentors + coordinators;
+  const admins = allUsers.filter((u) => u.role === ROLES.COLLEGE_ADMIN || u.role === ROLES.SUPER_ADMIN).length;
 
   return {
     totalUsers,
     students,
+    trainers,
     mentors,
     coordinators,
     admins,

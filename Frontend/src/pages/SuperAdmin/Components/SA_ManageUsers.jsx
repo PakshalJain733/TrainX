@@ -105,6 +105,27 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [dailyTopicsList, setDailyTopicsList] = useState([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
+  const [trainers, setTrainers] = useState([]);
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setLoadingTrainers(true);
+    apiFetch("/admin/users?role=trainer")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list)) {
+          const onlyTrainers = list.filter(u => String(u.role || "").toLowerCase() === "trainer");
+          setTrainers(onlyTrainers);
+        }
+      })
+      .catch((err) => {
+        console.warn("[Fetch Trainers Error]", err);
+        const fallback = (users || []).filter(u => String(u.role || "").toLowerCase() === "trainer");
+        setTrainers(fallback);
+      })
+      .finally(() => setLoadingTrainers(false));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -187,10 +208,17 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
   if (!isOpen) return null;
 
-  const trainersList = users.filter(u => {
-    const r = (u.role || "").toLowerCase();
-    return r.includes("mentor") || r.includes("faculty") || r.includes("trainer") || r.includes("admin");
-  });
+  const trainerOptions = trainers.map((t) => ({
+    value: t.name,
+    label: `${t.name} (Trainer)`,
+  }));
+
+  if (currentTrainer && !trainerOptions.some(o => o.value === currentTrainer)) {
+    trainerOptions.unshift({
+      value: currentTrainer,
+      label: `${currentTrainer} (Assigned)`,
+    });
+  }
 
   const computeAutoStatus = (dateStr, fallbackStatus) => {
     if (!dateStr) return fallbackStatus || "Scheduled";
@@ -406,19 +434,20 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                 </div>
 
                 {isEditingTrainer ? (
-                  <MuSelect
-                    value={currentTrainer}
-                    options={[
-                      ...trainersList.map(t => ({ value: t.name, label: `${t.name} (${t.role || 'Faculty'})` })),
-                      { value: "Rahul Verma", label: "Rahul Verma (DSA Specialist)" },
-                      { value: "Dr. Priya Sharma", label: "Dr. Priya Sharma (React Architect)" },
-                      { value: "Prof. Anish Deshmukh", label: "Prof. Anish Deshmukh (Faculty)" },
-                      { value: "Er. Amit Kulkarni", label: "Er. Amit Kulkarni (ML Engineer)" }
-                    ]}
-                    onChange={val => setCurrentTrainer(val)}
-                    placeholder="Select trainer..."
-                    icon={UserCheck}
-                  />
+                  <>
+                    <MuSelect
+                      value={currentTrainer}
+                      options={trainerOptions}
+                      onChange={val => setCurrentTrainer(val)}
+                      placeholder={loadingTrainers ? "Loading trainers..." : (trainerOptions.length === 0 ? "No trainers available" : "Select trainer...")}
+                      icon={UserCheck}
+                    />
+                    {!loadingTrainers && trainers.length === 0 && (
+                      <small style={{ color: "#64748b", marginTop: "4px", display: "block", fontSize: "11px" }}>
+                        No trainers registered yet. Create a user with role "Trainer" in User Management.
+                      </small>
+                    )}
+                  </>
                 ) : (
                   <div className="fs-portal-preassigned-box">
                     <span className="fs-portal-flex-center-gap"><User size={15} className="fs-portal-icon-indigo" /> {currentTrainer}</span>
@@ -736,7 +765,13 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               <label className="fs-portal-label">Mentor / Leader</label>
               <MuSelect
                 value={selectedMentor}
-                options={mentors.map(m => ({ value: m.name, label: `${m.name} (${m.department || 'Computer Science'})` }))}
+                options={mentors.map(m => {
+                  const dept = (m.department || m.dept || "").trim();
+                  return {
+                    value: m.name,
+                    label: dept ? `${m.name} (${dept})` : m.name
+                  };
+                })}
                 onChange={val => setSelectedMentor(val)}
                 placeholder="-- Choose Mentor --"
                 icon={UserCheck}
@@ -919,7 +954,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                             {student.roll_number || student.rollNo || `ID-${student.id}`}
                           </span>
                           <span>·</span>
-                          <span style={{ fontWeight: 600, color: '#475569' }}>{student.department || 'Computer Science'}</span>
+                          <span style={{ fontWeight: 600, color: '#475569' }}>{student.department || '—'}</span>
                         </div>
                       </div>
                     </label>
@@ -997,6 +1032,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           const dept = String(row["Department"] || row["department"] || row["dept"] || "COMPS").trim();
           const year = String(row["Academic Year"] || row["year"] || row["Year"] || "FE").trim();
           const div = String(row["Division"] || row["division"] || row["div"] || "A").trim();
+          const password = String(row["Password"] || row["password"] || "").trim();
 
           let isValid = true;
           let issue = "";
@@ -1017,6 +1053,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
             department: dept,
             year,
             division: div,
+            ...(password ? { password } : {}),
             isValid,
             issue,
           };
@@ -1302,9 +1339,8 @@ export default function ManageUsers() {
         if (res && res.data && Array.isArray(res.data)) {
           const adminOnly = res.data.filter(u => {
             const r = String(u.role || '').toLowerCase();
-            const isVerifiedOr2fa = u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-                                    u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-            return (r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin')) && isVerifiedOr2fa;
+            const isVerified = u.is_verified === 1 || u.is_verified === true || u.is_verified === "1";
+            return (r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin')) && isVerified;
           });
           setPendingUsersList(adminOnly);
           setPendingUsersCount(adminOnly.length);
@@ -1327,8 +1363,7 @@ export default function ManageUsers() {
           : (Array.isArray(pendingRes) ? pendingRes : []);
 
         const pendingData = rawPending.filter(u => {
-          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1";
         });
 
         setPendingUsersList(pendingData);
@@ -1364,7 +1399,7 @@ export default function ManageUsers() {
               college: u.college_name || u.college || 'Direct / Institutional',
               designation: u.designation || (u.role === 'hod' ? 'Head of Department' : u.role === 'college_admin' ? 'College Admin' : 'Institutional Admin'),
               date: u.created_at ? (typeof u.created_at === 'string' ? u.created_at.split('T')[0] : new Date(u.created_at).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
-              status: u.is_active ? 'Approved' : 'Pending'
+              status: (u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1') ? 'Approved' : 'Pending'
             })));
           }
 
@@ -1375,7 +1410,7 @@ export default function ManageUsers() {
               email: u.email,
               phone: u.mobile_number || u.phone || '',
               college: u.college_name || u.college || 'Partner Institution',
-              department: u.department_name || u.department || 'Computer Engineering',
+              department: u.department_name || u.department || '—',
               status: u.is_active ? 'Active' : 'Inactive'
             })));
           }
@@ -1560,11 +1595,28 @@ export default function ManageUsers() {
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
   const [codeCollege, setCodeCollege] = useState('Partner Campus');
+  const [codeAdminEmail, setCodeAdminEmail] = useState('');
+  const [codeAdminName, setCodeAdminName] = useState('');
   const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
   const [generatedCodesList, setGeneratedCodesList] = useState([]);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
+  // Sync Admin Email whenever selected target college or collegesList changes
+  useEffect(() => {
+    if (codeCollege && collegesList.length > 0) {
+      const selectedCol = collegesList.find(
+        (c) => c.name === codeCollege || c.id === codeCollege || (c.code && c.code === codeCollege)
+      );
+      if (selectedCol) {
+        const foundEmail = selectedCol.adminEmail || selectedCol.contact_email || '';
+        const foundName = selectedCol.adminName || selectedCol.admin_name || '';
+        setCodeAdminEmail(foundEmail);
+        setCodeAdminName(foundName);
+      }
+    }
+  }, [codeCollege, collegesList]);
 
   const loadSecureCodes = async () => {
     try {
@@ -1663,14 +1715,17 @@ export default function ManageUsers() {
     const selectedCollegeObj = collegesList.find((c) => c.name === codeCollege || c.id === codeCollege || (c.code && c.code === codeCollege));
 
     try {
+      const targetAdminEmail = codeAdminEmail || selectedCollegeObj?.adminEmail || selectedCollegeObj?.contact_email || null;
+      const targetAdminName = codeAdminName || selectedCollegeObj?.adminName || selectedCollegeObj?.admin_name || null;
+
       const res = await apiFetch('/secure-codes/generate', {
         method: 'POST',
         body: JSON.stringify({
           code: generatedFallback,
           role: targetRole,
           college_name: codeCollege,
-          admin_email: selectedCollegeObj?.adminEmail || selectedCollegeObj?.contact_email || null,
-          admin_name: selectedCollegeObj?.adminName || selectedCollegeObj?.admin_name || null,
+          admin_email: targetAdminEmail,
+          admin_name: targetAdminName,
           max_uses: parseInt(codeMaxUses, 10) || 1,
           expiry_option: codeExpiry,
           description: `Generated for ${codeCollege} - Max Uses: ${codeMaxUses === '0' ? 'Unlimited' : codeMaxUses} - Expiry: ${codeExpiry}`,
@@ -1796,7 +1851,7 @@ export default function ManageUsers() {
         college: newUserForm.college || 'College',
         designation: 'Institutional Admin',
         date: new Date().toISOString().split('T')[0],
-        status: 'Verified',
+        status: 'Pending Activation',
       };
       setAdminRequests([newAdmin, ...adminRequests]);
     } else if (newUserForm.role === 'coordinators') {
@@ -1807,7 +1862,7 @@ export default function ManageUsers() {
         phone: newUserForm.phone || '',
         college: newUserForm.college || 'College',
         department: newUserForm.department || 'Department',
-        status: 'Active',
+        status: 'Pending Activation',
       };
       setCoordinators([newCoord, ...coordinators]);
     } else if (newUserForm.role === 'mentors') {
@@ -2402,7 +2457,7 @@ export default function ManageUsers() {
               )}
 
               {/* Row 1: Role Box & Target College (Side-by-Side) */}
-              <div className="form-row-2 sa-form-row-2" style={{ marginBottom: '14px' }}>
+              <div className="form-row-2 sa-form-row-2 mobile-pair-2" style={{ marginBottom: '14px' }}>
                 <div className="form-group-admin">
                   <label>Assign Target Role *</label>
                   <div
@@ -2438,8 +2493,35 @@ export default function ManageUsers() {
                 </div>
               </div>
 
+              {/* College Admin Email (Populated from college registration) */}
+              <div className="form-group-admin" style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span>College Admin Email (Registered with College) *</span>
+                  {codeAdminEmail ? (
+                    <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>
+                      ✓ Retrieved from college registration
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: '#ea580c', fontWeight: 600 }}>
+                      ⚠️ Enter college admin email
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="email"
+                  required
+                  className="form-input-admin"
+                  placeholder="e.g. admin@college.edu (registered when college was added)"
+                  value={codeAdminEmail}
+                  onChange={(e) => setCodeAdminEmail(e.target.value)}
+                />
+                <span style={{ fontSize: '11.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  The activation link and secure authorization code will be delivered to this email.
+                </span>
+              </div>
+
               {/* Row 2: Usage Limit (below role) & Expiry Duration (besides usage limit) */}
-              <div className="form-row-2 sa-form-row-2">
+              <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                 <div className="form-group-admin">
                   <label>Usage Limit (Max Uses) *</label>
                   <input
@@ -2586,7 +2668,7 @@ export default function ManageUsers() {
                 </div>
 
                 {/* Full Name & Password (Side-by-Side) */}
-                <div className="form-row-2 sa-form-row-2">
+                <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                   <div className="form-group-admin">
                     <label>Full Name *</label>
                     <input
@@ -2704,7 +2786,7 @@ export default function ManageUsers() {
                       </div>
                     </div>
 
-                    <div className="form-row-2 sa-form-row-2">
+                    <div className="form-row-2 sa-form-row-2 mobile-pair-2">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
                         <MuSelect
@@ -2738,10 +2820,10 @@ export default function ManageUsers() {
                   </>
                 )}
 
-                {/* Coordinator Department Selection (Department removed for Mentors) */}
-                {newUserForm.role === 'coordinators' && (
+                {/* Department Selection for Coordinators & Mentors */}
+                {(newUserForm.role === 'coordinators' || newUserForm.role === 'mentors') && (
                   <div className="form-group-admin sa-form-group-full">
-                    <label>Department *</label>
+                    <label>{newUserForm.role === 'mentors' ? 'Mentor Department / Branch *' : 'Department *'}</label>
                     <MuSelect
                       value={newUserForm.departmentId}
                       direction="up"

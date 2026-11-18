@@ -1,7 +1,28 @@
-import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
+import {
+  sendRegistrationOtp,
+  checkRegistrationEmailOtp,
+  verifyRegistrationOtpAndRegister,
+  sendUserOtp,
+  verifyUserOtpAndLogin,
+  loginWithPassword,
+  changeUserPassword,
+  resetUserPasswordWithOtp,
+  verifyInstitutionToken,
+  completeInstitutionSetup,
+  activateWithSecureCode,
+  forceChangePassword,
+} from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
+import { ROLES } from '../utils/constants.js';
+import {
+  isApprovalFeatureActive,
+  isRegistrationFeatureActive,
+  isPasswordLoginFeatureActive,
+  isOtpLoginFeatureActive,
+  isPasswordResetFeatureActive,
+} from '../middleware/featureSwitch.middleware.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -28,8 +49,27 @@ export const getCollegeByEmail = async (req, res, next) => {
   }
 };
 
+const checkRegistrationFeatureActive = async () => {
+  try {
+    const active = await isRegistrationFeatureActive();
+    if (!active) {
+      return {
+        allowed: false,
+        message: 'Self-registration and new account sign-up is currently disabled by system administration.',
+      };
+    }
+  } catch (err) {
+    // If error occurs, fail-open to allowed
+  }
+  return { allowed: true };
+};
+
 export const sendRegisterOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await sendRegistrationOtp(req.body);
     return sendSuccess(res, 'Verification code sent to your college email.', result);
   } catch (error) {
@@ -39,6 +79,10 @@ export const sendRegisterOtp = async (req, res, next) => {
 
 export const verifyRegisterEmailOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await checkRegistrationEmailOtp(req.body);
     return sendSuccess(res, 'College email verified successfully!', result);
   } catch (error) {
@@ -48,6 +92,10 @@ export const verifyRegisterEmailOtp = async (req, res, next) => {
 
 export const verifyRegisterOtp = async (req, res, next) => {
   try {
+    const status = await checkRegistrationFeatureActive();
+    if (!status.allowed) {
+      return sendError(res, status.message, 403);
+    }
     const result = await verifyRegistrationOtpAndRegister(req.body);
     return sendSuccess(res, 'User registered successfully', result, 201);
   } catch (error) {
@@ -57,6 +105,11 @@ export const verifyRegisterOtp = async (req, res, next) => {
 
 export const sendOtp = async (req, res, next) => {
   try {
+    const otpActive = await isOtpLoginFeatureActive();
+    if (!otpActive) {
+      return sendError(res, 'OTP authentication gateway is temporarily offline for maintenance.', 403);
+    }
+
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     if (!identifier) {
       return sendError(res, 'Email or Mobile number is required', 400);
@@ -70,6 +123,11 @@ export const sendOtp = async (req, res, next) => {
 
 export const verifyOtpAndLogin = async (req, res, next) => {
   try {
+    const otpActive = await isOtpLoginFeatureActive();
+    if (!otpActive) {
+      return sendError(res, 'OTP authentication gateway is temporarily offline for maintenance.', 403);
+    }
+
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     const { otp, rememberMe, remember_me } = req.body;
     if (!identifier || !otp) {
@@ -84,49 +142,6 @@ export const verifyOtpAndLogin = async (req, res, next) => {
   }
 };
 
-export const verifyTotp = async (req, res, next) => {
-  try {
-    const body = req.body || {};
-    const identifier = body.email || body.mobile || body.identifier || body.mobile_number;
-    const { code, otp, totp, rememberMe, remember_me } = body;
-    const inputCode = code || otp || totp;
-    const authorization = req.headers.authorization || req.headers.Authorization || '';
-    const headerToken = typeof authorization === 'string'
-      ? authorization.replace(/^Bearer\s+/i, '').trim()
-      : '';
-    const preAuthToken = body.preAuthToken || body.temporaryToken || body.preauthToken || body.token || headerToken;
-
-    if (!inputCode) {
-      return sendError(res, 'Authenticator code is required', 400);
-    }
-
-    const formattedCode = Array.isArray(inputCode) ? inputCode.join('') : inputCode;
-    const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
-
-    if (preAuthToken) {
-      try {
-        const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
-        return sendSuccess(res, 'Authenticator verification successful', result);
-      } catch (err) {
-        if (!identifier) throw err;
-        console.warn(`[TOTP] preAuthToken verification failed (${err.message}). Falling back to identifier verification.`);
-      }
-    }
-
-    if (!identifier) {
-      return sendError(res, 'Email, mobile, or token, and Authenticator code are required', 400);
-    }
-
-    const result = (typeof verifyTotpPairing === 'function')
-      ? await verifyTotpPairing(identifier, formattedCode)
-      : await verifyTotpAndLogin(identifier, formattedCode, isRemember);
-
-    return sendSuccess(res, 'Authenticator verification successful', result);
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const passwordLogin = async (req, res, next) => {
   try {
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
@@ -134,6 +149,16 @@ export const passwordLogin = async (req, res, next) => {
     if (!identifier || !password) {
       return sendError(res, 'Email/Mobile and Password are required', 400);
     }
+
+    const pwActive = await isPasswordLoginFeatureActive();
+    if (!pwActive) {
+      const user = await findUserByEmailOrMobile(identifier);
+      const isSuperAdmin = user && (user.role === ROLES.SUPER_ADMIN || String(user.role).toLowerCase().includes('super'));
+      if (!isSuperAdmin) {
+        return sendError(res, 'Password authentication is undergoing routine maintenance.', 403);
+      }
+    }
+
     const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
     const result = await loginWithPassword(identifier, password, isRemember);
     return sendSuccess(res, 'Login successful', result);
@@ -164,8 +189,8 @@ export const getMe = async (req, res, next) => {
     if (resolvedDeptId || resolvedDept) {
       try {
         const dRows = await query(
-          'SELECT id, name, code FROM departments WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
-          [resolvedDeptId || 0, resolvedDept, resolvedDept]
+          'SELECT id, name, code FROM departments WHERE (college_id = ? OR college_id IS NULL) AND (id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?)) ORDER BY (college_id = ?) DESC LIMIT 1',
+          [user.college_id || 0, resolvedDeptId || 0, resolvedDept, resolvedDept, user.college_id || 0]
         );
         if (dRows && dRows.length > 0) {
           resolvedDeptId = dRows[0].id;
@@ -178,6 +203,15 @@ export const getMe = async (req, res, next) => {
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...safeUser,
       ...studentProfile,
+      phone: user.mobile_number || '',
+      current_year: user.current_year || null,
+      currentYear: user.current_year || null,
+      area_of_expertise: user.area_of_expertise || user.specialization || null,
+      areaOfExpertise: user.area_of_expertise || user.specialization || null,
+      specialization: user.area_of_expertise || user.specialization || user.target_track || null,
+      experience: user.experience || null,
+      avatar_url: user.avatar_url || null,
+      avatarUrl: user.avatar_url || null,
       remember_me: Boolean(user.remember_me),
       is_profile_updated: isProfileUpdated,
       studentProfile: {
@@ -200,6 +234,11 @@ export const getMe = async (req, res, next) => {
 
 export const changePassword = async (req, res, next) => {
   try {
+    const pwResetActive = await isPasswordResetFeatureActive();
+    if (!pwResetActive) {
+      return sendError(res, 'Password recovery and change service is currently updating.', 403);
+    }
+
     const userId = req.user.userId || req.user.id;
     const { currentPassword, newPassword } = req.body;
     if (!newPassword || newPassword.length < 6) {
@@ -214,6 +253,11 @@ export const changePassword = async (req, res, next) => {
 
 export const resetPasswordWithOtp = async (req, res, next) => {
   try {
+    const pwResetActive = await isPasswordResetFeatureActive();
+    if (!pwResetActive) {
+      return sendError(res, 'Password recovery and change service is currently updating.', 403);
+    }
+
     const { otp, newPassword } = req.body;
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
     if (!identifier || !otp || !newPassword) {
@@ -232,31 +276,20 @@ export const resetPasswordWithOtp = async (req, res, next) => {
 export const updateProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const updated = await updateUserModel(userId, req.body);
+    // Security Allowlist: strip protected privilege fields
+    const allowed = [
+      'name', 'mobile_number', 'phone', 'gender', 'city', 'emergency_contact',
+      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester',
+      'department', 'department_id', 'experience', 'specialization', 'area_of_expertise'
+    ];
+    const safeData = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) safeData[key] = req.body[key];
+    }
+    const updated = await updateUserModel(userId, safeData);
     return sendSuccess(res, 'Profile updated successfully in database', updated);
   } catch (error) {
     next(error);
-  }
-};
-
-export const setup2FA = async (req, res, next) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    const result = await setupUser2FA(userId);
-    return sendSuccess(res, '2FA setup QR Code generated successfully', result);
-  } catch (error) {
-    return sendError(res, error.message || 'Failed to generate 2FA setup QR Code', 400);
-  }
-};
-
-export const verify2FA = async (req, res, next) => {
-  try {
-    const userId = req.user.userId || req.user.id;
-    const { secret, code } = req.body;
-    const result = await verifyAndEnableUser2FA(userId, secret, code);
-    return sendSuccess(res, 'Google Authenticator 2FA paired successfully', result);
-  } catch (error) {
-    return sendError(res, error.message || 'Failed to verify 2FA code', 400);
   }
 };
 
@@ -286,11 +319,13 @@ export const checkRegistrationStatus = async (req, res, next) => {
     if (!user) {
       return sendError(res, 'No registered account found for this email', 404);
     }
-    const isApproved = (user.is_active === 1 || user.is_active === true || user.is_active === '\x01') &&
-                       (user.is_approved === 1 || user.is_approved === true || user.is_approved === '\x01');
+    const approvalRequired = await isApprovalFeatureActive();
+    const isApproved = !approvalRequired ||
+      ((user.is_active === 1 || user.is_active === true || user.is_active === '\x01') &&
+       (user.is_approved === 1 || user.is_approved === true || user.is_approved === '\x01'));
     return sendSuccess(res, 'Registration status retrieved successfully', {
       email: user.email,
-      isApproved,
+      isApproved: Boolean(isApproved),
       status: isApproved ? 'approved' : 'pending',
       role: user.role,
       name: user.name,
@@ -349,7 +384,7 @@ export const getSecureCodeRequests = async (req, res, next) => {
         UPDATE secure_code_requests scr
         JOIN users u ON LOWER(scr.email) = LOWER(u.email)
         SET scr.status = 'Approved'
-        WHERE scr.status = 'Pending' AND (u.is_active = 1 OR u.role = 'college_admin' OR u.two_factor_enabled = 1)
+        WHERE scr.status = 'Pending' AND (u.is_active = 1 OR u.role = 'college_admin')
       `);
 
       const [rows] = await pool.query(
@@ -397,6 +432,57 @@ export const deleteSecureCodeRequestByEmail = async (req, res, next) => {
     const { email } = req.params;
     await pool.query(`DELETE FROM secure_code_requests WHERE LOWER(email) = LOWER(?)`, [email]);
     return sendSuccess(res, 'Secure code request removed');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyInstitutionTokenHandler = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    const result = await verifyInstitutionToken(token);
+    return sendSuccess(res, 'Institution invitation token verified successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const completeInstitutionSetupHandler = async (req, res, next) => {
+  try {
+    const result = await completeInstitutionSetup(req.body);
+    return sendSuccess(res, result.message, {
+      token: result.token,
+      user: result.user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Public endpoint: Set password and activate account using secure activation code
+ * POST /api/v1/auth/activate-with-code
+ */
+export const activateWithCodeHandler = async (req, res, next) => {
+  try {
+    const { email, code, password, confirmPassword, role } = req.body;
+    const result = await activateWithSecureCode({ email, code, password, confirmPassword, role });
+    return sendSuccess(res, result.message, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Authenticated endpoint: Force password change on first login
+ * POST /api/v1/auth/force-change-password
+ */
+export const forceChangePasswordHandler = async (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const result = await forceChangePassword({ userId, currentPassword, newPassword, confirmPassword });
+    return sendSuccess(res, result.message, result);
   } catch (error) {
     next(error);
   }

@@ -202,8 +202,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 20px;
+  /* margin-bottom: 15px; */
   flex-wrap: wrap;
+  /* margin-top: 15px; */
+  margin: 15px 0 15px 0;
 }
 
 .admin-lb-tab-btn {

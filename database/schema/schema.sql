@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS batches (
   join_code VARCHAR(50) NULL,
   code_expires_at VARCHAR(100) NULL,
   trainer VARCHAR(100) DEFAULT 'Faculty Instructor',
+  mentor VARCHAR(255) NULL,
+  mentor_id INT NULL,
+  trainer_id INT NULL,
   schedule VARCHAR(100) DEFAULT 'Mon, Wed, Fri (10:00 AM - 12:00 PM)',
   students INT DEFAULT 0,
   progress INT DEFAULT 0,
@@ -82,6 +85,8 @@ CREATE TABLE IF NOT EXISTS users (
   role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
   college_id INT NULL,
   is_active BOOLEAN DEFAULT TRUE,
+  profile_pic VARCHAR(255) NULL,
+  cg_synced_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
@@ -99,7 +104,16 @@ CREATE TABLE IF NOT EXISTS students (
   year VARCHAR(20),
   division VARCHAR(20),
   semester VARCHAR(20),
-  cgpa VARCHAR(10) DEFAULT '8.5',
+  cgpa DECIMAL(4,2) DEFAULT 8.50,
+  live_kt INT DEFAULT 0,
+  dead_kt INT DEFAULT 0,
+  placement_status VARCHAR(50) DEFAULT 'Unplaced',
+  placed_company VARCHAR(255) NULL,
+  placement_opt_in BOOLEAN DEFAULT TRUE,
+  linkedin_url VARCHAR(255) NULL,
+  portfolio_link VARCHAR(255) NULL,
+  resume_url VARCHAR(255) NULL,
+  cg_synced_at TIMESTAMP NULL DEFAULT NULL,
   skills TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -349,4 +363,30 @@ CREATE TABLE IF NOT EXISTS skill_gap_analysis (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE KEY unique_user_skill_gap (user_id)
+);
+
+
+-- 3d. Batch Trainers (Join Table)
+CREATE TABLE IF NOT EXISTS batch_trainers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  batch_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_trainer_batch (user_id, batch_id)
+);
+
+-- Career Gateway Sync Audit Log Table
+CREATE TABLE IF NOT EXISTS career_gateway_sync_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  sync_direction ENUM('inbound_from_cg', 'outbound_to_cg') NOT NULL,
+  entity_type VARCHAR(50) NOT NULL DEFAULT 'students',
+  total_records INT NOT NULL DEFAULT 0,
+  success_count INT NOT NULL DEFAULT 0,
+  failure_count INT NOT NULL DEFAULT 0,
+  status ENUM('success', 'partial', 'failed') NOT NULL DEFAULT 'success',
+  details JSON NULL,
+  triggered_by VARCHAR(100) DEFAULT 'scheduled_job',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_cg_sync_direction (sync_direction),
+  INDEX idx_cg_sync_created (created_at)
 );

@@ -404,3 +404,29 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+@media (max-width: 768px) {
+  .coord-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .coord-filter-bar > div:first-child,
+  .coord-batch-select-wrap,
+  .coord-filter-bar .custom-select-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .coord-modal-actions-row {
+    flex-direction: column-reverse;
+  }
+
+  .coord-modal-actions-row button {
+    width: 100%;
+    justify-content: center;
+  }
+}

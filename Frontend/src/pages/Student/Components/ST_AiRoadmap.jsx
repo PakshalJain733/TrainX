@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
@@ -135,7 +135,8 @@ function getPreviewDocument(lang, code) {
         document.getElementById('root').innerHTML = '<div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; font-size: 13px;">⚠️ Define a React component named <code>function App() { ... }</code> to render preview.</div>';
       }
     } catch(err) {
-      document.getElementById('root').innerHTML = '<div style="padding: 14px; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; color: #fecaca; font-family: monospace; font-size: 12.5px;"><strong>🔴 React Render Error:</strong><br/>' + err.message + '</div>';
+      const safeMsg = String(err?.message || 'Unknown render error').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.getElementById('root').innerHTML = '<div style="padding: 14px; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; color: #fecaca; font-family: monospace; font-size: 12.5px;"><strong>🔴 React Render Error:</strong><br/>' + safeMsg + '</div>';
     }
   </script>
 </body>
@@ -144,6 +145,59 @@ function getPreviewDocument(lang, code) {
 
   // HTML / CSS preview
   return code || `<!DOCTYPE html><html><body style="background:#0f172a;color:#94a3b8;padding:20px;font-family:sans-serif;"><p>Write HTML & CSS in the editor to see live web preview.</p></body></html>`;
+}
+
+export function formatHtmlTags(htmlStr) {
+  if (typeof htmlStr !== "string") return htmlStr || "";
+  if (!htmlStr.includes("<") || !htmlStr.includes(">")) return htmlStr;
+  try {
+    const voidTags = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+    const lines = htmlStr.replace(/>\s*</g, ">\n<").split("\n").map(s => s.trim()).filter(Boolean);
+    let indent = 0;
+    const formatted = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith("</")) {
+        indent = Math.max(0, indent - 1);
+        formatted.push("  ".repeat(indent) + line);
+      } else {
+        const isSelfClosing = line.endsWith("/>");
+        const match = line.match(/^<([a-zA-Z0-9]+)/);
+        const tag = match ? match[1].toLowerCase() : "";
+        const isVoid = isSelfClosing || voidTags.has(tag);
+        formatted.push("  ".repeat(indent) + line);
+        if (!isVoid && line.startsWith("<") && !line.startsWith("<!") && !line.startsWith("<?")) {
+          indent++;
+        }
+      }
+    }
+    return formatted.join("\n");
+  } catch {
+    return htmlStr;
+  }
+}
+
+export function formatSampleCode(text, type = "input") {
+  if (text === null || text === undefined) return type === "input" ? "None" : "";
+  const str = String(text).trim();
+  if (!str) return type === "input" ? "None" : "";
+
+  // 1. JSON formatting
+  if ((str.startsWith("{") && str.endsWith("}")) || (str.startsWith("[") && str.endsWith("]"))) {
+    try {
+      const parsed = JSON.parse(str);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // not valid JSON, proceed
+    }
+  }
+
+  // 2. HTML formatting
+  if (str.includes("<") && str.includes(">")) {
+    return formatHtmlTags(str);
+  }
+
+  return str;
 }
 
 /* ── Topic & Resource Helpers ── */
@@ -651,19 +705,223 @@ function getTheoryForMilestone(m, targetRole) {
   };
 }
 
-function getPracticeQuestionForMilestone(m, targetRole) {
+function evaluatePracticeSubmission(userCode, actualOutput, expectedOutput, sampleInput, language) {
+  const cleanCode = (userCode || "").trim();
+  if (!cleanCode) {
+    return { score: 0, passed: false, reason: "Empty code submitted." };
+  }
+
+  // Visual/markup environments (HTML / React)
+  if (language === "html" || language === "react") {
+    const isMinimalLength = cleanCode.length > 30;
+    const hasComponentOrTag = language === "react"
+      ? (cleanCode.includes("function") || cleanCode.includes("return") || cleanCode.includes("=>")) && cleanCode.includes("<")
+      : cleanCode.includes("<") && cleanCode.includes(">");
+    if (isMinimalLength && hasComponentOrTag) {
+      return { score: 100, passed: true, reason: "Component structure verified." };
+    }
+    return { score: 0, passed: false, reason: "Incomplete HTML or React component structure." };
+  }
+
+  const cleanActual = (actualOutput || "").trim();
+  const cleanExpected = (expectedOutput || "").trim();
+
+  if (!cleanExpected || cleanExpected === "null") {
+    return { score: 100, passed: true, reason: "Execution completed successfully." };
+  }
+
+  const normActual = cleanActual.toLowerCase().replace(/\r\n/g, "\n").trim();
+  const normExpected = cleanExpected.toLowerCase().replace(/\r\n/g, "\n").trim();
+
+  if (normActual === normExpected || normActual.includes(normExpected)) {
+    return { score: 100, passed: true, reason: "Output matches expected result exactly." };
+  }
+
+  // Dedicated check for string reversal & transformation consistency
+  if (sampleInput && typeof sampleInput === "string" && sampleInput.trim().length > 1) {
+    const rawInputWord = sampleInput.replace(/["']/g, "").trim();
+    if (rawInputWord.length > 1) {
+      const reversed = rawInputWord.split("").reverse().join("").toLowerCase();
+      // If student correctly produced the reversed string
+      if (normActual === reversed || normActual.includes(reversed)) {
+        return { score: 100, passed: true, reason: `Reversed string "${reversed}" verified.` };
+      }
+      // Reject boolean outputs for string reversal
+      if (normActual === "true" || normActual === "false") {
+        return { score: 0, passed: false, reason: "Output was a boolean (true/false) instead of the required reversed string." };
+      }
+    }
+  }
+
+  // Numerical value check
+  const expectedNumbers = (normExpected.match(/\b\d+(\.\d+)?\b/g) || []);
+  const actualNumbers = (normActual.match(/\b\d+(\.\d+)?\b/g) || []);
+
+  if (expectedNumbers.length > 0) {
+    const matchedNumbers = expectedNumbers.filter(num => actualNumbers.includes(num));
+    const numRatio = matchedNumbers.length / expectedNumbers.length;
+    if (numRatio === 0) {
+      return { score: 0, passed: false, reason: "Output numbers did not match expected results." };
+    } else if (numRatio === 1) {
+      return { score: 100, passed: true, reason: "All output numerical values match expected results." };
+    } else if (numRatio >= 0.3) {
+      return { score: 50, passed: false, reason: `Partially correct (${Math.round(numRatio * 100)}% of numerical values matched).` };
+    }
+  }
+
+  // Check matching tokens / values
+  const expectedTokens = normExpected
+    .replace(/[{}()[\],:"]/g, " ")
+    .split(/\s+/)
+    .filter(t => t.length > 1);
+
+  if (expectedTokens.length > 0) {
+    const matchedTokens = expectedTokens.filter(t => normActual.includes(t));
+    const ratio = matchedTokens.length / expectedTokens.length;
+    if (ratio >= 0.8) {
+      return { score: 100, passed: true, reason: "Output verified with expected data values." };
+    } else if (ratio >= 0.4) {
+      return { score: 50, passed: false, reason: `Partially correct (${Math.round(ratio * 100)}% token match with sample expected).` };
+    }
+  }
+
+  return { score: 0, passed: false, reason: "Output does not match sample expected output." };
+}
+
+export const MILESTONE_PRACTICE_TIERS = {
+  1: "Very Easy",
+  2: "Easy",
+  3: "Medium",
+  4: "Hard",
+  5: "Very Hard"
+};
+
+export function getMilestoneTier(mIdx) {
+  const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+  return MILESTONE_PRACTICE_TIERS[idx] || (idx > 5 ? "Very Hard" : "Medium");
+}
+
+function getPracticeQuestionForMilestone(m, targetRole, milestoneIndex) {
   const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
   const role = targetRole || "Software Engineering";
+  const parsedIdx = m?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+  const mIdx = Math.max(1, parseInt(parsedIdx || m?.milestoneIndex || milestoneIndex, 10) || 1);
+  const tier = getMilestoneTier(mIdx);
   const lang = resolveLanguageForRole(role, title);
   const lower = `${title} ${role}`.toLowerCase();
 
+  // 1. String Manipulation / Reversal / Palindrome
+  if (lower.includes("string") || lower.includes("reverse") || lower.includes("reversal") || lower.includes("palindrome")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on Challenge: String Concatenation & Greeting (${title})`,
+        prompt: `Write a beginner-friendly function createGreeting(name) that takes a user's name as input and returns a warm greeting message: "Hello, " followed by the name and an exclamation mark "!". For example, createGreeting("Alice") returns "Hello, Alice!". This introduces core string operations for complete beginners.`,
+        sampleInput: `Alice`,
+        sampleOutput: `Hello, Alice!`,
+        starterCode: `// String Fundamentals (Very Easy) for: ${title}
+function createGreeting(name) {
+  // Return "Hello, " + name + "!"
+  return "Hello, " + (name || "Learner") + "!";
+}
+
+// Test execution:
+console.log(createGreeting("Alice"));
+`,
+        solutionCode: `function createGreeting(name) {\n  return "Hello, " + (name || "Learner") + "!";\n}`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Very Easy",
+      };
+    }
+
+    if (mIdx === 2) {
+      return {
+        title: `Hands-on Challenge: String Reversal (${title})`,
+        prompt: `Write a function reverseString(str) that takes a string input and returns the reversed string. For example, reversing "hello" must produce "olleh", and reversing "world" must produce "dlrow". Do not return boolean validation values; return the actual reversed string.`,
+        sampleInput: `hello`,
+        sampleOutput: `olleh`,
+        starterCode: `// String Reversal (Easy) for: ${title}
+function reverseString(str) {
+  if (typeof str !== "string") return "";
+  return str.split("").reverse().join("");
+}
+
+// Test execution:
+const result = reverseString("hello");
+console.log(result);
+`,
+        solutionCode: `function reverseString(str) {\n  if (typeof str !== "string") return "";\n  return str.split("").reverse().join("");\n}`,
+        language: "node",
+        milestoneIndex: 2,
+        difficulty: "Easy",
+      };
+    }
+
+    // Milestone 3+: Palindrome verification (Medium, Hard, Very Hard)
+    return {
+      title: `Hands-on Challenge: Palindrome Verification (${title})`,
+      prompt: `Write a function isPalindrome(str) that checks whether a given string reads the same backwards as forwards. Return true if it is a palindrome, and false otherwise. Ignore non-alphanumeric characters and case. For example, "racecar" returns true, and "hello" returns false.`,
+      sampleInput: `racecar`,
+      sampleOutput: `true`,
+      starterCode: `// Palindrome Verification (${tier}) for: ${title}
+function isPalindrome(str) {
+  if (typeof str !== "string") return false;
+  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return clean === clean.split("").reverse().join("");
+}
+
+// Test execution:
+console.log(isPalindrome("racecar"));
+`,
+      solutionCode: `function isPalindrome(str) {\n  if (typeof str !== "string") return false;\n  const clean = str.toLowerCase().replace(/[^a-z0-9]/g, "");\n  return clean === clean.split("").reverse().join("");\n}`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: tier,
+    };
+  }
+
+  // 2. React / Frontend Hooks & UI
   if (lang === "react" || lower.includes("react") || lower.includes("hook") || lower.includes("component")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on React Challenge: Milestone 1 Component Basics (${title})`,
+        prompt: `Create a clean, functional React component for ${title} that displays a user greeting card with a name, role badge, and active status. Verify your component renders properly in the Live Preview pane.`,
+        sampleInput: `Props: { name: 'Alex Johnson', role: '${role}', status: 'Active' }`,
+        sampleOutput: `Live Web Preview: Renders styled greeting card with user information and badge`,
+        starterCode: `// React Milestone 1: Component Fundamentals for: ${title}
+import React from 'react';
+
+export default function UserCard() {
+  const user = {
+    name: "Alex Johnson",
+    role: "${role}",
+    status: "Active"
+  };
+
+  return (
+    <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '380px', margin: '20px auto', background: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0' }}>
+      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Milestone 1 • Fundamentals</span>
+      <h3 style={{ margin: '8px 0 4px', color: '#1e293b' }}>{user.name}</h3>
+      <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: '14px' }}>Target Role: <strong>{user.role}</strong></p>
+      <div style={{ display: 'inline-block', padding: '4px 10px', background: '#dcfce7', color: '#15803d', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>
+        Status: {user.status}
+      </div>
+    </div>
+  );
+}`,
+        solutionCode: `// Milestone 1 React solution`,
+        language: "react",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
     return {
       title: `Hands-on React Challenge: Build an Interactive Component for ${title}`,
       prompt: `Develop a functional React component demonstrating ${title}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset), and verify the live interactive UI in the Live Preview pane.`,
       sampleInput: `Interactive button clicks & user input state transitions`,
       sampleOutput: `Live Web Preview: Renders responsive styled React component with real-time state feedback`,
-      starterCode: `// React Interactive Playground for: ${title}
+      starterCode: `// React Interactive Playground (${tier}) for: ${title}
 import React, { useState } from 'react';
 
 export default function InteractiveApp() {
@@ -696,13 +954,17 @@ export default function InteractiveApp() {
     </div>
   );
 }`,
-      language: "react"
+      solutionCode: `// React State Solution`,
+      language: "react",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
+  // 2. HTML / CSS
   if (lang === "html" || lower.includes("html") || lower.includes("css") || lower.includes("flexbox") || lower.includes("grid")) {
     return {
-      title: `Hands-on Web Design Challenge: ${title}`,
+      title: `Hands-on Web Design Challenge: Milestone ${mIdx} Layout (${title})`,
       prompt: `Write clean HTML5 markup and modern CSS3 styles for ${title}. Structure the page elements with semantic tags, apply Flexbox or Grid for alignment, and preview your layout live in the Live Web Preview pane.`,
       sampleInput: `HTML5 semantic markup with CSS Flexbox styles`,
       sampleOutput: `Live Web Preview: Displays a polished, responsive styled UI card with hover effects`,
@@ -762,18 +1024,55 @@ export default function InteractiveApp() {
 </head>
 <body>
   <article class="card">
-    <span class="badge">TOPIC MODULE</span>
+    <span class="badge">MILESTONE ${mIdx} • ${tier.toUpperCase()}</span>
     <h2>${title}</h2>
     <p>Semantic HTML5 and CSS3 styling demonstration for ${role}. Flexbox provides flexible alignment across viewport sizes.</p>
     <a href="#" class="btn">Explore Module</a>
   </article>
 </body>
 </html>`,
-      language: "html"
+      solutionCode: `<!-- HTML solution -->`,
+      language: "html",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
+  // 3. SQL / Database
   if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on SQL Challenge: Milestone 1 Basic Filtering (${title})`,
+        prompt: `Write a basic database query logic for ${title}. Filter all active records from a collection and project only id, name, and role.`,
+        sampleInput: `users = [{id: 1, name: 'Alice', active: true, role: 'Developer'}, {id: 2, name: 'Bob', active: false, role: 'Designer'}]`,
+        sampleOutput: `Expected: [{ id: 1, name: 'Alice', role: 'Developer' }]`,
+        starterCode: `// SQL Milestone 1: Basic Selection & Projection for: ${title}
+
+function queryActiveUsers(users) {
+  if (!Array.isArray(users)) return [];
+  return users
+    .filter(u => u.active === true)
+    .map(u => ({ id: u.id, name: u.name, role: u.role }));
+}
+
+// Sample Test Data
+const sampleUsers = [
+  { id: 1, name: "Alice", active: true, role: "Developer" },
+  { id: 2, name: "Bob", active: false, role: "Designer" },
+  { id: 3, name: "Charlie", active: true, role: "QA Engineer" }
+];
+
+console.log("Executing Milestone 1 Query for: ${title}...");
+const result = queryActiveUsers(sampleUsers);
+console.log("Query Result:", JSON.stringify(result));
+`,
+        solutionCode: `// Milestone 1 SQL solution`,
+        language: "node",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
     return {
       title: `Hands-on SQL Challenge: Relational Queries for ${title}`,
       prompt: `Write a database manipulation algorithm for ${title}. Perform an inner join between sample users and orders datasets, calculating total order amounts per user.`,
@@ -782,7 +1081,6 @@ export default function InteractiveApp() {
       starterCode: `// Relational Data Query Challenge for: ${title}
 
 function executeRelationalJoin(users, orders) {
-  // Aggregate orders by user ID
   return users.map(user => {
     const userOrders = orders.filter(o => o.userId === user.id);
     const total = userOrders.reduce((acc, curr) => acc + curr.amount, 0);
@@ -803,17 +1101,82 @@ console.log("Executing Query for: ${title}...");
 const result = executeRelationalJoin(users, orders);
 console.log("Query Result:", JSON.stringify(result, null, 2));
 `,
-      language: "node"
+      solutionCode: `// Reference SQL solution`,
+      language: "node",
+      milestoneIndex: mIdx,
+      difficulty: tier
     };
   }
 
+  // 4. Python
   if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
+    if (mIdx === 1) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 1 Basics & Variables (${title})`,
+        prompt: `Write a beginner Python program for ${title}. Calculate the total price of items including sales tax (8%). Define unit_price and quantity, compute subtotal and total, and print a formatted summary.`,
+        sampleInput: `price = 20.0, quantity = 2, tax_rate = 0.08`,
+        sampleOutput: `Bill Summary: {'subtotal': 40.0, 'tax': 3.2, 'total': 43.2, 'status': 'CALCULATED'}`,
+        starterCode: `# Python Milestone 1: Beginner Fundamentals for: ${title}
+def calculate_bill(price: float, quantity: int, tax_rate: float = 0.08) -> dict:
+    subtotal = round(price * quantity, 2)
+    tax = round(subtotal * tax_rate, 2)
+    total = round(subtotal + tax, 2)
+    return {
+        "subtotal": subtotal,
+        "tax": tax,
+        "total": total,
+        "status": "CALCULATED"
+    }
+
+# Test execution:
+result = calculate_bill(20.0, 2)
+print("Bill Summary:", result)
+`,
+        solutionCode: `# Milestone 1 Python solution`,
+        language: "python",
+        milestoneIndex: 1,
+        difficulty: "Very Easy"
+      };
+    }
+
+    if (mIdx === 2) {
+      return {
+        title: `Hands-on Python Challenge: Milestone 2 Functions & Loops (${title})`,
+        prompt: `Write a Python function for ${title} that filters numbers above a given threshold from a list and computes their average. Straightforward loop logic for elementary learners.`,
+        sampleInput: `numbers = [10, 25, 40, 15, 60], threshold = 20`,
+        sampleOutput: `Filtered Summary: {'filtered_count': 3, 'average': 41.67, 'status': 'PROCESSED'}`,
+        starterCode: `# Python Milestone 2: Functions & Iterations (Easy) for: ${title}
+from typing import List, Dict, Any
+
+def filter_and_average(numbers: List[float], threshold: float) -> Dict[str, Any]:
+    filtered = [n for n in numbers if n > threshold]
+    if not filtered:
+        return {"filtered_count": 0, "average": 0.0, "status": "EMPTY"}
+    avg = round(sum(filtered) / len(filtered), 2)
+    return {
+        "filtered_count": len(filtered),
+        "average": avg,
+        "status": "PROCESSED"
+    }
+
+# Test execution:
+test_nums = [10, 25, 40, 15, 60]
+result = filter_and_average(test_nums, 20)
+print("Filtered Summary:", result)
+`,
+        solutionCode: `# Milestone 2 Python solution`,
+        language: "python",
+        milestoneIndex: 2,
+        difficulty: "Easy"
+      };
+    }
+
     return {
       title: `Hands-on Python Challenge: ${title}`,
       prompt: `Implement a clean Python data processing function for ${title}. Your code should validate input entries, compute statistical aggregations, and return a structured summary.`,
       sampleInput: `values = [15, 22, 15, 45, 22, 15, 60, 30]`,
       sampleOutput: `{'topic': '${title}', 'total_count': 8, 'average': 28.0, 'status': 'SUCCESS'}`,
-      starterCode: `# Python Implementation for: ${title}
+      starterCode: `# Python Implementation (${tier}) for: ${title}
 from typing import List, Dict, Any
 
 def process_metrics_pipeline(values: List[int]) -> Dict[str, Any]:
@@ -837,17 +1200,85 @@ print("Running Python Pipeline for: ${title}...")
 result = process_metrics_pipeline(test_data)
 print("Result Summary:", result)
 `,
-      language: "python"
+      solutionCode: `# Reference solution`,
+      language: "python",
+      milestoneIndex: mIdx,
+      difficulty: tier
+    };
+  }
+
+  // 5. Default General JavaScript
+  if (mIdx === 1) {
+    return {
+      title: `Practice Challenge: Milestone 1 Fundamentals (${title})`,
+      prompt: `Write a foundational JavaScript function for ${title} that checks whether a numerical test score meets the passing threshold (>= 60) and returns a structured evaluation object.`,
+      sampleInput: `score = 75`,
+      sampleOutput: `Evaluation Result: {"score":75,"status":"PASSED","verdict":"Requirement Met"}`,
+      starterCode: `// Milestone 1: Beginner Fundamentals for: ${title}
+// Target Role: ${role}
+
+function evaluateScore(score) {
+  const isPassing = typeof score === "number" && score >= 60;
+  return {
+    score: score,
+    status: isPassing ? "PASSED" : "FAILED",
+    verdict: isPassing ? "Requirement Met" : "Needs Retake"
+  };
+}
+
+// Sample test run
+const testScore = 75;
+console.log("Executing Milestone 1 task for ${title}...");
+const output = evaluateScore(testScore);
+console.log("Evaluation Result:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 1 solution`,
+      language: "node",
+      milestoneIndex: 1,
+      difficulty: "Very Easy"
+    };
+  }
+
+  if (mIdx === 2) {
+    return {
+      title: `Practice Challenge: Milestone 2 Logic & Functions (${title})`,
+      prompt: `Write a JavaScript function for ${title} that iterates through a list of transactions, filters transactions above a given amount, and computes the total sum. Straightforward single-loop logic.`,
+      sampleInput: `transactions = [50, 120, 30, 200, 80], threshold = 100`,
+      sampleOutput: `Summary: {"count":2,"total":320,"status":"PROCESSED"}`,
+      starterCode: `// Milestone 2: Elementary Logic (Easy) for: ${title}
+// Target Role: ${role}
+
+function summarizeHighValueTransactions(transactions, threshold) {
+  if (!Array.isArray(transactions)) return { count: 0, total: 0 };
+  const filtered = transactions.filter(t => t > threshold);
+  const total = filtered.reduce((acc, curr) => acc + curr, 0);
+  return {
+    count: filtered.length,
+    total: total,
+    status: "PROCESSED"
+  };
+}
+
+// Sample test run
+const sampleTransactions = [50, 120, 30, 200, 80];
+console.log("Executing Milestone 2 task for ${title}...");
+const output = summarizeHighValueTransactions(sampleTransactions, 100);
+console.log("Summary:", JSON.stringify(output));
+`,
+      solutionCode: `// Milestone 2 solution`,
+      language: "node",
+      milestoneIndex: 2,
+      difficulty: "Easy"
     };
   }
 
   return {
-    title: `Practice Challenge: Implement ${title} Logic`,
+    title: `Practice Challenge: Milestone ${mIdx} Algorithm (${title})`,
     prompt: `Write a program that processes data applying the core principles of ${title} for ${role}. Your code should handle edge cases, calculate metrics, and return structured results.`,
     sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
     sampleOutput: `Expected: { topic: "${title}", processedCount: 7, minValue: 7, maxValue: 89, status: "VERIFIED" }`,
-    starterCode: `// Algorithmic Challenge for: ${title}
-// Target Role: ${role}
+    starterCode: `// Algorithmic Challenge (${tier}) for: ${title}
+// Target Role: ${role} (Milestone ${mIdx})
 
 function executeModuleTask(items) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -872,7 +1303,10 @@ console.log("Executing task for ${title}...");
 const output = executeModuleTask(testInput);
 console.log("Output Result:", JSON.stringify(output, null, 2));
 `,
-    language: lang
+    solutionCode: `// Solution code`,
+    language: lang,
+    milestoneIndex: mIdx,
+    difficulty: tier
   };
 }
 
@@ -947,7 +1381,7 @@ function getQuizQuestionsForMilestone(m, targetRole) {
 /* ── Theory Formatters & VS Code Code Highlighting ── */
 function renderFormattedTheoryText(textStr = "") {
   if (!textStr) return null;
-  const parts = String(textStr).split(/(`[^`]+`)/g);
+  const parts = String(textStr).split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
 
   return parts.map((part, pIdx) => {
     if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
@@ -958,8 +1392,39 @@ function renderFormattedTheoryText(textStr = "") {
         </code>
       );
     }
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      const boldVal = part.slice(2, -2);
+      return (
+        <strong key={pIdx} className="roadmap-theory-bold" style={{ fontWeight: 700, color: "inherit" }}>
+          {boldVal}
+        </strong>
+      );
+    }
     return part;
   });
+}
+
+function formatPureSyntaxCode(rawCode = "") {
+  if (!rawCode || typeof rawCode !== "string") return "";
+  let lines = rawCode.trim().split("\n");
+
+  if (rawCode.includes("class ProductionModule")) {
+    lines = lines.filter(l => !l.includes("class ProductionModule") && !l.includes("constructor(name)") && !l.includes("this.name = name") && !l.includes("this.records = []"));
+  }
+
+  if (lines.length > 0 && lines[0].trim().startsWith("/**")) {
+    const endDocIdx = lines.findIndex(l => l.includes("*/"));
+    if (endDocIdx !== -1) {
+      lines = lines.slice(endDocIdx + 1);
+    }
+  }
+
+  while (lines.length > 0 && (lines[0].trim().startsWith("// Professional Implementation Blueprint") || lines[0].trim().startsWith("// Production-Grade React Implementation"))) {
+    lines.shift();
+  }
+
+  const cleaned = lines.join("\n").trim();
+  return cleaned || rawCode.trim();
 }
 
 /* ── VS Code Theme Code Syntax & Editor Component ── */
@@ -1081,6 +1546,7 @@ export default function AIRoadmap() {
 
   // View state: 'overview' (all roadmaps list) vs 'milestones' (selected roadmap detail)
   const [viewMode, setViewMode] = useState("overview");
+  const [mobileMilestonesOpen, setMobileMilestonesOpen] = useState(false);
 
   // Active section inside milestone detail: 'theory' | 'video' | 'practice' | 'quiz'
   const [activeSection, setActiveSection] = useState("theory");
@@ -1122,6 +1588,15 @@ export default function AIRoadmap() {
 
   const [aiSource, setAiSource] = useState(null);
   const [error, setError] = useState(null);
+  const [roadmapRateLimit, setRoadmapRateLimit] = useState({
+    isLocked: false,
+    remainingDays: 0,
+    remainingHours: 0,
+    lockedUntil: null,
+    lastGeneratedAt: null,
+    currentRole: null,
+    message: "",
+  });
 
   // Load all saved student roadmaps on mount
   useEffect(() => {
@@ -1139,15 +1614,15 @@ export default function AIRoadmap() {
 
       loadAITheoryForMilestone(title, role);
       loadMilestoneVideo(title, role);
-      loadAIPracticeForMilestone(title, role);
+      loadAIPracticeForMilestone(title, role, false, activeMilestone, activeMilestoneIdx);
       loadAIQuizForMilestone(title, role);
 
       // Auto-detect and set appropriate language & starter code for this milestone practice
-      const practice = getPracticeQuestionForMilestone(activeMilestone, role);
+      const practice = getActivePractice(activeMilestone, role, activeMilestoneIdx);
       const promptText = practice?.prompt || "";
-      const lang = resolveLanguageForRole(role, title, promptText);
+      const lang = practice?.language || resolveLanguageForRole(role, title, promptText);
       setCompilerLanguage(lang);
-      setCompilerCode("");
+      setCompilerCode(practice?.starterCode || "");
       setCompilerOutput("");
       setCompilerStatus("idle");
       if (lang === "html" || lang === "react") {
@@ -1221,15 +1696,121 @@ export default function AIRoadmap() {
     }
   };
 
-  const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false) => {
+  const sanitizeClientPractice = (problem, contextTitle = "") => {
+    if (!problem || typeof problem !== "object") return problem;
+    const text = `${problem.title || ""} ${problem.prompt || ""} ${contextTitle || ""}`.toLowerCase();
+    const isPal = text.includes("palindrome");
+    const isReversal = (text.includes("reverse") || text.includes("reversal")) && !isPal;
+    const outputStr = String(problem.sampleOutput || "").trim().toLowerCase();
+    const isBoolOutput = outputStr === "true" || outputStr === "false" || outputStr === "boolean";
+
+    if (isReversal && isBoolOutput) {
+      let inputStr = "hello";
+      if (problem.sampleInput) {
+        const match = String(problem.sampleInput).match(/["']?([a-zA-Z0-9_\s!@#$%^&*()-]+)["']?/);
+        if (match && match[1]) inputStr = match[1].trim();
+      }
+      const reversed = inputStr.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: reversed,
+        starterCode: problem.starterCode
+          ? problem.starterCode.replace(/console\.log\(\s*([a-zA-Z0-9_]+)\(([^)]+)\)\s*===?\s*[^)]+\)/g, "console.log($1($2))")
+          : problem.starterCode
+      };
+    }
+
+    if (isPal && !outputStr.includes("true") && !outputStr.includes("false")) {
+      const inputStr = String(problem.sampleInput || "racecar").replace(/["']/g, "").trim();
+      const clean = inputStr.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const isPalVal = clean === clean.split("").reverse().join("");
+      return {
+        ...problem,
+        sampleInput: inputStr,
+        sampleOutput: String(isPalVal)
+      };
+    }
+
+    // Standardize difficulty tier into: 'Very Easy' | 'Easy' | 'Medium' | 'Hard' | 'Very Hard'
+    const rawDiff = String(problem.difficulty || "").trim().toLowerCase();
+    let stdDiff = "";
+    if (rawDiff.includes("very easy") || rawDiff === "beginner") {
+      stdDiff = "Very Easy";
+    } else if (rawDiff.includes("very hard") || rawDiff === "expert") {
+      stdDiff = "Very Hard";
+    } else if (rawDiff === "easy" || rawDiff === "elementary") {
+      stdDiff = "Easy";
+    } else if (rawDiff === "medium" || rawDiff === "intermediate") {
+      stdDiff = "Medium";
+    } else if (rawDiff === "hard" || rawDiff === "advanced") {
+      stdDiff = "Hard";
+    } else if (problem.milestoneIndex) {
+      stdDiff = getMilestoneTier(problem.milestoneIndex);
+    }
+    if (stdDiff) {
+      problem.difficulty = stdDiff;
+    }
+
+    // Pedagogical HTML & UI Challenge Sanitization
+    const isHtml = problem.language === "html" || 
+                   String(problem.starterCode || "").includes("<!DOCTYPE html>") || 
+                   text.includes("html") || 
+                   text.includes("web design") || 
+                   text.includes("css3");
+
+    if (isHtml) {
+      problem.language = "html";
+      const sampleInputStr = String(problem.sampleInput || "").trim();
+      if (sampleInputStr.startsWith("[") || sampleInputStr.startsWith("{")) {
+        problem.sampleInput = "Direct HTML5 Markup (No stdin required)";
+      }
+      if (problem.prompt && (problem.prompt.toLowerCase().includes("function") || problem.prompt.toLowerCase().includes("return")) && problem.prompt.includes("HTML")) {
+        problem.prompt = "Write clean semantic HTML5 markup. Structure the document using standard semantic tags like <section>, <article>, <h2>, and <p>. View your layout live in the Live Web Preview tab.";
+      }
+    }
+
+    return problem;
+  };
+
+  const getPracticeCacheKey = (title, role, mIdx) => {
+    const cleanTitle = String(title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim().toLowerCase();
+    const cleanRole = String(role || "").trim().toLowerCase();
+    const idx = Math.max(1, parseInt(mIdx, 10) || 1);
+    return `m${idx}__${cleanTitle}__${cleanRole}`;
+  };
+
+  const getActivePractice = (m = null, role = null, mIdx = null) => {
+    const currentM = m || (activeMilestoneIdx !== null && milestones ? milestones[activeMilestoneIdx] : null) || activeMilestone;
+    const parsedIdx = currentM?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+    const idx = Math.max(1, parseInt(parsedIdx || (typeof mIdx === "number" ? mIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
+    const targetRole = role || currentRoadmap?.targetRole || goalInput || "Software Engineering";
+    const key = getPracticeCacheKey(currentM?.title, targetRole, idx);
+    const rawPractice = aiPracticeCache[key] || (currentM ? getPracticeQuestionForMilestone(currentM, targetRole, idx) : null);
+    return sanitizeClientPractice(rawPractice, currentM?.title);
+  };
+
+  const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false, milestoneObj = null, milestoneIdx = null) => {
     if (!milestoneTitle) return;
     const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
     const cleanRole = String(targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const currentM = milestoneObj || (activeMilestoneIdx !== null && milestones ? milestones[activeMilestoneIdx] : null) || activeMilestone;
+    const parsedIdx = currentM?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+    const mIdx = Math.max(1, parseInt(parsedIdx || (typeof milestoneIdx === "number" ? milestoneIdx + 1 : (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1)), 10) || 1);
+    const cacheKey = getPracticeCacheKey(cleanTitle, cleanRole, mIdx);
 
     if (!forceRefresh && aiPracticeCache[cacheKey]) {
       return;
     }
+
+    const difficultyMap = {
+      1: "Very Easy",
+      2: "Easy",
+      3: "Medium",
+      4: "Hard",
+      5: "Very Hard"
+    };
+    const difficulty = difficultyMap[mIdx] || (mIdx > 5 ? "Very Hard" : "Medium");
 
     setIsPracticeLoading(true);
     try {
@@ -1239,23 +1820,28 @@ export default function AIRoadmap() {
           milestoneTitle: cleanTitle,
           targetRole: cleanRole || currentRoadmap?.targetRole || goalInput,
           topic: cleanTitle,
+          milestoneIndex: mIdx,
+          difficulty,
+          topics: currentM?.topics || [],
+          description: currentM?.desc || "",
           forceRefresh: Boolean(forceRefresh),
         }),
       });
 
       if (res && res.data && res.data.title && res.data.prompt) {
+        const sanitized = sanitizeClientPractice(res.data, cleanTitle);
         setAiPracticeCache((prev) => ({
           ...prev,
-          [cacheKey]: res.data,
+          [cacheKey]: sanitized,
         }));
-        if (res.data.language) {
-          setCompilerLanguage(res.data.language);
+        if (sanitized.language) {
+          setCompilerLanguage(sanitized.language);
         }
-        if (res.data.starterCode) {
-          setCompilerCode((prevCode) => (prevCode ? prevCode : res.data.starterCode));
+        if (sanitized.starterCode) {
+          setCompilerCode((prevCode) => (prevCode ? prevCode : sanitized.starterCode));
         }
-        if (res.data.sampleInput) {
-          setCustomInput(res.data.sampleInput);
+        if (sanitized.sampleInput) {
+          setCustomInput(sanitized.sampleInput);
         }
       }
     } catch (err) {
@@ -1437,34 +2023,78 @@ export default function AIRoadmap() {
     }
   };
 
-  const loadAllRoadmaps = async () => {
-    setIsLoading(true);
+  const loadAllRoadmaps = async (isBackground = false) => {
+    if (!isBackground) {
+      setIsLoading(true);
+    }
     try {
-      const res = await apiFetch("/roadmaps/all");
+      const [res, lockRes] = await Promise.all([
+        apiFetch("/roadmaps/all"),
+        apiFetch("/roadmaps/lock-status"),
+      ]);
+
+      if (lockRes && lockRes.data) {
+        setRoadmapRateLimit(lockRes.data);
+      } else if (res && res.rateLimit) {
+        setRoadmapRateLimit(res.rateLimit);
+      }
+
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
         const processed = res.data.map((rm) => mergeCachedProgress(rm));
         setAllRoadmaps(processed);
-        // Default select latest roadmap and set active milestone to Milestone 1
-        setCurrentRoadmap(processed[0]);
-        if (processed[0]?.milestones?.length > 0) {
-          setActiveMilestoneIdx(0);
-        }
+
+        setCurrentRoadmap((prevCurrent) => {
+          if (!prevCurrent) {
+            // First initialization
+            if (processed[0]?.milestones?.length > 0) {
+              setActiveMilestoneIdx(0);
+            }
+            return processed[0];
+          }
+
+          // Check if currently selected roadmap exists in latest processed list
+          const matchingRm = processed.find(
+            (r) => r.id === prevCurrent.id || (r.targetRole && prevCurrent.targetRole && r.targetRole.trim().toLowerCase() === prevCurrent.targetRole.trim().toLowerCase())
+          );
+
+          if (matchingRm) {
+            // Check if milestones or updated dates changed before replacing to avoid re-rendering
+            const isUpdated = matchingRm.updatedAt !== prevCurrent.updatedAt ||
+              JSON.stringify(matchingRm.milestones) !== JSON.stringify(prevCurrent.milestones);
+            return isUpdated ? matchingRm : prevCurrent;
+          }
+
+          // If a brand new roadmap was generated and student was on previous default
+          return processed[0] || prevCurrent;
+        });
       } else {
         // Fetch active single roadmap
         const resSingle = await apiFetch("/roadmaps");
+        if (resSingle && resSingle.rateLimit) {
+          setRoadmapRateLimit(resSingle.rateLimit);
+        }
         if (resSingle && resSingle.data && resSingle.data.milestones) {
           const rm = mergeCachedProgress(resSingle.data);
           setAllRoadmaps([rm]);
-          setCurrentRoadmap(rm);
-          if (rm.milestones?.length > 0) {
-            setActiveMilestoneIdx(0);
-          }
+          setCurrentRoadmap((prevCurrent) => {
+            if (!prevCurrent) {
+              if (rm.milestones?.length > 0) {
+                setActiveMilestoneIdx(0);
+              }
+              return rm;
+            }
+            const isUpdated = rm.id !== prevCurrent.id ||
+              JSON.stringify(rm.milestones) !== JSON.stringify(prevCurrent.milestones);
+            return isUpdated ? rm : prevCurrent;
+          });
         }
       }
     } catch (err) {
       console.error("Error loading roadmaps:", err);
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -1490,20 +2120,18 @@ export default function AIRoadmap() {
 
     setActiveMilestoneIdx(index);
     setActiveSection("theory");
+    setMobileMilestonesOpen(false);
     resetQuizState();
     setError(null);
 
     // Initialize compiler code for the selected milestone topic
     const role = currentRoadmap?.targetRole || goalInput || "Topic Practice";
     const title = targetM.title || "Topic";
-    const cleanTitle = String(title).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(role).trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const cachedPractice = aiPracticeCache[cacheKey];
-    const practice = cachedPractice || getPracticeQuestionForMilestone(targetM, role);
+    const practice = getActivePractice(targetM, role, index);
     const lang = practice?.language || resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
-    setCompilerCode(practice?.starterCode || STARTER_TEMPLATES[lang] || "");
+    const initialStarter = practice?.starter_templates?.[lang] || practice?.starterCode || STARTER_TEMPLATES[lang] || "";
+    setCompilerCode(initialStarter);
     setCompilerOutput("");
     setCompilerStatus("idle");
     setCustomInput(practice?.sampleInput || "");
@@ -1517,13 +2145,11 @@ export default function AIRoadmap() {
 
   const handleCompilerLanguageChange = (newLang) => {
     setCompilerLanguage(newLang);
-    const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === newLang && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[newLang]) {
+      setCompilerCode(currentPractice.starter_templates[newLang]);
+    } else if (currentPractice?.language === newLang && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[newLang] || "");
@@ -1538,13 +2164,11 @@ export default function AIRoadmap() {
   };
 
   const handleResetCompilerCode = () => {
-    const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
-    if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
+    if (currentPractice?.starter_templates?.[compilerLanguage]) {
+      setCompilerCode(currentPractice.starter_templates[compilerLanguage]);
+    } else if (currentPractice?.language === compilerLanguage && currentPractice?.starterCode) {
       setCompilerCode(currentPractice.starterCode);
     } else {
       setCompilerCode(STARTER_TEMPLATES[compilerLanguage] || "");
@@ -1563,12 +2187,12 @@ export default function AIRoadmap() {
     resetQuizState();
   };
 
-  const recordPracticeSuccess = async () => {
+  const recordPracticeScore = async (score) => {
     const activeM = milestones[activeMilestoneIdx];
     const mKey = activeM?.id || `m_${activeMilestoneIdx}`;
-    setPracticeScores((prev) => ({ ...prev, [mKey]: 100 }));
+    setPracticeScores((prev) => ({ ...prev, [mKey]: score }));
 
-    if (activeM && activeM.status !== "completed") {
+    if (score >= 70 && activeM && activeM.status !== "completed") {
       const newProgress = Math.max(activeM.progress || 0, 50);
       const updatedMilestonesRaw = milestones.map((m, idx) =>
         idx === activeMilestoneIdx
@@ -1589,6 +2213,8 @@ export default function AIRoadmap() {
     }
   };
 
+  const recordPracticeSuccess = () => recordPracticeScore(100);
+
   const handleGenerate = async (e) => {
     if (e) e.preventDefault();
     if (!goalInput.trim()) return;
@@ -1596,19 +2222,56 @@ export default function AIRoadmap() {
   };
 
   const executeGeneration = async (targetRole) => {
+    const cleanRole = String(targetRole || "").trim();
+    if (!cleanRole) return;
+
+    // Check if the student already has this roadmap in their saved list
+    const existing = allRoadmaps.find(
+      (r) =>
+        r.targetRole &&
+        r.targetRole.trim().toLowerCase() === cleanRole.toLowerCase()
+    );
+
+    if (existing) {
+      handleSelectRoadmap(existing);
+      setGoalInput("");
+      return;
+    }
+
+    // Check 7-day generation lock
+    if (roadmapRateLimit.isLocked) {
+      setError(
+        roadmapRateLimit.message ||
+          `AI Roadmap generation is locked for 7 days so you can focus on mastering your current milestones. Next generation unlocks in ${roadmapRateLimit.remainingDays} day(s).`
+      );
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
     try {
       const response = await apiFetch("/roadmaps/generate", {
         method: "POST",
-        body: JSON.stringify({ targetRole: targetRole }),
+        body: JSON.stringify({ targetRole: cleanRole }),
       });
 
-      if (response && response.data) {
-        const genData = {
-          ...response.data,
-          milestones: enforceSequentialMilestoneLocks(response.data.milestones || []),
-        };
+      const rawData = response?.data?.roadmap || response?.data || (response?.milestones ? response : null);
+
+      if (response && (response.status === 429 || (!rawData && (response?.rateLimit?.isLocked || response.isLocked)))) {
+        const lockInfo = response.rateLimit || response;
+        setRoadmapRateLimit({
+          isLocked: true,
+          remainingDays: lockInfo.remainingDays || 7,
+          remainingHours: lockInfo.remainingHours || 168,
+          lockedUntil: lockInfo.lockedUntil,
+          message: response.message || response.error,
+        });
+        setError(response.message || response.error || "AI Roadmap generation is locked for 7 days.");
+        return;
+      }
+
+      if (rawData) {
+        const genData = mergeCachedProgress(rawData);
 
         // Add to allRoadmaps list
         setAllRoadmaps((prev) => [genData, ...prev.filter((r) => r.id !== genData.id)]);
@@ -1616,8 +2279,13 @@ export default function AIRoadmap() {
         setActiveMilestoneIdx(0);
         setViewMode("milestones");
         setActiveSection("theory");
+        setGoalInput("");
         resetQuizState();
+        setError(null);
         if (genData.aiSource) setAiSource(genData.aiSource);
+        if (response.rateLimit) {
+          setRoadmapRateLimit(response.rateLimit);
+        }
       } else if (response && response.error) {
         setError(response.error);
       }
@@ -1757,10 +2425,7 @@ export default function AIRoadmap() {
     const startTime = Date.now();
 
     const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
 
@@ -1772,7 +2437,8 @@ export default function AIRoadmap() {
         body: JSON.stringify({
           language: compilerLanguage,
           code: compilerCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          stdin: typeof stdin === "string" ? stdin : String(stdin ?? ""),
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -1841,15 +2507,19 @@ export default function AIRoadmap() {
     }
 
     const activeM = milestones[activeMilestoneIdx];
-    const cleanTitle = String(activeM?.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
-    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
-    const currentPractice = aiPracticeCache[cacheKey] || (activeM ? getPracticeQuestionForMilestone(activeM, currentRoadmap?.targetRole) : null);
+    const currentPractice = getActivePractice();
 
     if (compilerLanguage === "html" || compilerLanguage === "react") {
-      recordPracticeSuccess();
-      setCompilerStatus("success");
-      setCompilerOutput(`✅ Practice Challenge Solution Accepted!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
+      const evalResult = evaluatePracticeSubmission(currentCode, "", currentPractice?.sampleOutput, currentPractice?.sampleInput, compilerLanguage);
+      if (evalResult.passed) {
+        recordPracticeScore(evalResult.score);
+        setCompilerStatus("success");
+        setCompilerOutput(`✅ Practice Challenge Solution Accepted!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
+      } else {
+        recordPracticeScore(0);
+        setCompilerStatus("error");
+        setCompilerOutput(`❌ Incomplete Solution (Score: 0%)\n\nReason: ${evalResult.reason}\nPlease write a valid, complete component before submitting.`);
+      }
       return;
     }
 
@@ -1861,17 +2531,30 @@ export default function AIRoadmap() {
     }
     setCompilerActiveTab("terminal");
 
-    const stdin = useCustomInput ? customInput : (currentPractice?.sampleInput || "");
+    const activeTestCases = Array.isArray(currentPractice?.testCases) && currentPractice.testCases.length > 0
+      ? currentPractice.testCases.map((tc, idx) => ({
+          id: tc.id || idx + 1,
+          input: tc.input || "",
+          expected_output: tc.expected_output || tc.output || tc.expectedOutput || "",
+          is_hidden: Boolean(tc.is_hidden || tc.isHidden),
+        }))
+      : [
+          { id: 1, input: currentPractice?.sampleInput || "sample", expected_output: currentPractice?.sampleOutput || "sample", is_hidden: false },
+          { id: 2, input: (currentPractice?.sampleInput || "sample") + " 2", expected_output: (currentPractice?.sampleOutput || "sample") + " 2", is_hidden: false },
+          { id: 3, input: (currentPractice?.sampleInput || "sample") + " 3", expected_output: (currentPractice?.sampleOutput || "sample") + " 3", is_hidden: true },
+          { id: 4, input: (currentPractice?.sampleInput || "sample") + " 4", expected_output: (currentPractice?.sampleOutput || "sample") + " 4", is_hidden: true },
+        ];
 
     try {
       const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/code/run`, {
+      const res = await fetch(`${baseUrl}/code/evaluate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           language: compilerLanguage,
           code: currentCode,
-          stdin: typeof stdin === "string" ? stdin : String(stdin ?? "")
+          test_cases: activeTestCases,
+          function_name: currentPractice?.function_name || null,
         }),
       });
       const data = await res.json();
@@ -1882,34 +2565,58 @@ export default function AIRoadmap() {
         return;
       }
 
-      const result = data.data || data;
+      const evalData = data.data || data;
+      const passed = evalData.passed_test_cases || 0;
+      const total = evalData.total_test_cases || activeTestCases.length;
+      const percentage = evalData.percentage ?? (total > 0 ? Math.round((passed / total) * 100) : 0);
 
-      if (result.compilationError) {
+      recordPracticeScore(percentage);
+
+      if (evalData.compilation_error) {
         setCompilerStatus("ce");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Cannot Submit Solution: Compilation Error"}\n\n${result.stderr || "Check your syntax."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Compilation Error)" : "Compilation Error"}\n\nPlease check your syntax and language compatibility.`);
         return;
       }
-      if (result.timedOut) {
+      if (evalData.timed_out) {
         setCompilerStatus("tle");
-        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Cannot Submit Solution: Time Limit Exceeded"} (${result.executionTime || 5000}ms)`);
+        setCompilerOutput(`⏱️ ${isAuto ? "Auto-Submitted Solution (Time Limit Exceeded)" : "Time Limit Exceeded"}\n\nExecution exceeded sandbox timeout (5000ms).`);
         return;
       }
-      if (result.exitCode !== 0 && result.exitCode !== undefined) {
+      if (evalData.runtime_error && passed === 0) {
         setCompilerStatus("error");
-        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Cannot Submit Solution: Runtime Error"} (exit code ${result.exitCode})\n\n${result.stderr || "Execution failed."}`);
+        setCompilerOutput(`🔴 ${isAuto ? "Auto-Submitted Solution (Runtime Error)" : "Runtime Error"}\n\nCheck for unhandled exceptions or out-of-bounds access.`);
         return;
       }
 
-      // Execution passed cleanly in Docker container!
-      recordPracticeSuccess();
-      setCompilerStatus("success");
-      const outputText = result.stdout?.trim() || "(No console output)";
-      setCompilerOutput(
-        `✅ Solution Verified & Accepted via Docker Sandbox (${result.executionTime || 0}ms)!\n\nStandard Output:\n${outputText}\n\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! Complete the Assessment Quiz in the next part to unlock the next milestone.`
-      );
+      const results = Array.isArray(evalData.results) ? evalData.results : [];
+      let breakdownLines = [];
+      results.forEach((r, idx) => {
+        const isHidden = Boolean(r.is_hidden);
+        const icon = r.passed ? "✅" : "❌";
+        if (isHidden) {
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Hidden): ${r.passed ? "Passed" : "Wrong Answer"}`);
+        } else {
+          const detail = r.passed
+            ? "Passed"
+            : `Failed (Expected: "${r.expected_output}", Got: "${(r.actual_output || "").trim()}")`;
+          breakdownLines.push(`  ${icon} Test Case ${idx + 1} (Visible): ${detail}`);
+        }
+      });
+
+      if (percentage === 100) {
+        setCompilerStatus("success");
+        setCompilerOutput(
+          `🎉 Solution Accepted! (Passed ${passed}/${total} Test Cases in ${evalData.execution_time_ms || 0}ms)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nScore Awarded: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz to unlock.`
+        );
+      } else {
+        setCompilerStatus("error");
+        setCompilerOutput(
+          `❌ Solution Not Accepted (Verdict: ${(evalData.status || "wrong_answer").toUpperCase()})\nPassed: ${passed}/${total} Test Cases (${percentage}% Score)\n\nTest Case Breakdown:\n${breakdownLines.join("\n")}\n\nPlease review the failed test cases and refine your implementation before retrying.`
+        );
+      }
     } catch (err) {
       setCompilerStatus("error");
-      setCompilerOutput(`❌ Network error submitting to Docker sandbox: ${err.message}`);
+      setCompilerOutput(`❌ Network error submitting to evaluation engine: ${err.message}`);
     }
   };
 
@@ -1969,6 +2676,64 @@ export default function AIRoadmap() {
 
   const overallProgress = calculateRoadmapProgress(milestones);
 
+  // Auto-refresh polling (every 20s) and immediate tab focus / visibility refetch
+  const loadAllRoadmapsRef = useRef(loadAllRoadmaps);
+  useEffect(() => {
+    loadAllRoadmapsRef.current = loadAllRoadmaps;
+  });
+
+  useEffect(() => {
+    let intervalId = null;
+
+    const executeSilentRefresh = () => {
+      if (document.visibilityState === "visible") {
+        if (typeof loadAllRoadmapsRef.current === "function") {
+          loadAllRoadmapsRef.current(true);
+        }
+      }
+    };
+
+    const startPolling = () => {
+      if (!intervalId && document.visibilityState === "visible") {
+        intervalId = setInterval(() => {
+          if (document.visibilityState === "visible") {
+            executeSilentRefresh();
+          }
+        }, 20000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        executeSilentRefresh();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    // Start polling initially if page is visible
+    if (document.visibilityState === "visible") {
+      startPolling();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+    };
+  }, []);
+
   return (
     <div className="roadmap-container stack-6">
       {/* ── Top Generator Header ── */}
@@ -1988,6 +2753,62 @@ export default function AIRoadmap() {
           Select a roadmap or generate a new custom role to access sequential milestone theory, video tutorials, practice exercises, and assessment quizzes.
         </p>
       </div>
+
+      {/* ── 7-Day Roadmap Rate Limit Notice ── */}
+      {roadmapRateLimit.isLocked && (
+        <div
+          className="roadmap-rate-limit-card"
+          style={{
+            background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+            border: "1.5px solid #a7f3d0",
+            borderRadius: "14px",
+            padding: "16px 20px",
+            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.08)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#065f46", fontWeight: "700", fontSize: "14px" }}>
+              <Clock size={18} />
+              <span>AI Roadmap Active &bull; 7-Day Milestone Focus Period</span>
+            </div>
+            <span
+              style={{
+                background: "#d1fae5",
+                color: "#047857",
+                padding: "3px 12px",
+                borderRadius: "999px",
+                fontSize: "12px",
+                fontWeight: "700",
+                border: "1px solid #6ee7b7",
+              }}
+            >
+              {roadmapRateLimit.remainingDays} Day{roadmapRateLimit.remainingDays > 1 ? "s" : ""} Remaining
+            </span>
+          </div>
+          <p style={{ margin: "0 0 10px 0", color: "#334155", fontSize: "13px", lineHeight: "1.5" }}>
+            {roadmapRateLimit.message ||
+              "To ensure in-depth learning and mastery, new AI roadmaps can be generated once every 7 days. Focus on mastering your current milestones, video lectures, and practice challenges below!"}
+          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#475569", borderTop: "1px dashed #a7f3d0", paddingTop: "8px", flexWrap: "wrap", gap: "6px" }}>
+            <span>
+              🔓 Next Roadmap Generation Available:{" "}
+              <strong style={{ color: "#065f46" }}>
+                {roadmapRateLimit.lockedUntil
+                  ? new Date(roadmapRateLimit.lockedUntil).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "In 7 days"}
+              </strong>
+            </span>
+            <span style={{ color: "#059669", fontWeight: "600" }}>
+              ✨ Continue learning with your current roadmap below
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Generator & Search Bar ── */}
       <div className="roadmap-generator-card">
@@ -2016,13 +2837,19 @@ export default function AIRoadmap() {
 
             <button
               type="submit"
-              className="roadmap-gen-btn"
+              className={`roadmap-gen-btn ${roadmapRateLimit.isLocked ? "roadmap-gen-btn-locked" : ""}`}
               disabled={isGenerating || !goalInput.trim()}
+              style={roadmapRateLimit.isLocked ? { background: "#64748b" } : {}}
             >
               {isGenerating ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
                   <span>Generating AI Path...</span>
+                </>
+              ) : roadmapRateLimit.isLocked ? (
+                <>
+                  <Clock size={16} />
+                  <span>Locked &bull; {roadmapRateLimit.remainingDays}d Left</span>
                 </>
               ) : (
                 <>
@@ -2193,9 +3020,22 @@ export default function AIRoadmap() {
 
             <hr className="roadmap-card-divider" />
 
-            {/* Milestones Vertical List */}
-            <div className="roadmap-sidebar-list">
+            {/* Milestones Vertical List Header with Mobile Toggle */}
+            <div className="roadmap-sidebar-header-row">
               <span className="roadmap-sidebar-heading">Milestones ({milestones.length})</span>
+              <button
+                type="button"
+                className="roadmap-mobile-milestone-toggle"
+                onClick={() => setMobileMilestonesOpen(prev => !prev)}
+                aria-label="Toggle Milestones"
+              >
+                <span>{mobileMilestonesOpen ? "Hide" : "Switch Milestone"}</span>
+                {mobileMilestonesOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+            </div>
+
+            {/* Milestones Vertical List */}
+            <div className={`roadmap-sidebar-list ${mobileMilestonesOpen ? 'roadmap-sidebar-list--mobile-open' : ''}`}>
               {milestones.map((m, idx) => {
                 const isActive = activeMilestoneIdx === idx;
                 const isCompleted = m.status === "completed";
@@ -2244,7 +3084,10 @@ export default function AIRoadmap() {
                         <div className="roadmap-sidebar-sublist">
                           <button
                             type="button"
-                            onClick={() => setActiveSection("theory")}
+                            onClick={() => {
+                              setActiveSection("theory");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "theory" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">1.</span>
@@ -2254,7 +3097,10 @@ export default function AIRoadmap() {
                           {mHasVideo && (
                             <button
                               type="button"
-                              onClick={() => setActiveSection("video")}
+                              onClick={() => {
+                                setActiveSection("video");
+                                setMobileMilestonesOpen(false);
+                              }}
                               className={`roadmap-sidebar-sub-btn ${activeSection === "video" ? "active" : "inactive"}`}
                             >
                               <span className="font-extrabold opacity-90">2.</span>
@@ -2264,7 +3110,10 @@ export default function AIRoadmap() {
 
                           <button
                             type="button"
-                            onClick={() => setActiveSection("practice")}
+                            onClick={() => {
+                              setActiveSection("practice");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "practice" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">{mHasVideo ? "3." : "2."}</span>
@@ -2273,7 +3122,10 @@ export default function AIRoadmap() {
 
                           <button
                             type="button"
-                            onClick={() => setActiveSection("quiz")}
+                            onClick={() => {
+                              setActiveSection("quiz");
+                              setMobileMilestonesOpen(false);
+                            }}
                             className={`roadmap-sidebar-sub-btn ${activeSection === "quiz" ? "active" : "inactive"}`}
                           >
                             <span className="font-extrabold opacity-90">{mHasVideo ? "4." : "3."}</span>
@@ -2383,7 +3235,7 @@ export default function AIRoadmap() {
                         Synthesizing authentic, topic-specific curriculum from foundational basics to working mechanics, practical code, and senior best practices.
                       </p>
                       <div className="roadmap-loading-steps-pills">
-                        <span className="roadmap-load-step-chip">L1: Intuition & Concepts</span>
+                        <span className="roadmap-load-step-chip">L1: Foundations</span>
                         <span className="roadmap-load-step-chip">L2: Working Mechanics</span>
                         <span className="roadmap-load-step-chip">L3: Core Internals</span>
                         <span className="roadmap-load-step-chip">L4: Senior Best Practices</span>
@@ -2467,7 +3319,7 @@ export default function AIRoadmap() {
                         <div className="roadmap-theory-level-steps">
                           <div className="roadmap-theory-step-pill step-lvl-1">
                             <span className="step-num">L1</span>
-                            <span className="step-lbl">Intuition</span>
+                            <span className="step-lbl">Foundations</span>
                           </div>
                           <span className="roadmap-theory-step-arrow">→</span>
                           <div className="roadmap-theory-step-pill step-lvl-2">
@@ -2497,9 +3349,9 @@ export default function AIRoadmap() {
                         const points = extractPointsFromSection(sec);
                         const lvlTier = sIdx % 4;
                         const levelConfig = [
-                          { label: "Level 1: Core Concept & Real-World Intuition", badge: "Intuition", colorClass: "lvl-emerald", Icon: BookOpen },
+                          { label: "Level 1: Core Technical Foundations & Architecture", badge: "Foundations", colorClass: "lvl-emerald", Icon: BookOpen },
                           { label: "Level 2: Working Mechanics & Step-by-Step Flow", badge: "Mechanics", colorClass: "lvl-sky", Icon: Cpu },
-                          { label: "Level 3: Deep Core Internals & Architecture", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
+                          { label: "Level 3: Deep Core Internals & Runtime Engine", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
                           { label: "Level 4: Common Pitfalls & Senior Best Practices", badge: "Senior Best Practices", colorClass: "lvl-amber", Icon: ShieldCheck }
                         ][lvlTier];
 
@@ -2540,19 +3392,6 @@ export default function AIRoadmap() {
                       })}
                     </div>
 
-                    {/* Code / Workflow Syntax Block */}
-                    {theoryData.codeExample && (
-                      <div>
-                        <h4 className="roadmap-section-subheading">
-                          {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
-                            ? "Working Syntax & Execution Pattern" 
-                            : "Practical Workflow & Domain Case Study"}
-                        </h4>
-                        <div className="vscode-editor-container roadmap-editor-padded">
-                          <VSCodeCodeHighlighter code={theoryData.codeExample} />
-                        </div>
-                      </div>
-                    )}
 
                     {/* Best Practices */}
                     {Array.isArray(theoryData.bestPractices) && theoryData.bestPractices.length > 0 && (
@@ -2659,11 +3498,13 @@ export default function AIRoadmap() {
 
               {/* ── PART 3: PRACTICE QUESTION & LIVE COMPILER ── */}
               {activeSection === "practice" && (() => {
+                const practice = getActivePractice();
                 const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
                 const cleanRole = String(currentRoadmap?.targetRole || "").trim();
-                const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+                const parsedIdx = activeMilestone?.title?.match(/^Milestone\s*(\d+)/i)?.[1];
+                const mIdx = Math.max(1, parseInt(parsedIdx || (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1), 10) || 1);
+                const cacheKey = getPracticeCacheKey(cleanTitle, cleanRole, mIdx);
                 const aiPractice = aiPracticeCache[cacheKey];
-                const practice = aiPractice || getPracticeQuestionForMilestone(activeMilestone, currentRoadmap.targetRole);
                 return (
                   <div className="roadmap-section-card">
                     <div>
@@ -2674,6 +3515,9 @@ export default function AIRoadmap() {
                         <span className="roadmap-practice-tag-pill">
                           <Code2 size={13} />
                           <span>{aiPractice ? "AI Tailored Practice Challenge" : "Hands-on Practice & Compiler"}</span>
+                        </span>
+                        <span className={`roadmap-diff-pill diff-${String(practice?.difficulty || getMilestoneTier(mIdx)).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+                          🎯 {practice?.difficulty || getMilestoneTier(mIdx)}
                         </span>
                         {isPracticeLoading && !aiPractice && (
                           <span className="roadmap-meta-text" style={{ fontSize: "11px", color: "#818cf8" }}>
@@ -2689,9 +3533,49 @@ export default function AIRoadmap() {
                       </p>
                     </div>
 
-                    <div className="roadmap-sample-box">
-                      <div className="roadmap-sample-input">{practice.sampleInput}</div>
-                      <div className="roadmap-sample-output">{practice.sampleOutput}</div>
+                    {/* Modern Pedagogical Sample Test Case / Example Card */}
+                    <div className="roadmap-example-card">
+                      <div className="roadmap-example-header">
+                        <div className="roadmap-example-header-left">
+                          <Terminal size={14} className="roadmap-example-icon" />
+                          <span className="roadmap-example-title">Sample Test Case & Expected Result</span>
+                        </div>
+                        <span className="roadmap-example-badge">
+                          {compilerLanguage === 'html' || compilerLanguage === 'react' ? 'Visual UI Preview' : 'Standard I/O'}
+                        </span>
+                      </div>
+
+                      <div className="roadmap-example-body">
+                        {/* Sample Input */}
+                        <div className="roadmap-example-row">
+                          <div className="roadmap-example-meta">
+                            <span className="roadmap-example-key">Sample Input:</span>
+                            <span className="roadmap-example-hint">
+                              {compilerLanguage === 'html' || compilerLanguage === 'react' ? '(Direct Markup / Component)' : '(stdin)'}
+                            </span>
+                          </div>
+                          <div className="roadmap-example-code-box roadmap-example-code-box--input">
+                            <pre className="roadmap-example-pre">
+                              <code>{formatSampleCode(practice.sampleInput, 'input')}</code>
+                            </pre>
+                          </div>
+                        </div>
+
+                        {/* Sample Output */}
+                        <div className="roadmap-example-row">
+                          <div className="roadmap-example-meta">
+                            <span className="roadmap-example-key roadmap-example-key--output">Expected Output:</span>
+                            <span className="roadmap-example-hint">
+                              {compilerLanguage === 'html' || compilerLanguage === 'react' ? '(Rendered DOM / Web Preview)' : '(stdout)'}
+                            </span>
+                          </div>
+                          <div className="roadmap-example-code-box roadmap-example-code-box--output">
+                            <pre className="roadmap-example-pre">
+                              <code>{formatSampleCode(practice.sampleOutput, 'output')}</code>
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Upgraded Spacious Code IDE & Live Web Preview Box */}

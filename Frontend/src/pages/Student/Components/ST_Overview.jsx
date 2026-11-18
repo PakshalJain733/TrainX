@@ -60,7 +60,7 @@ const formatStudentName = (name) => {
 
 const defaultDashboardData = {
   personalDetails: {
-    name: "Student",
+    name: "",
     department: "",
   },
   academicOverview: {
@@ -107,8 +107,23 @@ export default function Overview() {
           let resolvedName = (typeof u.name === "string" && u.name) ||
             (typeof u.fullName === "string" && u.fullName) ||
             (typeof u.full_name === "string" && u.full_name) ||
-            (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
-            "Student";
+            "";
+          if (!resolvedName || resolvedName === "Student") {
+            const email = typeof u.email === "string" ? u.email : "";
+            if (email && email.includes("@")) {
+              resolvedName = email.split("@")[0].replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            }
+          }
+          if (!resolvedName) resolvedName = "Student";
+
+          // Sync resolved user back into session/local storage
+          try {
+            const cur = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+            const merged = { ...cur, ...u, name: resolvedName };
+            sessionStorage.setItem("user", JSON.stringify(merged));
+            if (localStorage.getItem("user")) localStorage.setItem("user", JSON.stringify(merged));
+          } catch {}
+
           const dept = student.department || u.department || u.dept || "";
           const sem = student.semester || u.semester || u.sem || u.current_semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
@@ -131,7 +146,7 @@ export default function Overview() {
             ...prev,
             personalDetails: {
               ...prev.personalDetails,
-              name: resolvedName !== "Student" ? resolvedName : prev.personalDetails.name,
+              name: resolvedName !== "Student" ? resolvedName : (prev.personalDetails.name || "Student"),
               department: dept || prev.personalDetails.department,
             },
             academicOverview: {
@@ -145,7 +160,7 @@ export default function Overview() {
           }));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   useEffect(() => {
@@ -159,6 +174,11 @@ export default function Overview() {
             setDashboard((prev) => {
               const resPersonal = result.data.personalDetails || {};
               const resAcademic = result.data.academicOverview || {};
+              const resolvedName = (resPersonal.name && resPersonal.name !== "Student")
+                ? resPersonal.name
+                : (prev.personalDetails?.name && prev.personalDetails.name !== "Student"
+                    ? prev.personalDetails.name
+                    : (storedUser.name && storedUser.name !== "Student" ? storedUser.name : ""));
 
               return {
                 ...prev,
@@ -166,7 +186,7 @@ export default function Overview() {
                 personalDetails: {
                   ...prev.personalDetails,
                   ...resPersonal,
-                  name: (resPersonal.name && resPersonal.name !== "Student") ? resPersonal.name : prev.personalDetails.name,
+                  name: resolvedName || prev.personalDetails?.name || resPersonal.name || "",
                   department: resPersonal.department || prev.personalDetails.department,
                 },
                 academicOverview: {
@@ -262,6 +282,8 @@ export default function Overview() {
       if (data.success) {
         setModalSuccess(data.message || "Successfully joined batch!");
         setJoinCodeInput("");
+        window.dispatchEvent(new Event("batchJoined"));
+        window.dispatchEvent(new Event("portal_batch_updated"));
         setTimeout(() => {
           setShowJoinModal(false);
           setModalSuccess("");
@@ -283,7 +305,26 @@ export default function Overview() {
     } catch { return {}; }
   })();
 
-  const studentName = dashboard.personalDetails.name || storedUser.name || getStoredUserName() || "Student";
+  const studentName = (() => {
+    const rawDashName = dashboard.personalDetails?.name;
+    if (rawDashName && rawDashName !== "Student" && typeof rawDashName === "string" && rawDashName.trim()) {
+      return rawDashName.trim();
+    }
+    const rawStored = storedUser.name || storedUser.fullName || storedUser.full_name;
+    if (rawStored && rawStored !== "Student" && typeof rawStored === "string" && rawStored.trim()) {
+      return rawStored.trim();
+    }
+    const hName = getStoredUserName();
+    if (hName && hName !== "Student" && typeof hName === "string" && hName.trim()) {
+      return hName.trim();
+    }
+    const email = storedUser.email || dashboard.personalDetails?.email || "";
+    if (email && email.includes("@")) {
+      const derived = email.split("@")[0].replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      if (derived && derived !== "Student") return derived;
+    }
+    return "Student";
+  })();
   const dept = dashboard.personalDetails.department || storedUser.department || storedUser.dept || storedUser.studentProfile?.department || "";
   const sem = dashboard.academicOverview.semester || storedUser.semester || storedUser.sem || storedUser.current_semester || storedUser.studentProfile?.semester || "";
   const rollNum = dashboard.academicOverview.rollNumber || storedUser.rollNumber || storedUser.roll_number || storedUser.studentProfile?.roll_number || "";
@@ -334,7 +375,7 @@ export default function Overview() {
               <Sparkles size={13} /> STUDENT WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, {studentName && studentName !== "Student" ? studentName : "Student"}!
+              Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
               {[
@@ -371,7 +412,7 @@ export default function Overview() {
                   <s.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{s.label}</span>
-                
+
               </div>
 
               <p className="overview-stat-value">{s.value}</p>
@@ -410,15 +451,28 @@ export default function Overview() {
               </div>
             ) : (
               <div className="overview-tasks-list">
-                {upcoming.map((task, i) => (
-                  <div key={i} className="overview-task-item">
-                    <div>
-                      <h4 className="overview-item-title">{task.title}</h4>
-                      <p className="overview-item-due">{task.dueDate}</p>
+                {upcoming.map((task, i) => {
+                  const deadlineStr = task.deadline || task.dueDate || "Flexible Deadline";
+                  const typeStr = task.type || "Task";
+                  const isExpired = task.status === "Expired" || task.isExpired;
+                  return (
+                    <div key={i} className="overview-task-item">
+                      <div className="overview-task-info">
+                        <div className="overview-task-title-row">
+                          <h4 className="overview-item-title">{task.title}</h4>
+                          {typeStr && <span className="overview-task-type-badge">{typeStr}</span>}
+                        </div>
+                        <p className="overview-item-due">
+                          <Clock size={12} className="overview-item-due-icon" />
+                          <span>{deadlineStr.startsWith("Due") || deadlineStr.startsWith("Uploaded") || deadlineStr.startsWith("Assigned") ? deadlineStr : `Due: ${deadlineStr}`}</span>
+                        </p>
+                      </div>
+                      <Badge variant={isExpired ? "destructive" : (task.status === "Pending" ? "outline" : "success")}>
+                        {task.status || "Pending"}
+                      </Badge>
                     </div>
-                    <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -560,7 +614,11 @@ export default function Overview() {
 
             <form onSubmit={handleJoinSubmit}>
               <div className="modal-body">
-                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalError && (
+                  <div className={`modal-feedback-alert ${modalError.toLowerCase().includes("already") ? "modal-feedback--warning" : "modal-feedback--error"}`}>
+                    {modalError}
+                  </div>
+                )}
                 {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
 
                 <div className="form-group-admin">
@@ -615,4 +673,3 @@ export default function Overview() {
     </div>
   );
 }
-

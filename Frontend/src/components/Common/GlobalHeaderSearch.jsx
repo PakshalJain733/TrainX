@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame } from "lucide-react";
+import { Search, X, ArrowLeft, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame } from "lucide-react";
 import './GlobalHeaderSearch.css';
 
 const SEARCH_REGISTRY = [
@@ -64,7 +64,7 @@ const SEARCH_REGISTRY = [
   { id: 'mn-defaulters', title: 'Defaulters', path: '/mentor/defaulters', role: 'faculty', category: 'Records', icon: AlertCircle, keywords: ['defaulters', 'at-risk students'] },
   { id: 'mn-mockdrives', title: 'Mock Drives', path: '/mentor/mock-drives', role: 'faculty', category: 'Career', icon: Briefcase, keywords: ['mock drives', 'placement prep'] },
   { id: 'mn-help', title: 'Support Ticket', path: '/mentor/help', role: 'faculty', category: 'Support', icon: HelpCircle, keywords: ['support ticket', 'help', 'queries'] },
-  { id: 'mn-profile', title: 'Faculty Profile', path: '/mentor/profile', role: 'faculty', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
+  { id: 'mn-profile', title: 'Mentor Profile', path: '/mentor/profile', role: 'faculty', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
 
   // ── COORDINATOR DASHBOARD ──
   { id: 'co-overview', title: 'Overview', path: '/coordinator', role: 'coordinator', category: 'Dashboard', icon: LayoutDashboard, keywords: ['overview', 'dashboard', 'home'] },
@@ -78,12 +78,21 @@ const SEARCH_REGISTRY = [
   { id: 'co-requests', title: 'Requests & Approvals', path: '/coordinator/requests', role: 'coordinator', category: 'Management', icon: Inbox, keywords: ['requests', 'approvals', 'inbox'] },
   { id: 'co-broadcast', title: 'Broadcast Notice Center', path: '/coordinator/broadcast', role: 'coordinator', category: 'Communication', icon: Megaphone, keywords: ['broadcast notice center', 'announcements'] },
   { id: 'co-help', title: 'Support Ticket', path: '/coordinator/help', role: 'coordinator', category: 'Support', icon: HelpCircle, keywords: ['support ticket', 'help'] },
-  { id: 'co-profile', title: 'Coordinator Profile', path: '/coordinator/profile', role: 'coordinator', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] }
+  { id: 'co-profile', title: 'Coordinator Profile', path: '/coordinator/profile', role: 'coordinator', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings'] },
+
+  // ── TRAINER DASHBOARD ──
+  { id: 'tr-overview', title: 'Overview', path: '/trainer', role: 'trainer', category: 'Dashboard', icon: LayoutDashboard, keywords: ['overview', 'dashboard', 'home', 'stats', 'metrics'] },
+  { id: 'tr-batches', title: 'My Batches', path: '/trainer/batches', role: 'trainer', category: 'Academic', icon: Users, keywords: ['batches', 'my batches', 'assigned batches', 'cohorts', 'join batch'] },
+  { id: 'tr-tasks', title: 'Batch Tasks & Code', path: '/trainer/tasks', role: 'trainer', category: 'Coding', icon: Code2, keywords: ['tasks', 'coding tasks', 'challenges', 'assign task', 'test cases'] },
+  { id: 'tr-submissions', title: 'Submissions & Reviews', path: '/trainer/submissions', role: 'trainer', category: 'Evaluations', icon: FileCheck2, keywords: ['submissions', 'reviews', 'evaluations', 'grades', 'code review'] },
+  { id: 'tr-leaderboard', title: 'Leaderboard', path: '/trainer/leaderboard', role: 'trainer', category: 'Rankings', icon: Trophy, keywords: ['leaderboard', 'ranks', 'scores', 'batch rankings'] },
+  { id: 'tr-profile', title: 'Trainer Profile', path: '/trainer/profile', role: 'trainer', category: 'Account', icon: User, keywords: ['profile', 'account', 'settings', 'password'] }
 ];
 
 export default function GlobalHeaderSearch({ role }) {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
   const inputRef = useRef(null);
@@ -116,6 +125,7 @@ export default function GlobalHeaderSearch({ role }) {
         e.preventDefault();
         inputRef.current?.focus();
         setIsOpen(true);
+        setIsMobileOpen(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -127,6 +137,7 @@ export default function GlobalHeaderSearch({ role }) {
     const handleClickOutside = (e) => {
       if (searchWrapRef.current && !searchWrapRef.current.contains(e.target)) {
         setIsOpen(false);
+        setIsMobileOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -140,10 +151,25 @@ export default function GlobalHeaderSearch({ role }) {
 
   const handleSelect = (item) => {
     setIsOpen(false);
+    setIsMobileOpen(false);
     setQuery('');
     if (item && item.path) {
       navigate(item.path);
     }
+  };
+
+  const handleOpenMobile = () => {
+    setIsMobileOpen(true);
+    setIsOpen(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 60);
+  };
+
+  const handleCloseMobile = () => {
+    setIsMobileOpen(false);
+    setIsOpen(false);
+    setQuery('');
   };
 
   const handleKeyDown = (e) => {
@@ -162,13 +188,41 @@ export default function GlobalHeaderSearch({ role }) {
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
+      setIsMobileOpen(false);
     }
   };
 
   return (
-    <div className="global-header-search-wrap" ref={searchWrapRef}>
+    <div
+      className={`global-header-search-wrap ${isMobileOpen ? 'global-header-search-wrap--mobile-active' : ''}`}
+      ref={searchWrapRef}
+    >
+      {/* Mobile-only Trigger Icon Button */}
+      <button
+        type="button"
+        className="global-header-search-mobile-trigger"
+        onClick={handleOpenMobile}
+        aria-label="Search"
+        title="Search pages (Ctrl + K)"
+      >
+        <Search size={18} />
+      </button>
+
+      {/* Main Search Bar */}
       <div className={`global-header-search-bar ${isOpen ? 'global-header-search-bar--focused' : ''}`}>
-        <Search size={16} className="global-header-search-icon" />
+        {isMobileOpen ? (
+          <button
+            type="button"
+            className="global-header-search-mobile-back"
+            onClick={handleCloseMobile}
+            aria-label="Back"
+          >
+            <ArrowLeft size={17} />
+          </button>
+        ) : (
+          <Search size={16} className="global-header-search-icon" />
+        )}
+
         <input
           ref={inputRef}
           type="text"
@@ -182,6 +236,7 @@ export default function GlobalHeaderSearch({ role }) {
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
         />
+
         {query ? (
           <button
             type="button"
@@ -198,6 +253,17 @@ export default function GlobalHeaderSearch({ role }) {
           <span className="global-header-search-kbd">
             <kbd>Ctrl K</kbd>
           </span>
+        )}
+
+        {isMobileOpen && (
+          <button
+            type="button"
+            className="global-header-search-mobile-close"
+            onClick={handleCloseMobile}
+            aria-label="Close search"
+          >
+            <X size={17} />
+          </button>
         )}
       </div>
 
@@ -232,7 +298,9 @@ export default function GlobalHeaderSearch({ role }) {
                     </div>
                     <div className="global-header-search-item-info">
                       <span className="global-header-search-item-title">{item.title}</span>
-                      <span className="global-header-search-item-cat">{item.category} &bull; {item.path}</span>
+                      {item.category && (
+                        <span className="global-header-search-item-cat">{item.category}</span>
+                      )}
                     </div>
                   </button>
                 );

@@ -7,11 +7,29 @@ import {
   createUser,
   getStudentByUserId,
   updateUserModel,
+  getCollegeForUser,
 } from '../models/user.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { getUserNotifications } from '../services/notification.service.js';
 import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
 import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
+import { calculateStudentProgressAnalytics } from '../services/progressAnalytics.service.js';
+
+export const isDeadlineExpired = (deadline) => {
+  if (!deadline) return false;
+  if (deadline instanceof Date) {
+    return deadline.getTime() < Date.now();
+  }
+  const clean = String(deadline).replace(/^due\s+/i, '').trim();
+  if (!clean || clean.toLowerCase() === 'no deadline' || clean.toLowerCase() === 'none' || clean.toLowerCase() === 'flexible deadline') return false;
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return false;
+  if (!clean.includes(':') && !clean.includes('T')) {
+    d.setHours(23, 59, 59, 999);
+  }
+  return d.getTime() < Date.now();
+};
 
 export const getStudentData = async (req, res, next) => {
   try {
@@ -27,7 +45,11 @@ export const getStudentData = async (req, res, next) => {
     }
 
     const allUsers = await getAllUsersModel(collegeId, deptFilter);
-    let students = (allUsers || []).filter((u) => u.role === ROLES.STUDENT || u.role === 'student');
+    let students = (allUsers || []).filter((u) => {
+      const isStudent = u.role === ROLES.STUDENT || u.role === 'student';
+      const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+      return isStudent && isApproved;
+    });
 
     // Extra safety in-memory filter if deptFilter is present
     if (deptFilter && deptFilter !== 'all' && deptFilter !== 'All') {
@@ -51,7 +73,7 @@ export const getStudentData = async (req, res, next) => {
           attendanceMap[r.user_id] = tot > 0 ? Math.round((pres / tot) * 100) : 0;
         });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const formatted = students.map((s) => {
       const studentId = s.id || s.user_id;
@@ -63,7 +85,7 @@ export const getStudentData = async (req, res, next) => {
         email: s.email,
         rollNo: s.roll_number || s.rollNo || `CS-${s.id}`,
         roll_number: s.roll_number || s.rollNo || `CS-${s.id}`,
-        department: s.department || 'Computer Science & Engineering',
+        department: s.department || null,
         department_id: s.department_id || 1,
         batch: s.batch_name || 'BE-CS-2026-A',
         year: s.year || 'TE',
@@ -139,13 +161,38 @@ export const getStudentProfile = async (req, res, next) => {
       console.warn('[getStudentProfile training query warning]', e.message);
     }
 
+    // Fetch College details for this student from DB
+    const collegeInfo = await getCollegeForUser(userId, user, studentProfile);
+    const collegeName = collegeInfo?.name || '';
+    const collegeId = collegeInfo?.id || user.college_id || studentProfile.college_id || null;
+
+    if (collegeId) {
+      if (!user.college_id) {
+        query('UPDATE users SET college_id = ? WHERE id = ?', [collegeId, userId]).catch(() => { });
+        user.college_id = collegeId;
+      }
+      if (!studentProfile.college_id) {
+        query('UPDATE students SET college_id = ? WHERE user_id = ?', [collegeId, userId]).catch(() => { });
+        studentProfile.college_id = collegeId;
+      }
+    }
+
+    const resolvedProfileName = user.name || user.fullName || studentProfile.name || req.user?.name || req.user?.fullName || 'Student';
+
     return sendSuccess(res, 'Student profile retrieved successfully', {
       ...toSafeUser(user),
       ...studentProfile,
+      name: resolvedProfileName,
+      college: collegeName,
+      college_name: collegeName,
+      college_id: collegeId,
       is_profile_updated: isProfileUpdated,
       training,
       studentProfile: {
         ...studentProfile,
+        college: collegeName,
+        college_name: collegeName,
+        college_id: collegeId,
         is_profile_updated: isProfileUpdated,
       },
     });
@@ -157,7 +204,43 @@ export const getStudentProfile = async (req, res, next) => {
 export const updateStudentProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const updated = await updateUserModel(userId, { ...req.body, is_profile_updated: true });
+    // Security Allowlist: prevent mass assignment and privilege escalation (role, is_approved, college_id)
+    const allowed = [
+      'name', 'mobile_number', 'phone', 'gender', 'city', 'emergency_contact',
+      'skills', 'target_track', 'track', 'avatar_url', 'bio', 'year', 'division', 'semester', 'roll_number'
+    ];
+    const safeData = { is_profile_updated: true };
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) safeData[key] = req.body[key];
+    }
+    const updated = await updateUserModel(userId, safeData);
+
+    // Save notification preferences directly to students table
+    if (
+      req.body.notif_milestones !== undefined ||
+      req.body.notif_weekly_report !== undefined ||
+      req.body.notif_interview !== undefined
+    ) {
+      const updates = [];
+      const params = [];
+      if (req.body.notif_milestones !== undefined) {
+        updates.push('notif_milestones = ?');
+        params.push(req.body.notif_milestones ? 1 : 0);
+      }
+      if (req.body.notif_weekly_report !== undefined) {
+        updates.push('notif_weekly_report = ?');
+        params.push(req.body.notif_weekly_report ? 1 : 0);
+      }
+      if (req.body.notif_interview !== undefined) {
+        updates.push('notif_interview = ?');
+        params.push(req.body.notif_interview ? 1 : 0);
+      }
+      if (updates.length > 0) {
+        params.push(userId);
+        await query(`UPDATE students SET ${updates.join(', ')} WHERE user_id = ?`, params).catch(() => { });
+      }
+    }
+
     return sendSuccess(res, 'Student profile updated successfully', updated);
   } catch (error) {
     next(error);
@@ -166,12 +249,24 @@ export const updateStudentProfile = async (req, res, next) => {
 
 export const getStudentDashboard = async (req, res, next) => {
   try {
-    const collegeId = req.user.collegeId || 1;
+    // TENANT-03: Strict tenant validation - no silent fallback to college 1
+    let collegeId = req.user?.collegeId || req.user?.college_id;
+    if (!collegeId) {
+      if (req.user?.role === ROLES.SUPER_ADMIN && req.query?.collegeId) {
+        collegeId = parseInt(req.query.collegeId, 10);
+      } else {
+        return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
+      }
+    }
     const callerId = req.user.userId || req.user.id;
 
     // Multi-college isolation: retrieve students from the same college
     const allUsers = await getAllUsersModel(collegeId);
-    const students = allUsers.filter((u) => u.role === ROLES.STUDENT);
+    const students = allUsers.filter((u) => {
+      const isStudent = u.role === ROLES.STUDENT;
+      const isApproved = u.is_approved === 1 || u.is_approved === true || String(u.is_approved) === '1';
+      return isStudent && isApproved;
+    });
 
     // Calculate real attendance stats for logged in student
     let attendancePercentage = 0;
@@ -230,8 +325,96 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = realLeaderboard.findIndex((s) => s.you);
     const currentRank = currentStudentIdx !== -1 ? `${realLeaderboard[currentStudentIdx].rank} / ${realLeaderboard.length}` : `1 / ${Math.max(1, realLeaderboard.length)}`;
 
-    // Fetch upcoming deadlines: prioritize practice problems and coding tasks
+    // Fetch upcoming deadlines: combine batch tasks, practice problems, and study materials
     let upcomingDeadlines = [];
+
+    // 1. Check Coursework Tasks from batch_tasks (assigned strictly to student's enrolled batches)
+    try {
+      const studentBatches = await query(
+        `SELECT DISTINCT batch_id FROM (
+           SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
+           UNION
+           SELECT batch_id FROM student_batches WHERE user_id = ? AND batch_id IS NOT NULL
+         ) as eb`,
+        [callerId, callerId]
+      );
+      const enrolledBatchIds = (studentBatches || []).map(r => r.batch_id).filter(Boolean);
+
+      if (enrolledBatchIds.length > 0) {
+        const placeholders = enrolledBatchIds.map(() => '?').join(',');
+        const taskSql = `
+          SELECT bt.id, bt.title, bt.deadline, bt.task_date, bt.topic, bt.difficulty, bt.created_at, bt.batch_id, bt.points,
+                 (
+                   SELECT ts.status
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS submission_status,
+                 (
+                   SELECT COALESCE(ts.marks_obtained, ts.score, 0)
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS marks_obtained,
+                 (
+                   SELECT ts.feedback
+                   FROM task_submissions ts
+                   WHERE ts.task_id = bt.id AND ts.user_id = ?
+                   ORDER BY ts.id DESC
+                   LIMIT 1
+                 ) AS submission_feedback
+          FROM batch_tasks bt
+          WHERE bt.batch_id IN (${placeholders})
+          ORDER BY (bt.deadline IS NULL OR bt.deadline = ''), bt.deadline ASC, bt.id DESC LIMIT 5
+        `;
+        const batchTaskRows = await query(taskSql, [callerId, callerId, callerId, ...enrolledBatchIds]);
+        if (batchTaskRows && batchTaskRows.length > 0) {
+          batchTaskRows.forEach((t) => {
+            const expired = isDeadlineExpired(t.deadline);
+            const rawStatus = String(t.submission_status || '').toLowerCase().trim();
+            const totalPoints = Number(t.points || 0);
+            const scoreVal = Number(t.marks_obtained || 0);
+            const hasFeedback = Boolean(t.submission_feedback && String(t.submission_feedback).trim());
+            const isPartialByFeedback = hasFeedback && String(t.submission_feedback).toLowerCase().startsWith('partial');
+
+            let status = 'Pending';
+            if (rawStatus) {
+              if (rawStatus === 'passed' || rawStatus === 'completed' || rawStatus === 'accepted' || (totalPoints > 0 && scoreVal >= totalPoints)) {
+                status = 'Completed';
+              } else if (rawStatus === 'partial' || isPartialByFeedback || (totalPoints > 0 && scoreVal > 0 && scoreVal < totalPoints)) {
+                status = 'Partial';
+              } else if (rawStatus === 'failed') {
+                status = 'Failed';
+              } else {
+                status = 'Submitted';
+              }
+            } else if (expired) {
+              status = 'Expired';
+            }
+            const formattedDeadline = t.deadline
+              ? (t.deadline.toLowerCase().startsWith('due') ? t.deadline : `Due ${t.deadline}`)
+              : (t.created_at ? `Assigned ${new Date(t.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
+            upcomingDeadlines.push({
+              id: `task-${t.id}`,
+              title: t.title,
+              deadline: formattedDeadline,
+              dueDate: formattedDeadline,
+              status: status,
+              isExpired: expired,
+              type: t.topic || 'Batch Task',
+              taskDate: t.task_date || '',
+              batchId: t.batch_id,
+            });
+          });
+        }
+      }
+    } catch (taskErr) {
+      console.warn('[getStudentDashboard batch_tasks query notice]', taskErr.message);
+    }
+
+    // 2. Check Practice Problems
     try {
       const problemRows = await query(
         `SELECT id, title, due_date, difficulty FROM practice_problems 
@@ -240,32 +423,62 @@ export const getStudentDashboard = async (req, res, next) => {
         [collegeId]
       );
       if (problemRows && problemRows.length > 0) {
-        upcomingDeadlines = problemRows.map(p => ({
-          id: p.id,
-          title: p.title,
-          dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
-          status: 'Pending',
-          type: 'Coding Practice',
-        }));
+        problemRows.forEach((p) => {
+          const expired = isDeadlineExpired(p.due_date);
+          const formattedDue = p.due_date
+            ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+            : 'Flexible Deadline';
+          upcomingDeadlines.push({
+            id: `problem-${p.id}`,
+            title: p.title,
+            deadline: formattedDue.startsWith('Due') ? formattedDue : `Due ${formattedDue}`,
+            dueDate: formattedDue.startsWith('Due') ? formattedDue : `Due ${formattedDue}`,
+            status: expired ? 'Expired' : 'Pending',
+            isExpired: expired,
+            type: 'Coding Practice',
+          });
+        });
       }
     } catch (e) {
       console.warn('[getStudentDashboard practice problems deadlines warning]', e.message);
     }
 
-    if (upcomingDeadlines.length === 0) {
-      try {
-        const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
-        if (materials && materials.length > 0) {
-          upcomingDeadlines = materials.map(m => ({
+    // 3. Check Uploaded Study Materials & Tasks
+    try {
+      const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
+      if (materials && materials.length > 0) {
+        materials.forEach((m) => {
+          const formattedDeadline = m.deadline
+            ? (String(m.deadline).toLowerCase().startsWith('due') ? m.deadline : `Due ${m.deadline}`)
+            : (m.created_at ? `Uploaded ${new Date(m.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'Flexible Deadline');
+
+          upcomingDeadlines.push({
+            id: `mat-${m.id}`,
             title: m.title,
-            dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
+            deadline: formattedDeadline,
+            dueDate: formattedDeadline,
             status: 'Published',
-          }));
-        }
-      } catch (e) {
-        console.warn('[getStudentDashboard materials query warning]', e.message);
+            isExpired: m.deadline ? isDeadlineExpired(m.deadline) : false,
+            type: m.type === 'Link' ? 'Web Link' : (m.type || 'Study Resource'),
+          });
+        });
       }
+    } catch (e) {
+      console.warn('[getStudentDashboard materials query warning]', e.message);
     }
+
+    // Deduplicate by title and cap to 5 items
+    const seenTitles = new Set();
+    const finalDeadlines = [];
+    for (const d of upcomingDeadlines) {
+      const key = (d.title || '').trim().toLowerCase();
+      if (!seenTitles.has(key)) {
+        seenTitles.add(key);
+        finalDeadlines.push(d);
+      }
+      if (finalDeadlines.length >= 5) break;
+    }
+    upcomingDeadlines = finalDeadlines;
 
     let callerUser = await findUserById(callerId);
     if (!callerUser) {
@@ -327,7 +540,7 @@ export const getStudentDashboard = async (req, res, next) => {
         totalMilestones = rmRows.length;
         milestonesCompleted = rmRows.filter(r => r.status === 'completed').length;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Calculate real Earned XP
     const earnedCodingXp = solvedCount * 100;
@@ -361,7 +574,8 @@ export const getStudentDashboard = async (req, res, next) => {
 
     const dashboardData = {
       personalDetails: {
-        name: callerUser.name || req.user.name || 'Student',
+        name: callerUser.name || callerUser.fullName || req.user?.name || req.user?.fullName || 'Student',
+        email: callerUser.email || req.user?.email || '',
         department: callerStudent.department || callerUser.department || '',
       },
       academicOverview: {
@@ -463,6 +677,8 @@ export const getStudentPracticeProblems = async (req, res, next) => {
     });
 
     let submissionMap = new Map();
+    let retakeSet = new Set();
+    let attemptsMap = new Map(); // tracks attempt count per problem
     if (callerId) {
       try {
         const solvedRows = await query(
@@ -475,6 +691,8 @@ export const getStudentPracticeProblems = async (req, res, next) => {
         if (Array.isArray(solvedRows)) {
           solvedRows.forEach(r => {
             const pId = Number(r.problem_id);
+            // Count every row as an attempt
+            attemptsMap.set(pId, (attemptsMap.get(pId) || 0) + 1);
             const prev = submissionMap.get(pId);
             const rScore = parseFloat(r.marks ?? r.score ?? 0);
             if (!prev || rScore >= prev.score) {
@@ -488,24 +706,16 @@ export const getStudentPracticeProblems = async (req, res, next) => {
             }
           });
         }
-        const taskSolved = await query(
-          `SELECT task_id, score, marks_obtained, status FROM task_submissions WHERE user_id = ?`,
+
+        const retakeRows = await query(
+          `SELECT target_id FROM coding_retake_permissions 
+           WHERE target_type = 'practice' AND student_id = ? AND status = 'pending'`,
           [callerId]
         );
-        if (Array.isArray(taskSolved)) {
-          taskSolved.forEach(r => {
-            const tId = Number(r.task_id);
-            const tScore = parseFloat(r.marks_obtained ?? r.score ?? 0);
-            const prev = submissionMap.get(tId);
-            if (!prev || tScore >= prev.score) {
-              submissionMap.set(tId, {
-                score: tScore,
-                percentage: 100,
-                status: r.status,
-              });
-            }
-          });
+        if (Array.isArray(retakeRows)) {
+          retakeRows.forEach(r => retakeSet.add(Number(r.target_id)));
         }
+        // Practice problems solve status is derived strictly from coding_submissions
       } catch (e) { }
     }
 
@@ -523,6 +733,11 @@ export const getStudentPracticeProblems = async (req, res, next) => {
             solveStatus = 'Attempted';
           }
         }
+        const hasPassedDeadline = isDeadlineExpired(p.due_date || p.dueDate);
+        const isExpired = hasPassedDeadline && solveStatus !== 'Solved';
+        if (isExpired && solveStatus === 'Unsolved') {
+          solveStatus = 'Expired';
+        }
         return {
           id: p.id,
           title: p.title,
@@ -536,9 +751,15 @@ export const getStudentPracticeProblems = async (req, res, next) => {
           description: p.description || '',
           language: p.language || null,
           solve_status: solveStatus,
+          is_expired: isExpired,
+          isExpired: isExpired,
+          retakeAvailable: retakeSet.has(Number(p.id)),
           score_obtained: sub ? sub.score : null,
           marks_obtained: sub ? sub.score : null,
           percentage: sub ? sub.percentage : null,
+          attempts_count: attemptsMap.get(Number(p.id)) || 0,
+          attemptsCount: attemptsMap.get(Number(p.id)) || 0,
+          max_attempts: 3,
         };
       });
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
@@ -557,7 +778,28 @@ export const getStudentPracticeProblemById = async (req, res, next) => {
     if (!problem) {
       return sendError(res, 'Practice problem not found', 404);
     }
-    return sendSuccess(res, 'Practice problem retrieved successfully', problem);
+    const isExpired = isDeadlineExpired(problem.due_date || problem.dueDate);
+    let retakeAvailable = false;
+    const callerId = req.user?.userId || req.user?.id;
+    if (callerId) {
+      try {
+        const retakeRows = await query(
+          `SELECT id FROM coding_retake_permissions 
+           WHERE target_type = 'practice' AND target_id = ? AND student_id = ? AND status = 'pending' 
+           LIMIT 1`,
+          [id, callerId]
+        );
+        if (retakeRows && retakeRows.length > 0) {
+          retakeAvailable = true;
+        }
+      } catch (e) {}
+    }
+    return sendSuccess(res, 'Practice problem retrieved successfully', {
+      ...problem,
+      isExpired,
+      is_expired: isExpired,
+      retakeAvailable,
+    });
   } catch (error) {
     next(error);
   }
@@ -605,7 +847,7 @@ export const getStudentAttendance = async (req, res, next) => {
             userEmail = uRes[0].email || userEmail;
             userMobile = uRes[0].mobile_number || userMobile;
           }
-        } catch (e) {}
+        } catch (e) { }
 
         let rows = await query(
           `SELECT a.*, b.name AS batch_name, b.code AS batch_code
@@ -670,8 +912,12 @@ export const getStudentAttendance = async (req, res, next) => {
 export const applyStudentLeave = async (req, res, next) => {
   try {
     const { category, startDate, endDate, days, reason, attachment } = req.body;
-    const userId = req.user?.userId || req.user?.id || 1;
-    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    const userId = req.user?.userId || req.user?.id;
+    const collegeId = req.user?.college_id || req.user?.collegeId;
+
+    if (!collegeId) {
+      return sendError(res, 'Access denied: User is not associated with any college tenant', 403);
+    }
 
     if (!startDate) {
       return sendError(res, 'Start date is required', 400);
@@ -750,13 +996,9 @@ export const applyStudentLeave = async (req, res, next) => {
 
 export const getStudentNotifications = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || 1;
-    let broadcasts = await getBroadcastsModel(collegeId, 'student');
-    if (req.user) {
-      broadcasts = await filterContentByMentorAssignment(broadcasts, req.user, 'created_by');
-    }
-
-    return sendSuccess(res, 'Student notifications retrieved', broadcasts);
+    const user = req.user || {};
+    const notifs = await getUserNotifications(user);
+    return sendSuccess(res, 'Student notifications retrieved', notifs);
   } catch (error) {
     next(error);
   }
@@ -778,51 +1020,219 @@ export const getStudentPerformance = async (req, res, next) => {
     let totalStudents = 1;
     let quizList = [];
     let weeklyProgress = [];
+    let progressAnalytics = null;
+
+    // Detailed Track Containers
+    let taskDetails = { totalAssigned: 0, completedCount: 0, pendingCount: 0, meanScore: 0, completionRate: 0, tasks: [] };
+    let quizDetails = { totalAttempted: 0, passedCount: 0, failedCount: 0, meanScore: 0, passRate: 0, attempts: [] };
+    let codingDetails = { solvedCount: 0, totalProblems: 0, easySolved: 0, mediumSolved: 0, hardSolved: 0, recentSubmissions: [] };
+    let attendanceDetails = { total: 0, present: 0, absent: 0, rate: 0, status: 'N/A', recent: [] };
+    let interviewDetails = { completedCount: 0, meanScore: 0, interviews: [] };
 
     if (userId) {
-      // 1. Attendance score
+      // 1. Attendance score & detailed attendance logs
       try {
-        const attRows = await query(`SELECT status FROM attendance WHERE user_id = ?`, [userId]);
+        const attRows = await query(
+          `SELECT a.id, a.session_date, a.status, a.remark, b.name as batch_name
+           FROM attendance a
+           LEFT JOIN batches b ON a.batch_id = b.id
+           WHERE a.user_id = ?
+           ORDER BY a.session_date DESC, a.id DESC LIMIT 20`,
+          [userId]
+        );
         if (attRows && attRows.length > 0) {
           const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
           attendanceScore = Math.round((present / attRows.length) * 100);
+          attendanceDetails = {
+            total: attRows.length,
+            present,
+            absent: attRows.length - present,
+            rate: attendanceScore,
+            status: attendanceScore >= 75 ? 'Good Standing' : 'Attendance Risk',
+            recent: attRows.map(r => ({
+              id: r.id,
+              date: r.session_date ? new Date(r.session_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+              status: String(r.status || 'present').toLowerCase() === 'present' ? 'Present' : 'Absent',
+              batchName: r.batch_name || 'Classroom Session',
+              remark: r.remark || '',
+            })),
+          };
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[getStudentPerformance attendance warning]', e.message);
+      }
 
       // 2. Quiz score & list from real assessment_attempts
       try {
         const qRows = await query(
-          `SELECT a.title, aa.marks_obtained, aa.total_marks, aa.score, aa.percentage 
+          `SELECT aa.id, aa.assessment_id, COALESCE(a.title, CONCAT('Quiz #', aa.assessment_id)) as title,
+                  COALESCE(a.category, 'Technical Quiz') as category,
+                  aa.marks_obtained, aa.total_marks, aa.score, aa.percentage, aa.status,
+                  COALESCE(aa.completed_at, aa.submitted_at, aa.created_at) as attempt_date
            FROM assessment_attempts aa 
            LEFT JOIN assessments a ON aa.assessment_id = a.id 
-           WHERE aa.user_id = ? AND aa.status IN ('completed', 'finished', 'passed')
-           ORDER BY aa.id DESC LIMIT 10`,
+           WHERE aa.user_id = ?
+             AND (
+               aa.status IN ('completed', 'finished', 'passed', 'failed', 'reviewed')
+               OR aa.completed_at IS NOT NULL
+               OR aa.submitted_at IS NOT NULL
+             )
+           ORDER BY aa.id DESC LIMIT 50`,
           [userId]
         );
         if (qRows && qRows.length > 0) {
-          const totalPct = qRows.reduce((acc, r) => {
+          // Deduplicate by assessment_id so each distinct quiz shows only its latest/definitive completed attempt
+          const seenAssessments = new Map();
+          for (const r of qRows) {
+            const key = r.assessment_id ? String(r.assessment_id) : String(r.title);
+            if (!seenAssessments.has(key)) {
+              seenAssessments.set(key, r);
+            }
+          }
+          const deduplicatedRows = Array.from(seenAssessments.values());
+
+          const totalPct = deduplicatedRows.reduce((acc, r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
             return acc + sc;
           }, 0);
-          quizScore = Math.round(totalPct / qRows.length);
-          quizList = qRows.slice(0, 6).map((r, i) => {
+          quizScore = deduplicatedRows.length > 0 ? Math.round(totalPct / deduplicatedRows.length) : 0;
+
+          const attemptsList = deduplicatedRows.map((r) => {
             const sc = Number(r.percentage) || (r.total_marks ? Math.round((Number(r.marks_obtained) / Number(r.total_marks)) * 100) : Number(r.score) || 0);
+            const isPassed = sc >= 50 || String(r.status).toLowerCase() === 'passed';
             return {
-              label: r.title || `Quiz ${i + 1}`,
+              id: r.id,
+              assessmentId: r.assessment_id,
+              title: r.title,
+              category: r.category,
               score: Math.min(100, Math.max(0, sc)),
-              color: ["#4f46e5", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"][i % 6]
+              marksObtained: r.marks_obtained || 0,
+              totalMarks: r.total_marks || 100,
+              status: isPassed ? 'Passed' : 'Needs Review',
+              date: r.attempt_date ? new Date(r.attempt_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently',
             };
           });
+
+          const passedAttempts = attemptsList.filter(a => a.status === 'Passed').length;
+          quizDetails = {
+            totalAttempted: attemptsList.length,
+            passedCount: passedAttempts,
+            failedCount: attemptsList.length - passedAttempts,
+            meanScore: quizScore,
+            passRate: attemptsList.length > 0 ? Math.round((passedAttempts / attemptsList.length) * 100) : 0,
+            attempts: attemptsList,
+          };
+
+          quizList = attemptsList.slice(0, 6).map((r, i) => ({
+            label: r.title,
+            score: r.score,
+            color: ["#4f46e5", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#06b6d4"][i % 6]
+          }));
         }
       } catch (e) {
         console.warn('[getStudentPerformance quiz warning]', e.message);
       }
 
-      // 3. Coding score & solved count from coding_submissions and task_submissions
+      // 3. Batch Tasks Progress (Coursework tasks & submissions)
+      try {
+        const studentBatches = await query(
+          `SELECT DISTINCT batch_id FROM (
+             SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
+             UNION
+             SELECT batch_id FROM student_batches WHERE user_id = ? AND batch_id IS NOT NULL
+           ) as eb`,
+          [userId, userId]
+        );
+        const enrolledBatchIds = (studentBatches || []).map(r => r.batch_id).filter(Boolean);
+
+        let taskRows = [];
+        if (enrolledBatchIds.length > 0) {
+          const placeholders = enrolledBatchIds.map(() => '?').join(',');
+          taskRows = await query(
+            `SELECT bt.id, bt.title, bt.topic, bt.difficulty, bt.deadline, bt.task_date, bt.created_at, bt.points,
+                    b.name as batch_name,
+                    ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.feedback as submission_feedback, ts.created_at as submitted_at
+             FROM batch_tasks bt
+             LEFT JOIN batches b ON bt.batch_id = b.id
+             LEFT JOIN task_submissions ts ON (bt.id = ts.task_id AND ts.user_id = ? AND ts.batch_id = bt.batch_id)
+             WHERE bt.batch_id IN (${placeholders})
+             ORDER BY bt.id DESC LIMIT 25`,
+            [userId, ...enrolledBatchIds]
+          );
+        }
+
+        if (!taskRows || taskRows.length === 0) {
+          taskRows = await query(
+            `SELECT ts.id, ts.task_id, ts.status as submission_status, ts.score as task_score, ts.marks_obtained, ts.feedback as submission_feedback, ts.created_at as submitted_at,
+                    bt.title, bt.topic, bt.difficulty, bt.deadline, bt.points, b.name as batch_name
+             FROM task_submissions ts
+             LEFT JOIN batch_tasks bt ON ts.task_id = bt.id
+             LEFT JOIN batches b ON ts.batch_id = b.id
+             WHERE ts.user_id = ?
+             ORDER BY ts.id DESC LIMIT 25`,
+            [userId]
+          );
+        }
+
+        if (taskRows && taskRows.length > 0) {
+          const parsedTasks = taskRows.map((t) => {
+            const rawStatus = String(t.submission_status || '').toLowerCase().trim();
+            const totalPoints = Number(t.points || 0);
+            const scoreVal = Number(t.marks_obtained ?? t.task_score ?? 0);
+            const hasFeedback = Boolean(t.submission_feedback && String(t.submission_feedback).trim());
+            const isPartialByFeedback = hasFeedback && String(t.submission_feedback).toLowerCase().startsWith('partial');
+
+            let computedStatus = 'Pending';
+            if (rawStatus) {
+              if (rawStatus === 'passed' || rawStatus === 'completed' || rawStatus === 'accepted' || (totalPoints > 0 && scoreVal >= totalPoints)) {
+                computedStatus = 'Completed';
+              } else if (rawStatus === 'partial' || isPartialByFeedback || (totalPoints > 0 && scoreVal > 0 && scoreVal < totalPoints)) {
+                computedStatus = 'Partial';
+              } else if (rawStatus === 'failed') {
+                computedStatus = 'Failed';
+              } else {
+                computedStatus = 'Submitted';
+              }
+            } else if (isDeadlineExpired(t.deadline)) {
+              computedStatus = 'Overdue';
+            }
+
+            return {
+              id: t.id || t.task_id,
+              title: t.title || 'Coursework Assignment',
+              topic: t.topic || 'Batch Milestone',
+              batchName: t.batch_name || 'Enrolled Batch',
+              difficulty: t.difficulty || 'Medium',
+              deadline: t.deadline || 'Flexible',
+              status: computedStatus,
+              score: (computedStatus === 'Completed' || computedStatus === 'Partial' || computedStatus === 'Submitted') ? scoreVal : 0,
+              submittedAt: t.submitted_at ? new Date(t.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (rawStatus ? 'Submitted' : '—'),
+            };
+          });
+
+          const completed = parsedTasks.filter(t => t.status === 'Completed').length;
+          const scores = parsedTasks.filter(t => t.status === 'Completed').map(t => t.score);
+          const meanScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+          const completionRate = Math.round((completed / parsedTasks.length) * 100);
+
+          taskDetails = {
+            totalAssigned: parsedTasks.length,
+            completedCount: completed,
+            pendingCount: parsedTasks.length - completed,
+            meanScore,
+            completionRate,
+            tasks: parsedTasks,
+          };
+        }
+      } catch (taskErr) {
+        console.warn('[getStudentPerformance tasks query notice]', taskErr.message);
+      }
+
+      // 4. Coding score & solved count from coding_submissions and task_submissions
       try {
         const cTotal = await query(`SELECT COUNT(*) as count FROM practice_problems`);
         totalProblems = cTotal && cTotal[0] ? Number(cTotal[0].count) : 0;
-        
+
         const cSolved = await query(
           `SELECT COUNT(DISTINCT problem_id) as count FROM coding_submissions 
            WHERE student_id = ? AND (LOWER(status) IN ('passed', 'accepted') OR (passed_test_cases = total_test_cases AND total_test_cases > 0))`,
@@ -843,11 +1253,49 @@ export const getStudentPerformance = async (req, res, next) => {
         } else if (solvedCount > 0) {
           codingScore = Math.min(100, solvedCount * 25);
         }
+
+        // Fetch recent coding submissions
+        const subRows = await query(
+          `SELECT cs.id, cs.problem_id, COALESCE(p.title, CONCAT('Problem #', cs.problem_id)) as title,
+                  COALESCE(p.difficulty, 'Medium') as difficulty, cs.language, cs.status,
+                  cs.passed_test_cases, cs.total_test_cases, cs.created_at
+           FROM coding_submissions cs
+           LEFT JOIN practice_problems p ON cs.problem_id = p.id
+           WHERE cs.student_id = ?
+           ORDER BY cs.id DESC LIMIT 20`,
+          [userId]
+        );
+
+        if (subRows && subRows.length > 0) {
+          codingDetails = {
+            solvedCount,
+            totalProblems,
+            meanSolveRate: codingScore,
+            recentSubmissions: subRows.map(s => ({
+              id: s.id,
+              problemId: s.problem_id,
+              title: s.title,
+              difficulty: s.difficulty,
+              language: s.language || 'javascript',
+              status: String(s.status).toLowerCase() === 'accepted' || String(s.status).toLowerCase() === 'passed' ? 'Accepted' : 'Attempted',
+              passedTestCases: s.passed_test_cases || 0,
+              totalTestCases: s.total_test_cases || 0,
+              date: s.created_at ? new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            })),
+          };
+        } else {
+          codingDetails = {
+            solvedCount,
+            totalProblems,
+            meanSolveRate: codingScore,
+            recentSubmissions: [],
+          };
+        }
       } catch (e) {
         console.warn('[getStudentPerformance coding warning]', e.message);
       }
 
-      // 4. Learning progress (from active roadmap items or computed dynamically from student activity)
+      // 5. Learning progress (from active roadmap items or computed dynamically from student activity)
       try {
         const rmItems = await query(`SELECT ri.status FROM roadmap_items ri JOIN roadmaps r ON ri.roadmap_id = r.id WHERE r.student_id = ?`, [userId]);
         if (rmItems && rmItems.length > 0) {
@@ -864,51 +1312,105 @@ export const getStudentPerformance = async (req, res, next) => {
             learningProgress = Math.round(activityWeights.reduce((a, b) => a + (b.val * b.w), 0) / sumW);
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
-      // 5. Interview score
+      // 6. Interview score & mock interview details
       try {
-        const iRows = await query(`SELECT overall_score FROM interview_submissions WHERE user_id = ?`, [userId]);
+        const iRows = await query(`SELECT id, role, overall_score, feedback, created_at FROM interview_submissions WHERE user_id = ? ORDER BY id DESC LIMIT 15`, [userId]);
         if (iRows && iRows.length > 0) {
           const sum = iRows.reduce((acc, r) => acc + (Number(r.overall_score) || 0), 0);
           interviewScore = Math.round(sum / iRows.length);
+          interviewDetails = {
+            completedCount: iRows.length,
+            meanScore: interviewScore,
+            interviews: iRows.map(r => ({
+              id: r.id,
+              role: r.role || 'Full Stack Engineer',
+              score: Number(r.overall_score) || 0,
+              feedback: r.feedback || 'Assessment completed successfully',
+              date: r.created_at ? new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            })),
+          };
         }
-      } catch (e) {}
+      } catch (e) { }
 
-      // 6. Ranking
+      // 7. Ranking
       try {
         const uCount = await query(`SELECT COUNT(*) as count FROM users WHERE role = 'student'`);
         if (uCount && uCount[0]) totalStudents = Math.max(1, uCount[0].count);
-      } catch (e) {}
+      } catch (e) { }
 
-      // 7. Weekly Progress Generation (for ST_ProgressAnalytics chart)
-      const baseProg = learningProgress || (solvedCount > 0 ? 30 : 0);
-      weeklyProgress = [
-        { week: "Week 1", value: Math.min(100, Math.round(baseProg * 0.3)) },
-        { week: "Week 2", value: Math.min(100, Math.round(baseProg * 0.55)) },
-        { week: "Week 3", value: Math.min(100, Math.round(baseProg * 0.8)) },
-        { week: "Week 4", value: Math.min(100, baseProg) },
-      ];
+      // 8. Weekly & Monthly Progress Analytics across 5 parameters
+      try {
+        progressAnalytics = await calculateStudentProgressAnalytics(userId);
+      } catch (analyticsErr) {
+        console.warn('[progressAnalytics calculation error]:', analyticsErr.message);
+      }
+
+      if (progressAnalytics && progressAnalytics.weeklyProgress?.length > 0) {
+        weeklyProgress = progressAnalytics.weeklyProgress;
+      } else {
+        const baseProg = learningProgress || (solvedCount > 0 ? 30 : 0);
+        weeklyProgress = [
+          { week: "Week 1", value: Math.min(100, Math.round(baseProg * 0.3)) },
+          { week: "Week 2", value: Math.min(100, Math.round(baseProg * 0.55)) },
+          { week: "Week 3", value: Math.min(100, Math.round(baseProg * 0.8)) },
+          { week: "Week 4", value: Math.min(100, baseProg) },
+        ];
+      }
     }
 
     const validScores = [attendanceScore, quizScore, codingScore, interviewScore].filter(s => s > 0);
-    const overallScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : 0;
+    const overallScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : (learningProgress || 0);
+
+    // Compute Mean Progress across all primary learning tracks
+    const trackScores = [];
+    if (taskDetails.totalAssigned > 0) trackScores.push(taskDetails.completionRate);
+    if (quizDetails.totalAttempted > 0) trackScores.push(quizDetails.meanScore);
+    if (codingScore > 0) trackScores.push(codingScore);
+    if (attendanceDetails.total > 0) trackScores.push(attendanceScore);
+    if (interviewDetails.completedCount > 0) trackScores.push(interviewScore);
+    if (learningProgress > 0) trackScores.push(learningProgress);
+
+    const meanProgress = trackScores.length > 0
+      ? Math.round(trackScores.reduce((a, b) => a + b, 0) / trackScores.length)
+      : (overallScore || learningProgress || 50);
 
     const performanceData = {
-      overallScore,
+      overallScore: progressAnalytics?.overallProgress ?? overallScore,
+      meanProgress,
       attendanceScore,
       codingScore,
       quizScore,
       interviewScore,
       solvedCount,
       totalProblems,
-      learningProgress,
+      learningProgress: progressAnalytics?.overallProgress ?? learningProgress,
       ranking,
       totalStudents,
       quizList,
       weeklyData: weeklyProgress,
       weeklyProgress,
-      monthlyProgress: [],
+      monthlyProgress: progressAnalytics?.monthlyProgress || [],
+      activityCards: progressAnalytics?.activityCards || [],
+      calculatedOverallProgress: progressAnalytics?.overallProgress ?? overallScore,
+      breakdown: progressAnalytics?.breakdown || null,
+      // Complete track collections
+      taskDetails,
+      quizDetails,
+      codingDetails,
+      attendanceDetails,
+      interviewDetails,
+      tracksMean: {
+        taskMean: taskDetails.completionRate || 0,
+        taskScoreMean: taskDetails.meanScore || 0,
+        quizMean: quizDetails.meanScore || quizScore || 0,
+        codingMean: codingScore || (solvedCount > 0 ? 50 : 0),
+        attendanceMean: attendanceScore || 0,
+        interviewMean: interviewScore || 0,
+        roadmapMean: learningProgress || 0,
+        overallMean: meanProgress,
+      },
     };
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
   } catch (error) {
@@ -918,20 +1420,29 @@ export const getStudentPerformance = async (req, res, next) => {
 
 export const getSupportTickets = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id || 1;
+    let userId = req.user?.userId || req.user?.id;
+    if (!userId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) userId = u[0].id;
+    }
     let tickets = [];
     try {
-      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [userId]);
+      tickets = await query(
+        `SELECT * FROM support_tickets WHERE (user_id = ? AND ? IS NOT NULL) OR (? IS NULL AND user_id IS NULL) ORDER BY id DESC`,
+        [userId || null, userId || null, userId || null]
+      );
     } catch (e) {
       console.warn('[DB getSupportTickets fallback]', e.message);
+      tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`).catch(() => []);
     }
 
     const formatted = (tickets || []).map(t => ({
       id: `TICK-${t.id}`,
       dbId: t.id,
-      subject: t.subject,
+      title: t.subject || 'Support Ticket',
+      subject: t.subject || 'Support Ticket',
       category: t.category || 'Technical',
-      priority: t.priority || 'Medium',
+      priority: t.priority || 'Normal',
       status: t.status || 'Open',
       created: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
       description: t.description || '',
@@ -948,34 +1459,51 @@ export const getSupportTickets = async (req, res, next) => {
 
 export const createSupportTicket = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id || 1;
-    const { subject, category, priority, description } = req.body;
+    let userId = req.user?.userId || req.user?.id;
+    if (!userId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) userId = u[0].id;
+    }
+    if (userId) {
+      const checkUser = await query('SELECT id FROM users WHERE id = ?', [userId]);
+      if (!checkUser || checkUser.length === 0) userId = null;
+    }
+    const { subject, category = 'Academics & Labs', priority = 'Normal', description } = req.body;
+    if (!subject || !subject.trim()) return sendError(res, 'Ticket subject is required', 400);
 
     let insertId = Math.floor(1000 + Math.random() * 9000);
     try {
       const result = await query(
-        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description)
-         VALUES (?, ?, ?, ?, 'Open', ?)`,
-        [userId, subject, category || 'Technical', priority || 'Medium', description || '']
+        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
+         VALUES (?, ?, ?, ?, 'Open', ?, 'admin', NOW())`,
+        [userId || null, subject.trim(), category, priority || 'Normal', description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
 
-      // Automatically generate a notification for College Admin
+      // Automatically generate a notification for College Admin if valid college exists
       try {
-        const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
-        const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
-        const userCollegeId = uRows && uRows[0] ? uRows[0].college_id : 1;
+        if (userId) {
+          const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
+          const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
+          let userCollegeId = uRows && uRows[0] ? uRows[0].college_id : null;
+          if (userCollegeId) {
+            const cCheck = await query('SELECT id FROM colleges WHERE id = ?', [userCollegeId]);
+            if (!cCheck || cCheck.length === 0) userCollegeId = null;
+          }
 
-        await query(
-          `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
-           VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
-          [
-            userCollegeId,
-            `🎫 Support Ticket: ${subject}`,
-            `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Medium'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
-            userName
-          ]
-        );
+          if (userCollegeId) {
+            await query(
+              `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
+               VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
+              [
+                userCollegeId,
+                `🎫 Support Ticket: ${subject}`,
+                `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Normal'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
+                userName
+              ]
+            );
+          }
+        }
       } catch (notifErr) {
         console.warn('[DB notifySupportTicket warning]', notifErr.message);
       }
@@ -985,11 +1513,14 @@ export const createSupportTicket = async (req, res, next) => {
 
     const ticket = {
       id: `TICK-${insertId}`,
+      dbId: insertId,
       subject,
-      category: category || 'Technical',
-      priority: priority || 'Medium',
+      title: subject,
+      category: category || 'Academics & Labs',
+      priority: priority || 'Normal',
       status: 'Open',
       created_at: new Date().toISOString().split('T')[0],
+      created: 'Just now',
       description: description || ''
     };
     return sendSuccess(res, 'Support ticket created successfully', ticket, 201);
@@ -1027,7 +1558,7 @@ export const getStudentWeeklyReports = async (req, res, next) => {
     try {
       reports = await query(
         `SELECT wr.*, 
-                COALESCE(m.name, 'Faculty Mentor') AS mentor_name
+                COALESCE(m.name, 'Mentor') AS mentor_name
          FROM weekly_reports wr
          LEFT JOIN users m ON wr.mentor_id = m.id
          WHERE wr.user_id = ? OR wr.student_id = ?
@@ -1073,41 +1604,14 @@ export const getStudentWeeklyReports = async (req, res, next) => {
         weakAreas: weak,
         nextSteps: nextStepsList,
         suggestions: nextStepsList,
-        mentor: r.mentor_name || 'Assigned Faculty Mentor',
+        mentor: r.mentor_name || 'Assigned Mentor',
         date: r.generated_at ? new Date(r.generated_at).toLocaleDateString() : 'Recent',
         trendStatus: r.trend_status || 'On Track',
       };
     });
 
-    if (formatted.length === 0) {
-      formatted = [
-        {
-          id: "week-current",
-          title: "Current Training Cycle: Week 1 Performance Evaluation",
-          week: "Week 1",
-          score: "88%",
-          overallScore: 88,
-          attendance: 96,
-          quiz: 85,
-          quizzes: 85,
-          coding: 90,
-          assignments: 90,
-          interview: 82,
-          tasks: 82,
-          milestones: "Completed all Week 1 foundation modules, solved 12 practice problems with >85% accuracy.",
-          skillGaps: ["Asynchronous Event Loop Depth", "Complex SQL Joins"],
-          strongAreas: ["Data Structures & Algorithmic Problem Solving", "Lecture Presence & Active Participation"],
-          weakAreas: ["Asynchronous Event Loop Depth", "Complex SQL Joins"],
-          nextSteps: ["Complete assigned coding tasks on time", "Practice weekly mock tests", "Schedule office hours with mentor if needed"],
-          suggestions: ["Complete assigned coding tasks on time", "Practice weekly mock tests"],
-          mentor: "Assigned Faculty Mentor",
-          date: new Date().toLocaleDateString(),
-          trendStatus: "On Track",
-        }
-      ];
-    }
-
-    return sendSuccess(res, 'Student weekly reports retrieved successfully', formatted);
+    // Return only genuinely submitted weekly reports (no hardcoded mock fallbacks)
+    return sendSuccess(res, 'Student weekly reports retrieved successfully', formatted || []);
   } catch (error) {
     next(error);
   }

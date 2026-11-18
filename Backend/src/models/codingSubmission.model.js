@@ -270,13 +270,7 @@ export const findCodingTestCasesByProblemId = async (problemId) => {
     console.warn(`[Coding Model] findCodingTestCasesByProblemId fallback: ${error.message}`);
   }
 
-  return [
-    { id: 1, problem_id: numId, input: 'sample_input_1', expected_output: 'sample_output_1', is_hidden: false, weightage: 20 },
-    { id: 2, problem_id: numId, input: 'sample_input_2', expected_output: 'sample_output_2', is_hidden: false, weightage: 20 },
-    { id: 3, problem_id: numId, input: 'sample_input_3', expected_output: 'sample_output_3', is_hidden: true, weightage: 20 },
-    { id: 4, problem_id: numId, input: 'sample_input_4', expected_output: 'sample_output_4', is_hidden: true, weightage: 20 },
-    { id: 5, problem_id: numId, input: 'sample_input_5', expected_output: 'sample_output_5', is_hidden: true, weightage: 20 },
-  ];
+  return [];
 };
 
 /**
@@ -296,6 +290,8 @@ export const createSubmissionModel = async (submissionData) => {
     percentage,
     status,
     execution_details = null,
+    is_retake = false,
+    retake_permission_id = null,
   } = submissionData;
 
   const numStudentId = parseInt(student_id, 10);
@@ -311,8 +307,8 @@ export const createSubmissionModel = async (submissionData) => {
   try {
     const res = await query(
       `INSERT INTO coding_submissions 
-        (student_id, problem_id, submitted_code, language, passed_test_cases, total_test_cases, score, marks, percentage, status, execution_details, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        (student_id, problem_id, submitted_code, language, passed_test_cases, total_test_cases, score, marks, percentage, status, execution_details, is_retake, retake_permission_id, submitted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         numStudentId,
         numProblemId,
@@ -325,6 +321,8 @@ export const createSubmissionModel = async (submissionData) => {
         numPercentage,
         status,
         executionJson,
+        is_retake ? 1 : 0,
+        retake_permission_id || null,
       ]
     );
 
@@ -348,6 +346,8 @@ export const createSubmissionModel = async (submissionData) => {
     percentage: numPercentage,
     status,
     execution_details,
+    is_retake: is_retake ? 1 : 0,
+    retake_permission_id: retake_permission_id || null,
     submitted_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
   };

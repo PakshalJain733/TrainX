@@ -18,6 +18,19 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, []);
 
+  const isApprovedActiveStudent = (item) => {
+    if (!item) return false;
+    if (item.is_approved !== undefined && item.is_approved !== null) {
+      if (item.is_approved === 0 || item.is_approved === false || item.is_approved === '0') return false;
+    }
+    if (item.is_active !== undefined && item.is_active !== null) {
+      if (item.is_active === 0 || item.is_active === false || item.is_active === '0') return false;
+    }
+    const st = String(item.status || item.approval_status || '').toLowerCase().trim();
+    if (st === 'rejected' || st === 'inactive' || st === 'disabled' || st === 'pending') return false;
+    return true;
+  };
+
   const fetchLeaderboard = () => {
     setLoading(true);
     apiFetch("/leaderboards")
@@ -25,7 +38,7 @@ export default function Leaderboard() {
         if (res && res.data) {
           if (Array.isArray(res.data)) {
             setLeaderboardData({
-              overall: res.data,
+              overall: res.data.filter(isApprovedActiveStudent),
               department: [],
               milestone: [],
               topBatches: [],
@@ -33,9 +46,9 @@ export default function Leaderboard() {
             });
           } else {
             setLeaderboardData({
-              overall: Array.isArray(res.data.overall) ? res.data.overall : [],
-              department: Array.isArray(res.data.department) ? res.data.department : [],
-              milestone: Array.isArray(res.data.milestone) ? res.data.milestone : [],
+              overall: (Array.isArray(res.data.overall) ? res.data.overall : []).filter(isApprovedActiveStudent),
+              department: (Array.isArray(res.data.department) ? res.data.department : []).filter(isApprovedActiveStudent),
+              milestone: (Array.isArray(res.data.milestone) ? res.data.milestone : []).filter(isApprovedActiveStudent),
               topBatches: Array.isArray(res.data.topBatches) ? res.data.topBatches : (Array.isArray(res.data.batches) ? res.data.batches : []),
               studentContext: res.data.studentContext || null,
             });
@@ -74,12 +87,36 @@ export default function Leaderboard() {
   const studentContext = leaderboardData.studentContext || {};
   const myRankInfo = studentContext.myRank || { overallRank: "-", departmentRank: "-", milestoneRank: "-", score: 0, totalStudents: 0 };
 
+  // Resolve current student's department
+  const currentStudent = (leaderboardData.overall || []).find((s) => s.isCurrentUser) ||
+                         (leaderboardData.department || []).find((s) => s.isCurrentUser);
+  const myDepartment = myRankInfo.myDepartment || currentStudent?.department || currentStudent?.sub || currentStudent?.department_name || "";
+
   // Current tab items list
   let currentList = [];
-  if (activeTab === "overall") currentList = leaderboardData.overall || [];
-  else if (activeTab === "department") currentList = leaderboardData.department || [];
-  else if (activeTab === "milestone") currentList = leaderboardData.milestone || [];
-  else if (activeTab === "batches") currentList = leaderboardData.topBatches || [];
+  if (activeTab === "overall") {
+    currentList = leaderboardData.overall || [];
+  } else if (activeTab === "department") {
+    let deptList = leaderboardData.department || [];
+    // Strict department filtering: only keep students matching the current student's department
+    if (myDepartment) {
+      const normMyDept = myDepartment.trim().toLowerCase();
+      deptList = deptList.filter((s) => {
+        const sDept = String(s.department || s.sub || s.department_name || "").trim().toLowerCase();
+        return sDept === normMyDept || sDept.includes(normMyDept) || normMyDept.includes(sDept);
+      });
+      // Re-index ranks for the filtered department standing
+      deptList = deptList.map((st, i) => ({
+        ...st,
+        rank: i + 1,
+      }));
+    }
+    currentList = deptList;
+  } else if (activeTab === "milestone") {
+    currentList = leaderboardData.milestone || [];
+  } else if (activeTab === "batches") {
+    currentList = leaderboardData.topBatches || [];
+  }
 
   return (
     <div className="leaderboard-page">
@@ -113,7 +150,7 @@ export default function Leaderboard() {
           <div>
             <div className="leaderboard-kpi-label">Department Standing</div>
             <p className="leaderboard-kpi-val">#{myRankInfo.departmentRank}</p>
-            <p className="leaderboard-kpi-sub">In your department</p>
+            <p className="leaderboard-kpi-sub">{myDepartment ? `In ${myDepartment}` : "In your department"}</p>
           </div>
         </div>
 
@@ -157,7 +194,7 @@ export default function Leaderboard() {
           <div>
             <h3 className="leaderboard-list-title">
               {activeTab === "overall" && "College-Wide Overall Ranking"}
-              {activeTab === "department" && "Department Standing Ranking"}
+              {activeTab === "department" && (myDepartment ? `Department Standing Ranking (${myDepartment})` : "Department Standing Ranking")}
               {activeTab === "batches" && "Top Batches Ranking"}
             </h3>
             <p className="leaderboard-list-desc">
@@ -205,7 +242,7 @@ export default function Leaderboard() {
                 const displayScore = st.score !== undefined ? st.score : (st.overall_score !== undefined ? st.overall_score : (st.xp || 0));
                 const displaySub = activeTab === "batches"
                   ? `${st.students || st.student_count || 0} Enrolled Students`
-                  : [st.batch || st.batch_name || "All Batches", st.department || st.dept_name || st.sub].filter(Boolean).join(" • ");
+                  : [st.batch || st.batch_name, st.department || st.dept_name || st.sub].filter(Boolean).join(" • ") || "—";
 
                 return (
                   <div

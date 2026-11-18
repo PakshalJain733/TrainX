@@ -35,16 +35,6 @@ const initialMaintenanceConfig = {
       message: "Email delivery & 6-digit OTP verification system is currently disabled by Super Admin maintenance policy.",
       updatedAt: "Just now",
     },
-    twoFactorAuth: {
-      key: "twoFactorAuth",
-      name: "Two-Factor Authentication (2FA)",
-      category: "Auth & Security",
-      active: true,
-      role: "All Roles",
-      description: "Secondary security verification layer via Google/Microsoft Authenticator app",
-      message: "Two-Factor Security verification is updating.",
-      updatedAt: "Just now",
-    },
     userRegistration: {
       key: "userRegistration",
       name: "Self-Registration & Sign-Up Flow",
@@ -89,7 +79,7 @@ const initialMaintenanceConfig = {
     // 2. Student Dashboard Features (Main Tabs & Small Sub-Features)
     studentDashboard: {
       key: "studentDashboard",
-      name: "Student Workspace Overview Tab",
+      name: "Overview",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -99,7 +89,7 @@ const initialMaintenanceConfig = {
     },
     aiRoadmaps: {
       key: "aiRoadmaps",
-      name: "AI Milestone Roadmap Generator Tab",
+      name: "AI Roadmap",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -121,7 +111,7 @@ const initialMaintenanceConfig = {
     },
     aiInterviews: {
       key: "aiInterviews",
-      name: "AI Interview Practice Tab",
+      name: "AI Interview",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -143,7 +133,7 @@ const initialMaintenanceConfig = {
     },
     skillGapAnalysis: {
       key: "skillGapAnalysis",
-      name: "Skill-Gap Analysis",
+      name: "Progress",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -164,7 +154,7 @@ const initialMaintenanceConfig = {
     },
     learningContent: {
       key: "learningContent",
-      name: "Learning Content & Study Notes",
+      name: "Learning Content",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -174,7 +164,7 @@ const initialMaintenanceConfig = {
     },
     academicQuizzes: {
       key: "academicQuizzes",
-      name: "Academic Quiz",
+      name: "Quiz",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -184,7 +174,7 @@ const initialMaintenanceConfig = {
     },
     practiceCoding: {
       key: "practiceCoding",
-      name: "Coding Practice",
+      name: "Practice",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -204,7 +194,7 @@ const initialMaintenanceConfig = {
     },
     attendance: {
       key: "attendance",
-      name: "Student Attendance & History Tracker Tab",
+      name: "Attendance",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -214,7 +204,7 @@ const initialMaintenanceConfig = {
     },
     weeklyReports: {
       key: "weeklyReports",
-      name: "Weekly Student Performance PDF Reports Tab",
+      name: "Weekly Reports",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -234,7 +224,7 @@ const initialMaintenanceConfig = {
     },
     studentBatches: {
       key: "studentBatches",
-      name: "Student Batches Tab",
+      name: "Batches",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -244,7 +234,7 @@ const initialMaintenanceConfig = {
     },
     studentLeaderboard: {
       key: "studentLeaderboard",
-      name: "Student Batch Leaderboard & Gamified XP Rankings Tab",
+      name: "Leaderboard",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -274,7 +264,7 @@ const initialMaintenanceConfig = {
     },
     studentHelp: {
       key: "studentHelp",
-      name: "Student Helpdesk & Support Ticket Portal Tab",
+      name: "Support Tickets",
       category: "Student Features",
       active: true,
       role: "Student",
@@ -397,7 +387,7 @@ const initialMaintenanceConfig = {
     // 3. Mentor Features (Main Tabs & Small Sub-Features)
     mentorDashboard: {
       key: "mentorDashboard",
-      name: "Mentor Overview Tab",
+      name: "Overview",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -407,7 +397,7 @@ const initialMaintenanceConfig = {
     },
     mentorStudents: {
       key: "mentorStudents",
-      name: "Assigned Students Tab",
+      name: "Students",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -417,7 +407,7 @@ const initialMaintenanceConfig = {
     },
     mentorLeaderboard: {
       key: "mentorLeaderboard",
-      name: "Mentor Leaderboard & Student Rankings Tab",
+      name: "Leaderboard",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -427,7 +417,7 @@ const initialMaintenanceConfig = {
     },
     mentorRoadmaps: {
       key: "mentorRoadmaps",
-      name: "Mentor Review of Student AI Roadmaps Tab",
+      name: "Roadmaps",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -438,7 +428,7 @@ const initialMaintenanceConfig = {
     },
     mentorAIInterviews: {
       key: "mentorAIInterviews",
-      name: "Mentor Review of AI Interview Transcripts Tab",
+      name: "AI Interviews",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -449,7 +439,7 @@ const initialMaintenanceConfig = {
     },
     mentorSkillGaps: {
       key: "mentorSkillGaps",
-      name: "Mentor Review of Student Skill Diagnostics Tab",
+      name: "Skill Gaps",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -460,7 +450,7 @@ const initialMaintenanceConfig = {
     },
     mentorAttendance: {
       key: "mentorAttendance",
-      name: "Live Class Attendance Marker & Register Tab",
+      name: "Attendance",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -470,7 +460,7 @@ const initialMaintenanceConfig = {
     },
     defaulters: {
       key: "defaulters",
-      name: "Defaulter Management Tab",
+      name: "Defaulters",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -501,7 +491,7 @@ const initialMaintenanceConfig = {
     },
     mentorStudyMaterial: {
       key: "mentorStudyMaterial",
-      name: "Faculty Study Material & Resource Uploader Tab",
+      name: "Study Material",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -521,7 +511,7 @@ const initialMaintenanceConfig = {
     },
     mentorQuizzes: {
       key: "mentorQuizzes",
-      name: "Mentor Quiz & Assessment Authoring Tab",
+      name: "Quizzes",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -531,7 +521,7 @@ const initialMaintenanceConfig = {
     },
     mentorPerformance: {
       key: "mentorPerformance",
-      name: "Mentor Student Analytics & Progress Audit Tab",
+      name: "Progress",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -551,7 +541,7 @@ const initialMaintenanceConfig = {
     },
     mentorWeeklyReports: {
       key: "mentorWeeklyReports",
-      name: "Mentor's Weekly Student PDF Audits Tab",
+      name: "Weekly Reports",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -571,7 +561,7 @@ const initialMaintenanceConfig = {
     },
     mentorHelp: {
       key: "mentorHelp",
-      name: "Mentor Help & Support Center Tab",
+      name: "Support Ticket",
       category: "Mentor Features",
       active: true,
       role: "Mentor",
@@ -596,7 +586,7 @@ const initialMaintenanceConfig = {
       active: true,
       role: "Mentor",
       isUSP: true,
-      description: "Allowing faculty mentors to manually edit and adjust AI interview and test grades",
+      description: "Allowing mentors to manually edit and adjust AI interview and test grades",
       message: "Score override tool is under maintenance.",
       updatedAt: "Just now",
     },
@@ -654,7 +644,7 @@ const initialMaintenanceConfig = {
     // 4. Coordinator Features (Main Tabs & Small Sub-Features)
     coordinatorDashboard: {
       key: "coordinatorDashboard",
-      name: "Coordinator Overview Tab",
+      name: "Overview",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -664,7 +654,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorBatches: {
       key: "coordinatorBatches",
-      name: "Department Batch & Division Setup Tab",
+      name: "Batches",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -674,7 +664,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorStudents: {
       key: "coordinatorStudents",
-      name: "Department Student Roster Tab",
+      name: "Students",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -684,7 +674,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorPerformances: {
       key: "coordinatorPerformances",
-      name: "Department Quiz & Coding Test Analytics Tab",
+      name: "Performances",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -704,7 +694,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorStudentsNeedImprovement: {
       key: "coordinatorStudentsNeedImprovement",
-      name: "Low-Performing Student Intervention Tracker Tab",
+      name: "Academic Support",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -714,7 +704,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorAttendance: {
       key: "coordinatorAttendance",
-      name: "Department Attendance Register & Defaulter Tab",
+      name: "Attendance Governance",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -724,7 +714,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorMentors: {
       key: "coordinatorMentors",
-      name: "Faculty Mentors Directory Tab",
+      name: "Mentors",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -734,7 +724,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorRequests: {
       key: "coordinatorRequests",
-      name: "Student Approvals & Requests Tab",
+      name: "Requests & Approvals",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -744,17 +734,17 @@ const initialMaintenanceConfig = {
     },
     coordinatorBroadcast: {
       key: "coordinatorBroadcast",
-      name: "Department Broadcast Announcement Center Tab",
+      name: "Broadcast Notice Center",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
-      description: "Sending official department announcements to students and faculty mentors",
+      description: "Sending official department announcements to students and mentors",
       message: "Broadcast center is updating.",
       updatedAt: "Just now",
     },
     coordinatorHelp: {
       key: "coordinatorHelp",
-      name: "Coordinator Support & System Documentation Center Tab",
+      name: "Support Ticket",
       category: "Coordinator Features",
       active: true,
       role: "Coordinator",
@@ -826,7 +816,7 @@ const initialMaintenanceConfig = {
     // 5. College Admin Features (Main Tabs & Small Sub-Features)
     adminDashboard: {
       key: "adminDashboard",
-      name: "College Admin Executive Dashboard Tab",
+      name: "Overview",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -836,7 +826,7 @@ const initialMaintenanceConfig = {
     },
     manageUsers: {
       key: "manageUsers",
-      name: "College User Directory & Role Assignment Tab",
+      name: "Manage Users",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -856,7 +846,7 @@ const initialMaintenanceConfig = {
     },
     adminBatches: {
       key: "adminBatches",
-      name: "College Batches & Academic Year Setup Tab",
+      name: "Batches",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -866,7 +856,7 @@ const initialMaintenanceConfig = {
     },
     adminDepartments: {
       key: "adminDepartments",
-      name: "Academic Streams & Department Structure Manager Tab",
+      name: "Departments",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -876,7 +866,7 @@ const initialMaintenanceConfig = {
     },
     adminAttendance: {
       key: "adminAttendance",
-      name: "Institutional Attendance CSV Register Upload Tab",
+      name: "Attendance",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -886,7 +876,7 @@ const initialMaintenanceConfig = {
     },
     adminLearningContent: {
       key: "adminLearningContent",
-      name: "Institutional Study Material Repository Setup Tab",
+      name: "Manage Content",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -896,7 +886,7 @@ const initialMaintenanceConfig = {
     },
     adminQuizzes: {
       key: "adminQuizzes",
-      name: "College Quiz & Assessment Test Authoring Tab",
+      name: "Manage Quizzes",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -906,7 +896,7 @@ const initialMaintenanceConfig = {
     },
     adminPracticeProblems: {
       key: "adminPracticeProblems",
-      name: "Coding Practice Problem Authoring Tool Tab",
+      name: "Coding Practice",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -916,7 +906,7 @@ const initialMaintenanceConfig = {
     },
     adminBroadcast: {
       key: "adminBroadcast",
-      name: "College-Wide Announcement Broadcast System Tab",
+      name: "Broadcast Notice",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -926,7 +916,7 @@ const initialMaintenanceConfig = {
     },
     adminProgress: {
       key: "adminProgress",
-      name: "Institutional Performance & Benchmark Analytics Tab",
+      name: "Student Progress",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -956,7 +946,7 @@ const initialMaintenanceConfig = {
     },
     adminC2CEnrollments: {
       key: "adminC2CEnrollments",
-      name: "Campus-to-Corporate (C2C) Institutional Program Management Tab",
+      name: "Trainings & Enrollments",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -966,17 +956,17 @@ const initialMaintenanceConfig = {
     },
     adminApproveUsers: {
       key: "adminApproveUsers",
-      name: "Pending Account Registration Approval Queue Tab",
+      name: "Approve Users",
       category: "College Admin",
-      active: true,
+      active: false,
       role: "College Admin",
       description: "Reviewing and approving newly registered student and mentor accounts before granting platform login",
-      message: "Registration approval queue is updating.",
+      message: "Registration approval workflow is disabled. All accounts are auto-approved.",
       updatedAt: "Just now",
     },
     adminHelp: {
       key: "adminHelp",
-      name: "College Admin Support & Ticket Center Tab",
+      name: "Support Tickets",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1056,7 +1046,7 @@ const initialMaintenanceConfig = {
     },
     adminWeeklyReports: {
       key: "adminWeeklyReports",
-      name: "College-Wide Weekly Mentor Governance Audit Tab",
+      name: "Weekly Reports",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1066,7 +1056,7 @@ const initialMaintenanceConfig = {
     },
     adminLeaderboard: {
       key: "adminLeaderboard",
-      name: "College-Wide Student & Batch Leaderboard Tab",
+      name: "Leaderboard",
       category: "College Admin",
       active: true,
       role: "College Admin",
@@ -1075,7 +1065,49 @@ const initialMaintenanceConfig = {
       updatedAt: "Just now",
     },
 
-    // 5b. Coordinator Missing Features
+    // 5b. Coordinator & Mentor Missing Features
+    coordinatorLeaderboard: {
+      key: "coordinatorLeaderboard",
+      name: "Leaderboard",
+      category: "Coordinator Features",
+      active: true,
+      role: "Coordinator",
+      description: "Department-wide student leaderboard ranking by coding points, quiz scores, and active streaks",
+      message: "Department leaderboard is currently updating.",
+      updatedAt: "Just now",
+    },
+    mentorBatches: {
+      key: "mentorBatches",
+      name: "Batches",
+      category: "Mentor Features",
+      active: true,
+      role: "Mentor",
+      description: "Viewing and managing assigned student batches, division schedules, and cohort progress",
+      message: "Mentor Batch Management is under maintenance.",
+      updatedAt: "Just now",
+    },
+    mentorCodingPractice: {
+      key: "mentorCodingPractice",
+      name: "Coding Practice",
+      category: "Mentor Features",
+      active: true,
+      role: "Mentor",
+      description: "Reviewing student coding practice submissions, problem-wise progress, and judge results",
+      message: "Mentor Coding Practice review is under maintenance.",
+      updatedAt: "Just now",
+    },
+    adminCareerGatewaySync: {
+      key: "adminCareerGatewaySync",
+      name: "Career Gateway Sync",
+      category: "College Admin",
+      active: true,
+      role: "College Admin",
+      description: "On-demand bi-directional sync between TrainX training records and Career Gateway placement portal",
+      message: "Career Gateway Sync is currently undergoing scheduled maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 5c. Coordinator (continued)
     coordinatorPlacement: {
       key: "coordinatorPlacement",
       name: "Coordinator Campus Placement Drives & Company Mapping Tab",
@@ -1112,7 +1144,7 @@ const initialMaintenanceConfig = {
     // 6. Super Admin Workspace Features (Global Enterprise Governance)
     superAdminOverview: {
       key: "superAdminOverview",
-      name: "Super Admin Global Overview & Platform Analytics Tab",
+      name: "Overview",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1122,7 +1154,7 @@ const initialMaintenanceConfig = {
     },
     superAdminColleges: {
       key: "superAdminColleges",
-      name: "Multi-College Directory & Institutional Management Tab",
+      name: "Colleges",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1142,7 +1174,7 @@ const initialMaintenanceConfig = {
     },
     superAdminUsers: {
       key: "superAdminUsers",
-      name: "Global User Management & Token Invitation Generator Tab",
+      name: "Manage Users",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1152,17 +1184,17 @@ const initialMaintenanceConfig = {
     },
     superAdminApproveUsers: {
       key: "superAdminApproveUsers",
-      name: "Admin Account Registration Approval Queue Tab",
+      name: "Approve Registration",
       category: "Super Admin",
-      active: true,
+      active: false,
       role: "Super Admin",
       description: "Reviewing and approving newly registered college admins, department heads, and institutional representatives",
-      message: "Admin Registration Approval queue is currently under maintenance.",
+      message: "Admin Registration Approval workflow is disabled. All accounts are auto-approved.",
       updatedAt: "Just now",
     },
     superAdminFeatureSwitches: {
       key: "superAdminFeatureSwitches",
-      name: "System Feature Switches & Maintenance Controls Tab",
+      name: "Feature Switches",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1172,7 +1204,7 @@ const initialMaintenanceConfig = {
     },
     superAdminTickets: {
       key: "superAdminTickets",
-      name: "Global System Support Ticket Desk & Escalations Tab",
+      name: "Support Tickets",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1182,7 +1214,7 @@ const initialMaintenanceConfig = {
     },
     superAdminSystemHealth: {
       key: "superAdminSystemHealth",
-      name: "Server Infrastructure, DB & API Telemetry Tab",
+      name: "System Health",
       category: "Super Admin",
       active: true,
       role: "Super Admin",
@@ -1216,8 +1248,80 @@ const initialMaintenanceConfig = {
       category: "Super Admin",
       active: true,
       role: "Super Admin",
-      description: "Master administrative profile, Two-Factor Authentication credentials, security keys, and access logs",
+      description: "Master administrative profile, security keys, and access logs",
       message: "Super Admin Profile is undergoing maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 7. Trainer Features
+    trainerOverview: {
+      key: "trainerOverview",
+      name: "Trainer Overview & Performance Metrics",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Real-time trainer analytics dashboard tracking assigned batches, completion velocity, and pass rates",
+      message: "Trainer Overview analytics is temporarily unavailable during scheduled maintenance.",
+      updatedAt: "Just now",
+    },
+    trainerBatches: {
+      key: "trainerBatches",
+      name: "Trainer Batches & Student Roster",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Assigned training batch rosters, student member profiles, batch schedules, and attendance metrics",
+      message: "Trainer batch management is temporarily under maintenance.",
+      updatedAt: "Just now",
+    },
+    trainerTasks: {
+      key: "trainerTasks",
+      name: "Batch Tasks & Programming Assignments",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Create, publish, schedule, and configure programming problems and coding assignments for trainer batches",
+      message: "Batch Task assignment tool is undergoing routine maintenance.",
+      updatedAt: "Just now",
+    },
+    trainerSubmissions: {
+      key: "trainerSubmissions",
+      name: "Student Code Submissions & Evaluation",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Review student source code submissions, test case run outputs, scores, and grading feedback",
+      message: "Student Submissions evaluation portal is updating.",
+      updatedAt: "Just now",
+    },
+    trainerLeaderboard: {
+      key: "trainerLeaderboard",
+      name: "Trainer Batch Leaderboard",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Batch student rankings, score percentiles, top performers, and problem completion leaderboards",
+      message: "Trainer leaderboard rankings are temporarily undergoing calculation updates.",
+      updatedAt: "Just now",
+    },
+    trainerProfile: {
+      key: "trainerProfile",
+      name: "Trainer Profile & Account Settings",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Trainer credentials, bio, contact details, assigned specializations, and password management",
+      message: "Trainer profile settings are undergoing maintenance.",
+      updatedAt: "Just now",
+    },
+    trainerHelp: {
+      key: "trainerHelp",
+      name: "Trainer Support & Help Desk",
+      category: "Trainer Features",
+      active: true,
+      role: "Trainer",
+      description: "Submit trainer issue tickets, platform assistance requests, and system incident reports",
+      message: "Trainer Help & Support ticketing is temporarily offline.",
       updatedAt: "Just now",
     },
   },
@@ -1242,19 +1346,39 @@ const KEY_ALIASES = {
   adminC2C: "adminC2CEnrollments",
   adminWeeklyReports: "adminWeeklyReports",
   adminLeaderboard: "adminLeaderboard",
+  adminBulkUserImport: "adminApproveUsers",
   coordinatorPlacement: "coordinatorPlacement",
   coordinatorNotifications: "coordinatorNotifications",
+  coordinatorLeaderboard: "coordinatorLeaderboard",
+  mentorBatches: "mentorBatches",
+  mentorCodingPractice: "mentorCodingPractice",
+  adminCareerGatewaySync: "adminCareerGatewaySync",
+  "career-gateway": "adminCareerGatewaySync",
   superAdminMaintenance: "superAdminFeatureSwitches",
   superAdminFeatureSwitches: "superAdminFeatureSwitches",
+  trainerBatches: "trainerBatches",
+  trainerLeaderboard: "trainerLeaderboard",
+  trainerTasks: "trainerTasks",
+  trainerSubmissions: "trainerSubmissions",
+  trainerHelp: "trainerHelp",
+  trainerOverview: "trainerOverview",
+  trainerProfile: "trainerProfile",
+  register: "userRegistration",
+  registration: "userRegistration",
+  selfRegistration: "userRegistration",
+  userRegistration: "userRegistration",
+  signUp: "userRegistration",
+  signup: "userRegistration",
 };
 
 const SWITCH_STORAGE_KEY = "system_switch_states";
 
-// Merges only switch booleans and messages into code-defined initialMaintenanceConfig.
+// Merges switch booleans and messages into code-defined initialMaintenanceConfig.
 // Never caches or overrides module definitions, names, or descriptions from code!
 function applySwitchState(baseConfig, savedState) {
   if (!savedState || typeof savedState !== "object") return baseConfig;
-  const switches = savedState.switches || {};
+  const rawSwitches = savedState.switches || (savedState.modules ? {} : savedState);
+  const rawModules = savedState.modules || {};
   const messages = savedState.messages || {};
   const emergency = typeof savedState.emergency === "boolean"
     ? savedState.emergency
@@ -1262,12 +1386,31 @@ function applySwitchState(baseConfig, savedState) {
 
   const nextModules = { ...baseConfig.modules };
   Object.keys(nextModules).forEach((k) => {
-    const sw = switches[k];
-    const msg = messages[k];
-    if (typeof sw === "boolean" || msg !== undefined) {
+    // 1. Check direct key
+    let sw = rawSwitches[k];
+
+    // 2. Check in modules object if present
+    if (sw === undefined && rawModules[k]) {
+      sw = typeof rawModules[k].active === "boolean"
+        ? rawModules[k].active
+        : (typeof rawModules[k].is_active === "boolean" ? rawModules[k].is_active : (rawModules[k].is_active === 0 ? false : undefined));
+    }
+
+    // 3. Check alias keys
+    if (sw === undefined) {
+      for (const [aliasKey, targetKey] of Object.entries(KEY_ALIASES)) {
+        if (targetKey === k && rawSwitches[aliasKey] !== undefined) {
+          sw = rawSwitches[aliasKey];
+          break;
+        }
+      }
+    }
+
+    const msg = messages[k] || (rawModules[k]?.message);
+    if (typeof sw === "boolean" || sw === 0 || sw === 1 || msg !== undefined) {
       nextModules[k] = {
         ...nextModules[k],
-        ...(typeof sw === "boolean" ? { active: sw } : {}),
+        ...(sw !== undefined ? { active: sw === 1 || sw === true || sw === 'true' } : {}),
         ...(msg !== undefined ? { message: msg } : {}),
       };
     }
@@ -1302,6 +1445,12 @@ function extractSwitchState(cfg) {
   };
 }
 
+function getAuthHeader() {
+  const token = getAuthToken();
+  if (!token) return {};
+  return { Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}` };
+}
+
 export function SystemMaintenanceProvider({ children }) {
   // Driven directly by code definition in initialMaintenanceConfig,
   // overlaid with active switch states from storage (zero cached module objects).
@@ -1327,12 +1476,11 @@ export function SystemMaintenanceProvider({ children }) {
       window.dispatchEvent(new CustomEvent("system_maintenance_changed", { detail: newConfig }));
     } catch (e) {}
 
-    const token = getAuthToken() || '';
     fetch(`${getApiBaseUrl()}/shared-content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        ...getAuthHeader(),
       },
       body: JSON.stringify({
         type: 'maintenance',
@@ -1347,51 +1495,62 @@ export function SystemMaintenanceProvider({ children }) {
     }).catch(err => console.warn('Failed to sync maintenance config to backend:', err));
   };
 
-  useEffect(() => {
-    // 1. Fetch backend state directly from database table feature_switches
-    const fetchServerConfig = () => {
-      const token = getAuthToken() || '';
-      fetch(`${getApiBaseUrl()}/feature-switches`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then((res) => res.json())
-        .then((json) => {
-          const serverData = json?.data;
-          if (serverData && typeof serverData === "object" && serverData.switches) {
+  // Dedicated server synchronization helper that can be called anywhere (e.g. on login page mount)
+  const refreshSwitches = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/feature-switches?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          ...getAuthHeader(),
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const serverData = json?.data;
+        if (serverData && typeof serverData === "object" && (serverData.switches || serverData.modules)) {
+          setConfig((prev) => {
+            const updated = applySwitchState(prev, serverData);
+            try {
+              const switchState = extractSwitchState(updated);
+              localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+              sessionStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+            } catch (e) {}
+            return updated;
+          });
+          return serverData;
+        }
+      }
+    } catch (err) {
+      // Fallback to shared-content endpoint if needed
+      try {
+        const fbRes = await fetch(`${getApiBaseUrl()}/shared-content?type=maintenance&_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: getAuthHeader(),
+        });
+        if (fbRes.ok) {
+          const json = await fbRes.json();
+          const serverData = json?.data?.[0]?.data;
+          if (serverData && typeof serverData === "object") {
             setConfig((prev) => {
               const updated = applySwitchState(prev, serverData);
               try {
                 const switchState = extractSwitchState(updated);
                 localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+                sessionStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
               } catch (e) {}
               return updated;
             });
+            return serverData;
           }
-        })
-        .catch(() => {
-          // Fallback to shared-content endpoint if needed
-          fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          })
-            .then((res) => res.json())
-            .then((json) => {
-              const serverData = json?.data?.[0]?.data;
-              if (serverData && typeof serverData === "object") {
-                setConfig((prev) => {
-                  const updated = applySwitchState(prev, serverData);
-                  try {
-                    const switchState = extractSwitchState(updated);
-                    localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
-                  } catch (e) {}
-                  return updated;
-                });
-              }
-            })
-            .catch(() => {});
-        });
-    };
+        }
+      } catch (_) {}
+    }
+  };
 
-    fetchServerConfig();
+  useEffect(() => {
+    refreshSwitches();
 
     // 2. Cross-tab real-time sync via storage event
     const handleStorageChange = (e) => {
@@ -1467,12 +1626,11 @@ export function SystemMaintenanceProvider({ children }) {
     // When ON -> is_active = true (1) in database
     // When OFF -> is_active = false (0) in database
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/toggle`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({
           feature_key: resolvedKey,
@@ -1480,7 +1638,11 @@ export function SystemMaintenanceProvider({ children }) {
           feature_name: mod.name,
           category: mod.category,
         })
-      }).catch(err => console.warn('Failed to sync feature switch to DB:', err));
+      })
+        .then(res => {
+          if (!res.ok) console.warn('Feature switch toggle response not OK:', res.status);
+        })
+        .catch(err => console.warn('Failed to sync feature switch to DB:', err));
     } catch (_) {}
   };
 
@@ -1503,12 +1665,11 @@ export function SystemMaintenanceProvider({ children }) {
     saveConfig(nextConfig);
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/notice`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({
           feature_key: resolvedKey,
@@ -1527,12 +1688,11 @@ export function SystemMaintenanceProvider({ children }) {
     });
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/emergency`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
         body: JSON.stringify({ globalEmergencyMode: nextEmergency })
       }).catch(() => {});
@@ -1556,12 +1716,11 @@ export function SystemMaintenanceProvider({ children }) {
     });
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
       }).catch(() => {});
     } catch (_) {}
@@ -1576,12 +1735,11 @@ export function SystemMaintenanceProvider({ children }) {
     saveConfig(initialMaintenanceConfig);
 
     try {
-      const token = getAuthToken() || '';
       fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
+          ...getAuthHeader(),
         },
       }).catch(() => {});
     } catch (_) {}
@@ -1598,6 +1756,7 @@ export function SystemMaintenanceProvider({ children }) {
         toggleGlobalEmergencyMode,
         turnAllModulesOn,
         resetToFullDefault,
+        refreshSwitches,
       }}
     >
       {children}

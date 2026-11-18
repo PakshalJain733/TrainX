@@ -852,3 +852,15 @@
 .student-help-select-option--selected { background: #eef2ff; color: #4338ca; font-weight: 700; }
 .student-help-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .student-help-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
+
+
+@media (max-width: 768px) {
+  .help-grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .help-faq-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+}

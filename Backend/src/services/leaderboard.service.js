@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { appCache } from '../utils/simpleCache.js';
 import { ROLES } from '../utils/constants.js';
 
 // Pre-seeded fallback dataset representing diverse students across colleges, departments, and batches
@@ -109,7 +110,15 @@ export const applyStandardTieRanking = (items, scoreKey = 'score', timeKey = 'to
  * Fetch raw student performance data from MySQL DB or Fallback Data
  */
 export const getStudentsRawPerformance = async (filters = {}) => {
-  const { college_id, department_id, batch_id } = filters;
+  const { college_id, department_id, batch_id, mentor_id, mentor_name } = filters;
+  const cacheKey = `raw_perf_${college_id || '0'}_${department_id || '0'}_${batch_id || '0'}_${mentor_id || '0'}_${mentor_name || ''}`;
+  return appCache.getOrSet(cacheKey, 30, async () => {
+    return await executeStudentsRawPerformance(filters);
+  });
+};
+
+const executeStudentsRawPerformance = async (filters = {}) => {
+  const { college_id, department_id, batch_id, mentor_id, mentor_name, mentor_email } = filters;
 
   try {
     let sql = `
@@ -118,6 +127,8 @@ export const getStudentsRawPerformance = async (filters = {}) => {
         s.id AS student_id,
         u.name,
         u.email,
+        u.is_approved,
+        u.is_active,
         u.created_at AS user_created_at,
         s.roll_number,
         s.college_id,
@@ -235,6 +246,8 @@ export const getStudentsRawPerformance = async (filters = {}) => {
       ) task_stats ON task_stats.user_id = u.id
 
       WHERE u.role IN ('student', 'STUDENT')
+        AND COALESCE(u.is_approved, 0) = 1
+        AND COALESCE(u.is_active, 1) = 1
     `;
 
     const params = [];
@@ -249,6 +262,30 @@ export const getStudentsRawPerformance = async (filters = {}) => {
     if (batch_id) {
       sql += ' AND s.batch_id = ?';
       params.push(parseInt(batch_id, 10));
+    }
+    if (mentor_id) {
+      sql += ` AND (
+        s.mentor_id = ?
+        OR u.mentor_id = ?
+        OR (s.mentor_name IS NOT NULL AND LOWER(s.mentor_name) = LOWER(?))
+        OR (u.mentor_name IS NOT NULL AND LOWER(u.mentor_name) = LOWER(?))
+        OR s.user_id IN (SELECT student_id FROM mentor_student_assignments WHERE mentor_id = ?)
+        OR s.user_id IN (SELECT student_id FROM mentor_assignments WHERE mentor_id = ? OR LOWER(mentor_name) = LOWER(?) OR LOWER(mentor_email) = LOWER(?))
+        OR s.batch_id IN (SELECT id FROM batches WHERE mentor = ? OR trainer = ? OR LOWER(mentor) = LOWER(?))
+      )`;
+      params.push(
+        mentor_id,
+        mentor_id,
+        mentor_name || '',
+        mentor_name || '',
+        mentor_id,
+        mentor_id,
+        mentor_name || '',
+        mentor_email || '',
+        mentor_name || '',
+        mentor_name || '',
+        mentor_name || ''
+      );
     }
 
     sql += ' ORDER BY u.created_at ASC, u.id ASC';
@@ -290,9 +327,9 @@ export const getStudentsRawPerformance = async (filters = {}) => {
           college_id: r.college_id,
           college_name: r.college_name || 'College',
           department_id: r.department_id,
-          department_name: r.department_name || 'General',
+          department_name: r.department_name || null,
           batch_id: r.batch_id,
-          batch_name: r.batch_name || 'General Batch',
+          batch_name: r.batch_name || null,
 
           quiz_points: quizPoints,
           quizzes_taken: Number(r.quizzes_taken) || 0,
@@ -369,6 +406,7 @@ export const getOverallLeaderboard = async (filters = {}) => {
     roll_number: s.roll_number,
     sub: s.department_name,
     department: s.department_name,
+    department_id: s.department_id,
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
@@ -411,20 +449,32 @@ export const getOverallLeaderboard = async (filters = {}) => {
  * 2. DEPARTMENT LEADERBOARD (Department Isolation & College Isolation)
  */
 export const getDepartmentLeaderboard = async (filters = {}) => {
-  const { department_id } = filters;
+  const { department_id, department_name, department } = filters;
+  const targetDept = department_name || department;
 
   const students = await getStudentsRawPerformance(filters);
 
   if (!students || students.length === 0) return [];
 
-  // Filter specifically if department_id was passed
+  // Filter specifically if department_id or department name was passed
   let filtered = students;
-  if (department_id) {
-    filtered = students.filter(
-      (s) =>
-        s.department_id === parseInt(department_id, 10) ||
-        s.department_name.toLowerCase() === String(department_id).toLowerCase()
-    );
+  if (department_id || targetDept) {
+    filtered = students.filter((s) => {
+      if (department_id && s.department_id && Number(s.department_id) === Number(department_id)) {
+        return true;
+      }
+      if (targetDept && s.department_name) {
+        const a = String(s.department_name).trim().toLowerCase();
+        const b = String(targetDept).trim().toLowerCase();
+        if (a === b || a.includes(b) || b.includes(a)) return true;
+      }
+      if (department_id && s.department_name) {
+        const a = String(s.department_name).trim().toLowerCase();
+        const b = String(department_id).trim().toLowerCase();
+        if (a === b || a.includes(b) || b.includes(a)) return true;
+      }
+      return false;
+    });
   }
 
   const mapped = filtered.map((s) => ({
@@ -435,6 +485,7 @@ export const getDepartmentLeaderboard = async (filters = {}) => {
     roll_number: s.roll_number,
     sub: s.department_name,
     department: s.department_name,
+    department_id: s.department_id,
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
@@ -513,7 +564,8 @@ export const getTopBatchesLeaderboard = async (filters = {}) => {
   const batchMap = new Map();
 
   students.forEach((s) => {
-    const bName = s.batch_name || 'General Batch';
+    const bName = s.batch_name ? String(s.batch_name).trim() : '';
+    if (!bName) return; // Ignore unassigned students instead of grouping into fake 'General Batch'
     if (!batchMap.has(bName)) {
       batchMap.set(bName, {
         name: bName,
@@ -566,6 +618,9 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     batch_id: queryParams.batch_id,
   };
 
+  let studentDeptId = queryParams.department_id || null;
+  let studentDeptName = queryParams.department || null;
+
   // Role Isolation Enforcement
   if (role === ROLES.COLLEGE_ADMIN || role === ROLES.COORDINATOR) {
     if (userCollegeId) {
@@ -578,16 +633,57 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
     if (userCollegeId) {
       filters.college_id = userCollegeId;
     }
-  } else if (role === ROLES.STUDENT) {
+    filters.mentor_id = user.userId || user.id;
+    filters.mentor_name = user.name || '';
+    filters.mentor_email = user.email || '';
+  } else if (role === 'student' || role === ROLES.STUDENT) {
     if (userCollegeId) {
       filters.college_id = userCollegeId;
     }
+    // Automatically resolve the student's department from students table
+    try {
+      const stRows = await query(
+        `SELECT s.department_id, s.department, d.name AS dept_name
+         FROM students s
+         LEFT JOIN departments d ON s.department_id = d.id
+         WHERE s.user_id = ? OR s.id = ?
+         LIMIT 1`,
+        [currentUserId, currentUserId]
+      );
+      if (stRows && stRows.length > 0) {
+        studentDeptId = stRows[0].department_id;
+        studentDeptName = stRows[0].dept_name || stRows[0].department;
+      }
+    } catch (e) {
+      console.warn('[Leaderboard] Student dept lookup error:', e.message);
+    }
   }
 
-  // Fetch all leaderboards concurrently
-  const [overall, department, milestone, topBatches] = await Promise.all([
-    getOverallLeaderboard(filters),
-    getDepartmentLeaderboard(filters),
+  // Fetch overall leaderboard without department restriction so overall campus standings remain intact
+  const overallFilters = { ...filters };
+  delete overallFilters.department_id;
+  delete overallFilters.department_name;
+  delete overallFilters.department;
+  const overall = await getOverallLeaderboard(overallFilters);
+
+  // If studentDeptName/studentDeptId is still not known, find it from the student in overall list
+  if ((role === 'student' || role === ROLES.STUDENT) && (!studentDeptId && !studentDeptName)) {
+    const me = overall.find(s => s.id === currentUserId || s.student_id === currentUserId || s.user_id === currentUserId);
+    if (me) {
+      studentDeptId = me.department_id;
+      studentDeptName = me.department || me.sub;
+    }
+  }
+
+  const deptFilters = {
+    ...filters,
+    department_id: studentDeptId || filters.department_id,
+    department_name: studentDeptName || filters.department_name,
+  };
+
+  // Fetch department (scoped to student's department), milestone, and topBatches concurrently
+  const [department, milestone, topBatches] = await Promise.all([
+    getDepartmentLeaderboard(deptFilters),
     getMilestoneLeaderboard(filters),
     getTopBatchesLeaderboard(filters),
   ]);
@@ -625,13 +721,18 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
       nearby = markedOverall.slice(0, Math.min(5, totalStudents));
     }
 
+    const currentStudentInDept = markedDept.find((s) => s.isCurrentUser);
+    const resolvedDeptName = studentDeptName || currentStudentInOverall?.department || currentStudentInDept?.department || '';
+
     studentContext = {
       myRank: {
         overallRank: myRank,
-        departmentRank: (markedDept.find((s) => s.isCurrentUser) || {}).rank || 1,
+        departmentRank: currentStudentInDept ? currentStudentInDept.rank : 1,
         milestoneRank: (markedMilestone.find((s) => s.isCurrentUser) || {}).rank || 1,
         score: myScore,
         totalStudents,
+        totalDeptStudents: markedDept.length,
+        myDepartment: resolvedDeptName,
       },
       nearby,
     };

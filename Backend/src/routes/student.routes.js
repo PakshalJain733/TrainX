@@ -17,6 +17,7 @@ import {
   getStudentWeeklyReports,
 } from '../controllers/student.controller.js';
 import { getRoadmapData, generateRoadmap } from '../controllers/roadmap.controller.js';
+import { getMyBatches } from '../controllers/batch.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -35,6 +36,7 @@ router.patch('/me', updateStudentProfile);
 router.get('/profile', getStudentProfile);
 router.patch('/profile', updateStudentProfile);
 router.get('/dashboard', getStudentDashboard);
+router.get('/batches', getMyBatches);
 
 // Practice Problems, Materials & Attendance
 router.get('/practice-problems', getStudentPracticeProblems);

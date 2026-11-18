@@ -42,7 +42,23 @@ export const collectRealStudentSignals = async (studentId) => {
   const sId = Number(studentId);
   const assessmentScores = {};
   const weakSkills = [];
-  let suggestedTrack = 'Full Stack Engineering';
+  let suggestedTrack = null; // resolved from student's batch topic, target_track, or department — no hardcoded default
+
+  // Check student target track, enrolled batch topic, or department
+  try {
+    const [pref] = await query(
+      `SELECT COALESCE(s.target_track, u.target_track, b.topic, b.name, d.name) AS pref_track
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN batches b ON (b.id = s.batch_id OR b.id = (SELECT batch_id FROM student_batches WHERE user_id = u.id LIMIT 1))
+       LEFT JOIN departments d ON (d.id = u.department_id OR d.id = s.department_id)
+       WHERE u.id = ? LIMIT 1`,
+      [sId]
+    );
+    if (pref && pref.pref_track && String(pref.pref_track).trim()) {
+      suggestedTrack = String(pref.pref_track).trim();
+    }
+  } catch (_) {}
 
   // 1. Real assessment scores by topic
   try {
@@ -149,8 +165,10 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
     : realSignals.assessmentScores;
 
   // Use the targeted role when provided, otherwise derive from the student's real weak areas.
+  // Final fallback is a generic track — no institution-specific name hardcoded here.
   const requestedRole = (targetRole && String(targetRole).trim())
-    || (weakSkills.length > 0 ? weakSkills[0] : realSignals.suggestedTrack);
+    || (weakSkills.length > 0 ? weakSkills[0] : realSignals.suggestedTrack)
+    || 'Software Engineering';
 
   const careerTrackName = requestedRole;
 

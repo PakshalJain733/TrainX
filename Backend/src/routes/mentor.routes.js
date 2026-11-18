@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   getMentorOverview,
   getMentorBatches,
+  getMentorBatchDetails,
+  saveMentorSubmissionFeedback,
   getMentorLeaderboard,
   getMentorDefaulters,
   getMentorStudentsPerformance,
@@ -26,12 +28,25 @@ import {
   createMentorSupportTicket,
   updateMentorSupportTicket,
   escalateMentorSupportTicket,
+  updateMentorProfile,
 } from '../controllers/mentor.controller.js';
+import {
+  getAdminPracticeProblems,
+  createAdminPracticeProblem,
+  updateAdminPracticeProblem,
+  deleteAdminPracticeProblem,
+  generateAIPracticeProblemController,
+  deleteAdminBroadcast,
+} from '../controllers/admin.controller.js';
+import {
+  getAllCodingSubmissionsAdmin,
+  updateSubmissionFeedbackController,
+} from '../controllers/codingSubmission.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
 import { upload } from '../utils/s3Upload.js';
-
+import { createCoordinatorBroadcast } from '../controllers/coordinator.controller.js';
 const router = Router();
 
 router.use(authenticateToken);
@@ -40,7 +55,10 @@ router.use(authenticateToken);
 const mentorOnly = authorizeRoles(ROLES.MENTOR, ROLES.SUPER_ADMIN);
 
 router.get('/overview', mentorOnly, getMentorOverview);
+router.get('/stats', mentorOnly, getMentorOverview);
 router.get('/batches', mentorOnly, getMentorBatches);
+router.get('/batches/:batchId/details', mentorOnly, getMentorBatchDetails);
+router.post('/submissions/:submissionId/feedback', mentorOnly, saveMentorSubmissionFeedback);
 router.get('/leaderboard', mentorOnly, getMentorLeaderboard);
 router.get('/defaulters', mentorOnly, getMentorDefaulters);
 router.get('/students', mentorOnly, getMentorStudentsPerformance);
@@ -50,6 +68,18 @@ router.post('/weekly-reports', mentorOnly, submitMentorWeeklyReport);
 router.get('/mentors-list', mentorOnly, getMentorDirectory);
 router.get('/interviews', mentorOnly, getMentorMenteeInterviews);
 router.get('/profile', mentorOnly, getMentorProfile);
+router.put('/profile', mentorOnly, updateMentorProfile);
+router.patch('/profile', mentorOnly, updateMentorProfile);
+
+// Mentor Coding Practice Problems Management (just like Admin)
+router.get('/practice-problems', mentorOnly, getAdminPracticeProblems);
+router.post('/practice-problems', mentorOnly, createAdminPracticeProblem);
+router.put('/practice-problems/:id', mentorOnly, updateAdminPracticeProblem);
+router.delete('/practice-problems/:id', mentorOnly, deleteAdminPracticeProblem);
+router.post('/practice-problems/generate-ai', mentorOnly, generateAIPracticeProblemController);
+router.get('/practice-problems/submissions', mentorOnly, getAllCodingSubmissionsAdmin);
+router.patch('/practice-problems/submissions/:id/feedback', mentorOnly, updateSubmissionFeedbackController);
+router.post('/practice-problems/submissions/:id/feedback', mentorOnly, updateSubmissionFeedbackController);
 
 router.get('/assignments', mentorOnly, getMentorAssignments);
 router.post('/assignments', mentorOnly, createMentorAssignment);
@@ -77,11 +107,15 @@ router.delete('/materials/:id', materialsWrite, deleteStudyMaterial);
 router.delete('/study-materials/:id', materialsWrite, deleteStudyMaterial);
 
 router.get('/notifications', mentorOnly, getMentorNotifications);
+router.get('/broadcast', mentorOnly, getMentorNotifications);
+router.post('/broadcast', mentorOnly, createCoordinatorBroadcast);
+router.delete('/broadcast/:id', mentorOnly, deleteAdminBroadcast);
 
 // Mentor Support Tickets & Escalation to College Admin
-router.get('/support/tickets', mentorOnly, getMentorSupportTickets);
-router.post('/support/tickets', mentorOnly, createMentorSupportTicket);
-router.put('/support/tickets/:id', mentorOnly, updateMentorSupportTicket);
-router.post('/support/tickets/:id/escalate', mentorOnly, escalateMentorSupportTicket);
+const supportTicketsAccess = authorizeRoles(ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN, ROLES.COORDINATOR);
+router.get('/support/tickets', supportTicketsAccess, getMentorSupportTickets);
+router.post('/support/tickets', supportTicketsAccess, createMentorSupportTicket);
+router.put('/support/tickets/:id', supportTicketsAccess, updateMentorSupportTicket);
+router.post('/support/tickets/:id/escalate', supportTicketsAccess, escalateMentorSupportTicket);
 
 export default router;

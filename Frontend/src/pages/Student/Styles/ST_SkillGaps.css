@@ -9,6 +9,36 @@
   margin: 0 auto;
 }
 
+/* Top Navigation / Back Button */
+.student-skillgaps-top-nav {
+  display: flex;
+  align-items: center;
+  margin-bottom: -10px;
+}
+
+.btn-back-to-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.btn-back-to-progress:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #4f46e5;
+  transform: translateX(-2px);
+}
+
 /* Header */
 .student-skillgaps-header {
   display: flex;
@@ -207,6 +237,28 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 485px;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.skill-analysis-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.skill-analysis-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.skill-analysis-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.skill-analysis-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .skill-item-row {
@@ -569,6 +621,278 @@
 .btn-secondary-action:hover {
   background: #f8fafc;
   border-color: #94a3b8;
+}
+
+/* Mentor Intervention Alert Banner */
+.skillgaps-intervention-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #fff5f5 0%, #fff1f2 100%);
+  border: 1px solid #fecdd3;
+  border-left: 5px solid #e11d48;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.05);
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
+}
+
+.intervention-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.intervention-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #be123c;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.intervention-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #ffe4e6;
+  color: #e11d48;
+  border-radius: 8px;
+}
+
+.intervention-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.25);
+}
+
+.intervention-reasons-group {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: #9f1239;
+  line-height: 1.5;
+}
+
+.intervention-reason-label {
+  font-weight: 700;
+  color: #881337;
+}
+
+.intervention-reasons-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.intervention-reason-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.intervention-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #ffe4e6;
+}
+
+.intervention-meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid #ffe4e6;
+  border-radius: 10px;
+}
+
+.intervention-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.intervention-meta-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Factors Overview Grid */
+.skillgaps-factors-banner {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.factors-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.factors-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.factors-banner-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-radius: 9999px;
+}
+
+.skillgaps-factors-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .skillgaps-factors-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .skillgaps-factors-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.factor-metric-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.factor-metric-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.factor-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.factor-card-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.factor-card-weight {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.factor-card-score {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.factor-card-detail {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.3;
+}
+
+/* Factor breakdown tag inside skill row */
+.skill-item-factors-tag {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Contributing factors in recommendation panel */
+.contributing-factors-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contributing-factor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.cf-name {
+  font-weight: 700;
+  color: #334155;
+}
+
+.cf-detail {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.cf-score {
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
 }
 
 .no-weak-skill-selected {

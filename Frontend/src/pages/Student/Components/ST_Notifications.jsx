@@ -30,37 +30,35 @@ export default function Notifications() {
 
       try {
         const res = await apiFetch("/student/notifications");
-        let broadcastMapped = [];
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          broadcastMapped = res.data.map((b) => ({
-            id: `broadcast-${b.id}`,
-            title: `📢 [Notice] ${b.title}`,
-            body: b.message,
+        if (res && res.data && Array.isArray(res.data)) {
+          const broadcastMapped = res.data.map((b) => ({
+            id: b.id || `broadcast-${b.db_id || Math.random()}`,
+            title: b.title?.startsWith("📢") ? b.title : `📢 [Notice] ${b.title || 'Announcement'}`,
+            body: b.body || b.message || b.desc || '',
             target: b.target || 'All Batches',
             priority: b.priority || 'General Announcement',
             created_by_name: b.created_by_name || 'Admin',
-            time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
-            category: "Broadcast",
+            sender_role: b.sender_role || 'Admin',
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Recently"),
+            category: b.category || "Broadcast",
             icon: Bell,
             iconColor: "#7c3aed",
             iconBg: "#f5f3ff",
-            unread: true,
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
           }));
+          setNotifications(broadcastMapped);
+          return;
         }
+      } catch (err) {
+        console.warn("[Notifications] Failed to load server notifications:", err);
+      }
+
+      if (sharedMapped.length > 0) {
         setNotifications((prev) => {
-          const allItems = [...sharedMapped, ...broadcastMapped];
           const existingIds = new Set(prev.map((p) => p.id));
-          const newNotifs = allItems.filter((n) => !existingIds.has(n.id));
+          const newNotifs = sharedMapped.filter((n) => !existingIds.has(n.id));
           return [...newNotifs, ...prev];
         });
-      } catch {
-        if (sharedMapped.length > 0) {
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map((p) => p.id));
-            const newNotifs = sharedMapped.filter((n) => !existingIds.has(n.id));
-            return [...newNotifs, ...prev];
-          });
-        }
       }
     };
 
@@ -75,18 +73,21 @@ export default function Notifications() {
     };
   }, []);
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const deleteNotif = (id) => {
+  const deleteNotif = async (id) => {
     setNotifications((prev) => prev.filter((item) => item.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const markSingleRead = (id) => {
+  const markSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((item) => (item.id === id ? { ...item, unread: false } : item))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -191,7 +192,7 @@ export default function Notifications() {
                       )}
                       {item.created_by_name && (
                         <span style={{ fontSize: '11px', fontWeight: '700', color: '#7e22ce', background: '#f3e8ff', padding: '2px 8px', borderRadius: '6px' }}>
-                          👤 By: {item.created_by_name}
+                          👤 By: {item.created_by_name}{item.sender_role ? ` • ${item.sender_role}` : ''}
                         </span>
                       )}
 

@@ -70,8 +70,36 @@ export const createBatchModel = async ({
   end_year = null,
   status = 'active',
 }) => {
-  const cId = college_id ? parseInt(college_id, 10) : 1;
-  const dId = department_id ? parseInt(department_id, 10) : null;
+  // Resolve valid college_id
+  let cId = college_id ? parseInt(college_id, 10) : null;
+  if (cId) {
+    const [cRow] = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [cId]);
+    if (!cRow) cId = null;
+  }
+  if (!cId) {
+    const [firstCol] = await query('SELECT id FROM colleges ORDER BY id ASC LIMIT 1');
+    cId = firstCol ? firstCol.id : 1;
+  }
+
+  // Resolve valid department_id (batches.department_id is NOT NULL with FK to departments.id)
+  let dId = department_id ? parseInt(department_id, 10) : null;
+  if (dId) {
+    const [dRow] = await query('SELECT id FROM departments WHERE id = ? AND college_id = ? LIMIT 1', [dId, cId]);
+    if (!dRow) dId = null;
+  }
+  if (!dId) {
+    const [firstDept] = await query('SELECT id FROM departments WHERE college_id = ? ORDER BY id ASC LIMIT 1', [cId]);
+    if (firstDept) {
+      dId = firstDept.id;
+    } else {
+      const insertDept = await query(
+        'INSERT INTO departments (college_id, name, code, status) VALUES (?, ?, ?, ?)',
+        [cId, 'General Engineering', 'GEN', 'Active']
+      );
+      dId = insertDept.insertId;
+    }
+  }
+
   const expiresAtVal = code_expires_at ? Number(code_expires_at) : null;
 
   const res = await query(

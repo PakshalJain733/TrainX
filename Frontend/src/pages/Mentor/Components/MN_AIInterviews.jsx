@@ -250,7 +250,7 @@ export default function MN_AIInterviews() {
 
                     <td>
                       <div className="mn-ai-batch-cell">
-                        <span className="mn-ai-batch-name">{item.batch || 'Batch A'}</span>
+                        <span className="mn-ai-batch-name">{item.batch || '—'}</span>
                         <span className="mn-ai-roll-no">{item.rollNo || 'N/A'}</span>
                       </div>
                     </td>

@@ -1,7 +1,16 @@
+import dns from 'dns';
+
+// Ensure IPv4 address resolution takes precedence over IPv6 across all Node.js outbound connections
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 import express from 'express';
 import cors from 'cors';
+import { corsMiddleware } from './config/cors.js';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -29,6 +38,10 @@ import superadminRoutes from './routes/superadmin.routes.js';
 import c2cRoutes from './routes/c2c.routes.js';
 import featureSwitchRoutes from './routes/featureSwitch.routes.js';
 import systemHealthRoutes from './routes/systemHealth.routes.js';
+import googleAuthRoutes from './routes/googleAuth.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import retakeRoutes from './routes/retake.routes.js';
+import careerGatewayRoutes from './modules/integrations/careerGateway/careerGateway.routes.js';
 import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
@@ -51,70 +64,12 @@ const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 
 // ============================================================================
-// Robust Universal CORS Middleware (All Routes, Preflights & Methods)
+// Authoritative Centralized CORS Middleware (All Routes, Preflights & Methods)
 // ============================================================================
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+app.use(corsMiddleware);
 
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'
-  );
-
-  const requestHeaders = req.headers['access-control-request-headers'];
-  if (requestHeaders) {
-    res.setHeader('Access-Control-Allow-Headers', requestHeaders);
-  } else {
-    res.setHeader('Access-Control-Allow-Headers', '*');
-  }
-
-  res.setHeader('Access-Control-Expose-Headers', '*');
-  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
-  res.setHeader('Vary', 'Origin, Access-Control-Request-Headers, Access-Control-Request-Method');
-
-  // Immediate handling of preflight OPTIONS requests across ALL routes
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  next();
-});
-
-// Configure cors library for full express middleware compatibility
-app.use(
-  cors({
-    origin: (origin, callback) => callback(null, true),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: '*',
-    exposedHeaders: '*',
-    maxAge: 86400,
-  })
-);
-
-// Explicit OPTIONS handler for all wildcard routes
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-  const requestHeaders = req.headers['access-control-request-headers'];
-  res.setHeader('Access-Control-Allow-Headers', requestHeaders || '*');
-  res.setHeader('Access-Control-Expose-Headers', '*');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.status(204).end();
-});
+// HTTP Payload Compression (Gzip / Brotli) - reduces network payload by 70%+
+app.use(compression());
 
 // Production Security Headers via Helmet
 app.use(
@@ -122,10 +77,21 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
-    frameguard: false, // Allows same-site document previews in portal modals
-    xContentTypeOptions: false,
+    frameguard: false, // Disabled global SAMEORIGIN so documents can be embedded across authorized frontends
+    xContentTypeOptions: true, // MIME-sniffing protection enabled
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
   })
 );
+
+// Frame protection allowing authorized frontends to embed document viewers
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.getflytechnologies.com https://getflytechnologies.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+  );
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -134,21 +100,27 @@ app.use(apiMetricsMiddleware);
 // Security Rate Limiters (skip preflight OPTIONS and preserve CORS headers on 429)
 export const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 1000, // Limit each client IP to 1000 auth requests per windowMs
+  max: nodeEnv === 'production' ? 120 : 2000, // Rate limit for authentication attempts (per IP/identifier)
+  keyGenerator: (req) => {
+    // Key by email/token when available so students on shared campus IP don't lock each other out
+    const identifier = req.body?.email || req.body?.mobile || req.body?.identifier || (req.headers.authorization ? req.headers.authorization.slice(-16) : req.ip);
+    return String(identifier || req.ip).toLowerCase().trim();
+  },
+  validate: { default: false, xForwardedForHeader: false },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.method === 'OPTIONS',
+  skip: (req) => {
+    // Never rate limit GET, HEAD, or OPTIONS requests (e.g. /auth/me, /colleges, /broadcast)
+    if (req.method === 'OPTIONS' || req.method === 'GET' || req.method === 'HEAD') return true;
+    const url = req.originalUrl || req.path || '';
+    // Only throttle actual authentication attempt endpoints
+    const isAuthAttempt = /\/(login|login-password|send-otp|verify-otp|verify-email-otp|reset-password-otp|register\/send-otp)/i.test(url);
+    return !isAuthAttempt;
+  },
   handler: (req, res, next, options) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
     res.status(options.statusCode).json({
       success: false,
-      message: 'Too many authentication attempts from this IP. Please try again after 10 minutes.',
+      message: 'Too many authentication attempts. Please try again after 10 minutes.',
     });
   },
 });
@@ -156,17 +128,11 @@ export const authLimiter = rateLimit({
 export const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500, // Limit each client IP to 500 AI operations per windowMs
+  validate: { default: false, xForwardedForHeader: false },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.method === 'OPTIONS',
   handler: (req, res, next, options) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    } else {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-    }
     res.status(options.statusCode).json({
       success: false,
       message: 'AI rate limit reached. Please wait a few moments before trying again.',
@@ -244,6 +210,18 @@ const handleUploadsFile = (req, res, next) => {
   `);
 };
 
+const uploadHeadersMiddleware = (req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.getflytechnologies.com https://getflytechnologies.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+  );
+  next();
+};
+
+app.use(['/uploads', '/api/v1/uploads', '/api/uploads'], uploadHeadersMiddleware);
+
 uploadPaths.forEach((p) => {
   if (fs.existsSync(p)) {
     app.use('/uploads', express.static(p));
@@ -296,7 +274,7 @@ app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/mock-drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
-app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/secure-codes', authLimiter, secureCodeRoutes);
 app.use('/api/v1/code', codingRoutes);
 app.use('/api/v1/coding', codingRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
@@ -307,13 +285,22 @@ app.use('/api/v1/c2c', c2cRoutes);
 app.use('/api/v1/admin/c2c', c2cRoutes);
 app.use('/api/v1/feature-switches', featureSwitchRoutes);
 app.use('/api/v1/maintenance', featureSwitchRoutes);
+app.use('/api/v1/retakes', retakeRoutes);
+app.use('/api/retakes', retakeRoutes);
+app.use('/api/google/auth', googleAuthRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/notification', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/v1/google/auth', googleAuthRoutes);
+app.use('/api/integrations/career-gateway', careerGatewayRoutes);
+app.use('/api/v1/integrations/career-gateway', careerGatewayRoutes);
+app.use('/api/career-gateway', careerGatewayRoutes);
+app.use('/api/v1/career-gateway', careerGatewayRoutes);
+app.use('/integrations/career-gateway', careerGatewayRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {
-  if (req.headers.origin && !res.getHeader('Access-Control-Allow-Origin')) {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  console.log(`[TrainX 404 Debug] Unmatched incoming request: ${req.method} ${req.originalUrl}`);
   return sendError(res, `Route not found: ${req.originalUrl}`, 404);
 });
 

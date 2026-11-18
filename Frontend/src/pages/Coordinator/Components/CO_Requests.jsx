@@ -402,7 +402,7 @@ export default function CoordinatorRequests() {
                 )}
               </div>
 
-              <div className="coord-requests-form-row">
+              <div className="coord-requests-form-row mobile-pair-2">
                 <div className="coord-requests-form-group">
                   <label className="coord-requests-form-label">Roll Number</label>
                   <input

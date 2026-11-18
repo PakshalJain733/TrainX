@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { createNotification, getUserNotifications } from '../services/notification.service.js';
 import { getShortDept, isSameDepartment } from '../utils/departmentHelper.js';
 
 /**
@@ -262,7 +263,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
     const statsList = [
       { id: 'students', label: 'Enrolled Students', value: String(studentCount?.count || 0), hint: `Active in ${departmentName}` },
       { id: 'batches', label: 'Managed Batches', value: `${batchCount?.count || 0} Batches`, hint: 'Current active batches' },
-      { id: 'mentors', label: 'Faculty & Mentors', value: `${mentorCount} Trainers`, hint: `Assigned to ${departmentName}` },
+      { id: 'mentors', label: 'Mentors', value: `${mentorCount} Trainers`, hint: `Assigned to ${departmentName}` },
       { id: 'attendance', label: 'Attendance Rate', value: `${attData?.avg_attendance || 0}%`, hint: 'Department average' },
     ];
 
@@ -282,7 +283,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
         studentId: s.id,
         name: s.name,
         rollNumber: s.roll_number,
-        batch: s.batch_name || 'General Batch',
+        batch: s.batch_name || null,
         attendance: `${s.attendance}%`,
         avgScore: `${s.avg_quiz_score}%`,
         riskStatus: s.attendance < 65 ? 'High Risk' : 'Moderate Risk',
@@ -577,7 +578,7 @@ export const createCoordinatorMentor = async (req, res, next) => {
     }
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
     const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, req.query?.department);
-    const mentorDept = department || scope.primaryDeptName || 'Computer Engineering';
+    const mentorDept = department || scope.primaryDeptName || null;
 
     const [existing] = await query('SELECT id FROM users WHERE email = ?', [email]);
     let mentorId;
@@ -586,8 +587,8 @@ export const createCoordinatorMentor = async (req, res, next) => {
       await query('UPDATE users SET role = ?, department = ?, college_id = ? WHERE id = ?', ['mentor', mentorDept, collegeId, mentorId]);
     } else {
       const result = await query(
-        'INSERT INTO users (name, email, role, department, college_id, password) VALUES (?, ?, ?, ?, ?, ?)',
-        [name, email, 'mentor', mentorDept, collegeId, '$2a$10$abcdefghijklmnopqrstuu']
+        'INSERT INTO users (name, email, role, department, college_id, password_hash, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, ?, NULL, 0, 0, 0)',
+        [name, email, 'mentor', mentorDept, collegeId]
       );
       mentorId = result.insertId;
     }
@@ -602,7 +603,7 @@ export const createCoordinatorMentor = async (req, res, next) => {
       email,
       department: mentorDept,
       assignedBatch: assignedBatch || 'Unassigned',
-      status: 'Active',
+      status: existing ? 'Active' : 'Pending Activation',
     });
   } catch (error) {
     next(error);
@@ -721,9 +722,9 @@ export const updateCoordinatorRequestStatus = async (req, res, next) => {
  */
 export const getCoordinatorNotifications = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const broadcasts = await getBroadcastsModel(collegeId);
-    return sendSuccess(res, 'Notifications retrieved successfully', broadcasts);
+    const user = req.user || {};
+    const notifs = await getUserNotifications(user);
+    return sendSuccess(res, 'Notifications retrieved successfully', notifs);
   } catch (error) {
     next(error);
   }
@@ -742,13 +743,20 @@ export const createCoordinatorBroadcast = async (req, res, next) => {
       return sendError(res, 'Title and message are required', 400);
     }
 
-    const result = await query(
-      `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [collegeId, title, message, message, target || 'Department Students', priority || 'General', userId]
-    );
+    const senderName = req.user?.name || req.user?.username || (req.user?.role === 'mentor' ? 'Mentor' : 'Coordinator');
+    const senderRole = req.user?.role || 'Coordinator';
+    const created = await createNotification({
+      college_id: collegeId,
+      title: title.trim(),
+      message: message.trim(),
+      target: target || 'Department Students',
+      priority: priority || 'General Announcement',
+      created_by: userId,
+      created_by_name: senderName,
+      sender_role: senderRole,
+    });
 
-    return sendSuccess(res, 'Broadcast announcement sent successfully', { id: result.insertId }, 201);
+    return sendSuccess(res, 'Broadcast announcement sent and saved in database successfully', created, 201);
   } catch (error) {
     next(error);
   }
@@ -790,8 +798,8 @@ export const getCoordinatorSkillGaps = async (req, res, next) => {
           studentId: row.student_id,
           studentName: row.student_name,
           rollNo: row.roll_number || `R-${row.student_id}`,
-          department: row.department || 'Engineering',
-          batch: row.batch_name || 'General Batch',
+          department: row.department || null,
+          batch: row.batch_name || null,
           assignedMentor: row.mentor_name || 'Assigned',
           weakSkills: [],
           priorityScores: { High: 0, Medium: 0, Low: 0 },
@@ -975,52 +983,7 @@ export const createCoordinatorLiveSession = async (req, res, next) => {
  */
 export const getCoordinatorSupportTickets = async (req, res, next) => {
   try {
-    const coordId = req.user?.userId || req.user?.id || 1;
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-
-    let tickets = [];
-    try {
-      tickets = await query(
-        `SELECT st.*,
-                COALESCE(u.name, 'User') AS requesterName,
-                u.email AS requesterEmail,
-                u.role AS requesterRole,
-                COALESCE(s.department, 'General') AS requesterBatch
-         FROM support_tickets st
-         LEFT JOIN users u ON st.user_id = u.id
-         LEFT JOIN students s ON u.id = s.user_id
-         WHERE st.user_id = ? OR (u.college_id = ? OR ? IS NULL)
-         ORDER BY st.id DESC`,
-        [coordId, collegeId, collegeId]
-      );
-    } catch (e) {
-      console.warn('[DB getCoordinatorSupportTickets fallback]', e.message);
-      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [coordId]).catch(() => []);
-    }
-
-    const formatted = (tickets || []).map(t => ({
-      id: `TICK-${t.id}`,
-      dbId: t.id,
-      title: t.subject || 'Support Issue',
-      subject: t.subject || 'Support Issue',
-      category: t.category || 'Academics & Labs',
-      priority: t.priority || 'Normal',
-      status: t.status || 'Open',
-      description: t.description || '',
-      requesterName: t.requesterName || 'User',
-      requesterEmail: t.requesterEmail || '',
-      role: t.requesterRole || 'COORDINATOR',
-      batch: t.requesterBatch || 'General',
-      created: t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : 'Today',
-      time: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Today',
-      resolutionNote: t.resolution_note || '',
-      isEscalated: Boolean(t.is_escalated),
-      escalatedTo: t.escalated_to || '',
-      escalationReason: t.escalation_reason || '',
-      isOwner: t.user_id === coordId,
-    }));
-
-    return sendSuccess(res, 'Coordinator support tickets retrieved successfully', formatted);
+    return sendSuccess(res, 'Support tickets are managed exclusively by College Admin and Super Admin', []);
   } catch (error) {
     next(error);
   }
@@ -1028,16 +991,24 @@ export const getCoordinatorSupportTickets = async (req, res, next) => {
 
 export const createCoordinatorSupportTicket = async (req, res, next) => {
   try {
-    const coordId = req.user?.userId || req.user?.id || 1;
+    let coordId = req.user?.userId || req.user?.id;
+    if (!coordId && req.user?.email) {
+      const u = await query('SELECT id FROM users WHERE email = ?', [req.user.email]);
+      if (u && u.length > 0) coordId = u[0].id;
+    }
+    if (coordId) {
+      const checkUser = await query('SELECT id FROM users WHERE id = ?', [coordId]);
+      if (!checkUser || checkUser.length === 0) coordId = null;
+    }
     const { subject, category = 'Academics & Labs', priority = 'Normal', description } = req.body;
-    if (!subject) return sendError(res, 'Ticket subject is required', 400);
+    if (!subject || !subject.trim()) return sendError(res, 'Ticket subject is required', 400);
 
-    let insertId = Date.now();
+    let insertId = Math.floor(1000 + Math.random() * 9000);
     try {
       const result = await query(
         `INSERT INTO support_tickets (user_id, subject, category, priority, status, description, target_role, created_at)
          VALUES (?, ?, ?, ?, 'Open', ?, 'admin', NOW())`,
-        [coordId, subject.trim(), category, priority, description ? description.trim() : '']
+        [coordId || null, subject.trim(), category, priority, description ? description.trim() : '']
       );
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {
@@ -1048,6 +1019,7 @@ export const createCoordinatorSupportTicket = async (req, res, next) => {
       id: `TICK-${insertId}`,
       dbId: insertId,
       subject,
+      title: subject,
       category,
       priority,
       status: 'Open'
@@ -1058,48 +1030,9 @@ export const createCoordinatorSupportTicket = async (req, res, next) => {
 };
 
 export const updateCoordinatorSupportTicket = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { status, resolutionNote } = req.body;
-
-    const updates = [];
-    const params = [];
-    if (status) { updates.push('status = ?'); params.push(status); }
-    if (resolutionNote !== undefined) { updates.push('resolution_note = ?'); params.push(resolutionNote); }
-
-    if (updates.length > 0) {
-      params.push(cleanId);
-      await query(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = ?`, params);
-    }
-
-    return sendSuccess(res, 'Ticket updated successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };
 
 export const escalateCoordinatorSupportTicket = async (req, res, next) => {
-  try {
-    const coordId = req.user?.userId || req.user?.id || 1;
-    const { id } = req.params;
-    const cleanId = String(id).replace(/^TICK-/i, '');
-    const { escalationReason } = req.body;
-
-    await query(
-      `UPDATE support_tickets 
-       SET is_escalated = 1,
-           escalated_to = 'admin',
-           escalation_reason = ?,
-           escalated_by = ?,
-           escalated_at = NOW(),
-           status = 'Escalated'
-       WHERE id = ?`,
-      [escalationReason || 'Coordinator requested assistance from College Admin.', coordId, cleanId]
-    );
-
-    return sendSuccess(res, 'Ticket escalated to College Admin successfully');
-  } catch (error) {
-    next(error);
-  }
+  return sendError(res, 'Support tickets are managed exclusively by College Admin and Super Admin', 403);
 };

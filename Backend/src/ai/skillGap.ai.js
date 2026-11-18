@@ -250,7 +250,7 @@ export const generateAIDiagnostics = async ({ topic, batchName, deficiencyRate, 
 Perform an in-depth technical skill gap diagnostic for a class/batch of engineering students:
 
 TOPIC / CONCEPT: "${topic}"
-AFFECTED BATCH: "${batchName || 'Computer Engineering Batch TE-A'}"
+AFFECTED BATCH: "${batchName || 'Assigned Batch'}"
 BATCH DEFICIENCY RATE: "${deficiencyRate}"
 CLASS AVERAGE SCORE: "${avgScore}"
 

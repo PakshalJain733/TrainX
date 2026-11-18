@@ -38,13 +38,43 @@ export const getPracticeProblemsModel = async ({ collegeId = null, batchId = nul
     sql += ' ORDER BY p.id DESC';
 
     const results = await query(sql, params);
-    if (results && Array.isArray(results)) {
+    if (results && Array.isArray(results) && results.length > 0) {
+      const pIds = results.map(r => r.id);
+      let allTestCases = [];
+      try {
+        allTestCases = await query(
+          `SELECT id, problem_id, input, expected_output, is_hidden 
+           FROM coding_test_cases 
+           WHERE problem_id IN (${pIds.map(() => '?').join(',')}) 
+           ORDER BY id ASC`,
+          pIds
+        );
+      } catch (e) {
+        console.warn('[getPracticeProblemsModel] test cases fetch warning:', e.message);
+      }
+
+      const tcMap = {};
+      for (const tc of allTestCases) {
+        if (!tcMap[tc.problem_id]) tcMap[tc.problem_id] = [];
+        const isHidden = Boolean(tc.is_hidden === 1 || tc.is_hidden === true || String(tc.is_hidden).toLowerCase() === 'true');
+        tcMap[tc.problem_id].push({
+          id: tc.id,
+          input: tc.input || '',
+          output: tc.expected_output || '',
+          expectedOutput: tc.expected_output || '',
+          expected_output: tc.expected_output || '',
+          is_hidden: isHidden,
+          isHidden: isHidden,
+        });
+      }
+
       return results.map(r => ({
         ...r,
         tags: r.tags ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         batch: r.batch_name || r.associated_batch_name || 'All Batches',
         due_date: formatDbDate(r.due_date),
         dueDate: formatDbDate(r.due_date),
+        testCases: tcMap[r.id] || [],
       }));
     }
   } catch (error) {
@@ -60,11 +90,24 @@ export const getPracticeProblemByIdModel = async (id, { forStudent = false } = {
     const rows = await query('SELECT * FROM practice_problems WHERE id = ?', [numId]);
     if (rows && rows.length > 0) {
       const r = rows[0];
-      let testCases = await query('SELECT input, expected_output, is_hidden FROM coding_test_cases WHERE problem_id = ?', [numId]);
+      let testCases = await query('SELECT id, input, expected_output, is_hidden FROM coding_test_cases WHERE problem_id = ? ORDER BY id ASC', [numId]);
       
       if (forStudent && Array.isArray(testCases)) {
         testCases = testCases.filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true'));
       }
+
+      const formattedTestCases = (testCases || []).map(tc => {
+        const isHidden = Boolean(tc.is_hidden === 1 || tc.is_hidden === true || String(tc.is_hidden).toLowerCase() === 'true');
+        return {
+          id: tc.id,
+          input: tc.input || '',
+          output: tc.expected_output || '',
+          expectedOutput: tc.expected_output || '',
+          expected_output: tc.expected_output || '',
+          is_hidden: isHidden,
+          isHidden: isHidden,
+        };
+      });
 
       let desc = r.description;
       if (!desc || desc === 'No problem description provided.') {
@@ -76,7 +119,7 @@ export const getPracticeProblemByIdModel = async (id, { forStudent = false } = {
         description: desc,
         tags: r.tags ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         batch: r.batch_name || 'All Batches',
-        testCases: testCases || [],
+        testCases: formattedTestCases,
         due_date: formatDbDate(r.due_date),
         dueDate: formatDbDate(r.due_date),
       };
@@ -183,24 +226,16 @@ export const createPracticeProblemModel = async ({
       console.warn('[Practice Problem Model] coding_problems sync notice:', e.message);
     }
 
-    if (sampleInput || sampleOutput) {
-      try {
-        await query(
-          `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, 0)`,
-          [probId, sampleInput || '', sampleOutput || '']
-        );
-      } catch (e) { }
-    }
-
     if (Array.isArray(testCases) && testCases.length > 0) {
       for (const tc of testCases) {
         const inp = tc.input || '';
         const out = tc.expectedOutput || tc.expected_output || tc.output || '';
         if (inp || out) {
+          const isHidden = (tc.isHidden === true || tc.is_hidden === true || tc.isHidden === 1 || tc.is_hidden === 1 || String(tc.isHidden).toLowerCase() === 'true' || String(tc.is_hidden).toLowerCase() === 'true') ? 1 : 0;
           try {
             await query(
               `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)`,
-              [probId, inp, out, tc.isHidden ? 1 : 0]
+              [probId, inp, out, isHidden]
             );
           } catch (e) { }
         }

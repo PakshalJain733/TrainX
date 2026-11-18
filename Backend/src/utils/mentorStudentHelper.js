@@ -162,12 +162,18 @@ export const filterContentByMentorAssignment = async (items = [], user, creatorK
   if (role === 'student') {
     const assignedMentorIds = new Set(await getStudentMentorIds(userId));
     return items.filter(item => {
+      // General curriculum content marked for "All Batches" is open to all students
+      const batchName = String(item.batch || item.category || '').toLowerCase().trim();
+      if (!batchName || batchName === 'all batches' || batchName === 'all' || batchName === 'general') {
+        return true;
+      }
+
       const creatorId = item[creatorKey] !== null && item[creatorKey] !== undefined ? Number(item[creatorKey]) : null;
       // If the item wasn't created by a mentor (e.g., admin, college, system seed), it's general curriculum content
       if (!creatorId || !mentorUserIds.has(creatorId)) {
         return true;
       }
-      // If it was created by a mentor, it MUST only be visible if that mentor is assigned to this student
+      // If it was created by a mentor, it is visible if that mentor is assigned to this student
       return assignedMentorIds.has(creatorId);
     });
   }

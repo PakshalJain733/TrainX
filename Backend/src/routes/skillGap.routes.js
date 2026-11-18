@@ -11,11 +11,13 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
+import { requireFeature } from '../middleware/featureSwitch.middleware.js';
 
 const router = Router();
 
 // Protect all skill-gap endpoints with JWT authentication
 router.use(authenticateToken);
+router.use(requireFeature('skillGapAnalysis'));
 
 /**
  * Route: Get personal skill gap report for logged-in student

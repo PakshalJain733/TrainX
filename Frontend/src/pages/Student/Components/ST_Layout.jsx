@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User, Video } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
@@ -13,6 +13,7 @@ import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import { getShortDept } from "../../../utils/departmentHelper";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
@@ -93,6 +94,13 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
       return (
         <div className="notif-colorful-icon-box notif-icon-emerald">
           <CheckCircle2 size={18} />
+        </div>
+      );
+    }
+    if (titleLower.includes("meeting") || titleLower.includes("call") || type === "video" || type === "meeting") {
+      return (
+        <div className="notif-colorful-icon-box notif-icon-emerald">
+          <Video size={18} />
         </div>
       );
     }
@@ -190,6 +198,11 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
+                  if (n.actionUrl) {
+                    if (onClose) onClose();
+                    navigate(n.actionUrl);
+                    return;
+                  }
                   if (onClose) onClose();
                   if (onSelectNotification) onSelectNotification(n);
                 }}
@@ -205,6 +218,35 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
+
+                  {n.actionUrl && (
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.unread) toggleSingleRead(n.id);
+                          if (onClose) onClose();
+                          navigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: n.actionColor || '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {n.actionLabel || 'View →'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -311,25 +353,72 @@ export default function StudentLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    const loadStudentNotifs = () => {
-      apiFetch("/student/notifications")
-        .then((res) => {
-          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-          const serverItems = rawItems.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-          setNotifications(serverItems);
-        })
-        .catch(() => { });
+    const loadStudentNotifs = async () => {
+      try {
+        const [notifRes, leaveRes] = await Promise.all([
+          apiFetch("/student/notifications").catch(() => null),
+          apiFetch("/attendance/leave-requests").catch(() => null),
+        ]);
+
+        const notifItems = [];
+
+        // 1. Leave application status updates
+        const leaves = Array.isArray(leaveRes?.data)
+          ? leaveRes.data
+          : (Array.isArray(leaveRes) ? leaveRes : []);
+        leaves.forEach((l) => {
+          if (l.status === 'Approved' || l.status === 'Rejected') {
+            const isApproved = l.status === 'Approved';
+            notifItems.push({
+              id: `student-leave-${l.id}`,
+              title: `${isApproved ? '✅' : '❌'} Leave Request ${l.status}: ${l.category || 'Leave'}`,
+              desc: `Your leave application for ${l.days || 1} day(s) (${l.start_date || ''}) was ${l.status.toLowerCase()}.${l.remarks ? ` Remarks: ${l.remarks}` : ''}`,
+              message: `Your leave application for ${l.days || 1} day(s) (${l.start_date || ''} to ${l.end_date || l.start_date || ''}) was marked as ${l.status}.${l.remarks ? ` Remarks: ${l.remarks}` : ''}`,
+              time: l.created_at ? new Date(l.created_at).toLocaleString() : 'Update',
+              unread: false,
+              type: isApproved ? 'success' : 'alert',
+              target: 'My Attendance',
+              priority: 'Standard',
+              created_by_name: 'Attendance Desk',
+              actionUrl: '/student/attendance',
+              actionLabel: 'View Attendance →',
+              actionColor: isApproved ? '#10b981' : '#ef4444'
+            });
+          }
+        });
+
+        // 2. Broadcasts
+        const rawItems = Array.isArray(notifRes?.data) ? notifRes.data : (Array.isArray(notifRes) ? notifRes : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+          sender_role: b.sender_role || "Admin",
+        }));
+
+        notifItems.push(...serverItems);
+
+        const unique = [];
+        const seenIds = new Set();
+        for (const item of notifItems) {
+          const key = String(item.id || item.title);
+          if (!seenIds.has(key)) {
+            seenIds.add(key);
+            unique.push(item);
+          }
+        }
+
+        setNotifications(unique);
+      } catch (err) {
+        console.warn("[ST_Layout] Error loading notifications:", err);
+      }
     };
 
     loadStudentNotifs();
@@ -412,6 +501,14 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
+          try {
+            const cur = JSON.parse(sessionStorage.getItem("user") || "{}");
+            sessionStorage.setItem("user", JSON.stringify({ ...cur, ...fetchedUser }));
+            if (localStorage.getItem("user")) {
+              localStorage.setItem("user", JSON.stringify({ ...JSON.parse(localStorage.getItem("user") || "{}"), ...fetchedUser }));
+            }
+          } catch {}
+
           const userKey = fetchedUser.id || fetchedUser.email;
           const isUpdated = checkIsProfileUpdated(res.data, userKey);
           const isDismissed = checkIsDismissedThisSession(userKey);
@@ -437,6 +534,13 @@ export default function StudentLayout() {
             if (fetchedUser.avatar_url || fetchedUser.avatar) {
               setAvatarUrl(fetchedUser.avatar_url || fetchedUser.avatar);
             }
+            try {
+              const cur = JSON.parse(sessionStorage.getItem("user") || "{}");
+              sessionStorage.setItem("user", JSON.stringify({ ...cur, ...fetchedUser }));
+              if (localStorage.getItem("user")) {
+                localStorage.setItem("user", JSON.stringify({ ...JSON.parse(localStorage.getItem("user") || "{}"), ...fetchedUser }));
+              }
+            } catch {}
             const userKey = fetchedUser.id || fetchedUser.email;
             const isUpdated = checkIsProfileUpdated(res.data, userKey);
             const isDismissed = checkIsDismissedThisSession(userKey);
@@ -513,7 +617,7 @@ export default function StudentLayout() {
   };
 
   const isCodingPlatform = pathname.startsWith('/student/coding-platform');
-  const isFullScreenApp = Boolean(interviewLive);
+  const isFullScreenApp = Boolean(interviewLive || isCodingPlatform);
 
   return (
     <div className={`student-layout ${isFullScreenApp ? 'student-layout--fullscreen' : ''}`}>
@@ -539,14 +643,15 @@ export default function StudentLayout() {
             {!isFullScreenApp && (
               <header className="student-header">
                 <div className="student-header__left">
-                  <button
-                    className="student-header__sidebar-toggle"
-                    onClick={toggleSidebar}
-                    aria-label="Toggle sidebar"
-                    title="Toggle sidebar"
-                  >
-                    <PanelLeft size={20} />
-                  </button>
+                  <AppTooltip text="Toggle sidebar" position="bottom">
+                    <button
+                      className="student-header__sidebar-toggle"
+                      onClick={toggleSidebar}
+                      aria-label="Toggle sidebar"
+                    >
+                      <PanelLeft size={20} />
+                    </button>
+                  </AppTooltip>
 
                   <GlobalHeaderSearch role="student" />
                 </div>
@@ -600,7 +705,6 @@ export default function StudentLayout() {
                       </div>
                       <div className="student-header__user-info">
                         <span className="student-header__name">{user.name || "Student"}</span>
-                        <span className="student-header__role">{user.role || "Student"}</span>
                       </div>
                     </button>
 
@@ -687,6 +791,7 @@ export default function StudentLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}

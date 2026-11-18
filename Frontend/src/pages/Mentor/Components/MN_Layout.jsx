@@ -9,6 +9,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import "../Styles/MN_Layout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
@@ -43,23 +44,31 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
     }
   }, [unreadCount, onUnreadChange]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const handleDeleteItem = (e, id) => {
+  const handleDeleteItem = async (e, id) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id);
     setNotifications([]);
+    await apiFetch("/notifications/clear-all", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
   };
 
-  const toggleSingleRead = (id) => {
+  const toggleSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const visibleNotifications = notifications.filter((n) => {
@@ -185,6 +194,11 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
+                  if (n.actionUrl) {
+                    if (onClose) onClose();
+                    navigate(n.actionUrl);
+                    return;
+                  }
                   if (onClose) onClose();
                   if (onSelectNotification) onSelectNotification(n);
                 }}
@@ -200,6 +214,35 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
+
+                  {n.actionUrl && (
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.unread) toggleSingleRead(n.id);
+                          if (onClose) onClose();
+                          navigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: n.actionColor || '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {n.actionLabel || 'View Requests →'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -253,25 +296,72 @@ export default function MentorLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    const loadMentorNotifs = () => {
-      apiFetch("/mentor/notifications")
-        .then((res) => {
-          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-          const serverItems = rawItems.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-          setNotifications(serverItems);
-        })
-        .catch(() => { });
+    const loadMentorNotifs = async () => {
+      try {
+        const [notifRes, leaveRes] = await Promise.all([
+          apiFetch("/mentor/notifications").catch(() => null),
+          apiFetch("/attendance/leave-requests").catch(() => null),
+        ]);
+
+        const notifItems = [];
+
+        // 1. Pending Student Leave Requests for Mentor
+        const leaves = Array.isArray(leaveRes?.data)
+          ? leaveRes.data
+          : (Array.isArray(leaveRes) ? leaveRes : []);
+        const pendingLeaves = leaves.filter(
+          (l) => String(l.status || '').toLowerCase() === 'pending'
+        );
+        pendingLeaves.forEach((l) => {
+          const studentName = l.student_name || l.name || 'Mentee';
+          notifItems.push({
+            id: `pending-leave-${l.id}`,
+            title: `📋 Student Leave Request: ${studentName}`,
+            desc: `${studentName} requested ${l.days || 1} day(s) ${l.category || 'Leave'}: ${l.reason || 'Pending review'}`,
+            message: `${studentName} has submitted a leave application for ${l.days || 1} day(s) (${l.start_date || ''} to ${l.end_date || l.start_date || ''}). Reason: ${l.reason || 'Personal'}.`,
+            time: l.created_at ? new Date(l.created_at).toLocaleString() : 'Action Required',
+            unread: true,
+            type: 'calendar',
+            target: 'Mentorship',
+            priority: 'High Priority',
+            created_by_name: studentName,
+            actionUrl: '/mentor/attendance',
+            actionLabel: 'View Attendance →',
+            actionColor: '#2563eb',
+          });
+        });
+
+        // 2. Broadcasts
+        const rawItems = Array.isArray(notifRes?.data) ? notifRes.data : (Array.isArray(notifRes) ? notifRes : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+
+        notifItems.push(...serverItems);
+
+        const unique = [];
+        const seenIds = new Set();
+        for (const item of notifItems) {
+          const key = String(item.id || item.title);
+          if (!seenIds.has(key)) {
+            seenIds.add(key);
+            unique.push(item);
+          }
+        }
+
+        setNotifications(unique);
+      } catch (err) {
+        console.warn("[MN_Layout] Error loading notifications:", err);
+      }
     };
 
     loadMentorNotifs();
@@ -406,14 +496,15 @@ export default function MentorLayout() {
             {/* Integrated Header Bar Inside the Card */}
             <header className="mentor-header">
               <div className="mentor-header__left">
-                <button
-                  className="mentor-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="mentor-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
 
                 <GlobalHeaderSearch role="faculty" />
               </div>
@@ -461,7 +552,6 @@ export default function MentorLayout() {
                     </div>
                     <div className="mentor-header__user-info">
                       <span className="mentor-header__name">{user.name || "Mentor"}</span>
-                      <span className="mentor-header__role">{user.role || "Mentor"}</span>
                     </div>
                   </button>
 
@@ -532,8 +622,14 @@ export default function MentorLayout() {
       <NotificationDetailModal
         notification={selectedNotifModal}
         onClose={() => setSelectedNotifModal(null)}
-        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
-        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onMarkRead={async (id) => {
+          setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n));
+          await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
+        }}
+        onDelete={async (id) => {
+          setNotifications((prev) => prev.filter((n) => n.id !== id));
+          await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
+        }}
         onNavigate={(path) => navigate(path)}
       />
       <FullNotificationModal
@@ -541,6 +637,7 @@ export default function MentorLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <BroadcastToast />
     </div>

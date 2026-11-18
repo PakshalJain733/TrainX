@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
-import { Check, User, Camera, Mail, Phone, GraduationCap, Building, Users, UserCheck, Award, CheckCircle2, Save, Sparkles, BookOpen, Star, AlertCircle, Plus, X, ChevronDown, Target, Bell, Search, Briefcase, Key, QrCode, Copy, Loader2, Edit2 } from "lucide-react";
+import { Check, User, Mail, Phone, GraduationCap, Building, Users, UserCheck, Award, CheckCircle2, Save, Sparkles, BookOpen, Star, AlertCircle, Plus, X, ChevronDown, Target, Bell, Search, Briefcase, Key, QrCode, Copy, Loader2, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -12,7 +12,10 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
+  const selected = safeOptions.find(o => 
+    String(o.value).toLowerCase() === String(value || '').toLowerCase() ||
+    String(o.label).toLowerCase() === String(value || '').toLowerCase()
+  );
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -33,7 +36,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
       {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
           {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
+            const isSel = String(opt.value).toLowerCase() === String(value || '').toLowerCase() || String(opt.label).toLowerCase() === String(value || '').toLowerCase();
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-prof-select-option${isSel ? ' student-prof-select-option--selected' : ''}`}>
                 <span className="student-prof-select-option-label">{opt.label}</span>
@@ -152,13 +155,82 @@ export const CAREER_TRACK_OPTIONS = [
   "Game Development",
 ];
 
+export const YEAR_SEMESTER_MAP = {
+  FE: [
+    { value: "Semester 1", label: "Semester 1" },
+    { value: "Semester 2", label: "Semester 2" },
+  ],
+  SE: [
+    { value: "Semester 3", label: "Semester 3" },
+    { value: "Semester 4", label: "Semester 4" },
+  ],
+  TE: [
+    { value: "Semester 5", label: "Semester 5" },
+    { value: "Semester 6", label: "Semester 6" },
+  ],
+  BE: [
+    { value: "Semester 7", label: "Semester 7" },
+    { value: "Semester 8", label: "Semester 8" },
+  ],
+};
+
+export const ALL_SEMESTERS = [
+  { value: "Semester 1", label: "Semester 1" },
+  { value: "Semester 2", label: "Semester 2" },
+  { value: "Semester 3", label: "Semester 3" },
+  { value: "Semester 4", label: "Semester 4" },
+  { value: "Semester 5", label: "Semester 5" },
+  { value: "Semester 6", label: "Semester 6" },
+  { value: "Semester 7", label: "Semester 7" },
+  { value: "Semester 8", label: "Semester 8" },
+];
+
+export function getSemestersForYear(year) {
+  if (!year) return ALL_SEMESTERS;
+  const yStr = String(year).trim().toUpperCase();
+  if (yStr.startsWith("FE") || yStr.includes("FIRST") || yStr === "1") {
+    return YEAR_SEMESTER_MAP.FE;
+  }
+  if (yStr.startsWith("SE") || yStr.includes("SECOND") || yStr === "2") {
+    return YEAR_SEMESTER_MAP.SE;
+  }
+  if (yStr.startsWith("TE") || yStr.includes("THIRD") || yStr === "3") {
+    return YEAR_SEMESTER_MAP.TE;
+  }
+  if (yStr.startsWith("BE") || yStr.includes("FINAL") || yStr.includes("FOURTH") || yStr === "4") {
+    return YEAR_SEMESTER_MAP.BE;
+  }
+  return ALL_SEMESTERS;
+}
+
+export function normalizeSemester(sem) {
+  if (!sem) return "";
+  const s = String(sem).trim();
+  const match = s.match(/(\d+)/);
+  if (match) {
+    const num = parseInt(match[1], 10);
+    if (num >= 1 && num <= 8) return `Semester ${num}`;
+  }
+  return s;
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const trackWrapperRef = useRef(null);
+  const redirectTimerRef = useRef(null);
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [trackSearchFocus, setTrackSearchFocus] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -190,6 +262,14 @@ export default function ProfilePage() {
       if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
     }
 
+    let rawSem = normalizeSemester(sp.semester || u.semester || "");
+    if (rawYear) {
+      const validSems = getSemestersForYear(rawYear);
+      if (rawSem && !validSems.some(s => s.value === rawSem)) {
+        rawSem = "";
+      }
+    }
+
     return {
       name: u.name || "",
       email: u.email || "",
@@ -201,12 +281,12 @@ export default function ProfilePage() {
       gender: sp.gender || u.gender || "",
       city: sp.city || u.city || "",
       guardianContact: sp.emergency_contact || u.emergency_contact || "",
-      semester: sp.semester || u.semester || "",
+      semester: rawSem,
       cgpa: sp.cgpa || u.cgpa || "",
       skills: sp.skills || u.skills || "",
       profileCompleted: true,
       batch: sp.batch || u.batch || "",
-      college: u.college_name || u.college || sp.college_name || "Enterprise Partner Institution",
+      college: u.college_name || u.college || sp.college_name || sp.college || "",
       coordinator: "",
       mentor: "",
       track: sp.target_track || u.target_track || "",
@@ -218,18 +298,6 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-
-  // 2FA Google Authenticator State
-  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
-  const [loading2FASetup, setLoading2FASetup] = useState(false);
-  const [totpData, setTotpData] = useState(null);
-  const [totpCodeInput, setTotpCodeInput] = useState(["", "", "", "", "", ""]);
-  const [verifying2FA, setVerifying2FA] = useState(false);
-  const [totpError, setTotpError] = useState("");
-  const [totpSuccess, setTotpSuccess] = useState("");
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-  const [copiedSecret, setCopiedSecret] = useState(false);
-  const totpInputRefs = useRef([]);
 
   const filteredTracks = CAREER_TRACK_OPTIONS.filter((track) =>
     track.toLowerCase().includes((form.track || "").toLowerCase())
@@ -262,16 +330,25 @@ export default function ProfilePage() {
             if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
           }
 
-          let derivedSem = sp.semester || user.semester || uSp.semester || uStored.semester;
+          let derivedSem = normalizeSemester(sp.semester || user.semester || uSp.semester || uStored.semester);
           if (!derivedSem && rawYear) {
             if (rawYear === 'FE') derivedSem = 'Semester 1';
             else if (rawYear === 'SE') derivedSem = 'Semester 3';
             else if (rawYear === 'TE') derivedSem = 'Semester 5';
             else if (rawYear === 'BE') derivedSem = 'Semester 7';
           }
+          if (rawYear) {
+            const validSems = getSemestersForYear(rawYear);
+            if (derivedSem && !validSems.some(s => s.value === derivedSem)) {
+              derivedSem = "";
+            }
+          }
+
+          const fetchedCollege = user.college_name || user.college || sp.college_name || sp.college || uStored.college_name || uStored.college || "";
 
           setForm((prev) => ({
             ...prev,
+            college: fetchedCollege || prev.college,
             name: user.name || prev.name,
             email: user.email || prev.email,
             phone: user.mobile_number || user.phone || prev.phone,
@@ -290,106 +367,20 @@ export default function ProfilePage() {
             notifWeeklyReport: sp.notif_weekly_report !== undefined ? Boolean(sp.notif_weekly_report) : prev.notifWeeklyReport,
             notifInterview: sp.notif_interview !== undefined ? Boolean(sp.notif_interview) : prev.notifInterview,
           }));
-          setIs2FAEnabled(Boolean(user.two_factor_enabled || user.two_factor_secret || sp.two_factor_enabled || sp.two_factor_secret));
+
+          if (fetchedCollege) {
+            try {
+              const curStored = JSON.parse(sessionStorage.getItem("user") || "{}");
+              curStored.college = fetchedCollege;
+              curStored.college_name = fetchedCollege;
+              sessionStorage.setItem("user", JSON.stringify(curStored));
+            } catch {}
+          }
         }
       })
       .catch((err) => console.error("PROFILE FETCH ERROR:", err));
   }, []);
-
-  const handleOpen2FASetup = async () => {
-    setTotpError("");
-    setTotpSuccess("");
-    setTotpCodeInput(["", "", "", "", "", ""]);
-    setLoading2FASetup(true);
-    setIs2FASetupOpen(true);
-
-    try {
-      const res = await apiFetch("/auth/setup-2fa", { method: "POST" });
-      if (res && (res.data || res.qrCode)) {
-        setTotpData(res.data || res);
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to generate Google Authenticator QR Code");
-    } finally {
-      setLoading2FASetup(false);
-    }
-  };
-
-  const handleCopySecret = () => {
-    if (totpData?.secret) {
-      navigator.clipboard.writeText(totpData.secret);
-      setCopiedSecret(true);
-      setTimeout(() => setCopiedSecret(false), 2000);
-    }
-  };
-
-  const handleTotpDigitChange = (index, value) => {
-    const cleanVal = value.replace(/\D/g, "").slice(-1);
-    const newCode = [...totpCodeInput];
-    newCode[index] = cleanVal;
-    setTotpCodeInput(newCode);
-
-    if (cleanVal && index < 5) {
-      totpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleTotpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !totpCodeInput[index] && index > 0) {
-      totpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleTotpPaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasteData) {
-      const digits = pasteData.split("");
-      const newCode = ["", "", "", "", "", ""];
-      digits.forEach((d, i) => {
-        newCode[i] = d;
-      });
-      setTotpCodeInput(newCode);
-      const nextIdx = Math.min(digits.length, 5);
-      totpInputRefs.current[nextIdx]?.focus();
-    }
-  };
-
-  const handleVerify2FASubmit = async (e) => {
-    e.preventDefault();
-    const code = totpCodeInput.join("");
-    if (code.length < 6) {
-      setTotpError("Please enter complete 6-digit Authenticator code.");
-      return;
-    }
-    setVerifying2FA(true);
-    setTotpError("");
-    setTotpSuccess("");
-
-    try {
-      const res = await apiFetch("/auth/verify-2fa", {
-        method: "POST",
-        body: JSON.stringify({
-          secret: totpData?.secret,
-          code: code,
-        }),
-      });
-
-      if (res && (res.success || res.data)) {
-        setTotpSuccess("Google Authenticator 2FA paired and activated successfully!");
-        setIs2FAEnabled(true);
-        setTimeout(() => {
-          setIs2FASetupOpen(false);
-        }, 1500);
-      } else {
-        setTotpError(res?.message || "Invalid Authenticator Code. Please check Google Authenticator.");
-      }
-    } catch (err) {
-      setTotpError(err.message || "Failed to verify 2FA code. Please try again.");
-    } finally {
-      setVerifying2FA(false);
-    }
-  };
+
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
@@ -426,6 +417,7 @@ export default function ProfilePage() {
   const handleSave = async (e) => {
     e.preventDefault();
     setForm((prev) => ({ ...prev, profileCompleted: true }));
+    setIsSaving(true);
 
     try {
       const payload = {
@@ -464,6 +456,11 @@ export default function ProfilePage() {
           sessionStorage.removeItem(`st_flash_skipped_${userKey}`);
           localStorage.removeItem(`st_flash_skipped_${userKey}`);
         }
+        try {
+          const merged = { ...u, ...res.data, name: form.name.trim() };
+          sessionStorage.setItem("user", JSON.stringify(merged));
+          if (localStorage.getItem("user")) localStorage.setItem("user", JSON.stringify(merged));
+        } catch { }
         sessionStorage.removeItem("showFirstLoginAlert");
         sessionStorage.removeItem("st_first_login_dismissed");
         sessionStorage.removeItem("st_flash_skipped_session");
@@ -473,13 +470,20 @@ export default function ProfilePage() {
       }
     } catch (err) {
       console.error("[ProfilePage] Save error:", err);
+    } finally {
+      setIsSaving(false);
     }
 
     setSaved(true);
     setIsEditing(false);
-    setTimeout(() => {
+
+    if (redirectTimerRef.current) {
+      clearTimeout(redirectTimerRef.current);
+    }
+    redirectTimerRef.current = setTimeout(() => {
       setSaved(false);
-    }, 2000);
+      navigate("/student");
+    }, 2500);
   };
 
 
@@ -518,7 +522,7 @@ export default function ProfilePage() {
       {saved && (
         <div className="profile-alert-success">
           <CheckCircle2 size={18} />
-          <span>Profile saved successfully! Redirecting to Overview...</span>
+          <span>Profile updated successfully! Redirecting to Overview...</span>
         </div>
       )}
 
@@ -532,21 +536,6 @@ export default function ProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              <button
-                type="button"
-                className="profile-camera-btn"
-                onClick={() => fileInputRef.current?.click()}
-                title="Change Avatar"
-              >
-                <Camera size={14} />
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="profile-file-input"
-                onChange={handleAvatarChange}
-              />
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
@@ -703,10 +692,9 @@ export default function ProfilePage() {
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
+                <Key size={14} />
                 <span>Change Password</span>
               </button>
-
-
             </div>
           </div>
         </div>
@@ -745,16 +733,29 @@ export default function ProfilePage() {
                     <button
                       type="submit"
                       className="profile-save-btn"
+                      disabled={isSaving}
                     >
-                      <Save size={15} /> Save Profile
+                      {isSaving ? (
+                        <>
+                          <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Saving...
+                        </>
+                      ) : saved ? (
+                        <>
+                          <Check size={15} /> Profile Updated
+                        </>
+                      ) : (
+                        <>
+                          <Save size={15} /> Save Profile
+                        </>
+                      )}
                     </button>
                   </>
                 )}
               </div>
             </div>
 
-            <div className="profile-form-grid">
-              <div className="profile-field">
+            <div className="profile-form-grid mobile-pair-2">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Full Name *</label>
                 <input
                   type="text"
@@ -766,7 +767,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Email Address *</label>
                 <input
                   type="email"
@@ -778,7 +779,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label">Phone Number *</label>
                 <input
                   type="text"
@@ -790,7 +791,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <div className="profile-field">
+              <div className="profile-field mobile-field-full">
                 <label className="profile-label profile-label-flex">
                   Department <span className="profile-label-hint">(Read-Only)</span>
                 </label>
@@ -815,7 +816,19 @@ export default function ProfilePage() {
                     { value: "TE", label: "TE (Third Year)" },
                     { value: "BE", label: "BE (Final Year)" },
                   ]}
-                  onChange={(val) => setForm((p) => ({ ...p, year: val }))}
+                  onChange={(val) => {
+                    setForm((p) => {
+                      const validSems = getSemestersForYear(val);
+                      const isCurrentSemValid = validSems.some(
+                        (s) => String(s.value).toLowerCase() === String(p.semester || "").toLowerCase()
+                      );
+                      return {
+                        ...p,
+                        year: val,
+                        semester: isCurrentSemValid ? p.semester : "",
+                      };
+                    });
+                  }}
                 />
               </div>
 
@@ -842,16 +855,8 @@ export default function ProfilePage() {
                 <StudentProfSelect
                   value={form.semester}
                   disabled={!isEditing}
-                  options={[
-                    { value: "Semester 1", label: "Semester 1" },
-                    { value: "Semester 2", label: "Semester 2" },
-                    { value: "Semester 3", label: "Semester 3" },
-                    { value: "Semester 4", label: "Semester 4" },
-                    { value: "Semester 5", label: "Semester 5" },
-                    { value: "Semester 6", label: "Semester 6" },
-                    { value: "Semester 7", label: "Semester 7" },
-                    { value: "Semester 8", label: "Semester 8" },
-                  ]}
+                  placeholder={form.year ? "Select Semester..." : "Select..."}
+                  options={getSemestersForYear(form.year)}
                   onChange={(val) => setForm((p) => ({ ...p, semester: val }))}
                 />
               </div>
@@ -924,7 +929,7 @@ export default function ProfilePage() {
               </div>
 
               {/* SEARCHABLE CAREER TRACK INPUT */}
-              <div className="profile-field profile-track-search-wrapper" ref={trackWrapperRef}>
+              <div className="profile-field profile-track-search-wrapper mobile-field-full" ref={trackWrapperRef}>
                 <label className="profile-label">Target Career Track / Role Goal *</label>
                 <div className="profile-track-search-box">
                   <Search
@@ -1004,64 +1009,79 @@ export default function ProfilePage() {
                     </div>
                     
                     <span className="profile-skills-count-badge">
-                      {currentSkillsList.length} Skills Selected
+                      {currentSkillsList.length} {currentSkillsList.length === 1 ? "Skill" : "Skills"} Selected
                     </span>
                   </div>
 
-                  {/* Skill Search, Select & Add */}
-                  <div className="mb-4">
-                    <StudentSkillSelect
-                      disabled={!isEditing}
-                      placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
-                      options={PREDEFINED_SKILLS.map((skill) => ({
-                        value: skill,
-                        label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
-                      }))}
-                      onAdd={(val) => {
-                        if (val && isEditing) {
-                          const trimmed = val.trim();
-                          if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
-                            setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
-                          }
-                        }
-                      }}
-                    />
-                  </div>
+                  {/* Mode-Dependent View: Edit Mode shows search & active box; View Mode shows clean pills directly */}
+                  {isEditing ? (
+                    <>
+                      {/* Skill Search, Select & Add Input */}
+                      <div className="profile-skills-input-wrapper">
+                        <StudentSkillSelect
+                          disabled={false}
+                          placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
+                          options={PREDEFINED_SKILLS.map((skill) => ({
+                            value: skill,
+                            label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill,
+                          }))}
+                          onAdd={(val) => {
+                            const trimmed = val ? val.trim() : "";
+                            if (trimmed && !currentSkillsList.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
+                              setForm((p) => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
+                            }
+                          }}
+                        />
+                      </div>
 
-                  {/* Selected Skills Container */}
-                  <div className="profile-skills-active-box">
-                    <div className="profile-skills-active-title">
-                      <CheckCircle2 size={14} color="#16a34a" />
-                      <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                      {/* Selected Skills Container with Remove buttons */}
+                      <div className="profile-skills-active-box">
+                        <div className="profile-skills-active-title">
+                          <CheckCircle2 size={14} color="#16a34a" />
+                          <span>Active Skills on Profile ({currentSkillsList.length}) — Click ✕ to remove</span>
+                        </div>
+
+                        {currentSkillsList.length === 0 ? (
+                          <div className="profile-no-skills-msg">
+                            No skills added yet. Search or type above to add skills.
+                          </div>
+                        ) : (
+                          <div className="profile-skill-pills-wrap">
+                            {currentSkillsList.map((skill) => (
+                              <span key={skill} className="profile-skill-pill">
+                                <span>{skill}</span>
+                                <button
+                                  type="button"
+                                  className="profile-skill-badge-btn"
+                                  onClick={() => handleRemoveSkill(skill)}
+                                  title={`Remove ${skill}`}
+                                >
+                                  <X size={12} strokeWidth={2.5} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Clean Direct View Mode without redundant disabled search box or double nested borders */
+                    <div className="profile-skills-view-wrap">
+                      {currentSkillsList.length === 0 ? (
+                        <div className="profile-no-skills-msg">
+                          No skills added yet. Click <strong>Edit Profile</strong> at the top to add your skills.
+                        </div>
+                      ) : (
+                        <div className="profile-skill-pills-wrap">
+                          {currentSkillsList.map((skill) => (
+                            <span key={skill} className="profile-skill-pill">
+                              <span>{skill}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-
-                    {currentSkillsList.length === 0 ? (
-                      <div className="profile-no-skills-msg">
-                        No skills added yet. Click Edit Profile above to manage skills.
-                      </div>
-                    ) : (
-                      <div className="profile-skill-pills-wrap">
-                        {currentSkillsList.map((skill) => (
-                          <span
-                            key={skill}
-                            className="profile-skill-pill"
-                          >
-                            <span>{skill}</span>
-                            {isEditing && (
-                              <button
-                                type="button"
-                                className="profile-skill-badge-btn"
-                                onClick={() => handleRemoveSkill(skill)}
-                                title={`Remove ${skill}`}
-                              >
-                                <X size={12} strokeWidth={2.5} />
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1073,141 +1093,7 @@ export default function ProfilePage() {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       />
-
-      {/* Google Authenticator 2FA Modal */}
-      {is2FASetupOpen && createPortal(
-        <div className="modal-overlay profile-2fa-modal-overlay">
-          <div className="modal-dialog profile-2fa-modal-dialog">
-            <div className="profile-2fa-modal-header">
-              <div className="profile-2fa-modal-title-wrap">
-                <div className="profile-2fa-modal-icon">
-                  <QrCode size={20} />
-                </div>
-                <div>
-                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
-                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIs2FASetupOpen(false)}
-                className="profile-2fa-modal-close-btn"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {loading2FASetup ? (
-              <div className="profile-2fa-modal-loading">
-                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
-                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleVerify2FASubmit}>
-                {totpError && (
-                  <div className="profile-2fa-alert-error">
-                    {totpError}
-                  </div>
-                )}
-
-                {totpSuccess && (
-                  <div className="profile-2fa-alert-success">
-                    <CheckCircle2 size={16} />
-                    <span>{totpSuccess}</span>
-                  </div>
-                )}
-
-                {/* QR Code Container */}
-                <div className="profile-2fa-qr-box">
-                  {totpData?.qrCode ? (
-                    <img
-                      src={totpData.qrCode}
-                      alt="Google Authenticator QR Code"
-                      className="profile-2fa-qr-img"
-                    />
-                  ) : (
-                    <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="profile-icon-slate" />
-                    </div>
-                  )}
-                  <p className="profile-2fa-qr-text">
-                    Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
-                  </p>
-                </div>
-
-                {/* Secret Key Copy Bar */}
-                {totpData?.secret && (
-                  <div className="profile-2fa-secret-box">
-                    <label className="profile-2fa-secret-label">
-                      Or enter Secret Key manually:
-                    </label>
-                    <div className="profile-2fa-secret-row">
-                      <code className="profile-2fa-secret-code">
-                        {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={handleCopySecret}
-                        className="profile-2fa-copy-btn"
-                      >
-                        {copiedSecret ? <Check size={12} className="profile-icon-emerald" /> : <Copy size={12} />}
-                        {copiedSecret ? "Copied" : "Copy"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6-Digit Code Input */}
-                <div className="profile-2fa-code-input-section">
-                  <label className="profile-2fa-code-label">
-                    Enter 6-Digit Authenticator Verification Code:
-                  </label>
-                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
-                    {totpCodeInput.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (totpInputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleTotpKeyDown(idx, e)}
-                        className="profile-2fa-digit-input"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="profile-2fa-modal-actions">
-                  <button
-                    type="button"
-                    onClick={() => setIs2FASetupOpen(false)}
-                    className="profile-2fa-modal-cancel-btn"
-                    disabled={verifying2FA}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="profile-2fa-modal-submit-btn"
-                    disabled={verifying2FA}
-                  >
-                    {verifying2FA ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Verifying...
-                      </>
-                    ) : (
-                      "Verify & Enable 2FA"
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
+      
     </div>
   );
 }

@@ -22,7 +22,11 @@
 .sa-sidebar {
   display: flex;
   flex-direction: column;
-  width: var(--sidebar-width);
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  max-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
+  flex-shrink: 0 !important;
   min-height: 100vh;
   background: var(--sidebar-bg);
   border-right: none !important;
@@ -44,7 +48,10 @@
 }
 
 .sa-sidebar.sidebar--collapsed {
-  width: var(--sidebar-width-icon);
+  width: var(--sidebar-width-icon) !important;
+  min-width: var(--sidebar-width-icon) !important;
+  max-width: var(--sidebar-width-icon) !important;
+  flex: 0 0 var(--sidebar-width-icon) !important;
 }
 
 /* ── Header ── */

@@ -9,6 +9,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import AppTooltip from "../../../components/ui/AppTooltip";
 import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
@@ -41,23 +42,31 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
     }
   }, [unreadCount, onUnreadChange]);
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    await apiFetch("/notifications/read-all", { method: "PUT" }).catch(() => {});
   };
 
-  const handleDeleteItem = (e, id) => {
+  const handleDeleteItem = async (e, id) => {
     e.stopPropagation();
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    const ids = notifications.map((n) => n.id);
     setNotifications([]);
+    await apiFetch("/notifications/clear-all", {
+      method: "DELETE",
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
   };
 
-  const toggleSingleRead = (id) => {
+  const toggleSingleRead = async (id) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
+    await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
   };
 
   const visibleNotifications = notifications.filter((n) => {
@@ -183,6 +192,11 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
+                  if (n.actionUrl) {
+                    if (onClose) onClose();
+                    if (onNavigate) onNavigate(n.actionUrl);
+                    return;
+                  }
                   if (onClose) onClose();
                   if (onSelectNotification) {
                     onSelectNotification(n);
@@ -200,6 +214,35 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
+
+                  {n.actionUrl && (
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.unread) toggleSingleRead(n.id);
+                          if (onClose) onClose();
+                          if (onNavigate) onNavigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: n.actionColor || '#2563eb',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {n.actionLabel || 'Review & Approve →'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -253,27 +296,91 @@ export default function AdminLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    const loadNotifications = () => {
-      let prefs = { notifSystemAlerts: true, notifWeeklyReport: true, notifNewUsers: true };
+    const loadNotifications = async () => {
       try {
-        const stored = JSON.parse(sessionStorage.getItem("adminNotifPrefs") || "{}");
-        prefs = { ...prefs, ...stored };
-      } catch (_) {}
+        const dbNotifsRes = await apiFetch("/notifications").catch(() => null);
+        if (dbNotifsRes && Array.isArray(dbNotifsRes.data) && dbNotifsRes.data.length > 0) {
+          setNotifications(dbNotifsRes.data);
+          return;
+        }
 
-      apiFetch("/admin/broadcast")
-        .then((res) => {
-          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-          const serverItems = rawItems
-            .filter((b) => {
-              const role = String(b.sender_role || "").toLowerCase();
-              const creator = String(b.created_by_name || "").toLowerCase();
-              // Do not notify admin of announcements that admin himself created
-              if (role.includes("admin") || creator.includes("admin")) {
-                return false;
-              }
-              return true;
-            })
-            .map((b) => ({
+        const [broadcastRes, pendingUsersRes, c2cRes] = await Promise.all([
+          apiFetch("/admin/broadcast").catch(() => null),
+          apiFetch("/admin/pending-users").catch(() => null),
+          apiFetch("/trainings/enrollments?approval_status=pending").catch(() => null),
+        ]);
+
+        const notifItems = [];
+
+        // 1. Live Pending User Approvals (Students, Mentors, Coordinators)
+        const pendingUsers = Array.isArray(pendingUsersRes?.data)
+          ? pendingUsersRes.data
+          : (Array.isArray(pendingUsersRes) ? pendingUsersRes : []);
+
+        if (pendingUsers.length > 0) {
+          pendingUsers.forEach((u) => {
+            const roleStr = String(u.role || 'student').toUpperCase();
+            const deptStr = u.department ? ` · ${u.department}` : '';
+            const yearStr = u.year ? ` (${u.year}${u.division ? ` Div ${u.division}` : ''})` : '';
+            notifItems.push({
+              id: `pending-user-${u.id}`,
+              title: `👤 Approval Needed: ${u.name} (${roleStr})`,
+              desc: `${u.name}${deptStr}${yearStr} has completed registration and is awaiting account approval.`,
+              message: `${u.name} (${u.email || u.mobile_number || 'N/A'}) registered as ${roleStr} in ${u.department || 'General'}${yearStr}. Action required: Review and approve or reject this user account.`,
+              time: u.created_at ? new Date(u.created_at).toLocaleString() : 'Action Required',
+              unread: true,
+              type: 'alert',
+              target: u.department || 'Campus Users',
+              priority: 'High Priority',
+              created_by_name: u.name,
+              actionUrl: '/admin/approve-users',
+              actionLabel: 'Review & Approve →',
+              actionColor: '#2563eb'
+            });
+          });
+        }
+
+        // 2. Live Pending Training / C2C Course Registrations
+        const c2cPending = Array.isArray(c2cRes?.data)
+          ? c2cRes.data
+          : (Array.isArray(c2cRes?.enrollments) ? c2cRes.enrollments : (Array.isArray(c2cRes) ? c2cRes : []));
+        const pendingC2CList = c2cPending.filter(
+          (e) => String(e.approval_status || e.approvalStatus || '').toLowerCase() === 'pending'
+        );
+        if (pendingC2CList.length > 0) {
+          notifItems.push({
+            id: 'pending-c2c-enrollments',
+            title: `🎓 ${pendingC2CList.length} Training Registration(s) Pending Approval`,
+            desc: `${pendingC2CList.length} student course application(s) have submitted verification/payment proof and are waiting for your approval.`,
+            message: `${pendingC2CList.length} training enrollment(s) are awaiting approval. Review fee receipts and approve students.`,
+            time: 'Action Required',
+            unread: true,
+            type: 'calendar',
+            target: 'Trainings / C2C',
+            priority: 'Action Required',
+            created_by_name: 'Training Desk',
+            actionUrl: '/admin/c2c-enrollments',
+            actionLabel: 'Review Enrollments →',
+            actionColor: '#059669'
+          });
+        }
+
+        // 3. Real Broadcasts / Announcements
+        const rawBroadcasts = Array.isArray(broadcastRes?.data)
+          ? broadcastRes.data
+          : (Array.isArray(broadcastRes) ? broadcastRes : []);
+
+        const serverBroadcasts = rawBroadcasts
+          .filter((b) => {
+            const role = String(b.sender_role || "").toLowerCase();
+            const creator = String(b.created_by_name || "").toLowerCase();
+            // Do not notify admin of announcements that admin himself created
+            if (role.includes("admin") || creator.includes("admin")) {
+              return false;
+            }
+            return true;
+          })
+          .map((b) => ({
             id: b.id || `notif-${Math.random()}`,
             title: b.title || "Announcement",
             desc: b.message || b.desc || b.description || "",
@@ -286,55 +393,23 @@ export default function AdminLayout() {
             created_by_name: b.created_by_name || "Admin",
           }));
 
-          const prefItems = [];
-          if (prefs.notifSystemAlerts) {
-            prefItems.push({
-              id: "pref-sec-alert",
-              title: "🛡️ System Security Alert",
-              desc: "2FA Authentication & System Security monitoring active.",
-              message: "2FA Authentication & System Security monitoring active.",
-              time: "Just now",
-              unread: true,
-              type: "alert",
-              target: "System Security",
-              priority: "High Priority",
-              created_by_name: "Security Engine"
-            });
-          }
-          if (prefs.notifWeeklyReport) {
-            prefItems.push({
-              id: "pref-weekly-audit",
-              title: "📊 Weekly Audit Digest",
-              desc: "Weekly institutional audit report and analytics digest is available.",
-              message: "Weekly institutional audit report and analytics digest is available.",
-              time: "Today",
-              unread: true,
-              type: "calendar",
-              target: "Institutional Audit",
-              priority: "Weekly Digest",
-              created_by_name: "Analytics Service"
-            });
-          }
-          if (prefs.notifNewUsers) {
-            prefItems.push({
-              id: "pref-new-users",
-              title: "👤 New User Enrollment",
-              desc: "New student and faculty registration applications pending verification.",
-              message: "New student and faculty registration applications pending verification.",
-              time: "Today",
-              unread: true,
-              type: "alert",
-              target: "User Management",
-              priority: "Action Required",
-              created_by_name: "Enrollment Desk"
-            });
-          }
+        notifItems.push(...serverBroadcasts);
 
-          // Combine server items and active preference items
-          const combined = [...prefItems, ...serverItems];
-          setNotifications(combined);
-        })
-        .catch(() => { });
+        // De-duplicate items by id
+        const unique = [];
+        const seenIds = new Set();
+        for (const item of notifItems) {
+          const key = String(item.id || item.title);
+          if (!seenIds.has(key)) {
+            seenIds.add(key);
+            unique.push(item);
+          }
+        }
+
+        setNotifications(unique);
+      } catch (err) {
+        console.warn("[AD_Layout] Notification load notice:", err);
+      }
     };
 
     loadNotifications();
@@ -362,7 +437,16 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+  const getInitials = (name) => {
+    if (!name || typeof name !== "string") return "AD";
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0] ? parts[0].slice(0, 2).toUpperCase() : "AD";
+  };
+
+  const formatDisplayName = (rawName, email) => {
     if (typeof rawName === "string" && rawName.trim()) {
       const trimmed = rawName.trim();
       if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
@@ -380,57 +464,90 @@ export default function AdminLayout() {
           .join(" ");
       }
     }
-    return fallback;
+    return "Administrator";
   };
 
-  const loadProfile = () => {
+  const resolveAdminUser = (freshData = null) => {
     try {
-      const stored = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
-      const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
-      const rawName = adminProf.name || stored.name || stored.fullName || stored.full_name;
-      const email = adminProf.email || stored.email || "admin@pvppcoe.ac.in";
-      const name = formatDisplayName(rawName, email, "Ganesh Shinde");
+      let stored = {};
+      try {
+        stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+      } catch (_) {}
+
+      // Clean up stale adminProfile if it doesn't match the active session user
+      let adminProf = {};
+      try {
+        const parsed = JSON.parse(sessionStorage.getItem("adminProfile") || localStorage.getItem("adminProfile") || "{}");
+        if (parsed && ((stored.id && parsed.id === stored.id) || (stored.email && parsed.email === stored.email))) {
+          adminProf = parsed;
+        } else {
+          sessionStorage.removeItem("adminProfile");
+          localStorage.removeItem("adminProfile");
+        }
+      } catch (_) {}
+
+      const u = freshData || {};
+      const rawName = u.name || u.fullName || u.full_name || stored.name || stored.fullName || stored.full_name || adminProf.name;
+      const email = u.email || stored.email || adminProf.email || "";
+      const name = formatDisplayName(rawName, email);
+      const role = u.role || stored.role || adminProf.role || "College Administrator";
+      const avatar = u.avatar || u.avatar_url || u.profile_pic || stored.avatar || stored.avatar_url || stored.profile_pic || adminProf.avatar || null;
+
       return {
-        name: name,
-        email: email,
-        role: adminProf.role || stored.role || "College Administrator",
-        avatar: adminProf.avatar || stored.avatar || stored.avatarUrl || null,
+        ...stored,
+        ...u,
+        name,
+        email,
+        role,
+        avatar,
+        initials: getInitials(name),
       };
-    } catch (e) {
-      return { name: "Ganesh Shinde", email: "admin@pvppcoe.ac.in", role: "College Administrator", avatar: null };
+    } catch (_) {
+      return {
+        name: "Administrator",
+        email: "",
+        role: "College Administrator",
+        avatar: null,
+        initials: "AD",
+      };
     }
   };
 
-  const [user, setUser] = useState(loadProfile);
+  const [user, setUser] = useState(() => resolveAdminUser(null));
 
   const fetchUser = async () => {
     try {
       const token = getAuthToken();
       if (!token) return;
-      const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.data) {
-          const u = data.data;
-          const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
-          const rawName = adminProf.name || u.name || u.fullName || u.full_name;
-          const email = adminProf.email || u.email || "admin@pvppcoe.ac.in";
-          const name = formatDisplayName(rawName, email, "Ganesh Shinde");
-          const updated = {
-            name: name,
-            email: email,
-            role: adminProf.role || u.role || "College Administrator",
-            avatar: adminProf.avatar || u.avatarUrl || u.avatar || null,
-          };
-          setUser(updated);
-          let localUser = {};
-          try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
-          const merged = { ...localUser, ...updated };
-          sessionStorage.setItem("user", JSON.stringify(merged));
-          localStorage.setItem("user", JSON.stringify(merged));
+
+      let freshData = null;
+      try {
+        const meRes = await apiFetch("/auth/me");
+        if (meRes && (meRes.data || meRes.user)) {
+          freshData = meRes.data || meRes.user;
         }
+      } catch (_) {}
+
+      if (!freshData) {
+        try {
+          const profRes = await apiFetch("/admin/profile");
+          if (profRes && (profRes.data || profRes.user)) {
+            freshData = profRes.data || profRes.user;
+          }
+        } catch (_) {}
+      }
+
+      if (freshData) {
+        const resolved = resolveAdminUser(freshData);
+        setUser(resolved);
+        try {
+          const currentStored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+          const merged = { ...currentStored, ...freshData, name: resolved.name };
+          sessionStorage.setItem("user", JSON.stringify(merged));
+          if (localStorage.getItem("user")) {
+            localStorage.setItem("user", JSON.stringify(merged));
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.warn("Could not fetch admin profile for header:", err);
@@ -440,7 +557,7 @@ export default function AdminLayout() {
   useEffect(() => {
     fetchUser();
     const handleProfileUpdate = () => {
-      setUser(loadProfile());
+      setUser(resolveAdminUser(null));
       fetchUser();
     };
     window.addEventListener("userProfileUpdated", handleProfileUpdate);
@@ -487,14 +604,16 @@ export default function AdminLayout() {
             {/* Integrated Header Bar Inside the Card */}
             <header className="admin-header">
               <div className="admin-header__left">
-                <button
-                  className="admin-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
+                <AppTooltip text="Toggle sidebar" position="bottom">
+                  <button
+                    className="admin-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                  >
+                    <PanelLeft size={20} />
+                  </button>
+                </AppTooltip>
+
 
                 <GlobalHeaderSearch role="admin" />
               </div>
@@ -545,15 +664,12 @@ export default function AdminLayout() {
                     <div className="admin-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                      ) : typeof user?.name === "string" && user.name.trim() ? (
-                        user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                       ) : (
-                        "AD"
+                        user.initials || getInitials(user.name)
                       )}
                     </div>
                     <div className="admin-header__user-info">
-                      <span className="admin-header__name">{user.name || "Admin User"}</span>
-                      <span className="admin-header__role">{user.role || "Admin"}</span>
+                      <span className="admin-header__name">{user.name || "Administrator"}</span>
                     </div>
                   </button>
 
@@ -564,15 +680,13 @@ export default function AdminLayout() {
                           <div className="admin-header__profile-avatar">
                             {user.avatar ? (
                               <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                            ) : typeof user?.name === "string" && user.name.trim() ? (
-                              user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                             ) : (
-                              "AD"
+                              user.initials || getInitials(user.name)
                             )}
                           </div>
                           <div className="admin-header__profile-info">
                             <span className="admin-header__profile-name">{user.name}</span>
-                            <span className="admin-header__profile-sub">{user.email || user.role || "Admin"}</span>
+                            <span className="admin-header__profile-sub">{user.email || user.role || "College Administrator"}</span>
                           </div>
                         </div>
                         <div className="admin-header__profile-divider" />
@@ -627,8 +741,14 @@ export default function AdminLayout() {
       <NotificationDetailModal
         notification={selectedNotifModal}
         onClose={() => setSelectedNotifModal(null)}
-        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
-        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onMarkRead={async (id) => {
+          setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n));
+          await apiFetch(`/notifications/${id}/read`, { method: "PUT" }).catch(() => {});
+        }}
+        onDelete={async (id) => {
+          setNotifications((prev) => prev.filter((n) => n.id !== id));
+          await apiFetch(`/notifications/${id}`, { method: "DELETE" }).catch(() => {});
+        }}
         onNavigate={(path) => navigate(path)}
       />
       <FullNotificationModal
@@ -636,6 +756,7 @@ export default function AdminLayout() {
         onClose={() => setFullNotifOpen(false)}
         notifications={notifications}
         setNotifications={setNotifications}
+        onNavigate={(path) => navigate(path)}
       />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}

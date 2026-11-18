@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone } from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
@@ -26,7 +26,7 @@ export default function AdminOverview() {
     }
   });
 
-  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+  const formatDisplayName = (rawName, email, fallback = "Administrator") => {
     if (typeof rawName === "string" && rawName.trim()) {
       const trimmed = rawName.trim();
       if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
@@ -49,15 +49,15 @@ export default function AdminOverview() {
 
   const rawName = adminUser.name || adminUser.fullName || adminUser.full_name;
   const email = adminUser.email || "";
-  const fullName = formatDisplayName(rawName, email, "Ganesh Shinde");
+  const fullName = formatDisplayName(rawName, email, "Administrator");
   const role = adminUser.role || "Campus Admin";
-  const dept = adminUser.department || adminUser.dept || "Computer Engineering";
+  const dept = adminUser.department || adminUser.dept || "";
 
   const getInitials = (name) => {
-    if (!name) return "GS";
-    const parts = name.trim().split(" ");
+    if (!name || typeof name !== "string") return "AD";
+    const parts = name.trim().split(" ").filter(Boolean);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+    return parts[0] ? parts[0].slice(0, 2).toUpperCase() : "AD";
   };
 
   const adminInitials = getInitials(fullName);
@@ -128,7 +128,7 @@ export default function AdminOverview() {
               Welcome back, {fullName}!
             </h1>
             <p className="overview-hero-desc">
-              {role || "Administrator"} &nbsp;|&nbsp; {email || "admin@pvppcoe.ac.in"} &nbsp;|&nbsp; {dept || "Computer Engineering"}
+              {[role || "Administrator", email, dept].filter(Boolean).join("  •  ")}
             </p>
           </div>
         </div>
@@ -271,6 +271,19 @@ export default function AdminOverview() {
                   </div>
                 </div>
                 <span className="admin-quick-action-arrow admin-quick-action-arrow--amber">Open &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/career-gateway" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <Zap size={18} color="#2563eb" />
+                  <div>
+                    <span className="admin-quick-action-title">Career Gateway Sync</span>
+                    <span className="admin-quick-action-sub">On-demand synchronization & audit</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--blue">Open &rarr;</span>
               </div>
             </Link>
           </CardContent>
