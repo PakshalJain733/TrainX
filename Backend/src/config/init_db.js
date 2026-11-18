@@ -1358,51 +1358,7 @@ export async function initializeDatabase() {
       try { await conn.query(col); } catch (_) { }
     }
 
-    // ─── Essential Core Seed Data ───────────────────────────────────────────
-    // A. Ensure default College
-    let defaultCollegeId = 1;
-    try {
-      const [colls] = await conn.query(`SELECT id FROM colleges WHERE code = 'VPPCOE' OR id = 1 LIMIT 1`);
-      if (!colls || colls.length === 0) {
-        const [ins] = await conn.query(`
-          INSERT INTO colleges (name, code, location, city, type, status)
-          VALUES ('Vasantdada Patil Pratishthan College of Engineering', 'VPPCOE', 'Main Campus', 'Mumbai', 'Autonomous', 'Active')
-        `);
-        defaultCollegeId = ins.insertId;
-        console.log(`[DB Init] Seeded default College (ID: ${defaultCollegeId})`);
-      } else {
-        defaultCollegeId = colls[0].id;
-      }
-    } catch (e) {
-      console.warn('[DB Init] College seed notice:', e.message);
-    }
-
-    // B. Department check (no hardcoded seeds)
-    let defaultDeptId = null;
-    try {
-      const [depts] = await conn.query(`SELECT id FROM departments WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
-      if (depts && depts.length > 0) {
-        defaultDeptId = depts[0].id;
-      }
-    } catch (e) {
-      console.warn('[DB Init] Department check notice:', e.message);
-    }
-
-    // D. Ensure default C2C 2026 Training Program exists
-    try {
-      const [existingProg] = await conn.query(`SELECT id FROM training_programs WHERE code = 'C2C 2026' OR id = 4 LIMIT 1`);
-      if (!existingProg || existingProg.length === 0) {
-        await conn.query(`
-          INSERT INTO training_programs (id, college_id, name, code, short_name, fee_amount, status, start_date, end_date, registration_open_date, registration_close_date, description)
-          VALUES (4, 1, 'Campus to Corporate Training 2026', 'C2C 2026', 'C2C', 3500, 'Open', '2026-07-01', '2026-12-31', '2026-06-01', '2026-07-15', 'Flagship comprehensive placement preparation program covering Full Stack, Aptitude, System Design, and Mock Drives.')
-        `);
-        console.log('[DB Init] Seeded initial C2C 2026 training program');
-      }
-    } catch (e) {
-      console.warn('[DB Init] Training program seed notice:', e.message);
-    }
-
-    // E. Ensure Super Admin Account
+    // ─── Super Admin Initialization from Environment (.env) ──────────────────
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL ? process.env.SUPER_ADMIN_EMAIL.trim().toLowerCase() : null;
       const superPass = process.env.SUPER_ADMIN_PASSWORD;
@@ -1418,7 +1374,7 @@ export async function initializeDatabase() {
               `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active, is_verified, is_approved) VALUES (?, ?, ?, ?, 'super_admin', NULL, 1, 1, 1)`,
               [superName, superEmail, superMobile, superPasswordHash]
             );
-            console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
+            console.log(`[DB Init] Initialized Super Admin account from .env for ${superEmail}`);
           }
         } else if (superPasswordHash) {
           await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
@@ -1426,10 +1382,10 @@ export async function initializeDatabase() {
           await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
         }
       } else {
-        console.log('[DB Init] SUPER_ADMIN_EMAIL not set in .env; skipping automated Super Admin seeding.');
+        console.log('[DB Init] SUPER_ADMIN_EMAIL not set in .env; skipping automated Super Admin initialization.');
       }
     } catch (e) {
-      console.warn('[DB Init] Super Admin seed notice:', e.message);
+      console.warn('[DB Init] Super Admin initialization notice:', e.message);
     }
 
     console.log('[DB Init] All database tables and core seed data successfully verified!');

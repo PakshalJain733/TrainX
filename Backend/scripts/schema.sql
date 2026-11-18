@@ -298,31 +298,4 @@ CREATE TABLE IF NOT EXISTS `secure_codes` (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ====================================================================
--- ESSENTIAL SEED DATA
--- ====================================================================
 
--- Default College
-INSERT INTO `colleges` (`id`, `name`, `code`, `location`, `city`, `type`, `status`)
-VALUES (1, 'Vasantdada Patil Pratishthan College of Engineering', 'VPPCOE', 'Main Campus', 'Mumbai', 'Autonomous', 'Active')
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
-
--- Default Department
-INSERT INTO `departments` (`id`, `college_id`, `name`, `code`, `status`)
-VALUES (1, 1, 'Computer Engineering', 'CE', 'Active')
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
-
--- Default Batch
-INSERT INTO `batches` (`id`, `college_id`, `department_id`, `name`, `status`, `year`, `division`)
-VALUES (1, 1, 1, 'Batch A', 'active', 'TE', 'A')
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
-
--- Default C2C Training Program
-INSERT INTO `training_programs` (`id`, `college_id`, `name`, `code`, `short_name`, `fee_amount`, `status`, `start_date`, `end_date`, `registration_open_date`, `registration_close_date`, `description`)
-VALUES (4, 1, 'Campus to Corporate Training 2026', 'C2C 2026', 'C2C', 3500, 'Open', '2026-07-01', '2026-12-31', '2026-06-01', '2026-07-15', 'Flagship placement preparation program covering Full Stack, Aptitude, System Design, and Mock Drives.')
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
-
--- Default Super Admin User (password: TrainX@2026)
-INSERT INTO `users` (`name`, `email`, `mobile_number`, `password`, `password_hash`, `role`, `college_id`, `is_active`, `is_approved`)
-VALUES ('Super Admin', 'super.admin0987@gmail.com', '9876543210', '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'super_admin', 1, 1, 1)
-ON DUPLICATE KEY UPDATE `role`='super_admin';

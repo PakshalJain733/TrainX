@@ -16,26 +16,26 @@ export default function SuperAdminProfile() {
 
   const [form, setForm] = useState(() => {
     try {
-      const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
+      const stored = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
       return {
         name: stored.name || "Super Admin",
-        email: stored.email || "admin@trainingportal.com",
-        phone: stored.mobile_number || stored.phone || "+91 12345 67890",
-        role: "Super Administrator",
+        email: stored.email || "",
+        phone: stored.mobile_number || stored.phone || "",
+        role: stored.role ? (stored.role.toLowerCase().includes("super") ? "Super Administrator" : stored.role) : "Super Administrator",
         region: "Mumbai, Maharashtra",
-        organization: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+        organization: stored.organization || "TrainX Platform HQ",
         notifSystemAlerts: true,
         notifWeeklyReport: true,
         notifNewUsers: true,
       };
-    } catch (e) {
+    } catch (_) {
       return {
         name: "Super Admin",
-        email: "admin@trainingportal.com",
-        phone: "+91 98765 43210",
+        email: "",
+        phone: "",
         role: "Super Administrator",
         region: "Mumbai, Maharashtra",
-        organization: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+        organization: "TrainX Platform HQ",
         notifSystemAlerts: true,
         notifWeeklyReport: true,
         notifNewUsers: true,
@@ -67,7 +67,8 @@ export default function SuperAdminProfile() {
       setAvatarUrl(url);
     }
   };
-
+
+
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
